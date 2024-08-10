@@ -1286,6 +1286,7 @@ func (c *Chain) storeEventsFunc(ssc cstate.StateContextI) func(e event.BlockEven
 		if !node.Self.IsSharder() {
 			return nil
 		}
+
 		return c.storeLastNEvents(e)
 	}
 }

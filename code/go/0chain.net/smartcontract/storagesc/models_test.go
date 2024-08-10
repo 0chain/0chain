@@ -59,7 +59,7 @@ func TestStorageAllocation_filterBlobbers(t *testing.T) {
 
 	newEmptyStorageNode := func() *StorageNode {
 		b := &StorageNode{}
-		b.SetEntity(&storageNodeV2{})
+		b.SetEntity(&storageNodeV3{})
 		return b
 	}
 

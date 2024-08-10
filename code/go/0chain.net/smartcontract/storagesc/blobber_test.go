@@ -37,7 +37,7 @@ func TestUpdateBlobberSettings(t *testing.T) {
 	)
 	setConfig(t, balances)
 	var (
-		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 		b, err = ssc.getBlobber(blob.id, balances)
 	)
 	require.NoError(t, err)
@@ -149,23 +149,64 @@ func TestAddBlobber(t *testing.T) {
 
 	setConfig(t, balances)
 
-	var blob = newClient(0, balances)
-	blob.terms = avgTerms
-	blob.cap = 2 * GB
-	blob.isRestricted = new(bool)
-	*blob.isRestricted = true
+	t.Run("Register normal blobber", func(t *testing.T) {
+		var blob = newClient(0, balances)
+		blob.terms = avgTerms
+		blob.cap = 2 * GB
 
-	_, err = blob.callAddBlobber(t, ssc, tp, balances)
-	require.NoError(t, err)
+		_, err = blob.callAddBlobber(t, ssc, tp, balances)
+		require.NoError(t, err)
 
-	blobber, err := getBlobber(blob.id, balances)
-	require.NoError(t, err)
-	require.NotNil(t, blobber)
+		blobber, err := getBlobber(blob.id, balances)
+		require.NoError(t, err)
+		require.NotNil(t, blobber)
 
-	require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
-	require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
-	require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
+		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
+		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, false, *blobber.mustBase().IsRestricted)
+	})
 
+	t.Run("Register restricted blobber", func(t *testing.T) {
+		var blob = newClient(0, balances)
+		blob.terms = avgTerms
+		blob.cap = 2 * GB
+		blob.isRestricted = true
+
+		_, err = blob.callAddBlobber(t, ssc, tp, balances)
+		require.NoError(t, err)
+
+		blobber, err := getBlobber(blob.id, balances)
+		require.NoError(t, err)
+		require.NotNil(t, blobber)
+
+		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
+		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
+		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, true, *blobber.mustBase().IsRestricted)
+	})
+
+	t.Run("Register Enterprise blobber", func(t *testing.T) {
+		var blob = newClient(0, balances)
+		blob.terms = avgTerms
+		blob.cap = 2 * GB
+		blob.isEnterprise = true
+
+		_, err = blob.callAddBlobber(t, ssc, tp, balances)
+		require.NoError(t, err)
+
+		blobber, err := getBlobber(blob.id, balances)
+		require.NoError(t, err)
+		require.NotNil(t, blobber)
+
+		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
+		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
+		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
+		require.Equal(t, false, *blobber.mustBase().IsRestricted)
+
+		blobberV3 := blobber.Entity().(*storageNodeV3)
+		require.Equal(t, true, *blobberV3.IsEnterprise)
+	})
 }
 
 func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
@@ -200,6 +241,7 @@ func TestStorageSmartContract_addBlobber_preventDuplicates(t *testing.T) {
 // - delete
 // - challenge passed
 func Test_flow_reward(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -214,12 +256,11 @@ func Test_flow_reward(t *testing.T) {
 	conf := setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	var b1 *Client
@@ -659,12 +700,11 @@ func Test_flow_penalty(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	var b1 *Client
@@ -866,10 +906,9 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	// add 10 validators
@@ -992,6 +1031,7 @@ func Test_flow_no_challenge_responses_finalize(t *testing.T) {
 		// add open challenges to allocation stats
 		alloc, err = ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
+
 		if alloc.Stats == nil {
 			alloc.Stats = new(StorageAllocationStats)
 		}
@@ -1083,14 +1123,12 @@ func Test_flow_no_challenge_responses_cancel(t *testing.T) {
 	require.NoError(t, err)
 
 	tp += 100
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	for _, ba := range alloc.BlobberAllocs {
-
 		ba.LatestFinalizedChallCreatedAt = 0
 		ba.ChallengePoolIntegralValue = 0
 	}
@@ -1276,7 +1314,7 @@ func TestBlobberHealthCheck(t *testing.T) {
 	setConfig(t, balances)
 
 	var (
-		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 		b, err = ssc.getBlobber(blob.id, balances)
 	)
 	require.NoError(t, err)
@@ -1299,7 +1337,7 @@ func TestOnlyAdd(t *testing.T) {
 	setConfig(t, balances)
 
 	var (
-		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+		blob   = addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 		b, err = ssc.getBlobber(blob.id, balances)
 	)
 	require.NoError(t, err)
@@ -1435,6 +1473,7 @@ func (lr *LoopRequest) checkEmitEvents(t *testing.T, wm *writeMarkerV2) {
 	require.EqualValues(t, 5, len(events))
 	alloc, err := lr.Ssc.getAllocation(*lr.AllocId, lr.Balances)
 	require.NoError(t, err)
+
 	requiredEventTags := []event.EventTag{event.TagToChallengePool, event.TagAddOrUpdateChallengePool, event.TagAddWriteMarker, event.TagUpdateAllocationStat, event.TagUpdateBlobberStat, event.TagFromChallengePool}
 	for i, evnt := range events {
 		require.Contains(t, requiredEventTags, evnt.Tag)
@@ -1550,6 +1589,7 @@ func (req *LoopRequest) flushEventsListFromBalances(t *testing.T) {
 }
 
 func TestCommitBlobberConnection(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -1562,12 +1602,11 @@ func TestCommitBlobberConnection(t *testing.T) {
 
 	tp += 100
 
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	var b1 *Client

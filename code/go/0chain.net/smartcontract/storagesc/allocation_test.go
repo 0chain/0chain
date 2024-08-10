@@ -76,7 +76,7 @@ func TestSelectBlobbers(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		sn := &StorageNode{}
-		sn.SetEntity(&storageNodeV2{
+		sn.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              mockBlobberId + strconv.Itoa(index),
 				ProviderType:    spenum.Blobber,
@@ -403,7 +403,7 @@ func TestChangeBlobbers(t *testing.T) {
 			}
 
 			blobber := &StorageNode{}
-			blobber.SetEntity(&storageNodeV2{
+			blobber.SetEntity(&storageNodeV3{
 				Provider: provider.Provider{
 					ID:              ba.BlobberID,
 					ProviderType:    spenum.Blobber,
@@ -665,7 +665,7 @@ func TestExtendAllocation(t *testing.T) {
 
 	makeMockBlobber := func(index int) *StorageNode {
 		sn := &StorageNode{}
-		sn.SetEntity(&storageNodeV2{
+		sn.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              mockBlobberId + strconv.Itoa(index),
 				ProviderType:    spenum.Blobber,
@@ -686,11 +686,23 @@ func TestExtendAllocation(t *testing.T) {
 	) (
 		StorageSmartContract,
 		*transaction.Transaction,
-		StorageAllocation,
+		*StorageAllocation,
 		[]*StorageNode,
 		chainState.StateContextI,
 	) {
 		var balances = &mocks.StateContextI{}
+
+		h := chainState.NewHardFork("electra", 0)
+		balances.On("GetTrieNode", h.GetKey(),
+			mock.MatchedBy(func(s *chainState.HardFork) bool {
+				s = h
+				return true
+			})).Return(nil).Twice()
+
+		mockBlock := &block.Block{}
+		mockBlock.Round = 0
+		balances.On("GetBlock").Return(mockBlock).Twice()
+
 		var ssc = StorageSmartContract{
 
 			SmartContract: sci.NewSC(ADDRESS),
@@ -797,7 +809,7 @@ func TestExtendAllocation(t *testing.T) {
 			}),
 		).Return("", nil).Once()
 
-		return ssc, &txn, sa, blobbers, balances
+		return ssc, &txn, &sa, blobbers, balances
 	}
 
 	testCases := []struct {
@@ -836,7 +848,7 @@ func TestExtendAllocation(t *testing.T) {
 			err := ssc.extendAllocation(
 				txn,
 				conf,
-				&sa,
+				sa,
 				aBlobbers,
 				&tt.args.request,
 				balances,
@@ -1018,8 +1030,11 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 	all = new(StorageNodes)
 
 	for i := 1; i <= numBlobbers; i++ {
+		isEnterprise := new(bool)
+		*isEnterprise = false
+
 		sn := &StorageNode{}
-		sn.SetEntity(&storageNodeV2{
+		sn.SetEntity(&storageNodeV3{
 			Provider: provider.Provider{
 				ID:              "b" + strconv.Itoa(i),
 				ProviderType:    spenum.Blobber,
@@ -1036,6 +1051,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 			Allocated:    5 * GB,  //  5 GB
 			NotAvailable: notAvailable,
 			IsRestricted: &isRestricted,
+			IsEnterprise: isEnterprise,
 		})
 		all.Nodes = append(all.Nodes, sn)
 	}
@@ -1197,6 +1213,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 
 	t.Run("Blobbers provided are restricted blobbers", func(t *testing.T) {
+
 		wallet := newClient(1000*x10, balances)
 		b0Wallet := newClient(1000*x10, balances)
 		b1Wallet := newClient(1000*x10, balances)
@@ -1276,6 +1293,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 	// 8. not enough tokens
 	t.Run("not enough tokens to honor the min lock demand (0 < 270)", func(t *testing.T) {
+
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 		nar.Owner = clientID
@@ -1325,6 +1343,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 	// 9. no tokens to lock (client balance check)
 	t.Run("Blobbers provided are not enough to honour the allocation no pools", func(t *testing.T) {
+
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
 		nar.Owner = clientID
@@ -1377,6 +1396,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 	})
 	// 10. ok
 	t.Run("ok", func(t *testing.T) {
+
 		wallet := newClient(1000*x10, balances)
 		var nar newAllocationRequest
 		nar.ReadPriceRange = PriceRange{20, 10}
@@ -1460,8 +1480,8 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		ab = append(ab, loaded1)
 		require.NoError(t, err)
 		for i, sbn := range allBlobbers.Nodes {
-			sbnEntity := sbn.Entity().(*storageNodeV2)
-			abEntitity := ab[i].Entity().(*storageNodeV2)
+			sbnEntity := sbn.Entity().(*storageNodeV3)
+			abEntitity := ab[i].Entity().(*storageNodeV3)
 
 			assert.Equal(t, *sbnEntity, *abEntitity)
 		}
@@ -1715,14 +1735,13 @@ func Test_updateAllocationRequest_getNewBlobbersSize(t *testing.T) {
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
 
-		uar   updateAllocationRequest
-		alloc *StorageAllocation
-		err   error
+		uar updateAllocationRequest
+		err error
 	)
 
 	createNewTestAllocation(t, ssc, allocTxHash, clientID, pubKey, balances)
 
-	alloc, err = ssc.getAllocation(allocTxHash, balances)
+	alloc, err := ssc.getAllocation(allocTxHash, balances)
 	require.NoError(t, err)
 
 	alloc.Size = 5 * GB
@@ -1740,6 +1759,7 @@ func Test_updateAllocationRequest_getNewBlobbersSize(t *testing.T) {
 }
 
 func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
+
 	const allocTxHash, clientID, pubKey = "a5f4c3d2_tx_hex", "client_hex",
 		"pub_key_hex"
 
@@ -1763,9 +1783,9 @@ func TestStorageSmartContract_getAllocationBlobbers(t *testing.T) {
 	assert.Len(t, blobbers, 2)
 }
 
-func (alloc *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
+func (sa *StorageAllocation) deepCopy(t *testing.T) (cp *StorageAllocation) {
 	cp = new(StorageAllocation)
-	require.NoError(t, cp.Decode(mustEncode(t, alloc)))
+	require.NoError(t, cp.Decode(mustEncode(t, sa)))
 	return
 }
 
@@ -1880,10 +1900,10 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 	}
 }
 
-func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, client *Client, tp int64, balances *testBalances, mockBlobberCapacity int, zeroStats bool) (alloc *StorageAllocation, blobbers []*Client) {
+func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, client *Client, tp int64, balances *testBalances, zeroStats, isRestricted, IsEnterpriseAllocation bool) (alloc *StorageAllocation, blobbers []*Client) {
 	var err error
 
-	allocID, blobbers := addAllocation(t, ssc, client, tp, 10*GB, 200*GB, 5000*x10, 100*x10, 20, balances, true)
+	allocID, blobbers := addAllocation(t, ssc, client, tp, 10*GB, 200*GB, 5000*x10, 100*x10, 20, balances, true, isRestricted, IsEnterpriseAllocation)
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
@@ -1936,14 +1956,14 @@ func compareAllocationData(t *testing.T, beforeAlloc, afterAlloc StorageAllocati
 }
 
 func TestUpdateAllocationRequest(t *testing.T) {
+
 	// Tests :
 	// 1. Update single operation and check the stats and tag events
 	// 2. Update all operations at once and check the stats and events at the end
 
 	var (
-		ssc                 = newTestStorageSC()
-		balances            = newTestBalances(t, false)
-		mockBlobberCapacity = 2 * GB
+		ssc      = newTestStorageSC()
+		balances = newTestBalances(t, false)
 	)
 
 	t.Run("Extend unused allocation duration should work without adding extra payment", func(t *testing.T) {
@@ -1952,7 +1972,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -1986,7 +2006,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(200000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2036,7 +2056,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2078,7 +2098,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(200000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, false)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
@@ -2131,11 +2151,11 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, mockBlobberCapacity, true)
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
 			allocID        = beforeAlloc.ID
 		)
 
-		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
 
 		// add blobber
 		var uar updateAllocationRequest
@@ -2167,17 +2187,18 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
 		compareAllocationData(t, *expectedAlloc, *afterAlloc)
 	})
+
 }
 
 func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
+
 	var (
 		ssc            = newTestStorageSC()
 		balances       = newTestBalances(t, false)
 		client         = newClient(2000*x10, balances)
 		otherClient    = newClient(50*x10, balances)
 		tp             = int64(0)
-		allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
-		alloc          *StorageAllocation
+		allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 		resp           string
 		err            error
 	)
@@ -2185,7 +2206,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	confMinAllocSize := 1024
 	mockBlobberCapacity := 2000 * confMinAllocSize
 
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	alloc.Stats = &StorageAllocationStats{
@@ -2261,7 +2282,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	require.EqualValues(t, alloc, &deco)
+	require.EqualValues(t, *alloc, deco)
 
 	assert.Equal(t, cp.Size*2, alloc.Size)
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
@@ -2313,6 +2334,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// Others can extend the allocation if `third_party_extendable` = true
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
+
 	req = updateAllocationRequest{
 		ID:     alloc.ID,
 		Size:   100,
@@ -2346,7 +2368,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	// add blobber
 	//
 	tp += 1000
-	nb := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+	nb := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 	tp += 1000
 	req = updateAllocationRequest{
 		ID:           alloc.ID,
@@ -2387,7 +2409,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	//
 
 	tp += 1000
-	nb2 := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances)
+	nb2 := addBlobber(t, ssc, 2*GB, tp, avgTerms, 50*x10, balances, false, false)
 	tp += 1000
 
 	req = updateAllocationRequest{
@@ -2459,7 +2481,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	//
 
 	tp += 1000
-	nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances)
+	nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
 
 	tp += 1000
 	req = updateAllocationRequest{
@@ -2512,7 +2534,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	alloc, err = ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
-	require.EqualValues(t, alloc, &deco)
+	require.EqualValues(t, *alloc, deco)
 
 	assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), alloc.Expiration)
 
@@ -2550,7 +2572,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, alloc.Owner, otherClient.id)
 	require.EqualValues(t, alloc.OwnerPublicKey, otherClient.pk)
-	require.EqualValues(t, alloc, &deco)
+	require.EqualValues(t, *alloc, deco)
 
 	//
 	// reduce
@@ -2569,6 +2591,7 @@ func TestStorageSmartContract_updateAllocationRequest(t *testing.T) {
 
 // - finalize allocation
 func Test_finalize_allocation(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -2582,12 +2605,11 @@ func Test_finalize_allocation(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// blobbers: stake 10k, balance 40k
 
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	alloc.Stats = &StorageAllocationStats{
@@ -2738,7 +2760,7 @@ func Test_finalize_allocation(t *testing.T) {
 	balances.setTransaction(t, tx)
 
 	tx.CreationDate = alloc.Expiration + 10
-	alloc, err = ssc.finalizeAllocationInternal(tx, mustEncode(t, &req), balances)
+	resp, err = ssc.finalizeAllocation(tx, mustEncode(t, &req), balances)
 	require.NoError(t, err)
 
 	// check out all the balances
@@ -2748,10 +2770,12 @@ func Test_finalize_allocation(t *testing.T) {
 
 	tp += 720
 
-	assert.True(t, alloc.Finalized)
+	_, err = ssc.getAllocation(allocID, balances)
+	require.Error(t, err)
 }
 
 func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
+
 	var (
 		ssc      = newTestStorageSC()
 		balances = newTestBalances(t, false)
@@ -2763,14 +2787,13 @@ func Test_finalize_allocation_do_not_remove_challenge_ready(t *testing.T) {
 	setConfig(t, balances)
 
 	tp += 1000
-	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false)
+	var allocID, blobs = addAllocation(t, ssc, client, tp, 0, 0, 0, 0, 0, balances, false, false, false)
 
 	// bind another allocation to the blobber
 
 	// blobbers: stake 10k, balance 40k
 
-	var alloc *StorageAllocation
-	alloc, err = ssc.getAllocation(allocID, balances)
+	alloc, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
 	confMinAllocSize := 1024

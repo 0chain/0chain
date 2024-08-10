@@ -20,8 +20,9 @@ import (
 func init() {
 	entitywrapper.RegisterWrapper(&StorageNode{},
 		map[string]entitywrapper.EntityI{
-			entitywrapper.DefaultOriginVersion: &storageNodeV1{},
+			entitywrapper.DefaultOriginVersion: &storageNodeV2{},
 			"v2":                               &storageNodeV2{},
+			"v3":                               &storageNodeV3{},
 		})
 }
 
@@ -145,49 +146,15 @@ func (sn *StorageNode) Decode(input []byte) error {
 	return nil
 }
 
-type storageNodeV1 struct {
-	provider.Provider
-	BaseURL                 string  `json:"url"`
-	Terms                   Terms   `json:"terms"`     // terms
-	Capacity                int64   `json:"capacity"`  // total blobber capacity
-	Allocated               int64   `json:"allocated"` // allocated capacity
-	PublicKey               string  `json:"-"`
-	SavedData               int64   `json:"saved_data"`
-	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
-	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
-	RewardRound       RewardRound        `json:"reward_round"`
-	NotAvailable      bool               `json:"not_available"`
-}
-
-func (sn1 *storageNodeV1) GetVersion() string {
-	return entitywrapper.DefaultOriginVersion
-}
-
-func (sn1 *storageNodeV1) InitVersion() {
-	// do nothing cause it's original version of storage node
-}
-
-func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
-	b := storageNodeBase(*sn1)
-	return &b
-}
-
-func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI) error {
-	// nothing to migrate as this is original version of the storage node
-	return nil
-}
-
-// use storageNodeV1 as the base
-type storageNodeBase storageNodeV1
+// use storageNodeV2 as the base
+type storageNodeBase storageNodeV2
 
 func (sb *storageNodeBase) CommitChangesTo(e entitywrapper.EntityI) {
 	switch v := e.(type) {
-	case *storageNodeV1:
-		*v = storageNodeV1(*sb)
 	case *storageNodeV2:
-		v.ApplyBaseChanges(storageNodeBase(*sb))
+		v.ApplyBaseChanges(*sb)
+	case *storageNodeV3:
+		v.ApplyBaseChanges(*sb)
 	}
 }
 
@@ -223,6 +190,7 @@ func (sn2 *storageNodeV2) InitVersion() {
 func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 	return &storageNodeBase{
 		Provider:                sn2.Provider,
+		Version:                 sn2.Version,
 		BaseURL:                 sn2.BaseURL,
 		Terms:                   sn2.Terms,
 		Capacity:                sn2.Capacity,
@@ -234,16 +202,11 @@ func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 		StakePoolSettings:       sn2.StakePoolSettings,
 		RewardRound:             sn2.RewardRound,
 		NotAvailable:            sn2.NotAvailable,
+		IsRestricted:            sn2.IsRestricted,
 	}
 }
 
 func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI) error {
-	v1, ok := e.(*storageNodeV1)
-	if !ok {
-		return errors.New("struct migrate fail, wrong storageNode type")
-	}
-	sn2.ApplyBaseChanges(storageNodeBase(*v1))
-	sn2.Version = "v2"
 	return nil
 }
 
@@ -260,4 +223,77 @@ func (sn2 *storageNodeV2) ApplyBaseChanges(snc storageNodeBase) {
 	sn2.StakePoolSettings = snc.StakePoolSettings
 	sn2.RewardRound = snc.RewardRound
 	sn2.NotAvailable = snc.NotAvailable
+}
+
+type storageNodeV3 struct {
+	provider.Provider
+	Version                 string  `json:"version" msg:"version"`
+	BaseURL                 string  `json:"url"`
+	Terms                   Terms   `json:"terms"`     // terms
+	Capacity                int64   `json:"capacity"`  // total blobber capacity
+	Allocated               int64   `json:"allocated"` // allocated capacity
+	PublicKey               string  `json:"-"`
+	SavedData               int64   `json:"saved_data"`
+	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
+	// StakePoolSettings used initially to create and setup stake pool.
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	RewardRound       RewardRound        `json:"reward_round"`
+	NotAvailable      bool               `json:"not_available"`
+	IsRestricted      *bool              `json:"is_restricted,omitempty"`
+	IsEnterprise      *bool              `json:"is_enterprise"`
+}
+
+const storageNodeV3Version = "v3"
+
+func (sn3 *storageNodeV3) GetVersion() string {
+	return storageNodeV3Version
+}
+
+func (sn3 *storageNodeV3) InitVersion() {
+	sn3.Version = storageNodeV3Version
+}
+
+func (sn3 *storageNodeV3) GetBase() entitywrapper.EntityBaseI {
+	return &storageNodeBase{
+		Provider:                sn3.Provider,
+		BaseURL:                 sn3.BaseURL,
+		Terms:                   sn3.Terms,
+		Capacity:                sn3.Capacity,
+		Allocated:               sn3.Allocated,
+		PublicKey:               sn3.PublicKey,
+		SavedData:               sn3.SavedData,
+		DataReadLastRewardRound: sn3.DataReadLastRewardRound,
+		LastRewardDataReadRound: sn3.LastRewardDataReadRound,
+		StakePoolSettings:       sn3.StakePoolSettings,
+		RewardRound:             sn3.RewardRound,
+		NotAvailable:            sn3.NotAvailable,
+		IsRestricted:            sn3.IsRestricted,
+	}
+}
+
+func (sn3 *storageNodeV3) MigrateFrom(e entitywrapper.EntityI) error {
+	v2, ok := e.(*storageNodeV2)
+	if !ok {
+		return errors.New("struct migrate fail, wrong storageNode type")
+	}
+	sn3.ApplyBaseChanges(storageNodeBase(*v2))
+	sn3.Version = "v3"
+	return nil
+}
+
+func (sn3 *storageNodeV3) ApplyBaseChanges(snc storageNodeBase) {
+	sn3.Provider = snc.Provider
+	sn3.BaseURL = snc.BaseURL
+	sn3.Terms = snc.Terms
+	sn3.Capacity = snc.Capacity
+	sn3.Allocated = snc.Allocated
+	sn3.PublicKey = snc.PublicKey
+	sn3.SavedData = snc.SavedData
+	sn3.DataReadLastRewardRound = snc.DataReadLastRewardRound
+	sn3.LastRewardDataReadRound = snc.LastRewardDataReadRound
+	sn3.StakePoolSettings = snc.StakePoolSettings
+	sn3.RewardRound = snc.RewardRound
+	sn3.NotAvailable = snc.NotAvailable
+	sn3.IsRestricted = snc.IsRestricted
 }

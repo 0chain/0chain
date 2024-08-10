@@ -56,6 +56,8 @@ func allocationTableToStorageAllocationBlobbers(alloc *event.Allocation, eventDb
 				MaxNumDelegates:    b.NumDelegates,
 				ServiceChargeRatio: b.ServiceCharge,
 			},
+			IsRestricted: b.IsRestricted,
+			IsEnterprise: b.IsEnterprise,
 		})
 
 		terms := blobberTermsMap[b.ID]

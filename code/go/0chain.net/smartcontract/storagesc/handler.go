@@ -2591,9 +2591,10 @@ type storageNodeResponse struct {
 	CreatedAt                time.Time     `json:"created_at"`
 
 	IsRestricted bool `json:"is_restricted"`
+	IsEnterprise bool `json:"is_enterprise"`
 }
 
-func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
+func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {
 	b := sn.mustBase()
 	sr := storageNodeResponse{
 		ID:                      b.ID,
@@ -2613,35 +2614,26 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		NotAvailable:            b.NotAvailable,
 	}
 
-	sv2, ok := sn.Entity().(*storageNodeV2)
-	if ok && sv2.IsRestricted != nil {
-		sr.IsRestricted = *sv2.IsRestricted
+	if b.IsRestricted != nil {
+		sr.IsRestricted = *b.IsRestricted
 	}
 
-	return sr
-}
+	err := cstate.WithActivation(balances, "electra", func() error {
+		return nil
+	}, func() error {
+		if sn.Entity().GetVersion() == "v3" {
+			if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
+				sr.IsEnterprise = *v3.IsEnterprise
+			}
+		}
+		return nil
+	})
 
-func storageNodeResponseToStorageNodeV1(snr storageNodeResponse) *storageNodeV1 {
-	return &storageNodeV1{
-		Provider: provider.Provider{
-			ID:              snr.ID,
-			ProviderType:    spenum.Blobber,
-			LastHealthCheck: snr.LastHealthCheck,
-			HasBeenKilled:   snr.IsKilled,
-			HasBeenShutDown: snr.IsShutdown,
-		},
-		BaseURL:                 snr.BaseURL,
-		Terms:                   snr.Terms,
-		Capacity:                snr.Capacity,
-		Allocated:               snr.Allocated,
-		PublicKey:               snr.PublicKey,
-		SavedData:               snr.SavedData,
-		DataReadLastRewardRound: snr.DataReadLastRewardRound,
-		LastRewardDataReadRound: snr.LastRewardDataReadRound,
-		StakePoolSettings:       snr.StakePoolSettings,
-		RewardRound:             snr.RewardRound,
-		NotAvailable:            snr.NotAvailable,
+	if err != nil {
+		return storageNodeResponse{}, err
 	}
+
+	return sr, nil
 }
 
 func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {
@@ -2653,6 +2645,7 @@ func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 
 			HasBeenKilled:   snr.IsKilled,
 			HasBeenShutDown: snr.IsShutdown,
 		},
+		Version:                 "v2",
 		BaseURL:                 snr.BaseURL,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
@@ -2665,6 +2658,32 @@ func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
 		IsRestricted:            &snr.IsRestricted,
+	}
+}
+
+func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 {
+	return &storageNodeV3{
+		Provider: provider.Provider{
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
+		},
+		Version:                 "v3",
+		BaseURL:                 snr.BaseURL,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            &snr.IsRestricted,
+		IsEnterprise:            &snr.IsEnterprise,
 	}
 }
 
@@ -2701,6 +2720,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
 		IsRestricted:             blobber.IsRestricted,
+		IsEnterprise:             blobber.IsEnterprise,
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
+	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -237,12 +238,22 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	if err = existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
-		b := e.(*storageNodeV2)
-		b.IsRestricted = updateBlobber.IsRestricted
-		return nil
-	}); err != nil {
-		return fmt.Errorf("error with activation: %v", err)
+	actErr := cstate.WithActivation(balances, "electra",
+		func() error {
+			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
+				b := e.(*storageNodeV2)
+				b.IsRestricted = updateBlobber.IsRestricted
+				return nil
+			})
+		}, func() error {
+			return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+				b := e.(*storageNodeV3)
+				b.IsRestricted = updateBlobber.IsRestricted
+				return nil
+			})
+		})
+	if actErr != nil {
+		return fmt.Errorf("error with activation: %v", actErr)
 	}
 
 	_, err = balances.InsertTrieNode(existingBlobber.GetKey(), existingBlobber)
@@ -370,12 +381,30 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	blobber := &StorageNode{}
 
-	b := storageNodeV2{}
-	if err := json.Unmarshal(input, &b); err != nil {
-		return "", common.NewError("add_or_update_blobber_failed",
-			"malformed request: "+err.Error())
+	beforeElectra := func() error {
+		b := storageNodeV2{}
+		if err := json.Unmarshal(input, &b); err != nil {
+			return common.NewError("add_or_update_blobber_failed",
+				"malformed request: "+err.Error())
+		}
+		blobber.SetEntity(&b)
+		return nil
 	}
-	blobber.SetEntity(&b)
+
+	afterElectra := func() error {
+		b := storageNodeV3{}
+		if err := json.Unmarshal(input, &b); err != nil {
+			return common.NewError("add_or_update_blobber_failed",
+				"malformed request: "+err.Error())
+		}
+		blobber.SetEntity(&b)
+		return nil
+	}
+
+	err = state.WithActivation(balances, "electra", beforeElectra, afterElectra)
+	if err != nil {
+		return "", err
+	}
 
 	// set transaction information
 	if err := blobber.mustUpdateBase(func(b *storageNodeBase) error {

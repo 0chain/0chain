@@ -33,6 +33,7 @@ type Blobber struct {
 	ReadData     int64 `json:"read_data"`
 	NotAvailable bool  `json:"not_available"`
 	IsRestricted bool  `json:"is_restricted"`
+	IsEnterprise bool  `json:"is_enterprise"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	// todo update
