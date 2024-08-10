@@ -883,17 +883,22 @@ func (c *Chain) syncPreviousBlock(ctx context.Context, b *block.Block, opt syncO
 		//pb.SetStateDB(ppb, c.GetStateDB())
 	}
 
-	if err := c.GetBlockStateChange(pb); err != nil {
-		if er := pb.InitStateDB(c.GetStateDB()); er == nil {
-			logging.Logger.Debug("sync_block - client state root exist in db", zap.Int64("round", pb.Round))
-			return pb
-		}
-
-		logging.Logger.Error("sync_block - sync state changes failed",
+	if err := pb.ComputeState(ctx, c); err != nil {
+		logging.Logger.Debug("sync_previous_block - compute state failed, try to sync state changes",
 			zap.Int64("round", pb.Round),
-			zap.Int64("num", opt.Num),
 			zap.Error(err))
-		return nil
+		if err := c.GetBlockStateChange(pb); err != nil {
+			if er := pb.InitStateDB(c.GetStateDB()); er == nil {
+				logging.Logger.Debug("sync_block - client state root exist in db", zap.Int64("round", pb.Round))
+				return pb
+			}
+
+			logging.Logger.Error("sync_block - sync state changes failed",
+				zap.Int64("round", pb.Round),
+				zap.Int64("num", opt.Num),
+				zap.Error(err))
+			return nil
+		}
 	}
 
 	if opt.SaveToDB {
