@@ -93,7 +93,7 @@ func (sc *StorageSmartContract) getAllocationChallenges(allocID string,
 
 // move tokens from challenge pool to blobber's stake pool (to unlocked)
 func (sc *StorageSmartContract) blobberReward(
-	alloc *StorageAllocation,
+	alloc *storageAllocationBase,
 	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
 	validators []string,
@@ -204,10 +204,6 @@ func (sc *StorageSmartContract) blobberReward(
 		return fmt.Errorf("can't save allocation's challenge pool: %v", err)
 	}
 
-	if err = alloc.saveUpdatedStakes(balances); err != nil {
-		return fmt.Errorf("can't save allocation: %v", err)
-	}
-
 	return nil
 }
 
@@ -250,7 +246,7 @@ func (ssc *StorageSmartContract) saveStakePools(validators []datastore.Key,
 
 // move tokens from challenge pool back to write pool
 func (sc *StorageSmartContract) blobberPenalty(
-	alloc *StorageAllocation,
+	alloc *storageAllocationBase,
 	latestSuccessfulChallTime common.Timestamp,
 	latestFinalizedChallTime common.Timestamp,
 	blobAlloc *BlobberAllocation,
@@ -379,11 +375,6 @@ func (sc *StorageSmartContract) blobberPenalty(
 		}
 	}
 
-	if err = alloc.saveUpdatedStakes(balances); err != nil {
-		return common.NewError("blobber_penalty_failed",
-			"saving allocation pools: "+err.Error())
-	}
-
 	if err = cp.save(sc.ID, alloc, balances); err != nil {
 		return fmt.Errorf("can't Save allocation's challenge pool: %v", err)
 	}
@@ -444,11 +435,12 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 		return "", common.NewErrorf(errCode, "could not find allocation challenges, %v", err)
 	}
 
-	alloc, err := sc.getAllocation(challenge.AllocationID, balances)
+	sa, err := sc.getAllocation(challenge.AllocationID, balances)
 	if err != nil {
 		return "", common.NewErrorf(errCode,
 			"can't get related allocation: %v", err)
 	}
+	alloc := sa.mustBase()
 
 	if t.CreationDate > alloc.Expiration {
 		return "", common.NewError(errCode, "allocation is finalized")
@@ -475,7 +467,7 @@ func (sc *StorageSmartContract) verifyChallenge(t *transaction.Transaction,
 	challenge.Responded = int64(ChallengeResponded)
 	cab := &challengeAllocBlobberPassResult{
 		verifyTicketsResult:       result,
-		alloc:                     alloc,
+		alloc:                     sa,
 		allocChallenges:           allocChallenges,
 		challenge:                 challenge,
 		blobAlloc:                 blobAlloc,
@@ -595,7 +587,9 @@ func (sc *StorageSmartContract) processChallengePassed(
 	cab *challengeAllocBlobberPassResult,
 ) (string, error) {
 
-	err := cab.alloc.removeOldChallenges(cab.allocChallenges, balances, cab.challenge, sc)
+	alloc := cab.alloc.mustBase()
+
+	err := alloc.removeOldChallenges(cab.allocChallenges, balances, cab.challenge, sc)
 	if err != nil {
 		return "failed to remove old allocation challenges", common.NewError("challenge_reward_error",
 			"error removing old challenges: "+err.Error())
@@ -669,9 +663,9 @@ func (sc *StorageSmartContract) processChallengePassed(
 			"First challenge on the list is not same as the one"+
 				" attempted to redeem")
 	}
-	cab.alloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
-	cab.alloc.Stats.SuccessChallenges++
-	cab.alloc.Stats.OpenChallenges--
+	alloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
+	alloc.Stats.SuccessChallenges++
+	alloc.Stats.OpenChallenges--
 
 	cab.blobAlloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
 	cab.blobAlloc.Stats.SuccessChallenges++
@@ -681,7 +675,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("verify_challenge_error", err.Error())
 	}
 
-	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, cab.alloc.Stats)
+	err = emitUpdateChallenge(cab.challenge, true, ChallengeResponded, balances, alloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -706,7 +700,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 
 	if cab.latestFinalizedChallTime > cab.latestSuccessfulChallTime {
 		err = sc.blobberPenalty(
-			cab.alloc, cab.latestSuccessfulChallTime, cab.latestFinalizedChallTime, cab.blobAlloc, validators,
+			alloc, cab.latestSuccessfulChallTime, cab.latestFinalizedChallTime, cab.blobAlloc, validators,
 			balances,
 			cab.challenge.AllocationID,
 		)
@@ -716,7 +710,7 @@ func (sc *StorageSmartContract) processChallengePassed(
 	}
 
 	err = sc.blobberReward(
-		cab.alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
+		alloc, cab.latestFinalizedChallTime, cab.blobAlloc,
 		validators,
 		balances,
 		cab.challenge.AllocationID,
@@ -725,8 +719,12 @@ func (sc *StorageSmartContract) processChallengePassed(
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
-	// save allocation object
-	if err := cab.alloc.save(balances, sc.ID); err != nil {
+	_ = cab.alloc.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+
+	if err = cab.alloc.saveUpdatedStakes(balances); err != nil {
 		return "", common.NewError("challenge_reward_error", err.Error())
 	}
 
@@ -747,20 +745,22 @@ func (sc *StorageSmartContract) processChallengeFailed(
 	balances cstate.StateContextI,
 	cab *challengeAllocBlobberPassResult,
 ) (string, error) {
+	alloc := cab.alloc.mustBase()
+
 	if !sc.completeChallenge(cab, false) {
 		return "", common.NewError("challenge_out_of_order",
 			"First challenge on the list is not same as the one"+
 				" attempted to redeem")
 	}
-	cab.alloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
-	cab.alloc.Stats.FailedChallenges++
-	cab.alloc.Stats.OpenChallenges--
+	alloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
+	alloc.Stats.FailedChallenges++
+	alloc.Stats.OpenChallenges--
 
 	cab.blobAlloc.Stats.LastestClosedChallengeTxn = cab.challenge.ID
 	cab.blobAlloc.Stats.FailedChallenges++
 	cab.blobAlloc.Stats.OpenChallenges--
 
-	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, cab.alloc.Stats)
+	err := emitUpdateChallenge(cab.challenge, false, ChallengeRespondedInvalid, balances, alloc.Stats)
 	if err != nil {
 		return "", err
 	}
@@ -770,6 +770,14 @@ func (sc *StorageSmartContract) processChallengeFailed(
 	}
 
 	logging.Logger.Info("Challenge failed", zap.String("challenge", cab.challenge.ID))
+
+	err = cab.alloc.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+	if err != nil {
+		return "", common.NewError("challenge_reward_error", err.Error())
+	}
 
 	// save allocation object
 	_, err = balances.InsertTrieNode(cab.alloc.GetKey(sc.ID), cab.alloc)
@@ -813,7 +821,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 			"unexpected error getting allocation: %v", err)
 	}
 
-	if alloc.Stats == nil {
+	if alloc.mustBase().Stats == nil {
 		return nil, common.NewError("adding_challenge_error",
 			"found empty allocation stats")
 	}
@@ -821,7 +829,7 @@ func (sc *StorageSmartContract) getAllocationForChallenge(
 	// we check that this allocation do have write-commits and can be challenged.
 	// We can't check only allocation to be written, because blobbers can commit in different order,
 	// so we check particular blobber's allocation to be written
-	if alloc.Stats.UsedSize > 0 && alloc.BlobberAllocsMap[blobberID].AllocationRoot != "" {
+	if alloc.mustBase().Stats.UsedSize > 0 && alloc.mustBase().BlobberAllocsMap[blobberID].AllocationRoot != "" {
 		return alloc, nil // found
 	}
 	return nil, nil
@@ -1011,14 +1019,14 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 			continue
 		}
 
-		if alloc.Finalized {
+		if alloc.mustBase().Finalized {
 			if err := removeAllocationFromBlobberPartitions(balances, blobberID, allocID); err != nil {
 				return nil, err
 			}
 			continue
 		}
 
-		if alloc.Expiration >= txn.CreationDate {
+		if alloc.mustBase().Expiration >= txn.CreationDate {
 			foundAllocation = true
 			break
 		}
@@ -1043,7 +1051,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		return nil, nil
 	}
 
-	allocBlobber, ok := alloc.BlobberAllocsMap[blobberID]
+	allocBlobber, ok := alloc.mustBase().BlobberAllocsMap[blobberID]
 	if !ok {
 		return nil, errors.New("invalid blobber for allocation")
 	}
@@ -1164,7 +1172,7 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 	storageChallenge.TotalValidators = len(selectedValidators)
 	storageChallenge.ValidatorIDs = validatorIDs
 	storageChallenge.BlobberID = blobberID
-	storageChallenge.AllocationID = alloc.ID
+	storageChallenge.AllocationID = alloc.mustBase().ID
 	storageChallenge.Created = txn.CreationDate
 	storageChallenge.RoundCreatedAt = balances.GetBlock().Round
 	lwm := allocBlobber.LastWriteMarker.mustBase()
@@ -1176,11 +1184,11 @@ func (sc *StorageSmartContract) populateGenerateChallenge(
 		Timestamp:        lwm.Timestamp,
 	}
 
-	allocChallenges, err := sc.getAllocationChallenges(alloc.ID, balances)
+	allocChallenges, err := sc.getAllocationChallenges(alloc.mustBase().ID, balances)
 	if err != nil {
 		if err == util.ErrValueNotPresent {
 			allocChallenges = &AllocationChallenges{}
-			allocChallenges.AllocationID = alloc.ID
+			allocChallenges.AllocationID = alloc.mustBase().ID
 		} else {
 			return nil, common.NewError("add_challenge",
 				"error fetching allocation challenge: "+err.Error())
@@ -1300,13 +1308,15 @@ func (sc *StorageSmartContract) genChal(
 	return nil
 }
 
-func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
+func (sc *StorageSmartContract) addChallenge(sa *StorageAllocation,
 	challenge *StorageChallenge,
 	allocChallenges *AllocationChallenges,
 	challInfo *StorageChallengeResponse,
 	conf *Config,
 	balances cstate.StateContextI,
 ) error {
+	alloc := sa.mustBase()
+
 	if challenge.BlobberID == "" {
 		return common.NewError("add_challenge",
 			"no blobber to add challenge to")
@@ -1347,12 +1357,14 @@ func (sc *StorageSmartContract) addChallenge(alloc *StorageAllocation,
 	blobAlloc.Stats.OpenChallenges++
 	blobAlloc.Stats.TotalChallenges++
 
-	if err := alloc.save(balances, sc.ID); err != nil {
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+	if err := sa.save(balances, sc.ID); err != nil {
 		return common.NewErrorf("add_challenge",
 			"error storing allocation: %v", err)
 	}
-
-	// balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationChallenges, alloc.ID, alloc.buildUpdateChallengeStat())
 
 	beforeEmitAddChallenge(challInfo)
 	return emitAddChallenge(challInfo, lenExpired, balances, alloc.Stats)

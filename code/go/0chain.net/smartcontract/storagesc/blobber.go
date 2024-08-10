@@ -238,7 +238,7 @@ func (sc *StorageSmartContract) updateBlobber(
 		}
 	}
 
-	actErr := cstate.WithActivation(balances, "electra",
+	if actErr := cstate.WithActivation(balances, "electra",
 		func() error {
 			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
@@ -251,8 +251,7 @@ func (sc *StorageSmartContract) updateBlobber(
 				b.IsRestricted = updateBlobber.IsRestricted
 				return nil
 			})
-		})
-	if actErr != nil {
+		}); actErr != nil {
 		return fmt.Errorf("error with activation: %v", actErr)
 	}
 
@@ -574,12 +573,14 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 	}
 
 	// move tokens to blobber's stake pool from client's read pool
-	var alloc *StorageAllocation
-	alloc, err = sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
+	var sa *StorageAllocation
+	sa, err = sc.getAllocation(commitRead.ReadMarker.AllocationID, balances)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't get related allocation: %v", err)
 	}
+
+	alloc := sa.mustBase()
 
 	if commitRead.ReadMarker.Timestamp < alloc.StartTime {
 		return "", common.NewError("commit_blobber_read",
@@ -718,8 +719,13 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't Save blobber: %v", err)
 	}
 
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
+
 	// Save allocation
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(sa.GetKey(sc.ID), sa)
 	if err != nil {
 		return "", common.NewErrorf("commit_blobber_read",
 			"can't Save allocation: %v", err)
@@ -731,7 +737,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 		return "", common.NewError("saving read marker", err.Error())
 	}
 
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, alloc.buildDbUpdates())
+	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocation, alloc.ID, sa.buildDbUpdates(balances))
 
 	err = emitAddOrOverwriteReadMarker(commitRead.ReadMarker, balances, t)
 	if err != nil {
@@ -744,7 +750,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 // commitMoveTokens moves tokens on connection commit (on write marker),
 // if data written (size > 0) -- from write pool to challenge pool, otherwise
 // (delete write marker) from challenge back to write pool
-func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *StorageAllocation,
+func (sc *StorageSmartContract) commitMoveTokens(conf *Config, alloc *storageAllocationBase,
 	size int64, details *BlobberAllocation, wmTime, now common.Timestamp,
 	balances cstate.StateContextI) (currency.Coin, error) {
 
@@ -862,12 +868,26 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid Blobber ID for closing connection. Write marker not for this blobber")
 	}
 
-	alloc, err := sc.getAllocation(commitMarkerBase.AllocationID,
+	sa, err := sc.getAllocation(commitMarkerBase.AllocationID,
 		balances)
 	if err != nil {
 		return "", common.NewError("commit_connection_failed",
 			"can't get allocation: "+err.Error())
 	}
+
+	if actErr := cstate.WithActivation(balances, "electra", func() error { return nil }, func() error {
+		if sa.Entity().GetVersion() == "v2" {
+			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+				return common.NewError("commit_connection_failed",
+					"commit connection not allowed for enterprise enterprise allocation")
+			}
+		}
+		return nil
+	}); actErr != nil {
+		return "", actErr
+	}
+
+	alloc := sa.mustBase()
 
 	if alloc.Owner != commitMarkerBase.ClientID {
 		return "", common.NewError("commit_connection_failed", fmt.Sprintf("write marker has"+
@@ -1098,8 +1118,12 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 	}
 
+	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+		alloc.deepCopy(base)
+		return nil
+	})
 	// Save allocation object
-	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
+	_, err = balances.InsertTrieNode(sa.GetKey(sc.ID), sa)
 	if err != nil {
 		return "", common.NewErrorf("commit_connection_failed",
 			"saving allocation object: %v", err)
@@ -1112,7 +1136,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"saving blobber object: %v", err)
 	}
 
-	emitAddWriteMarker(t, commitConnection.WriteMarker, &StorageAllocation{
+	emitAddWriteMarker(t, commitConnection.WriteMarker, &storageAllocationBase{
 		ID: alloc.ID,
 		Stats: &StorageAllocationStats{
 			UsedSize:  alloc.Stats.UsedSize,
