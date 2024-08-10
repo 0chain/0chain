@@ -458,6 +458,11 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
+			if b.Round == lfb.Round && b.Hash == lfb.Hash {
+				logging.Logger.Info("process block skip - block is latest finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
+				continue
+			}
+
 			if err := c.processBlock(ctx, b); err != nil {
 				logging.Logger.Error("process block failed",
 					zap.Error(err),
