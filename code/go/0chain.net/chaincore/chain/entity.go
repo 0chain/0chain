@@ -458,11 +458,6 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
-			if b.Round == lfb.Round && b.Hash == lfb.Hash {
-				logging.Logger.Info("process block skip - block is latest finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash))
-				continue
-			}
-
 			if err := c.processBlock(ctx, b); err != nil {
 				logging.Logger.Error("process block failed",
 					zap.Error(err),
@@ -485,13 +480,28 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					continue
 				}
 
-				// process previous block
-				if err := c.processBlock(ctx, pb); err != nil {
-					logging.Logger.Error("process block, handle previous block failed",
-						zap.Int64("round", pb.Round),
-						zap.String("block", pb.Hash),
-						zap.Error(err))
-					continue
+				// when it's miner and pb is <= lfb, we can set the pb client state from c.StateDB and mark is as computed
+				if !node.Self.IsSharder() && pb.Round <= lfb.Round {
+					ppb, _ := c.GetNotarizedBlock(ctx, pb.PrevHash, pb.Round-1)
+					if ppb == nil {
+						continue
+					}
+
+					logging.Logger.Debug("process block, got prev previous block",
+						zap.Int64("round", ppb.Round), zap.String("block", ppb.Hash))
+					pb.SetPreviousBlock(ppb)
+					// use state DB
+					pb.CreateState(c.GetStateDB(), ppb.ClientStateHash)
+					pb.SetStateStatus(block.StateSuccessful)
+				} else {
+					// process previous block
+					if err := c.processBlock(ctx, pb); err != nil {
+						logging.Logger.Error("process block, handle previous block failed",
+							zap.Int64("round", pb.Round),
+							zap.String("block", pb.Hash),
+							zap.Error(err))
+						continue
+					}
 				}
 
 				// process this block again
