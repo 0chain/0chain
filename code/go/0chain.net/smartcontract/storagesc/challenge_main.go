@@ -7,8 +7,6 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	"0chain.net/smartcontract/partitions"
-	"math/rand"
 )
 
 func (sc *StorageSmartContract) generateChallenge(
@@ -19,18 +17,6 @@ func (sc *StorageSmartContract) generateChallenge(
 	balances cstate.StateContextI,
 ) (err error) {
 	return sc.genChal(t, b, input, conf, balances)
-}
-
-// selectBlobberForChallenge select blobber for challenge in random manner
-func selectBlobberForChallenge(
-	selection challengeBlobberSelection,
-	challengeBlobbersPartition *partitions.Partitions,
-	r *rand.Rand,
-	balances cstate.StateContextI,
-	conf *Config,
-) (string, error) {
-
-	return selectRandomBlobber(selection, challengeBlobbersPartition, r, balances, conf)
 }
 
 func (sc *StorageSmartContract) challengePassed(

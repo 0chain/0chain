@@ -169,38 +169,6 @@ func (msc *MinerSmartContract) DeleteSharder(
 	return "", errors.New("delete sharder is disabled")
 }
 
-func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {
-	pn, err := GetPhaseNode(balances)
-	if err != nil {
-		return err
-	}
-
-	if pn.Phase == Unknown {
-		return common.NewError("failed to delete from view change", "phase is unknown")
-	}
-
-	if pn.Phase == Wait {
-		return common.NewError("failed to delete from view change", "magic block has already been created for next view change")
-	}
-
-	sharderIDs, err := getNodeIDs(balances, ShardersKeepKey)
-	if err != nil {
-		logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB", zap.Error(err))
-		return common.NewErrorf("delete_sharder_from_view_change", "failed to get sharder ids: %v", err)
-	}
-
-	for i, id := range sharderIDs {
-		if id == sn.ID {
-			sharderIDs = append(sharderIDs[:i], sharderIDs[i+1:]...)
-
-			emitDeleteSharder(sn.ID, balances)
-			break
-		}
-	}
-
-	return sharderIDs.save(balances, ShardersKeepKey)
-}
-
 // ------------- local functions ---------------------
 //func verifyAllShardersState(balances cstate.StateContextI, msg string) {
 //	shardersList, err := getAllShardersList(balances)
