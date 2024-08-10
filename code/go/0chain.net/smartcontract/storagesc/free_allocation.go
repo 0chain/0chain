@@ -99,19 +99,9 @@ func (fsa *freeStorageAssigner) validate(
 	value currency.Coin,
 	balances cstate.StateContextI,
 ) error {
-	verified := false
-	var beforeHardfork = func() (e error) {
-		verified, e = verifyFreeAllocationRequest(marker, fsa.PublicKey, balances)
+	verified, e := verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
+	if e != nil {
 		return e
-	}
-	var afterHardfork = func() (e error) {
-		verified, e = verifyFreeAllocationRequestNew(marker, fsa.PublicKey, balances)
-		return e
-	}
-	actErr := cstate.WithActivation(balances, "apollo", beforeHardfork, afterHardfork)
-
-	if actErr != nil {
-		return actErr
 	}
 	if !verified {
 		return fmt.Errorf("failed to verify signature")
@@ -203,19 +193,6 @@ func (ssc *StorageSmartContract) addFreeStorageAssigner(
 	return "", nil
 }
 
-func verifyFreeAllocationRequest(
-	frm freeStorageMarker,
-	publicKey string,
-	balances cstate.StateContextI,
-) (bool, error) {
-	marker := fmt.Sprintf("%s:%f:%d", frm.Recipient, frm.FreeTokens, frm.Nonce)
-	signatureScheme := balances.GetSignatureScheme()
-	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
-		return false, err
-	}
-	return signatureScheme.Verify(frm.Signature, hex.EncodeToString([]byte(marker)))
-}
-
 func verifyFreeAllocationRequestNew(
 	frm freeStorageMarker,
 	publicKey string,
@@ -280,65 +257,24 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 			"marker verification failed: %v", err)
 	}
 
-	var request newAllocationRequest
-	var beforeHardfork = func() (e error) {
-		request = newAllocationRequest{
-			DataShards:           conf.FreeAllocationSettings.DataShards,
-			ParityShards:         conf.FreeAllocationSettings.ParityShards,
-			Size:                 conf.FreeAllocationSettings.Size,
-			Owner:                marker.Recipient,
-			OwnerPublicKey:       inputObj.RecipientPublicKey,
-			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
-			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
-			Blobbers:             inputObj.Blobbers,
-			ThirdPartyExtendable: true,
-		}
+	var blobberAuthTickets []string
 
-		return
-	}
-	var afterHardfork = func() (e error) {
-		request = newAllocationRequest{
-			DataShards:           conf.FreeAllocationSettings.DataShards,
-			ParityShards:         conf.FreeAllocationSettings.ParityShards,
-			Size:                 conf.FreeAllocationSettings.Size,
-			Owner:                marker.Recipient,
-			OwnerPublicKey:       inputObj.RecipientPublicKey,
-			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
-			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
-			Blobbers:             marker.Blobbers,
-			ThirdPartyExtendable: true,
-		}
-
-		return
+	request := newAllocationRequest{
+		DataShards:           conf.FreeAllocationSettings.DataShards,
+		ParityShards:         conf.FreeAllocationSettings.ParityShards,
+		Size:                 conf.FreeAllocationSettings.Size,
+		Owner:                marker.Recipient,
+		OwnerPublicKey:       inputObj.RecipientPublicKey,
+		ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
+		WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
+		Blobbers:             marker.Blobbers,
+		ThirdPartyExtendable: true,
 	}
 
-	actErr := cstate.WithActivation(balances, "artemis", func() error {
-		err := cstate.WithActivation(balances, "apollo", beforeHardfork, afterHardfork)
-		return err
-	}, func() error {
-		var blobberAuthTickets []string
-
-		request = newAllocationRequest{
-			DataShards:           conf.FreeAllocationSettings.DataShards,
-			ParityShards:         conf.FreeAllocationSettings.ParityShards,
-			Size:                 conf.FreeAllocationSettings.Size,
-			Owner:                marker.Recipient,
-			OwnerPublicKey:       inputObj.RecipientPublicKey,
-			ReadPriceRange:       conf.FreeAllocationSettings.ReadPriceRange,
-			WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
-			Blobbers:             marker.Blobbers,
-			ThirdPartyExtendable: true,
-		}
-
-		for range marker.Blobbers {
-			blobberAuthTickets = append(blobberAuthTickets, "")
-		}
-		request.BlobberAuthTickets = blobberAuthTickets
-		return nil
-	})
-	if actErr != nil {
-		return "", actErr
+	for range marker.Blobbers {
+		blobberAuthTickets = append(blobberAuthTickets, "")
 	}
+	request.BlobberAuthTickets = blobberAuthTickets
 
 	arBytes, err := request.encode()
 	if err != nil {

@@ -250,18 +250,12 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		request.OwnerPublicKey = txn.PublicKey
 	}
 
-	actErr := chainstate.WithActivation(balances, "artemis", func() error { return nil }, func() error {
-		if len(request.BlobberAuthTickets) < len(request.Blobbers) {
-			return common.NewErrorf("allocation_creation_failed", "blobber_auth_tickets are less than blobbers")
-		}
+	if len(request.BlobberAuthTickets) < len(request.Blobbers) {
+		return "", common.NewErrorf("allocation_creation_failed", "blobber_auth_tickets are less than blobbers")
+	}
 
-		if len(request.BlobberAuthTickets) > len(request.Blobbers) {
-			request.BlobberAuthTickets = request.BlobberAuthTickets[:len(request.Blobbers)]
-		}
-		return nil
-	})
-	if actErr != nil {
-		return "", actErr
+	if len(request.BlobberAuthTickets) > len(request.Blobbers) {
+		request.BlobberAuthTickets = request.BlobberAuthTickets[:len(request.Blobbers)]
 	}
 
 	blobbers, err := getBlobbersByIDs(request.Blobbers, balances)
@@ -1521,30 +1515,23 @@ func (sc *StorageSmartContract) finishAllocation(
 				"saving blobber "+d.BlobberID+": "+err.Error())
 		}
 
-		err = chainstate.WithActivation(balances, "apollo", func() error { return nil }, func() error {
-			blobberStake, err := sps[i].stake()
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't get stake of "+d.BlobberID+": "+err.Error())
-			}
-
-			b := blobber.mustBase()
-			sd, err := maths.ConvertToUint64(b.SavedData)
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't convert saved data of "+d.BlobberID+": "+err.Error())
-			}
-
-			err = PartitionsChallengeReadyBlobberUpdate(balances, b.ID, blobberStake, sd)
-			if err != nil {
-				return common.NewError("fini_alloc_failed",
-					"can't update blobber "+d.BlobberID+": "+err.Error())
-			}
-
-			return nil
-		})
+		blobberStake, err := sps[i].stake()
 		if err != nil {
-			return err
+			return common.NewError("fini_alloc_failed",
+				"can't get stake of "+d.BlobberID+": "+err.Error())
+		}
+
+		b := blobber.mustBase()
+		sd, err := maths.ConvertToUint64(b.SavedData)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't convert saved data of "+d.BlobberID+": "+err.Error())
+		}
+
+		err = PartitionsChallengeReadyBlobberUpdate(balances, b.ID, blobberStake, sd)
+		if err != nil {
+			return common.NewError("fini_alloc_failed",
+				"can't update blobber "+d.BlobberID+": "+err.Error())
 		}
 
 		// Update saved data on events_db

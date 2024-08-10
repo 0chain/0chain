@@ -138,43 +138,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	actErr := cstate.WithActivation(balances, "ares", func() error {
-		return nil
-	}, func() error {
-		return errors.New("delete miner is disabled")
-	})
-	if actErr != nil {
-		return "", actErr
-	}
-
-	var err error
-	var deleteMiner = NewMinerNode()
-	if err = deleteMiner.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delete_miner",
-			"decoding request: %v", err)
-	}
-
-	var mn *MinerNode
-	mn, err = getMinerNode(deleteMiner.ID, balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		mn = NewMinerNode()
-		mn.ID = deleteMiner.ID
-	default:
-		return "", common.NewError("delete_miner", err.Error())
-	}
-
-	updatedMn, err := msc.deleteNode(gn, mn, balances)
-	if err != nil {
-		return "", common.NewError("delete_miner", err.Error())
-	}
-
-	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
-		return "", common.NewError("delete_miner", err.Error())
-	}
-
-	return "", nil
+	return "", errors.New("delete miner is disabled")
 }
 
 func (msc *MinerSmartContract) deleteNode(

@@ -210,7 +210,7 @@ func TestSelectBlobbers(t *testing.T) {
 			}
 
 			size := int64(sa.DataShards + sa.ParityShards)
-			require.EqualValues(t, int64(sa.Size+size-1)/size, outSize)
+			require.EqualValues(t, (sa.Size+size-1)/size, outSize)
 
 			for _, blobber := range outBlobbers {
 				bb := blobber.mustBase()
@@ -852,6 +852,38 @@ func TestExtendAllocation(t *testing.T) {
 				//mock.AssertExpectationsForObjects(t, balances)
 			}
 		})
+	}
+}
+
+func enableHardForks(t *testing.T, tb chainState.StateContextI) {
+	h := chainState.NewHardFork("apollo", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("ares", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("artemis", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("athena", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("demeter", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = chainState.NewHardFork("electra", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
 	}
 }
 
