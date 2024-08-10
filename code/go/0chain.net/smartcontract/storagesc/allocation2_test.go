@@ -1,6 +1,7 @@
 package storagesc
 
 import (
+	"0chain.net/core/util/entitywrapper"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -251,6 +252,19 @@ func TestCancelAllocationRequest(t *testing.T) {
 	t.Run("cancel allocation", func(t *testing.T) {
 		err := testCancelAllocation(t, sa, *blobbers, blobberStakePools,
 			challengePoolBalance, challenges, ctx, now)
+		require.NoError(t, err)
+	})
+
+	t.Run("Cancel Enterprise allocation", func(t *testing.T) {
+		var enterpriseAllocation = sa
+		enterpriseAllocation.Update(&storageAllocationV2{}, func(e entitywrapper.EntityI) error {
+			b := e.(*storageAllocationV2)
+			b.IsEnterprise = new(bool)
+			*b.IsEnterprise = true
+			return nil
+		})
+
+		err := testCancelEnterpriseAllocation(t, enterpriseAllocation, *blobbers, blobberStakePools, now+common.Timestamp(360*time.Hour/1e9), ctx)
 		require.NoError(t, err)
 	})
 
@@ -608,6 +622,19 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	t.Run("finalize allocation", func(t *testing.T) {
 		err := testFinalizeAllocation(t, sa, *blobbers, blobberStakePools, challengePoolBalance, allocation.Expiration, challenges, ctx)
+		require.NoError(t, err)
+	})
+
+	t.Run("finalize enterprise allocation", func(t *testing.T) {
+		var enterpriseAllocation = sa
+		enterpriseAllocation.Update(&storageAllocationV2{}, func(e entitywrapper.EntityI) error {
+			b := e.(*storageAllocationV2)
+			b.IsEnterprise = new(bool)
+			*b.IsEnterprise = true
+			return nil
+		})
+
+		err := testFinalizeEnterpriseAllocation(t, enterpriseAllocation, *blobbers, blobberStakePools, enterpriseAllocation.mustBase().Expiration, ctx)
 		require.NoError(t, err)
 	})
 
