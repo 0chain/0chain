@@ -263,7 +263,7 @@ jobs:
           echo "TENDERLY_VIRTUAL_TESTNET_RPC_ID=$(echo '${{ env.TENDERLY_CREATION_INFO }}' | jq -r '.container.connectivityConfig.endpoints[0].id')" >> $GITHUB_ENV
 
       - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@mixed/sharder-images
+        uses: 0chain/actions/deploy-0chain@master
         with:
           miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
           sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
@@ -278,7 +278,7 @@ jobs:
           graphnode_ethereum_node_url: https://virtual.mainnet.rpc.tenderly.co/${{ env.TENDERLY_VIRTUAL_TESTNET_RPC_ID }}
 
       - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@mixed/sharder-images
+        uses: 0chain/actions/run-system-tests@master
         with:
           repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
           network: ${{ env.NETWORK_URL }}
