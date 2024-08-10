@@ -842,10 +842,7 @@ type challengeOutput struct {
 	challInfo        *StorageChallengeResponse
 }
 
-type challengeBlobberSelection int
-
 func (sc *StorageSmartContract) populateGenerateChallenge(
-	challengeBlobbersPartition *partitions.Partitions,
 	partsWeight *blobberWeightPartitionsWrap,
 	seed int64,
 	validators *partitions.Partitions,
@@ -1207,7 +1204,6 @@ func (sc *StorageSmartContract) genChal(
 	}
 
 	result, err := sc.populateGenerateChallenge(
-		challengeReadyParts,
 		partsWeight,
 		int64(seedSource),
 		validators,
