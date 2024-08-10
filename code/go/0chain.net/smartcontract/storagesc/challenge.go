@@ -1357,7 +1357,7 @@ func (sc *StorageSmartContract) addChallenge(sa *StorageAllocation,
 	blobAlloc.Stats.OpenChallenges++
 	blobAlloc.Stats.TotalChallenges++
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
 	})

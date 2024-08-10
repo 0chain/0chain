@@ -719,7 +719,7 @@ func (sc *StorageSmartContract) commitBlobberRead(t *transaction.Transaction,
 			"can't Save blobber: %v", err)
 	}
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
 	})
@@ -1118,7 +1118,7 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 		}
 	}
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
 	})
