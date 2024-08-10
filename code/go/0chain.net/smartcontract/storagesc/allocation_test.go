@@ -1,15 +1,16 @@
 package storagesc
 
 import (
-	"0chain.net/core/util/entitywrapper"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/google/uuid"
 	"math"
 	"strconv"
 	"testing"
 	"time"
+
+	"0chain.net/core/util/entitywrapper"
+	"github.com/google/uuid"
 
 	"0chain.net/chaincore/tokenpool"
 
@@ -2322,6 +2323,91 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.Size = afterAllocBase.Size
 		for _, ba := range expectedAlloc.BlobberAllocs {
 			ba.Size += uar.Size / int64(afterAllocBase.DataShards)
+		}
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
+	})
+
+	t.Run("Upgrade size in unused allocation with price variations should work", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
+			allocID               = beforeAlloc.ID
+		)
+
+		var totalWritePrice currency.Coin
+		var writePriceBefore currency.Coin
+
+		increasePriceCount := 8 // Number of blobbers to increase the price for
+		decreasePriceCount := 5 // Number of blobbers to decrease the price for
+		// increaseMultiplier := 2   // Multiplier to increase the price by
+		// decreaseMultiplier := 0.5 // Multiplier to decrease the price by
+
+		// Considering first 5 blobbers increased price to 2x and next 2 blobbers decreased price to 0.5x
+		for i, blobber := range blobbers {
+			blobberNode, err := ssc.getBlobber(blobber.id, balances)
+			require.NoError(t, err)
+			writePriceBefore += blobberNode.mustBase().Terms.WritePrice
+
+			if i < increasePriceCount {
+				// Increase price to 2x for first 5 blobbers
+				blobberNode.mustUpdateBase(func(b *storageNodeBase) error {
+					b.Terms.WritePrice = b.Terms.WritePrice * 2
+					return nil
+				})
+			} else if i >= increasePriceCount && i < decreasePriceCount {
+				// Decrease price to 0.5x for next 2 blobbers
+				blobberNode.mustUpdateBase(func(b *storageNodeBase) error {
+					b.Terms.WritePrice = b.Terms.WritePrice / 2
+					return nil
+				})
+			}
+			_, err = updateBlobber(t, blobberNode, 0, tp, ssc, balances)
+			require.NoError(t, err)
+			totalWritePrice += blobberNode.mustBase().Terms.WritePrice
+		}
+
+		// upgrade
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.Size = 10 * GB
+		tp += int64(360 * time.Hour / 1e9)
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, (totalWritePrice*2)-writePriceBefore, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+
+		assert.Equal(t, int64(20*GB), afterAllocBase.Size, "Allocation size should be increased")
+		require.Equal(t, int(totalWritePrice*2), int(afterAllocBase.WritePool), "Write pool should be updated")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.Expiration = afterAllocBase.Expiration
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		expectedAlloc.Size = afterAllocBase.Size
+		for _, ba := range expectedAlloc.BlobberAllocs {
+			ba.Size += uar.Size / int64(afterAllocBase.DataShards)
+			// Correct the WritePrice for each blobber based on the logic applied earlier
+			for _, blobber := range blobbers {
+				blobberNode, err := ssc.getBlobber(blobber.id, balances)
+				require.NoError(t, err)
+				if ba.BlobberID == blobber.id {
+					ba.Terms.WritePrice = blobberNode.mustBase().Terms.WritePrice
+				}
+			}
 		}
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
