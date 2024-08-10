@@ -308,6 +308,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 
 		// triggered after sync process is started
 		stuckCheckTimer = time.NewTimer(10 * time.Second)
+		isStuck         bool
 		plfb            = c.GetLatestFinalizedBlock()
 	)
 
@@ -327,6 +328,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			logging.Logger.Debug("process block, detected stuck, trigger sync",
 				zap.Int64("round", c.GetCurrentRound()),
 				zap.Int64("lfb", c.GetLatestFinalizedBlock().Round))
+			isStuck = true
 			stuckCheckTimer.Reset(stuckDuration)
 			// trigger sync
 			syncBlocksTimer.Reset(0)
@@ -343,6 +345,13 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			if cr < lfb.Round {
 				c.SetCurrentRound(lfb.Round)
 				cr = lfb.Round
+			}
+
+			if isStuck {
+				cr = lfb.Round + 1
+				logging.Logger.Debug("process block, detected stuck, start sync from lfb+1",
+					zap.Int64("lfb", lfb.Round),
+					zap.Int64("from round", cr))
 			}
 
 			if lfb.Round+aheadN <= cr {
@@ -413,6 +422,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					if lfb.Round > plfb.Round {
 						plfb = lfb
 						stuckCheckTimer.Reset(10 * time.Second)
+						isStuck = false
 						// continue
 					}
 				}
