@@ -253,7 +253,7 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 		wg.Add(1)
 		go func(idx int64) {
 			defer wg.Done()
-			r := startRound + idx + 1
+			r := startRound + idx
 			var cancel func()
 			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 			defer cancel()
@@ -400,9 +400,9 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			logging.Logger.Debug("process block, sync blocks",
-				zap.Int64("start round", cr+1),
+				zap.Int64("start round", cr),
 				zap.Int64("end round", cr+reqNum+1))
-			go c.requestBlocks(ctx, cr, reqNum)
+			go c.requestBlocks(ctx, cr, reqNum+1)
 		default:
 			cr := c.GetCurrentRound()
 			lfb := c.GetLatestFinalizedBlock()
