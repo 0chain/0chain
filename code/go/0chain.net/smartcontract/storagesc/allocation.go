@@ -412,13 +412,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		m.tick("create_challenge_pool")
 	}
 
-	if err := sa.mustUpdateBase(func(sab *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(sab *storageAllocationBase) error {
 		alloc.deepCopy(sab)
 		return nil
-	}); err != nil {
-		logging.Logger.Error("new_allocation_request_failed: error updating storage allocation", zap.Error(err))
-		return "", common.NewErrorf("allocation_creation_failed", "updating storage allocation: %v", err)
-	}
+	})
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
@@ -513,7 +510,7 @@ func setupNewAllocation(
 
 	saBase.StartTime = now
 
-	sa.mustUpdateBase(func(sab *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(sab *storageAllocationBase) error {
 		saBase.deepCopy(sab)
 		return nil
 	})
@@ -1207,12 +1204,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// lock tokens if this transaction provides them
 
-	if err := sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
-	}); err != nil {
-		return "", common.NewError("allocation_updating_failed", err.Error())
-	}
+	})
 
 	err = sa.saveUpdatedAllocation(blobbers, balances)
 	if err != nil {
@@ -1486,7 +1481,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewErrorf("alloc_cancel_failed", "could not delete allocation: %v", err)
 	}
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
 	})
@@ -1607,7 +1602,7 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 
 	alloc.Finalized = true
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
 	})
