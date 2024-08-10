@@ -66,7 +66,7 @@ func addMockAllocation(
 	id := getMockAllocationId(i)
 	sa := &StorageAllocation{}
 	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
-		base = &storageAllocationBase{
+		alloc := &storageAllocationBase{
 			ID:              id,
 			DataShards:      viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
 			ParityShards:    viper.GetInt(sc.NumBlobbersPerAllocation) / 2,
@@ -91,6 +91,8 @@ func addMockAllocation(
 			Finalized: i == mockFinalizedAllocationIndex,
 			WritePool: 2e10,
 		}
+
+		alloc.deepCopy(base)
 		return nil
 	})
 

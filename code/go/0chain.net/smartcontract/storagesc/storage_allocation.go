@@ -46,7 +46,7 @@ func (sa *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	*sa = StorageAllocation(*d)
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		base.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 		for _, blobberAllocation := range base.BlobberAllocs {
 			base.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
@@ -104,7 +104,7 @@ func (sa *StorageAllocation) Decode(input []byte) error {
 		return err
 	}
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		base.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 		for _, blobberAllocation := range base.BlobberAllocs {
 			base.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
