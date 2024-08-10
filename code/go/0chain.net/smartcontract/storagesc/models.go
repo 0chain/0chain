@@ -1358,8 +1358,7 @@ func (sa *StorageAllocation) replaceBlobber(blobberID string, sc *StorageSmartCo
 			blobberIsKilled := false
 			blobber, e := sc.getBlobber(d.BlobberID, balances)
 			if e != nil {
-				return common.NewError("remove_blobber_failed",
-					"can't get blobber "+d.BlobberID+": "+err.Error())
+				return e
 			}
 
 			bb := blobber.mustBase()
