@@ -2337,28 +2337,25 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			allocID               = beforeAlloc.ID
 		)
 
-		var totalWritePrice currency.Coin
+		var totalLockAmount currency.Coin
 		var writePriceBefore currency.Coin
-
-		increasePriceCount := 8 // Number of blobbers to increase the price for
-		decreasePriceCount := 5 // Number of blobbers to decrease the price for
-		// increaseMultiplier := 2   // Multiplier to increase the price by
-		// decreaseMultiplier := 0.5 // Multiplier to decrease the price by
+		var sizePerBlobber = currency.Coin(sizeInGB(beforeAlloc.Size / int64(beforeAlloc.DataShards)))
 
 		// Considering first 5 blobbers increased price to 2x and next 2 blobbers decreased price to 0.5x
+		increasePriceCount := 5 // Number of blobbers to increase the price for
+		decreasePriceCount := 2 // Number of blobbers to decrease the price for
+
 		for i, blobber := range blobbers {
 			blobberNode, err := ssc.getBlobber(blobber.id, balances)
 			require.NoError(t, err)
 			writePriceBefore += blobberNode.mustBase().Terms.WritePrice
 
 			if i < increasePriceCount {
-				// Increase price to 2x for first 5 blobbers
 				blobberNode.mustUpdateBase(func(b *storageNodeBase) error {
 					b.Terms.WritePrice = b.Terms.WritePrice * 2
 					return nil
 				})
 			} else if i >= increasePriceCount && i < decreasePriceCount {
-				// Decrease price to 0.5x for next 2 blobbers
 				blobberNode.mustUpdateBase(func(b *storageNodeBase) error {
 					b.Terms.WritePrice = b.Terms.WritePrice / 2
 					return nil
@@ -2366,16 +2363,21 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			}
 			_, err = updateBlobber(t, blobberNode, 0, tp, ssc, balances)
 			require.NoError(t, err)
-			totalWritePrice += blobberNode.mustBase().Terms.WritePrice
+			totalLockAmount += (sizePerBlobber * blobberNode.mustBase().Terms.WritePrice)
 		}
 
 		// upgrade
 		var uar updateAllocationRequest
 		uar.ID = allocID
-		uar.Size = 10 * GB
+		uar.Size = 100 * GB
 		tp += int64(360 * time.Hour / 1e9)
 
-		resp, err := uar.callUpdateAllocReq(t, client.id, (totalWritePrice*2)-writePriceBefore, tp, ssc, balances)
+		var sizeMultiplier = float64(uar.Size+beforeAlloc.Size) / float64(beforeAlloc.Size)
+		var totalExpectedLockAmount = currency.Coin(float64(totalLockAmount) * sizeMultiplier)
+		var totalUpgradeLockAmount = currency.Coin((float64(totalLockAmount) * sizeMultiplier) - float64(writePriceBefore))
+		var totalExpectedSize = uar.Size + beforeAlloc.Size
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, totalUpgradeLockAmount, tp, ssc, balances)
 		require.NoError(t, err)
 
 		var deco StorageAllocation
@@ -2389,8 +2391,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 
-		assert.Equal(t, int64(20*GB), afterAllocBase.Size, "Allocation size should be increased")
-		require.Equal(t, int(totalWritePrice*2), int(afterAllocBase.WritePool), "Write pool should be updated")
+		assert.Equal(t, int64((totalExpectedSize)), afterAllocBase.Size, "Allocation size should be increased")
+		require.Equal(t, int(totalExpectedLockAmount), int(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
 
 		expectedAlloc := beforeAlloc
