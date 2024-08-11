@@ -2537,20 +2537,12 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		cp, err := ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		//debug
-		fmt.Println(sizeMultiplier)
-		fmt.Println(totalExpectedLockAmount)
-		fmt.Println(totalUpgradeLockAmount)
-		fmt.Println(totalLockAmount)
-		fmt.Println(cp.Balance)
-		fmt.Println(afterAllocBase.WritePool)
-
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 		assert.Equal(t, int64((totalExpectedSize)), afterAllocBase.Size, "Allocation size should be increased")
 		require.Equal(t, int(totalExpectedLockAmount-cp.Balance), int(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
-		require.Equal(t, 170*x10, int(cp.Balance), "Write pool should be updated")
+		require.Equal(t, int((totalExpectedLockAmount+beforeAlloc.MovedToChallenge)/2), int(cp.Balance), "Write pool should be updated")
 
 		expectedAlloc := beforeAlloc
 		expectedAlloc.Tx = afterAllocBase.Tx
@@ -2559,8 +2551,14 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.Size = afterAllocBase.Size
 		expectedAlloc.MovedToChallenge = afterAllocBase.MovedToChallenge
 
-		for _, ba := range expectedAlloc.BlobberAllocs {
-			ba.ChallengePoolIntegralValue += (ba.ChallengePoolIntegralValue / 2)
+		for i, ba := range expectedAlloc.BlobberAllocs {
+			if i < increasePriceCount {
+				ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue * 2) + (ba.ChallengePoolIntegralValue / 2)
+			} else if i >= increasePriceCount && i < increasePriceCount+decreasePriceCount {
+				ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue)
+			} else {
+				ba.ChallengePoolIntegralValue += (ba.ChallengePoolIntegralValue / 2)
+			}
 			ba.Size += uar.Size / int64(afterAllocBase.DataShards)
 			// Correct the WritePrice for each blobber based on the logic applied earlier
 			for _, blobber := range blobbers {
