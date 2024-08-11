@@ -58,8 +58,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"unexpected error: %v", err)
 	}
 
-	logging.Logger.Info("Jayash add_allocation", zap.Any("alloc_id", alloc), zap.Any("alloc_base", alloc.mustBase()))
-
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
