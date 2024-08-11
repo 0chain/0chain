@@ -40,6 +40,9 @@ func aggregateProviderRewards(spus []dbs.StakePoolReward) (*providerRewardsDeleg
 			}
 			dpRewardsMap[sp.ID][poolId] = dpRewardsMap[sp.ID][poolId] + spus[i].DelegateRewards[poolId]
 			totalRewardsMap[sp.ID] = totalRewardsMap[sp.ID] + spus[i].DelegateRewards[poolId]
+
+			logging.Logger.Info("Jayash aggregateProviderRewards",
+				zap.Any("sp.ID", sp.ID), zap.Any("poolId", poolId), zap.Any("dpRewardsMap", dpRewardsMap[sp.ID][poolId]))
 		}
 	}
 
@@ -112,6 +115,8 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		return nil
 	}
 
+	loggingDebugID := fmt.Sprintf("Jayash event db - reward update round %v", round)
+
 	ts := time.Now()
 	rewards, err := aggregateProviderRewards(spus)
 	if err != nil {
@@ -131,7 +136,7 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		}
 	}()
 
-	logging.Logger.Debug("reward provider", zap.Any("rewards", rewards))
+	logging.Logger.Info(loggingDebugID+"1", zap.Any("rewards", rewards.totalRewards), zap.Any("rewards", rewards.rewards), zap.Any("delegatePools", rewards.delegatePools), zap.Any("spus", spus))
 
 	if len(rewards.rewards) > 0 || len(rewards.totalRewards) > 0 {
 		if err := edb.rewardProviders(rewards.rewards, rewards.totalRewards, round); err != nil {
@@ -147,8 +152,8 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 	}
 
 	if len(rewards.delegatePools) > 0 {
-		logging.Logger.Debug("reward provider pools", zap.Any("rewards", rewards))
-		if err := edb.rewardProviderDelegates(rewards.delegatePools, round); err != nil {
+		logging.Logger.Info(loggingDebugID+"2", zap.Any("delegatePools", rewards.delegatePools))
+		if err := edb.rewardProviderDelegates(rewards.delegatePools, round, loggingDebugID); err != nil {
 			return fmt.Errorf("could not rewards delegate pool: %v", err)
 		}
 	}
@@ -157,6 +162,8 @@ func (edb *EventDb) rewardUpdate(spus []dbs.StakePoolReward, round int64) error 
 		if err := edb.insertProviderReward(spus, round); err != nil {
 			return err
 		}
+
+		logging.Logger.Info(loggingDebugID+"4", zap.Any("spus", spus))
 		if err := edb.insertDelegateReward(spus, round); err != nil {
 			return err
 		}
@@ -237,7 +244,7 @@ func (edb *EventDb) rewardProviders(
 		Exec(edb).Error
 }
 
-func (edb *EventDb) rewardProviderDelegates(dps map[string]map[string]currency.Coin, round int64) error {
+func (edb *EventDb) rewardProviderDelegates(dps map[string]map[string]currency.Coin, round int64, loggingDebugID string) error {
 	var poolIds []string
 	var providerIds []string
 	var reward []uint64
@@ -250,6 +257,8 @@ func (edb *EventDb) rewardProviderDelegates(dps map[string]map[string]currency.C
 			lastUpdated = append(lastUpdated, uint64(round))
 		}
 	}
+
+	logging.Logger.Info(loggingDebugID+"3", zap.Any("poolIds", poolIds), zap.Any("providerIds", providerIds), zap.Any("reward", reward), zap.Any("lastUpdated", lastUpdated))
 
 	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
 		AddCompositeId("provider_id", providerIds).

@@ -274,7 +274,7 @@ func TestEventDb_rewardProviderDelegates(t *testing.T) {
 			"miner two": {"pool 2": 11},
 			"mienr two": {"pool 1": 17},
 			"miner one": {"pool 1": 20},
-		}, 7)
+		}, 7, "")
 	require.NoError(t, err)
 
 	var dps []DelegatePool
