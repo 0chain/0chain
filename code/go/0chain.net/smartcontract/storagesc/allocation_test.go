@@ -2369,7 +2369,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		// upgrade
 		var uar updateAllocationRequest
 		uar.ID = allocID
-		uar.Size = 100 * GB
+		uar.Size = 10 * GB
 		tp += int64(360 * time.Hour / 1e9)
 
 		var sizeMultiplier = float64(uar.Size+beforeAlloc.Size) / float64(beforeAlloc.Size)
