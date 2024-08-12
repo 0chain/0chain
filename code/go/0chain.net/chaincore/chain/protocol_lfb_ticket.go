@@ -394,6 +394,8 @@ func (c *Chain) StartLFMBWorker(ctx context.Context) {
 			lfmb = v.block
 			clone = v.clone
 			logging.Logger.Debug("update LFMB", zap.Int64("round", lfmb.Round))
+			// Update local DKG and MB in DB
+
 			v.reply <- struct{}{}
 		case <-ctx.Done():
 			return

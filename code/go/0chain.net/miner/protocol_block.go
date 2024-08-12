@@ -398,6 +398,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	logging.Logger.Debug("verifySmartContracts finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
 	cur = time.Now()
+	// TODO: verify magic block in MPT
 	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
 		return
 	}

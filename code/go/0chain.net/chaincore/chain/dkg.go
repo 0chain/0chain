@@ -26,10 +26,6 @@ func (c *Chain) GetDKG(round int64) *bls.DKG {
 	return entity.(*bls.DKG)
 }
 
-func (c *Chain) GetDKGSummary(ctx context.Context, id string) (*bls.DKGSummary, error) {
-	return LoadDKGSummary(context.Background(), id)
-}
-
 // SetDKG sets DKG for the start round
 func (c *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
 	c.roundDkgMu.Lock()

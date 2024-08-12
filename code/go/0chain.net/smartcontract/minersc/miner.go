@@ -215,6 +215,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 		// load from local store and save to MPT
 		dkgSummary, err = balances.LoadDKGSummary(lfmb.MagicBlockNumber)
 		if err != nil {
+			logging.Logger.Error("delete miner, could not load dkg summary", zap.Error(err))
 			return "", common.NewError("delete_miner could not load dkg summary", err.Error())
 		}
 	default:
@@ -224,8 +225,13 @@ func (msc *MinerSmartContract) DeleteMiner(
 	delete(dkgSummary.SecretShares, computeBlsID(mn.GetKey()))
 	dkgSummary.StartingRound = cloneMB.StartingRound
 	if err := msc.saveDKGSummary(balances, dkgSummary, cloneMB.MagicBlockNumber); err != nil {
+		logging.Logger.Error("delete miner, could not save dkg summary", zap.Error(err))
 		return "", common.NewError("delete_miner could not save dkg summary", err.Error())
 	}
+
+	logging.Logger.Info("delete miner, success updated MB and DKG summary",
+		zap.Int64("MB starting round", cloneMB.StartingRound),
+		zap.Int64("DKG summary starting round", dkgSummary.StartingRound))
 
 	// newDKG, err := chain.NewDKGWithMagicBlock(cloneMB, prevDKGSummary)
 	// if err != nil {
