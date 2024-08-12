@@ -240,6 +240,10 @@ type Chain struct {
 	roundDkgMu sync.RWMutex
 }
 
+func (c *Chain) GetRoundDkg() round.RoundStorage {
+	return c.roundDkg
+}
+
 func (c *Chain) GetNotifyMoveToNextRoundC() chan round.RoundI {
 	return c.notifyMoveToNextRoundC
 }

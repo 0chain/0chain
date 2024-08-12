@@ -133,10 +133,10 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
-	muDKG               *sync.RWMutex
-	roundDkg            round.RoundStorage
-	discoverClients     bool
-	started             uint32
+	// muDKG               *sync.RWMutex
+	// roundDkg            round.RoundStorage
+	discoverClients bool
+	started         uint32
 
 	// view change process control
 	viewChangeProcess
@@ -409,7 +409,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	mc.SetLatestFinalizedMagicBlock(b)
 
 	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
-		mc.roundDkg, mc.MagicBlockStorage)
+		mc.GetRoundDkg(), mc.MagicBlockStorage)
 
 	// set DKG if this node is miner of new MB (it have to have the DKG)
 	var selfNodeKey = node.Self.Underlying().GetKey()

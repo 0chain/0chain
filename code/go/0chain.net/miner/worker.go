@@ -28,7 +28,7 @@ func SetupWorkers(ctx context.Context) {
 
 	go mc.SyncLFBStateWorker(ctx)
 
-	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
+	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.GetRoundDkg())
 	go mc.UpdateMagicBlockWorker(ctx)
 	//TODO uncomment it, atm it breaks executing faucet pour somehow
 	go mc.MinerHealthCheck(ctx)
@@ -232,7 +232,7 @@ func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 	pruneBelowCountDKG := viper.GetInt("server_chain.round_dkg_storage.prune_below_count")
 	return func(storage round.RoundStorage) int {
 		switch storage {
-		case mc.roundDkg:
+		case mc.GetRoundDkg():
 			return pruneBelowCountDKG
 		case mc.MagicBlockStorage:
 			return pruneBelowCountMB
