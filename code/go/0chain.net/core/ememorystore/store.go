@@ -7,7 +7,9 @@ import (
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/logging"
 	"github.com/linxGnu/grocksdb"
+	"go.uber.org/zap"
 )
 
 var storageAPI = &Store{}
@@ -45,7 +47,11 @@ func (ems *Store) Read(ctx context.Context, key datastore.Key, entity datastore.
 		}
 	}
 	defer data.Free()
-	return datastore.FromJSON(data.Data(), entity)
+	err = datastore.FromJSON(data.Data(), entity)
+	if err != nil {
+		logging.Logger.Error("bad data in store", zap.ByteString("string", data.Data()))
+	}
+	return err
 }
 
 func (ems *Store) Write(ctx context.Context, entity datastore.Entity) error {
@@ -123,7 +129,7 @@ func (ems *Store) MultiDelete(ctx context.Context, entityMetadata datastore.Enti
 // func (ems *Store) WBWrite(ctx context.Context, emd datastore.EntityMetadata, batch *AtomicWriteBatch) error {
 // 	// Build []byte key and value
 // 	c := GetEntityCon(ctx, emd)
-// 	err := 
+// 	err :=
 // }
 
 func (ems *Store) Merge(ctx context.Context, entity datastore.Entity) error {
