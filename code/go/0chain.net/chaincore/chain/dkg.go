@@ -67,13 +67,14 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
 				return nil, err
 			}
-		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
-			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
-					return nil, err
-				}
-			}
 		}
+		//  else if v, ok := mb.GetShareOrSigns().Get(k); ok {
+		// 	if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
+		// 		if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
+		// 			return nil, err
+		// 		}
+		// 	}
+		// }
 	}
 
 	if !newDKG.HasAllSecretShares() {

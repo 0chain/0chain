@@ -123,7 +123,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		return err
 	}
 
-	if err = mc.SetDKG(newDKG, mb.StartingRound); err != nil {
+	if err = mc.SetDKG(newDKG); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
 		return // error
 	}
