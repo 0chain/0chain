@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/smartcontract/dbs/event"
 
 	metrics "github.com/rcrowley/go-metrics"
@@ -391,8 +392,13 @@ func (c *Chain) NewStateContext(
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
 		c.GetLatestFinalizedBlock,
+		c.getDKGSummary,
 		eventDb,
 	)
+}
+
+func (c *Chain) getDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
+	return LoadDKGSummary(common.GetRootContext(), magicBlockNum)
 }
 
 func (c *Chain) updateState(ctx context.Context,

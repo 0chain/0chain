@@ -9,6 +9,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -17,6 +18,10 @@ import (
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
+
+func dkgSummaryKey(magicBlockNumber int64) datastore.Key {
+	return datastore.ToKey(fmt.Sprintf("dkgsummary:%d", magicBlockNumber))
+}
 
 //nolint:unused
 func doesMinerExist(pkey datastore.Key,
@@ -139,6 +144,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 ) (string, error) {
 	// actErr := cstate.WithActivation(balances, "ares", func() error {
 	// 	return nil
+	// }, func() error {
 	// 	return errors.New("delete miner is disabled")
 	// })
 	// if actErr != nil {
@@ -201,12 +207,30 @@ func (msc *MinerSmartContract) DeleteMiner(
 		return "", common.NewError("delete_miner could not update magic block", err.Error())
 	}
 
-	debugMB, err := getMagicBlock(balances)
-	if err != nil {
-		return "", common.NewError("delete_miner could not get magic block", err.Error())
+	// update DKG and Summary
+	dkgSummary, err := msc.getDKGSummary(balances, lfmb.MagicBlockNumber)
+	switch err {
+	case nil:
+	case util.ErrValueNotPresent:
+		// load from local store and save to MPT
+		dkgSummary, err = balances.LoadDKGSummary(lfmb.MagicBlockNumber)
+		if err != nil {
+			return "", common.NewError("delete_miner could not load dkg summary", err.Error())
+		}
+	default:
+		return "", common.NewError("delete_miner could not get dkg summary", err.Error())
 	}
 
-	logging.Logger.Debug("delete miner, get magic block:", zap.Any("miner size", debugMB.Miners.Size()))
+	delete(dkgSummary.SecretShares, computeBlsID(mn.GetKey()))
+	dkgSummary.StartingRound = cloneMB.StartingRound
+	if err := msc.saveDKGSummary(balances, dkgSummary, cloneMB.MagicBlockNumber); err != nil {
+		return "", common.NewError("delete_miner could not save dkg summary", err.Error())
+	}
+
+	// newDKG, err := chain.NewDKGWithMagicBlock(cloneMB, prevDKGSummary)
+	// if err != nil {
+	// 	return "", common.NewError("delete_miner could not create new dkg", err.Error())
+	// }
 
 	gn.ViewChange = cloneMB.StartingRound
 	if err := gn.save(balances); err != nil {
@@ -216,12 +240,31 @@ func (msc *MinerSmartContract) DeleteMiner(
 	return "delete miner successfully", nil
 }
 
+func computeBlsID(key string) string {
+	computeID := bls.ComputeIDdkg(key)
+	return computeID.GetHexString()
+}
+
+func (msc *MinerSmartContract) getDKGSummary(balances cstate.StateContextI, magicBlockNum int64) (*bls.DKGSummary, error) {
+	var summary bls.DKGSummary
+	if err := balances.GetTrieNode(dkgSummaryKey(magicBlockNum), &summary); err != nil {
+		return nil, err
+	}
+
+	return &summary, nil
+}
+
+func (msc *MinerSmartContract) saveDKGSummary(balances cstate.StateContextI, dkgSummary *bls.DKGSummary, magicBlockNum int64) error {
+	_, err := balances.InsertTrieNode(dkgSummaryKey(magicBlockNum), dkgSummary)
+	return err
+}
+
 func (msc *MinerSmartContract) deleteNode(
 	gn *GlobalNode,
 	deleteNode *MinerNode,
 	balances cstate.StateContextI,
 ) (*MinerNode, error) {
-	// var err error
+	var err error
 	deleteNode.Delete = true
 	var nodeType spenum.Provider
 	switch deleteNode.NodeType {
@@ -237,10 +280,10 @@ func (msc *MinerSmartContract) deleteNode(
 		zap.String("node type", nodeType.String()),
 		zap.String("id", deleteNode.ID))
 
-	// err = saveDeleteNodeID(balances, nodeType, deleteNode.ID)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = saveDeleteNodeID(balances, nodeType, deleteNode.ID)
+	if err != nil {
+		return nil, err
+	}
 
 	orderedPoolIds := deleteNode.OrderedPoolIds()
 	for _, key := range orderedPoolIds {
@@ -260,9 +303,9 @@ func (msc *MinerSmartContract) deleteNode(
 		}
 	}
 
-	// if err = deleteNode.save(balances); err != nil {
-	// 	return nil, fmt.Errorf("saving node %v", err.Error())
-	// }
+	if err = deleteNode.save(balances); err != nil {
+		return nil, fmt.Errorf("saving node %v", err.Error())
+	}
 
 	return deleteNode, nil
 }
@@ -270,7 +313,6 @@ func (msc *MinerSmartContract) deleteNode(
 func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
-		logging.Logger.Error("could not get phase node", zap.Error(err))
 		return
 	}
 	if pn.Phase == Unknown {
@@ -280,10 +322,8 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 	if pn.Phase != Wait {
 		var dkgMiners *DKGMinerNodes
 		if dkgMiners, err = getDKGMinersList(balances); err != nil {
-			logging.Logger.Error("delete_miner_from_view_change: Error in getting list from the DB", zap.Error(err))
 			return
 		}
-
 		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
 			delete(dkgMiners.SimpleNodes, mn.ID)
 			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)

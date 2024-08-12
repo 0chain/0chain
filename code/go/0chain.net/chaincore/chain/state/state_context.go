@@ -20,6 +20,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -92,6 +93,7 @@ type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
 	GetMagicBlock(round int64) *block.MagicBlock
+	LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error)
 	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
@@ -129,6 +131,7 @@ type StateContext struct {
 	getLatestFinalizedBlock       func() *block.Block
 	getMagicBlock                 func(round int64) *block.MagicBlock
 	getChainCurrentMagicBlock     func() *block.MagicBlock
+	getDKGSummary                 func(magicBlockNum int64) (*bls.DKGSummary, error)
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
@@ -163,6 +166,7 @@ func NewStateContext(
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
 	getLatestFinalizedBlock func() *block.Block,
+	getDKGSummary func(magicBlockNum int64) (*bls.DKGSummary, error),
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -177,6 +181,7 @@ func NewStateContext(
 		getLatestFinalizedBlock:       getLatestFinalizedBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
+		getDKGSummary:                 getDKGSummary,
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
@@ -200,6 +205,10 @@ func (sc *StateContext) GetState() util.MerklePatriciaTrieI {
 // GetTransaction - get the transaction associated with this context
 func (sc *StateContext) GetTransaction() *transaction.Transaction {
 	return sc.txn
+}
+
+func (sc *StateContext) LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
+	return sc.getDKGSummary(magicBlockNum)
 }
 
 // AddTransfer - add the transfer

@@ -18,7 +18,6 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/config"
 	"0chain.net/core/util/orderbuffer"
-	"0chain.net/miner"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -26,11 +25,11 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-	"github.com/herumi/bls-go-binary/bls"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -236,6 +235,9 @@ type Chain struct {
 	pbMutex                sync.RWMutex
 	notifySyncBlockC       chan struct{}
 	notifyMoveToNextRoundC chan round.RoundI
+
+	roundDkg   round.RoundStorage
+	roundDkgMu sync.RWMutex
 }
 
 func (c *Chain) GetNotifyMoveToNextRoundC() chan round.RoundI {
@@ -1092,6 +1094,8 @@ func Provider() datastore.Entity {
 	c.computeBlockStateC = make(chan struct{}, 1)
 	c.notifySyncBlockC = make(chan struct{}, 1)
 	c.notifyMoveToNextRoundC = make(chan round.RoundI, 1)
+
+	c.roundDkg = round.NewRoundStartingStorage()
 	return c
 }
 
@@ -1200,7 +1204,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	txnStateCache := statecache.NewTransactionCache(blockStateCache)
 	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil, txnStateCache)
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
-	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
+	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
 
 	c.mustInitGBState(initStates, stateCtx)
@@ -2364,17 +2368,6 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	}
 
 	c.SetMagicBlock(newMagicBlock)
-	if node.Self.IsSharder() {
-		return nil
-	}
-
-	if err := miner.StoreMagicBlock(common.GetRootContext(), newMagicBlock); err != nil {
-		logging.Logger.Error("failed to store magic block",
-			zap.String("hash", newMagicBlock.Hash),
-			zap.Int64("round", newMagicBlock.StartingRound),
-			zap.Error(err))
-	}
-
 	return nil
 }
 

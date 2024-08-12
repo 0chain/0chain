@@ -18,7 +18,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
-	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -64,8 +63,6 @@ func SetupMinerChain(c *chain.Chain) {
 	minerChain.ChainConfig = c.ChainConfig
 
 	minerChain.blockMessageChannel = make(chan *BlockMessage, 128)
-	minerChain.muDKG = &sync.RWMutex{}
-	minerChain.roundDkg = round.NewRoundStartingStorage()
 	c.SetFetchedNotarizedBlockHandler(minerChain)
 	c.SetViewChanger(minerChain)
 	c.RoundF = MinerRoundFactory{}
@@ -498,27 +495,6 @@ func mbRoundOffset(rn int64) int64 {
 		return rn // the same
 	}
 	return rn - chain.ViewChangeOffset // MB offset
-}
-
-// GetDKG returns DKG by round number.
-func (mc *Chain) GetDKG(round int64) *bls.DKG {
-
-	round = mbRoundOffset(round)
-
-	mc.muDKG.RLock()
-	defer mc.muDKG.RUnlock()
-	entity := mc.roundDkg.Get(round)
-	if entity == nil {
-		return nil
-	}
-	return entity.(*bls.DKG)
-}
-
-// SetDKG sets DKG for the start round
-func (mc *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
-	mc.muDKG.Lock()
-	defer mc.muDKG.Unlock()
-	return mc.roundDkg.Put(dkg, startingRound)
 }
 
 func (mc *Chain) RejectNotarizedBlock(_ string) bool {
