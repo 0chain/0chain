@@ -30,6 +30,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/build"
 	"0chain.net/core/common"
@@ -421,6 +422,14 @@ func initEntities(workdir string) {
 	sharder.SetupBlockSummaries()
 	sharder.SetupRoundSummaries()
 	setupsc.SetupSmartContracts()
+
+	bls.SetupDKGEntity()
+	bls.SetupDKGSummary(ememoryStorage)
+	bls.SetupDKGDB(workdir)
+	setupsc.SetupSmartContracts()
+
+	block.SetupMagicBlockData(ememoryStorage)
+	block.SetupMagicBlockDataDB(workdir)
 }
 
 func initN2NHandlers(c *sharder.Chain) {
