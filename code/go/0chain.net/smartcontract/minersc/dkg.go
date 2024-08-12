@@ -9,6 +9,7 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
@@ -919,9 +920,77 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 		zap.Int64("starting round", magicBlock.StartingRound),
 		zap.Int("miners num", magicBlock.Miners.Size()))
 	balances.SetMagicBlock(magicBlock)
+
+	// TODO: do with activation
+	dkgSummary, err := msc.getDKGSummary(balances, magicBlock.MagicBlockNumber)
+	if err != nil {
+		logging.Logger.Error("failed to get dkg summary", zap.Error(err))
+		return err
+	}
+
+	dkg, err := newDKGWithMagicBlock(magicBlock, dkgSummary)
+	if err != nil {
+		logging.Logger.Error("failed to create new dkg from MB and summary", zap.Error(err))
+		return err
+	}
+
+	if err := balances.SetDKG(dkg); err != nil {
+		logging.Logger.Error("failed to set dkg", zap.Error(err))
+		return err
+	}
+
+	logging.Logger.Debug("set dkg", zap.Int64("MB starting round", magicBlock.StartingRound))
 	return nil
 }
 
 func getFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+}
+
+func newDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.DKG, error) {
+	selfNodeKey := node.Self.Underlying().GetKey()
+
+	if summary.SecretShares == nil {
+		return nil, common.NewError("failed to set dkg from store", "no saved shares for dkg")
+	}
+
+	var newDKG = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
+	newDKG.MagicBlockNumber = mb.MagicBlockNumber
+	newDKG.StartingRound = mb.StartingRound
+
+	if mb.Miners == nil {
+		return nil, common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
+	}
+
+	for k := range mb.Miners.CopyNodesMap() {
+		if savedShare, ok := summary.SecretShares[computeBlsID(k)]; ok {
+			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
+				return nil, err
+			}
+		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
+			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
+				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
+	if !newDKG.HasAllSecretShares() {
+		return nil, common.NewError("failed to set dkg from store",
+			"not enough secret shares for dkg")
+	}
+
+	newDKG.AggregateSecretKeyShares()
+	newDKG.Pi = newDKG.Si.GetPublicKey()
+	mpks, err := mb.Mpks.GetMpkMap()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
+		return nil, err
+	}
+
+	return newDKG, nil
 }

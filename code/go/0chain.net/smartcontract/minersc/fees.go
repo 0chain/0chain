@@ -43,6 +43,7 @@ func (msc *MinerSmartContract) activatePending(mn *MinerNode) error {
 }
 
 // unlock all delegate pools of offline node
+//
 //nolint:unused
 func (msc *MinerSmartContract) unlockOffline(
 	mn *MinerNode,

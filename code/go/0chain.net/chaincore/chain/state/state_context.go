@@ -94,7 +94,8 @@ type StateContextI interface {
 	GetChainCurrentMagicBlock() *block.MagicBlock
 	GetMagicBlock(round int64) *block.MagicBlock
 	LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error)
-	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
+	SetMagicBlock(block *block.MagicBlock) // cannot use in smart contracts or REST endpoints
+	SetDKG(dkg *bls.DKG) error
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientState(clientID datastore.Key) (*state.State, error)
@@ -132,6 +133,7 @@ type StateContext struct {
 	getMagicBlock                 func(round int64) *block.MagicBlock
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getDKGSummary                 func(magicBlockNum int64) (*bls.DKGSummary, error)
+	setDKG                        func(dkg *bls.DKG) error
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
@@ -167,6 +169,7 @@ func NewStateContext(
 	getChainSignature func() encryption.SignatureScheme,
 	getLatestFinalizedBlock func() *block.Block,
 	getDKGSummary func(magicBlockNum int64) (*bls.DKGSummary, error),
+	setDKG func(dkg *bls.DKG) error,
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -182,6 +185,7 @@ func NewStateContext(
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 		getDKGSummary:                 getDKGSummary,
+		setDKG:                        setDKG,
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
@@ -209,6 +213,10 @@ func (sc *StateContext) GetTransaction() *transaction.Transaction {
 
 func (sc *StateContext) LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
 	return sc.getDKGSummary(magicBlockNum)
+}
+
+func (sc *StateContext) SetDKG(dkg *bls.DKG) error {
+	return sc.setDKG(dkg)
 }
 
 // AddTransfer - add the transfer

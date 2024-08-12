@@ -27,10 +27,10 @@ func (c *Chain) GetDKG(round int64) *bls.DKG {
 }
 
 // SetDKG sets DKG for the start round
-func (c *Chain) SetDKG(dkg *bls.DKG, startingRound int64) error {
+func (c *Chain) SetDKG(dkg *bls.DKG) error {
 	c.roundDkgMu.Lock()
 	defer c.roundDkgMu.Unlock()
-	return c.roundDkg.Put(dkg, startingRound)
+	return c.roundDkg.Put(dkg, dkg.StartingRound)
 }
 
 // LoadDKGSummary loads DKG summary by stored DKG (that stores DKG summary).

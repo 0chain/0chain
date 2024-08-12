@@ -393,6 +393,7 @@ func (c *Chain) NewStateContext(
 		c.GetSignatureScheme,
 		c.GetLatestFinalizedBlock,
 		c.getDKGSummary,
+		c.SetDKG,
 		eventDb,
 	)
 }
