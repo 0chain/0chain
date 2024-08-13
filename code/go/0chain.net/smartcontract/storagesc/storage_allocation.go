@@ -501,7 +501,7 @@ func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transa
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *transaction.Transaction, conf *Config, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
+func (sab *storageAllocationBase) payCostForDtuForReplaceEnterpriseBlobber(t *transaction.Transaction, conf *Config, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
 	var usedDuration float64
 	var err error
 	if sab.Expiration > t.CreationDate {
