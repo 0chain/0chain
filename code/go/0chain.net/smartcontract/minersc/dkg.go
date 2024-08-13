@@ -921,25 +921,25 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 		zap.Int("miners num", magicBlock.Miners.Size()))
 	balances.SetMagicBlock(magicBlock)
 
-	// TODO: do with activation
-	dkgSummary, err := msc.getDKGSummary(balances, magicBlock.MagicBlockNumber)
-	if err != nil {
-		logging.Logger.Error("failed to get dkg summary", zap.Error(err))
-		return err
-	}
+	// // TODO: do with activation
+	// dkgSummary, err := msc.getDKGSummary(balances, magicBlock.MagicBlockNumber)
+	// if err != nil {
+	// 	logging.Logger.Error("failed to get dkg summary", zap.Error(err))
+	// 	return err
+	// }
 
-	dkg, err := newDKGWithMagicBlock(magicBlock, dkgSummary)
-	if err != nil {
-		logging.Logger.Error("failed to create new dkg from MB and summary", zap.Error(err))
-		return err
-	}
+	// dkg, err := newDKGWithMagicBlock(magicBlock, dkgSummary)
+	// if err != nil {
+	// 	logging.Logger.Error("failed to create new dkg from MB and summary", zap.Error(err))
+	// 	return err
+	// }
 
-	if err := balances.SetDKG(dkg); err != nil {
-		logging.Logger.Error("failed to set dkg", zap.Error(err))
-		return err
-	}
+	// if err := balances.SetDKG(dkg); err != nil {
+	// 	logging.Logger.Error("failed to set dkg", zap.Error(err))
+	// 	return err
+	// }
 
-	logging.Logger.Debug("set dkg", zap.Int64("MB starting round", magicBlock.StartingRound))
+	// logging.Logger.Debug("set dkg", zap.Int64("MB starting round", magicBlock.StartingRound))
 	return nil
 }
 
