@@ -444,22 +444,18 @@ func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Co
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) usedDurationInTimeunit(now common.Timestamp, timeUnit time.Duration) (float64, error) {
-	usedTime := sab.Expiration - now
-	if usedTime < 0 {
-		return 0, errors.New("negative duration")
+func (sab *storageAllocationBase) usedDurationInTimeunit(now common.Timestamp, timeUnit time.Duration) float64 {
+	unUsedTime := sab.Expiration - now
+	if unUsedTime < 0 {
+		return 1
 	}
-	return 1 - float64(usedTime.Duration())/float64(timeUnit), nil
+	return 1 - float64(unUsedTime.Duration())/float64(timeUnit)
 }
 
 func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transaction.Transaction, conf *Config, sps []*stakePool, balances cstate.StateContextI) (currency.Coin, error) {
 	var usedDuration float64
-	var err error
 	if sab.Expiration > t.CreationDate {
-		usedDuration, err = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
-		if err != nil {
-			return 0, fmt.Errorf("failed to get used duration in time units: %v", err)
-		}
+		usedDuration = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
 	}
 
 	var cost currency.Coin
@@ -503,12 +499,8 @@ func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transa
 
 func (sab *storageAllocationBase) payCostForDtuForReplaceEnterpriseBlobber(t *transaction.Transaction, conf *Config, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
 	var usedDuration float64
-	var err error
 	if sab.Expiration > t.CreationDate {
-		usedDuration, err = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
-		if err != nil {
-			return 0, fmt.Errorf("failed to get used duration in time units: %v", err)
-		}
+		usedDuration = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
 	}
 
 	var cost currency.Coin
