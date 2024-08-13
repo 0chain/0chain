@@ -437,7 +437,10 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	Logger.Info("receive bls sign",
 		zap.Int64("round", mr.GetRoundNumber()),
 		zap.String("group_signature", groupSignature.GetHexString()),
-		zap.String("rboOutput", rbOutput))
+		zap.String("rboOutput", rbOutput),
+		zap.Int64("dkg_starting_round", dkg.StartingRound),
+		zap.Int64("dkg_mb_number", dkg.MagicBlockNumber),
+	)
 
 	//mc.computeRBO(ctx, mr, rbOutput)
 	if err := mc.computeRBO(ctx, mr, rbOutput); err != nil {
