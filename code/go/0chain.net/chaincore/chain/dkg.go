@@ -102,6 +102,9 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 	}
 
 	if !newDKG.HasAllSecretShares() {
+		logging.Logger.Error("not enough secret shares for dkg",
+			zap.Int("new DKG T", newDKG.T),
+			zap.Int("total secret shares", len(summary.SecretShares)))
 		return nil, nil, common.NewError("failed to set dkg from store",
 			"not enough secret shares for dkg")
 	}
