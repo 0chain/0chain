@@ -2844,6 +2844,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 		uar.AddBlobberAuthTicket = b3AuthTicket
 
+		tp = int64(beforeAlloc.Expiration) / 2
 		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
 		require.NoError(t, err)
 
@@ -2872,7 +2873,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		sp, err := ssc.getStakePool(spenum.Blobber, uar.RemoveBlobberId, balances)
 		require.NoError(t, err)
 
-		require.Equal(t, int(1.5*x10), int(sp.Reward), "30% service charge to blobber should be updated")
+		require.Equal(t, int(0.75*x10), int(sp.Reward), "30% service charge to blobber should be updated") // Half of reward as half used alloc
 		require.Len(t, sp.Pools, 1, "Single delegate pool")
 		// get key of the delegate pool
 		var dpKey string
@@ -2880,7 +2881,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			dpKey = k
 			break
 		}
-		require.Equal(t, int(3.5*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+		require.Equal(t, int(1.75*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated") // Half of rewards as half used alloc
 
 		// Added blobber should not get any rewards
 		sp, err = ssc.getStakePool(spenum.Blobber, nb3.id, balances)
@@ -2907,6 +2908,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.ParityShards = 10
 		expectedAlloc.WritePool = afterAllocBase.WritePool
 		expectedAlloc.BlobberAllocs[0].BlobberID = nb3.id
+		expectedAlloc.BlobberAllocs[0].LatestSuccessfulChallCreatedAt = afterAlloc.mustBase().BlobberAllocs[0].LatestSuccessfulChallCreatedAt
+		expectedAlloc.BlobberAllocs[0].LatestFinalizedChallCreatedAt = afterAlloc.mustBase().BlobberAllocs[0].LatestFinalizedChallCreatedAt
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 }
