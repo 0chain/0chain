@@ -475,7 +475,10 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) error {
 
-	var seed int64
+	var (
+		seed   int64
+		prSeed int64
+	)
 	if mc.ChainConfig.IsDkgEnabled() {
 		useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
 		if err != nil {
@@ -484,8 +487,9 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 		seed = int64(useed)
 	} else {
 		if pr != nil {
+			prSeed = pr.GetRandomSeed()
 			if mpr := pr.(*Round); mpr.IsVRFComplete() {
-				seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
+				seed = rand.New(rand.NewSource(prSeed)).Int63()
 			}
 		} else {
 			return fmt.Errorf("pr is null")
@@ -498,7 +502,8 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 			zap.Int("roundtimeout", r.GetTimeoutCount()),
 			zap.Int64("rseed", seed), zap.Int64("prev_round", pr.GetRoundNumber()),
 			//zap.Int("Prev_roundtimeout", pr.GetTimeoutCount()),
-			zap.Int64("Prev_rseed", pr.GetRandomSeed()))
+			// zap.Int64("Prev_rseed", pr.GetRandomSeed()))
+			zap.Int64("Prev_rseed", prSeed))
 	}
 	vrfStartTime := r.GetVrfStartTime()
 	if !vrfStartTime.IsZero() {
