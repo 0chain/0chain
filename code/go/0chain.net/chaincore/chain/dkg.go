@@ -80,17 +80,19 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 
 	var daNodes deleteAddNodes
 	minerNodes := mb.Miners.CopyNodesMap()
-	for k := range minerNodes {
+	for mid := range minerNodes {
+		pid := bls.ComputeIDdkg(mid)
+		k := pid.GetHexString()
 		logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.Any("summary shares", summary.SecretShares))
 		if savedShare, ok := summary.SecretShares[k]; ok {
-			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
+			if err := newDKG.AddSecretShare(pid, savedShare, false); err != nil {
 				return nil, nil, err
 			}
 			logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.String("share", savedShare))
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			daNodes.Added = append(daNodes.Added, k)
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
+				if err := newDKG.AddSecretShare(pid, share.Share, false); err != nil {
 					return nil, nil, err
 				}
 			}
