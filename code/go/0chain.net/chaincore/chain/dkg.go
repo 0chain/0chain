@@ -81,6 +81,7 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 	var daNodes deleteAddNodes
 	minerNodes := mb.Miners.CopyNodesMap()
 	for k := range minerNodes {
+		logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.Any("summary shares", summary.SecretShares))
 		if savedShare, ok := summary.SecretShares[k]; ok {
 			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
 				return nil, nil, err
