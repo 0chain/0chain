@@ -453,10 +453,10 @@ func (sab *storageAllocationBase) usedDurationInTimeunit(now common.Timestamp, t
 }
 
 func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transaction.Transaction, conf *Config, sps []*stakePool, balances cstate.StateContextI) (currency.Coin, error) {
-	var rdtu float64
+	var usedDuration float64
 	var err error
 	if sab.Expiration > t.CreationDate {
-		rdtu, err = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
+		usedDuration, err = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
 		if err != nil {
 			return 0, fmt.Errorf("failed to get used duration in time units: %v", err)
 		}
@@ -470,7 +470,7 @@ func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transa
 		}
 
 		if sab.Expiration > t.CreationDate {
-			c, err = currency.MultFloat64(c, rdtu)
+			c, err = currency.MultFloat64(c, usedDuration)
 			if err != nil {
 				return 0, err
 			}
@@ -501,11 +501,14 @@ func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transa
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *transaction.Transaction, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
-	rdtu, err := sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
-
+func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *transaction.Transaction, conf *Config, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
+	var usedDuration float64
+	var err error
+	if sab.Expiration > t.CreationDate {
+		usedDuration, err = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get used duration in time units: %v", err)
+		}
 	}
 
 	var cost currency.Coin
@@ -516,7 +519,7 @@ func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *t
 				return 0, err
 			}
 
-			c, err = currency.MultFloat64(c, rdtu)
+			c, err = currency.MultFloat64(c, usedDuration)
 			if err != nil {
 				return 0, err
 			}
