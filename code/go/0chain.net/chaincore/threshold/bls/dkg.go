@@ -14,7 +14,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
+	"github.com/0chain/common/core/logging"
 	"github.com/herumi/bls-go-binary/bls"
+	"go.uber.org/zap"
 )
 
 /*DKG - to manage DKG process */
@@ -259,6 +261,7 @@ func (dkg *DKG) HasSecretShare(key string) bool {
 
 // Sign - sign using the group secret key share
 func (dkg *DKG) Sign(msg string) *Sign {
+	logging.Logger.Debug("dkg sign", zap.String("key", dkg.Si.GetHexString()))
 	return dkg.Si.Sign(msg)
 }
 
