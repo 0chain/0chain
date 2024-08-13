@@ -85,6 +85,7 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
 				return nil, nil, err
 			}
+			logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.String("share", savedShare))
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			daNodes.Added = append(daNodes.Added, k)
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
@@ -104,7 +105,7 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 	if !newDKG.HasAllSecretShares() {
 		logging.Logger.Error("not enough secret shares for dkg",
 			zap.Int("new DKG T", newDKG.T),
-			zap.Int("total secret shares", len(summary.SecretShares)))
+			zap.Int("total secret shares", len(newDKG.GetSecretKeyShares())))
 		return nil, nil, common.NewError("failed to set dkg from store",
 			"not enough secret shares for dkg")
 	}
