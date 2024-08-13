@@ -74,7 +74,7 @@ const (
 
 	// ViewChangeOffset is offset between block with new MB (501) and the block
 	// where the new MB should be used (505).
-	ViewChangeOffset = 4
+	ViewChangeOffset = 8
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */

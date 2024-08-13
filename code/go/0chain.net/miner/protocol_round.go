@@ -1456,6 +1456,8 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 			}
 			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
 				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
+					zap.Int64("round", b.Round),
+					zap.String("block miner", b.MinerID),
 					zap.String("lfmbr hash", lfmbr.Hash),
 					zap.String("block lfmbr hash", b.LatestFinalizedMagicBlockHash),
 					zap.Int64("lfmbr starting round", lfmbr.Round),
