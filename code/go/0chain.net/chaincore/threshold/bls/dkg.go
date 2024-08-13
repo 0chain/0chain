@@ -136,6 +136,7 @@ func ComputeIDdkg(minerID string) PartyID {
 	var forID PartyID
 	if err := forID.SetHexString("1" + minerID[:31]); err != nil {
 		fmt.Printf("Error while computing ID %s\n", forID.GetHexString())
+		panic(fmt.Sprintf("Error while computing ID %s, err: %v", forID.GetHexString(), err))
 	}
 	return forID
 }
