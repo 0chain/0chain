@@ -1150,14 +1150,14 @@ func (sab *storageAllocationBase) cancellationCharge(cancellationFraction float6
 	return currency.MultFloat64(cost, cancellationFraction)
 }
 
-func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend bool, now common.Timestamp) (currency.Coin, error) {
+func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend, isEnterprise bool, now common.Timestamp) (currency.Coin, error) {
 	var (
 		costOfAllocAfterUpdate currency.Coin
 		tokensRequiredToLock   currency.Coin
 		err                    error
 	)
 
-	if extend {
+	if isEnterprise || extend {
 		costOfAllocAfterUpdate, err = sa.cost()
 		if err != nil {
 			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
@@ -1176,6 +1176,17 @@ func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance cur
 	} else {
 		tokensRequiredToLock = 0
 	}
+
+	logging.Logger.Info("requiredTokensForUpdateAllocation",
+		zap.Any("costOfAllocAfterUpdate", costOfAllocAfterUpdate),
+		zap.Any("totalWritePool", totalWritePool),
+		zap.Any("tokensRequiredToLock", tokensRequiredToLock),
+		zap.Any("extend", extend),
+		zap.Any("isEnterprise", isEnterprise),
+		zap.Any("sa", sa),
+		zap.Any("cpBalance", cpBalance),
+		zap.Any("now", now),
+	)
 
 	return tokensRequiredToLock, nil
 }

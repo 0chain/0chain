@@ -1179,7 +1179,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cpBalance, request.Extend, t.CreationDate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cpBalance, request.Extend, isEnterprise, t.CreationDate)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
