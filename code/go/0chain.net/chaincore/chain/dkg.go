@@ -70,6 +70,8 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 		return nil, nil, common.NewError("failed to set dkg from store", "no saved shares for dkg")
 	}
 
+	// bls.SetDKG(mb.T, mb.N, summary.SecretShares, summary)
+
 	var newDKG = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
 	newDKG.MagicBlockNumber = mb.MagicBlockNumber
 	newDKG.StartingRound = mb.StartingRound
@@ -115,6 +117,7 @@ func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.D
 
 	newDKG.AggregateSecretKeyShares()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
+	logging.Logger.Debug("dkg PI", zap.String("key", newDKG.Pi.GetHexString()))
 	mpks, err := mb.Mpks.GetMpkMap()
 	if err != nil {
 		return nil, nil, err
