@@ -285,6 +285,10 @@ func (dkg *DKG) RecoverGroupSig(from []PartyID, shares []Sign) (Sign, error) {
 
 // CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
 func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
+	logging.Logger.Debug("dkg recover",
+		zap.Strings("recSig", recSig),
+		zap.Strings("recIDs", recIDs))
+
 	signVec := make([]Sign, 0)
 	var signShare Sign
 	for i := 0; i < len(recSig); i++ {
@@ -307,7 +311,6 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 	if len(idVec) == 0 || len(signVec) == 0 {
 		return Sign{}, errors.New("empty id or share")
 	}
-
 	return dkg.RecoverGroupSig(idVec, signVec)
 }
 
