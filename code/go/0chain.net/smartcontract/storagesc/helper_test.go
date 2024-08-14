@@ -375,7 +375,7 @@ var avgTerms = Terms{
 
 // add allocation and 20 blobbers
 func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
-	now, allocSize, blobberCapacity int64, blobberBalance, lockTokens currency.Coin, nblobs int, balances chainState.StateContextI, preStakeTokens, isRestricted, IsEnterpriseAllocation bool) (
+	now, allocSize, blobberCapacity int64, blobberBalance, lockTokens currency.Coin, nblobs int, balances chainState.StateContextI, preStakeTokens, isRestricted, IsEnterpriseAllocation bool, terms ...Terms) (
 	allocID string, blobs []*Client) {
 
 	if nblobs <= 0 {
@@ -402,7 +402,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.Owner = client.id
 	nar.OwnerPublicKey = client.pk
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
-	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
+	nar.WritePriceRange = PriceRange{0 * x10, 20 * x10}
 
 	nar.IsEnterprise = IsEnterpriseAllocation
 
@@ -413,7 +413,11 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	}
 
 	for i := 0; i < nblobs; i++ {
-		var b = addBlobber(t, ssc, blobberCapacity, now, avgTerms, blobberBalance, balances, isRestricted, IsEnterpriseAllocation)
+		blobberTerms := avgTerms
+		if len(terms) > 0 {
+			blobberTerms = terms[0]
+		}
+		var b = addBlobber(t, ssc, blobberCapacity, now, blobberTerms, blobberBalance, balances, isRestricted, IsEnterpriseAllocation)
 		nar.Blobbers = append(nar.Blobbers, b.id)
 
 		if isRestricted || IsEnterpriseAllocation {

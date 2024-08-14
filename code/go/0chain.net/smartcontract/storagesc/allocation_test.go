@@ -2099,7 +2099,19 @@ func TestRemoveBlobberAllocation(t *testing.T) {
 func setupAllocationWithMockStats(t *testing.T, ssc *StorageSmartContract, client *Client, tp int64, balances *testBalances, zeroStats, isRestricted, IsEnterpriseAllocation bool) (alloc *storageAllocationBase, blobbers []*Client) {
 	var err error
 
-	allocID, blobbers := addAllocation(t, ssc, client, tp, 10*GB, 200*GB, 5000*x10, 100*x10, 20, balances, true, isRestricted, IsEnterpriseAllocation)
+	tokensToLock := 100 * x10
+
+	var enterpriseTestTerms []Terms
+
+	if IsEnterpriseAllocation {
+		enterpriseTestTerms = append(enterpriseTestTerms, Terms{
+			ReadPrice:  1 * x10,
+			WritePrice: 1 * x10,
+		})
+		tokensToLock = 20 * x10
+	}
+
+	allocID, blobbers := addAllocation(t, ssc, client, tp, 10*GB, 200*GB, 5000*x10, currency.Coin(tokensToLock), 20, balances, true, isRestricted, IsEnterpriseAllocation, enterpriseTestTerms...)
 	sa, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
 
@@ -2428,7 +2440,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 	// Enterprise Allocation Tests
 
-	t.Run("Enterprise : Extend unused allocation duration should work with extra payment equal to period of half of time unit", func(t *testing.T) {
+	t.Run("Enterprise : Extend unused allocation duration should work", func(t *testing.T) {
 		var (
 			tp     = int64(0)
 			client = newClient(2000*x10, balances)
@@ -2438,21 +2450,31 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			allocID        = beforeAlloc.ID
 		)
 
+		allocSizePerBlobber := int64(1)
+		expectedRewardPerBlobber := float64(0)
+
+		allocWpBalance := 20 * allocSizePerBlobber * x10
+		require.Equal(t, allocWpBalance, int64(beforeAlloc.WritePool), "Write pool should be 20")
+
 		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
-		// extend
+		// upgrade
 		var uar updateAllocationRequest
 		uar.ID = allocID
 		uar.Extend = true
 		tp += int64(360 * time.Hour / 1e9)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
 
-		resp, err = uar.callUpdateAllocReq(t, client.id, 50*x10, tp, ssc, balances)
+		expectedRewardPerBlobber += 0.5 * x10
+		allocWpBalance /= 2                                               // Update alloc after using 50% of time
+		requiredWpBalance := 20*allocSizePerBlobber*x10 + -allocWpBalance // One blobber has double write price
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, currency.Coin(requiredWpBalance), tp, ssc, balances) // 10 is paid as reward and new alloc cost is 200 with 50 already in WP.
 		require.NoError(t, err)
-
 		var deco StorageAllocation
 		require.NoError(t, deco.Decode([]byte(resp)))
+
+		allocWpBalance += requiredWpBalance
+		require.Equal(t, allocWpBalance, int64(deco.mustBase().WritePool), "Write pool should be updated")
 
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -2461,7 +2483,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
 			require.NoError(t, err)
 
-			require.Equal(t, int(1.5*x10), int(sp.Reward), "30% service charge to blobber should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.3), int(sp.Reward), "30% service charge to blobber should be updated")
 			require.Len(t, sp.Pools, 1, "Single delegate pool")
 			// get key of the delegate pool
 			var dpKey string
@@ -2469,21 +2491,35 @@ func TestUpdateAllocationRequest(t *testing.T) {
 				dpKey = k
 				break
 			}
-			require.Equal(t, int(3.5*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.7), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 		}
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		afterAlloc, err = ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
-		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.mustBase().Tx, "Transaction should be updated")
-		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.mustBase().Expiration, "Allocation expiration should be increased")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, int64(10*GB), afterAllocBase.Size, "Allocation size should be increased")
+		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
 
 		expectedAlloc := beforeAlloc
-		expectedAlloc.Tx = afterAlloc.mustBase().Tx
-		expectedAlloc.Expiration = afterAlloc.mustBase().Expiration
-		compareAllocationData(t, *expectedAlloc, *afterAlloc.mustBase())
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.Expiration = afterAllocBase.Expiration
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		expectedAlloc.Size = afterAllocBase.Size
+		for _, ba := range expectedAlloc.BlobberAllocs {
+			ba.Size += (uar.Size * 2) / int64(afterAllocBase.DataShards)
+		}
+		expectedAlloc.WritePool = afterAlloc.mustBase().WritePool
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
-	t.Run("Enterprise : Price Change : Extend unused allocation duration should work with extra payment equal to period of half of time unit", func(t *testing.T) {
+	t.Run("Enterprise : Price Change : Extend unused allocation duration should work", func(t *testing.T) {
 		var (
 			tp     = int64(0)
 			client = newClient(2000*x10, balances)
@@ -2492,18 +2528,12 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
-		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
-		// extend
-		var uar updateAllocationRequest
-		uar.ID = allocID
-		uar.Extend = true
-		tp += int64(360 * time.Hour / 1e9)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
+		allocSizePerBlobber := int64(1)
+		expectedRewardPerBlobber := float64(0)
 
-		resp, err = uar.callUpdateAllocReq(t, client.id, 50*x10, tp, ssc, balances)
-		require.NoError(t, err)
+		allocWpBalance := 20 * allocSizePerBlobber * x10
+		require.Equal(t, allocWpBalance, int64(beforeAlloc.WritePool), "Write pool should be 20")
 
 		// change price
 		b1, err := getBlobber(beforeAlloc.BlobberAllocs[0].BlobberID, balances)
@@ -2516,12 +2546,25 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
-		tp += int64(360 * time.Hour / 1e9)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 55*x10, tp, ssc, balances)
-		require.NoError(t, err)
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
+		// upgrade
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.Extend = true
+		tp += int64(360 * time.Hour / 1e9)
+
+		expectedRewardPerBlobber += 0.5 * x10
+		allocWpBalance /= 2                                                                            // Update alloc after using 50% of time
+		requiredWpBalance := 19*allocSizePerBlobber*x10 + 1*2*allocSizePerBlobber*x10 - allocWpBalance // One blobber has double write price
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, currency.Coin(requiredWpBalance), tp, ssc, balances) // 10 is paid as reward and new alloc cost is 200 with 50 already in WP.
+		require.NoError(t, err)
 		var deco StorageAllocation
 		require.NoError(t, deco.Decode([]byte(resp)))
+
+		allocWpBalance += requiredWpBalance
+		require.Equal(t, allocWpBalance, int64(deco.mustBase().WritePool), "Write pool should be updated")
 
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -2530,7 +2573,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
 			require.NoError(t, err)
 
-			require.Equal(t, int(2.25*x10), int(sp.Reward), "30% service charge to blobber should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.3), int(sp.Reward), "30% service charge to blobber should be updated")
 			require.Len(t, sp.Pools, 1, "Single delegate pool")
 			// get key of the delegate pool
 			var dpKey string
@@ -2538,21 +2581,68 @@ func TestUpdateAllocationRequest(t *testing.T) {
 				dpKey = k
 				break
 			}
-			require.Equal(t, int(5.25*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.7), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 		}
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		tp += int64(360 * time.Hour / 1e9)
+
+		expectedRewardPerBlobber += 0.5 * x10
+		allocWpBalance /= 2
+		requiredWpBalance = 19*allocSizePerBlobber*x10 + 1*2*allocSizePerBlobber*x10 - allocWpBalance // One blobber has double write price
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, currency.Coin(requiredWpBalance), tp, ssc, balances) // 50 is paid as reward and new alloc cost is 200 with 50 already in WP.
+		require.NoError(t, err)
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		allocWpBalance += requiredWpBalance
+		require.Equal(t, allocWpBalance, int64(deco.mustBase().WritePool), "Write pool should be updated")
+
+		afterAlloc, err = ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		for _, ba := range afterAlloc.mustBase().BlobberAllocs {
+			sp, err := ssc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
+			require.NoError(t, err)
+
+			expectedReward := expectedRewardPerBlobber
+
+			if ba.BlobberID == b1.Id() {
+				expectedReward += 0.5 * x10
+			}
+
+			require.Equal(t, int(expectedReward*0.3), int(sp.Reward), "30% service charge to blobber should be updated")
+			require.Len(t, sp.Pools, 1, "Single delegate pool")
+			// get key of the delegate pool
+			var dpKey string
+			for k := range sp.Pools {
+				dpKey = k
+				break
+			}
+			require.Equal(t, int(expectedReward*0.7), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+		}
+
+		afterAllocBase := afterAlloc.mustBase()
+
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
-		assert.NotEqual(t, beforeAlloc.Tx, afterAlloc.mustBase().Tx, "Transaction should be updated")
-		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAlloc.mustBase().Expiration, "Allocation expiration should be increased")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, int64(10*GB), afterAllocBase.Size, "Allocation size should be increased")
+		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
+		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
 
 		expectedAlloc := beforeAlloc
-		expectedAlloc.Tx = afterAlloc.mustBase().Tx
-		expectedAlloc.Expiration = afterAlloc.mustBase().Expiration
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.Expiration = afterAllocBase.Expiration
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		expectedAlloc.Size = afterAllocBase.Size
+		for _, ba := range expectedAlloc.BlobberAllocs {
+			ba.Size += (uar.Size * 2) / int64(afterAllocBase.DataShards)
+		}
 		expectedAlloc.BlobberAllocs[0].Terms.WritePrice = b1.mustBase().Terms.WritePrice
 		expectedAlloc.BlobberAllocsMap[b1.Id()].Terms.WritePrice = b1.mustBase().Terms.WritePrice
 		expectedAlloc.WritePool = afterAlloc.mustBase().WritePool
-		compareAllocationData(t, *expectedAlloc, *afterAlloc.mustBase())
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
 	t.Run("Enterprise : Upgrade size in unused allocation should work", func(t *testing.T) {
@@ -2564,6 +2654,13 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
+
+		allocSizePerBlobber := int64(1)
+		expectedRewardPerBlobber := float64(0)
+
+		allocWpBalance := 20 * allocSizePerBlobber * x10
+		require.Equal(t, allocWpBalance, int64(beforeAlloc.WritePool), "Write pool should be 20")
+
 		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
 		// upgrade
@@ -2571,13 +2668,19 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		uar.ID = allocID
 		uar.Size = 10 * GB
 		tp += int64(360 * time.Hour / 1e9)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 150*x10, tp, ssc, balances) // 50 is paid as reward and new alloc cost is 200 with 50 already in WP.
-		require.NoError(t, err)
 
+		allocSizePerBlobber += 1
+		expectedRewardPerBlobber += 0.5 * x10
+		allocWpBalance /= 2                                               // Update alloc after using 50% of time
+		requiredWpBalance := 20*allocSizePerBlobber*x10 + -allocWpBalance // One blobber has double write price
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, currency.Coin(requiredWpBalance), tp, ssc, balances) // 10 is paid as reward and new alloc cost is 200 with 50 already in WP.
+		require.NoError(t, err)
 		var deco StorageAllocation
 		require.NoError(t, deco.Decode([]byte(resp)))
+
+		allocWpBalance += requiredWpBalance
+		require.Equal(t, allocWpBalance, int64(deco.mustBase().WritePool), "Write pool should be updated")
 
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -2586,7 +2689,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
 			require.NoError(t, err)
 
-			require.Equal(t, int(1.5*x10), int(sp.Reward), "30% service charge to blobber should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.3), int(sp.Reward), "30% service charge to blobber should be updated")
 			require.Len(t, sp.Pools, 1, "Single delegate pool")
 			// get key of the delegate pool
 			var dpKey string
@@ -2594,7 +2697,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 				dpKey = k
 				break
 			}
-			require.Equal(t, int(3.5*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.7), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 		}
 
 		afterAllocBase := afterAlloc.mustBase()
@@ -2604,7 +2707,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
 		assert.Equal(t, int64(20*GB), afterAllocBase.Size, "Allocation size should be increased")
-		require.Equal(t, 200*x10, int(afterAllocBase.WritePool), "Write pool should be updated")
+		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
 
 		expectedAlloc := beforeAlloc
@@ -2613,8 +2716,9 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.WritePool = afterAllocBase.WritePool
 		expectedAlloc.Size = afterAllocBase.Size
 		for _, ba := range expectedAlloc.BlobberAllocs {
-			ba.Size += uar.Size / int64(afterAllocBase.DataShards)
+			ba.Size = (afterAllocBase.Size) / int64(afterAllocBase.DataShards)
 		}
+		expectedAlloc.WritePool = afterAlloc.mustBase().WritePool
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
@@ -2627,18 +2731,14 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, true, true)
 			allocID        = beforeAlloc.ID
 		)
-		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
-		// upgrade
-		var uar updateAllocationRequest
-		uar.ID = allocID
-		uar.Size = 10 * GB
-		tp += int64(360 * time.Hour / 1e9)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 150*x10, tp, ssc, balances) // 50 is paid as reward and new alloc cost is 200 with 50 already in WP.
-		require.NoError(t, err)
+		allocSizePerBlobber := int64(1)
+		expectedRewardPerBlobber := float64(0)
 
+		allocWpBalance := 20 * allocSizePerBlobber * x10
+		require.Equal(t, allocWpBalance, int64(beforeAlloc.WritePool), "Write pool should be 20")
+
+		// change price
 		b1, err := getBlobber(beforeAlloc.BlobberAllocs[0].BlobberID, balances)
 		require.NoError(t, err)
 		b1.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
@@ -2649,13 +2749,26 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
 		require.NoError(t, err)
 
+		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
+
+		// upgrade
+		var uar updateAllocationRequest
+		uar.ID = allocID
 		uar.Size = 10 * GB
 		tp += int64(360 * time.Hour / 1e9)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 215*x10, tp, ssc, balances) // 100 is paid as reward and new alloc cost is 315 with 100 already in WP.
-		require.NoError(t, err)
 
+		allocSizePerBlobber += 1
+		expectedRewardPerBlobber += 0.5 * x10
+		allocWpBalance /= 2                                                                            // Update alloc after using 50% of time
+		requiredWpBalance := 19*allocSizePerBlobber*x10 + 1*2*allocSizePerBlobber*x10 - allocWpBalance // One blobber has double write price
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, currency.Coin(requiredWpBalance), tp, ssc, balances) // 10 is paid as reward and new alloc cost is 200 with 50 already in WP.
+		require.NoError(t, err)
 		var deco StorageAllocation
 		require.NoError(t, deco.Decode([]byte(resp)))
+
+		allocWpBalance += requiredWpBalance
+		require.Equal(t, allocWpBalance, int64(deco.mustBase().WritePool), "Write pool should be updated")
 
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
@@ -2664,7 +2777,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			sp, err := ssc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
 			require.NoError(t, err)
 
-			require.Equal(t, 3*x10, int(sp.Reward), "30% service charge to blobber should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.3), int(sp.Reward), "30% service charge to blobber should be updated")
 			require.Len(t, sp.Pools, 1, "Single delegate pool")
 			// get key of the delegate pool
 			var dpKey string
@@ -2672,7 +2785,46 @@ func TestUpdateAllocationRequest(t *testing.T) {
 				dpKey = k
 				break
 			}
-			require.Equal(t, int(7*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+			require.Equal(t, int(expectedRewardPerBlobber*0.7), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+		}
+
+		uar.Size = 10 * GB
+		tp += int64(360 * time.Hour / 1e9)
+
+		allocSizePerBlobber += 1
+		expectedRewardPerBlobber += 1 * x10
+		allocWpBalance /= 2
+		requiredWpBalance = 19*allocSizePerBlobber*x10 + 1*2*allocSizePerBlobber*x10 - allocWpBalance // One blobber has double write price
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, currency.Coin(requiredWpBalance), tp, ssc, balances) // 50 is paid as reward and new alloc cost is 200 with 50 already in WP.
+		require.NoError(t, err)
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		allocWpBalance += requiredWpBalance
+		require.Equal(t, allocWpBalance, int64(deco.mustBase().WritePool), "Write pool should be updated")
+
+		afterAlloc, err = ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		for _, ba := range afterAlloc.mustBase().BlobberAllocs {
+			sp, err := ssc.getStakePool(spenum.Blobber, ba.BlobberID, balances)
+			require.NoError(t, err)
+
+			expectedReward := expectedRewardPerBlobber
+
+			if ba.BlobberID == b1.Id() {
+				expectedReward += 1 * x10
+			}
+
+			require.Equal(t, int(expectedReward*0.3), int(sp.Reward), "30% service charge to blobber should be updated")
+			require.Len(t, sp.Pools, 1, "Single delegate pool")
+			// get key of the delegate pool
+			var dpKey string
+			for k := range sp.Pools {
+				dpKey = k
+				break
+			}
+			require.Equal(t, int(expectedReward*0.7), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
 		}
 
 		afterAllocBase := afterAlloc.mustBase()
@@ -2682,7 +2834,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
 		assert.Equal(t, int64(30*GB), afterAllocBase.Size, "Allocation size should be increased")
-		require.Equal(t, 315*x10, int(afterAllocBase.WritePool), "Write pool should be updated")
+		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
 
 		expectedAlloc := beforeAlloc
@@ -2710,7 +2862,10 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		)
 		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
-		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
+		nb3 := addBlobber(t, ssc, 3*GB, tp, Terms{
+			WritePrice: 1 * x10,
+			ReadPrice:  1 * x10,
+		}, 50*x10, balances, false, false)
 
 		checkStakesRewardsAre0ForBlobber(nb3.id, ssc, t, balances)
 
@@ -2812,7 +2967,10 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		)
 		checkStakesRewardsAre0ForAlloc(beforeAlloc, ssc, t, balances)
 
-		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, true, false)
+		nb3 := addBlobber(t, ssc, 3*GB, tp, Terms{
+			WritePrice: 1 * x10,
+			ReadPrice:  1 * x10,
+		}, 50*x10, balances, true, false)
 		checkStakesRewardsAre0ForBlobber(nb3.id, ssc, t, balances)
 
 		// add blobber
@@ -2844,6 +3002,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 		uar.AddBlobberAuthTicket = b3AuthTicket
 
+		tp = int64(beforeAlloc.Expiration) / 2
 		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
 		require.NoError(t, err)
 
@@ -2872,7 +3031,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		sp, err := ssc.getStakePool(spenum.Blobber, uar.RemoveBlobberId, balances)
 		require.NoError(t, err)
 
-		require.Equal(t, int(1.5*x10), int(sp.Reward), "30% service charge to blobber should be updated")
+		require.Equal(t, int(0.15*x10), int(sp.Reward), "30% service charge to blobber should be updated") // Half of reward as half used alloc
 		require.Len(t, sp.Pools, 1, "Single delegate pool")
 		// get key of the delegate pool
 		var dpKey string
@@ -2880,7 +3039,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			dpKey = k
 			break
 		}
-		require.Equal(t, int(3.5*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated")
+		require.Equal(t, int(0.35*x10), int(sp.Pools[dpKey].Reward), "70% reward to delegate pool should be updated") // Half of rewards as half used alloc
 
 		// Added blobber should not get any rewards
 		sp, err = ssc.getStakePool(spenum.Blobber, nb3.id, balances)
@@ -2907,6 +3066,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.ParityShards = 10
 		expectedAlloc.WritePool = afterAllocBase.WritePool
 		expectedAlloc.BlobberAllocs[0].BlobberID = nb3.id
+		expectedAlloc.BlobberAllocs[0].LatestSuccessfulChallCreatedAt = afterAlloc.mustBase().BlobberAllocs[0].LatestSuccessfulChallCreatedAt
+		expectedAlloc.BlobberAllocs[0].LatestFinalizedChallCreatedAt = afterAlloc.mustBase().BlobberAllocs[0].LatestFinalizedChallCreatedAt
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 }
