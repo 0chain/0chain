@@ -424,7 +424,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("add_allocation")
 
 	// emit event to eventDB
-	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn)
+	emitAddOrOverwriteAllocationBlobberTerms(alloc, balances, txn)
 
 	return resp, err
 }
@@ -1212,7 +1212,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, t)
+	emitAddOrOverwriteAllocationBlobberTerms(alloc, balances, t)
 
 	return string(sa.Encode()), nil
 }
