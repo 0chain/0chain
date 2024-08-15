@@ -227,16 +227,6 @@ func prepareAllocationsResponse(eventDb *event.EventDb, eAllocs []event.Allocati
 	return sas, nil
 }
 
-func emitAddOrOverwriteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
-	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, t.Hash, sa.mustBase().buildEventBlobberTerms())
-}
-
-//nolint:unused
-func emitUpdateAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
-	balances.EmitEvent(event.TypeStats, event.TagUpdateAllocationBlobberTerm, sa.mustBase().ID, sa.mustBase().buildEventBlobberTerms())
-}
-
-//nolint:unused
-func emitDeleteAllocationBlobberTerms(sa *StorageAllocation, balances cstate.StateContextI, t *transaction.Transaction) {
-	balances.EmitEvent(event.TypeStats, event.TagDeleteAllocationBlobberTerm, t.Hash, sa.mustBase().buildEventBlobberTerms())
+func emitAddOrOverwriteAllocationBlobberTerms(sa *storageAllocationBase, balances cstate.StateContextI, t *transaction.Transaction) {
+	balances.EmitEvent(event.TypeStats, event.TagAddOrOverwriteAllocationBlobberTerm, sa.ID, sa.buildEventBlobberTerms())
 }
