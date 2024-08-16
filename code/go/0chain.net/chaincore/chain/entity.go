@@ -448,6 +448,18 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
+			if b.Round != cr+1 {
+				if !syncing {
+					syncBlocksTimer.Reset(0)
+				}
+				logging.Logger.Debug("process block skip, not the next round",
+					zap.Int64("block round", b.Round),
+					zap.Int64("current round", cr),
+					zap.Int64("lfb", lfb.Round),
+					zap.Bool("syncing", syncing))
+				continue
+			}
+
 			if err := c.processBlock(ctx, b); err != nil {
 				logging.Logger.Error("process block failed",
 					zap.Error(err),
