@@ -684,16 +684,24 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 		logging.Logger.Error("AddNotarizedBlock failed to compute state",
 			zap.Int64("round", b.Round),
 			zap.Error(err))
-		// if node.Self.IsSharder() {
 		return err
-		// }
 	}
 
-	c.SetCurrentRound(r.GetRoundNumber())
+	var (
+		rn         = r.GetRoundNumber()
+		cr         = c.GetCurrentRound()
+		moveToNext bool
+	)
+	if cr+1 == rn {
+		c.SetCurrentRound(r.GetRoundNumber())
+		if !node.Self.IsSharder() {
+			moveToNext = true
+		}
+	}
+
 	c.UpdateNodeState(b)
 
-	// TODO: notarization to move to next round
-	if !node.Self.IsSharder() {
+	if moveToNext {
 		c.notifyMoveToNextRound(r)
 	}
 
