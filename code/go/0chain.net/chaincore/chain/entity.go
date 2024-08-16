@@ -455,18 +455,18 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					zap.String("block", b.Hash),
 					zap.String("prev block", b.PrevHash))
 
+				if err != ErrNoPreviousBlock && !ErrNoPreviousState.Is(err) {
+					continue
+				}
+
 				var pb *block.Block
-				if err == ErrNoPreviousBlock || ErrNoPreviousState.Is(err) {
-					pb, err = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-					if err != nil {
-						logging.Logger.Error("process block, previous block is nil",
-							zap.Int64("round", b.Round),
-							zap.String("block", b.Hash),
-							zap.String("prev block", b.PrevHash),
-							zap.Error(err))
-						continue
-					}
-				} else {
+				pb, err = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+				if err != nil {
+					logging.Logger.Error("process block, failed to fetch previous block",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("prev block", b.PrevHash),
+						zap.Error(err))
 					continue
 				}
 
