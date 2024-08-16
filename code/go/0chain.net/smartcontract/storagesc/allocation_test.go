@@ -2542,7 +2542,53 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		assert.Equal(t, int64((totalExpectedSize)), afterAllocBase.Size, "Allocation size should be increased")
 		require.Equal(t, int(totalExpectedLockAmount-cp.Balance), int(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
-		require.Equal(t, int((totalExpectedLockAmount+beforeAlloc.MovedToChallenge)/2), int(cp.Balance), "Write pool should be updated")
+
+		// before any challenge
+		require.Equal(t, int((afterAllocBase.MovedToChallenge)), int(cp.Balance), "Challenge pool should be updated")
+
+		//gen a chall
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+		var blobber = blobbers[0]
+		blobberNode, err := ssc.getBlobber(blobber.id, balances)
+		require.NoError(t, err)
+		challID := fmt.Sprintf("chall-0")
+
+		currentRound := balances.GetBlock().Round
+
+		// add 10 validators
+		var valids []*Client
+		tp += 1000
+		for i := 0; i < 10; i++ {
+			valids = append(valids, addValidator(t, ssc, tp, balances))
+		}
+		validators, err := getValidatorsList(balances)
+		require.NoError(t, err)
+
+		genChall(t, ssc, tp, currentRound-100, challID, 0, validators, beforeAlloc.ID, blobberNode, balances)
+		fmt.Println(challID)
+		chall := &ChallengeResponse{
+			ID: challID,
+		}
+
+		for i := 0; i < 10; i++ {
+			chall.ValidationTickets = append(chall.ValidationTickets,
+				valids[i].validTicket(t, chall.ID, blobber.id, true, tp))
+		}
+
+		tx := newTransaction(blobber.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		resp, err = ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+		require.NoError(t, err)
+
+		require.Equal(t, "challenge passed by blobber", resp)
+
+		//after genration of challenge
+		cp_updated, err := ssc.getChallengePool(allocID, balances)
+		require.NoError(t, err)
+
+		assert.NotEqual(t, cp_updated.Balance, cp.Balance, "Challenge Pool should be updated")
 
 		expectedAlloc := beforeAlloc
 		expectedAlloc.Tx = afterAllocBase.Tx
