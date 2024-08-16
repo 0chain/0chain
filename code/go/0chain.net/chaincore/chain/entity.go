@@ -456,17 +456,17 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					zap.String("prev block", b.PrevHash))
 
 				var pb *block.Block
-				if err == ErrNoPreviousBlock {
-					// fetch the previous block
-					pb, _ = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-				} else if ErrNoPreviousState.Is(err) {
-					// get the previous block from local
-					pb, _ = c.GetBlock(ctx, b.PrevHash)
+				if err == ErrNoPreviousBlock || ErrNoPreviousState.Is(err) {
+					pb, err = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+					if err != nil {
+						logging.Logger.Error("process block, previous block is nil",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.String("prev block", b.PrevHash),
+							zap.Error(err))
+						continue
+					}
 				} else {
-					continue
-				}
-
-				if pb == nil {
 					continue
 				}
 
@@ -575,14 +575,6 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 
 	// pull related magic block if missing
 	var err error
-	// if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
-	// 	logging.Logger.Error("pulling related magic block", zap.Error(err),
-	// 		zap.Int64("round", b.Round),
-	// 		zap.String("block", b.Hash),
-	// 		zap.Int64("related mbr", b.LatestFinalizedMagicBlockRound))
-	// 	return fmt.Errorf("could not pull related magic block, err: %v", err)
-	// }
-
 	if err = b.Validate(ctx); err != nil {
 		logging.Logger.Error("block validation", zap.Int64("round", b.Round),
 			zap.String("hash", b.Hash), zap.Error(err))
