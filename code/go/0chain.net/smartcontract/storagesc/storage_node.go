@@ -20,7 +20,7 @@ import (
 func init() {
 	entitywrapper.RegisterWrapper(&StorageNode{},
 		map[string]entitywrapper.EntityI{
-			entitywrapper.DefaultOriginVersion: &storageNodeV2{},
+			entitywrapper.DefaultOriginVersion: &storageNodeV1{},
 			"v2":                               &storageNodeV2{},
 			"v3":                               &storageNodeV3{},
 		})
@@ -143,6 +143,52 @@ func (sn *StorageNode) Decode(input []byte) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+type storageNodeV1 struct {
+	provider.Provider
+	BaseURL                 string  `json:"url"`
+	Terms                   Terms   `json:"terms"`     // terms
+	Capacity                int64   `json:"capacity"`  // total blobber capacity
+	Allocated               int64   `json:"allocated"` // allocated capacity
+	PublicKey               string  `json:"-"`
+	SavedData               int64   `json:"saved_data"`
+	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
+	// StakePoolSettings used initially to create and setup stake pool.
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	RewardRound       RewardRound        `json:"reward_round"`
+	NotAvailable      bool               `json:"not_available"`
+}
+
+func (sn1 *storageNodeV1) GetVersion() string {
+	return entitywrapper.DefaultOriginVersion
+}
+
+func (sn1 *storageNodeV1) InitVersion() {
+	// do nothing cause it's original version of storage node
+}
+
+func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
+	return &storageNodeBase{
+		Provider:                sn1.Provider,
+		BaseURL:                 sn1.BaseURL,
+		Terms:                   sn1.Terms,
+		Capacity:                sn1.Capacity,
+		Allocated:               sn1.Allocated,
+		PublicKey:               sn1.PublicKey,
+		SavedData:               sn1.SavedData,
+		DataReadLastRewardRound: sn1.DataReadLastRewardRound,
+		LastRewardDataReadRound: sn1.LastRewardDataReadRound,
+		StakePoolSettings:       sn1.StakePoolSettings,
+		RewardRound:             sn1.RewardRound,
+		NotAvailable:            sn1.NotAvailable,
+	}
+}
+
+func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI) error {
+	// nothing to migrate as this is original version of the storage node
 	return nil
 }
 
