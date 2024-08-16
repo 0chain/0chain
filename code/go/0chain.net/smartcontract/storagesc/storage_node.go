@@ -170,20 +170,18 @@ func (sn1 *storageNodeV1) InitVersion() {
 	// do nothing cause it's original version of storage node
 }
 
+// use storageNodeV1 as the base
+type storageNodeBaseV1 storageNodeV1
+
 func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
-	return &storageNodeBase{
-		Provider:                sn1.Provider,
-		BaseURL:                 sn1.BaseURL,
-		Terms:                   sn1.Terms,
-		Capacity:                sn1.Capacity,
-		Allocated:               sn1.Allocated,
-		PublicKey:               sn1.PublicKey,
-		SavedData:               sn1.SavedData,
-		DataReadLastRewardRound: sn1.DataReadLastRewardRound,
-		LastRewardDataReadRound: sn1.LastRewardDataReadRound,
-		StakePoolSettings:       sn1.StakePoolSettings,
-		RewardRound:             sn1.RewardRound,
-		NotAvailable:            sn1.NotAvailable,
+	b := storageNodeBaseV1(*sn1)
+	return &b
+}
+
+func (sb *storageNodeBaseV1) CommitChangesTo(e entitywrapper.EntityI) {
+	switch v := e.(type) {
+	case *storageNodeV1:
+		*v = storageNodeV1(*sb)
 	}
 }
 
