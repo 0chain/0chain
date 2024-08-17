@@ -2,17 +2,11 @@ package chain
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
-	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
-	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 // GetDKG returns DKG by round number.
@@ -63,100 +57,118 @@ type deleteAddNodes struct {
 	Added   []string
 }
 
-func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.DKG, *deleteAddNodes, error) {
-	selfNodeKey := node.Self.Underlying().GetKey()
+// func NewDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.DKG, *deleteAddNodes, error) {
+// 	selfNodeKey := node.Self.Underlying().GetKey()
 
-	if summary.SecretShares == nil {
-		return nil, nil, common.NewError("failed to set dkg from store", "no saved shares for dkg")
-	}
+// 	// if summary.SecretShares == nil {
+// 	// 	return nil, nil, common.NewError("failed to set dkg from store", "no saved shares for dkg")
+// 	// }
 
-	// bls.SetDKG(mb.T, mb.N, summary.SecretShares, summary)
+// 	// bls.SetDKG(mb.T, mb.N, summary.SecretShares, summary)
 
-	var newDKG = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
-	newDKG.MagicBlockNumber = mb.MagicBlockNumber
-	newDKG.StartingRound = mb.StartingRound
+// 	var newDKG = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
+// 	newDKG.MagicBlockNumber = mb.MagicBlockNumber
+// 	newDKG.StartingRound = mb.StartingRound
 
-	if mb.Miners == nil {
-		return nil, nil, common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
-	}
+// 	if mb.Miners == nil {
+// 		return nil, nil, common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
+// 	}
 
-	var daNodes deleteAddNodes
-	minerNodes := mb.Miners.CopyNodesMap()
-	for mid := range minerNodes {
-		pid := bls.ComputeIDdkg(mid)
-		k := pid.GetHexString()
-		logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.Any("summary shares", summary.SecretShares))
-		if savedShare, ok := summary.SecretShares[k]; ok {
-			if err := newDKG.AddSecretShare(pid, savedShare, false); err != nil {
-				return nil, nil, err
-			}
-			logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.String("share", savedShare))
-		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
-			daNodes.Added = append(daNodes.Added, k)
-			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				if err := newDKG.AddSecretShare(pid, share.Share, false); err != nil {
-					return nil, nil, err
-				}
-			}
-		}
-	}
+// 	minerNodes := mb.Miners.CopyNodesMap()
+// 	var (
+// 		daNodes deleteAddNodes
+// 		ids     = make([]bls.PartyID, 0, len(minerNodes))
+// 	)
 
-	for k := range summary.SecretShares {
-		if _, ok := minerNodes[k]; !ok {
-			daNodes.Deleted = append(daNodes.Deleted, k)
-		}
-	}
+// 	for mid := range minerNodes {
+// 		pid := bls.ComputeIDdkg(mid)
+// 		ids = append(ids, pid)
+// 	}
 
-	if !newDKG.HasAllSecretShares() {
-		logging.Logger.Error("not enough secret shares for dkg",
-			zap.Int("new DKG T", newDKG.T),
-			zap.Int("total secret shares", len(newDKG.GetSecretKeyShares())))
-		return nil, nil, common.NewError("failed to set dkg from store",
-			"not enough secret shares for dkg")
-	}
+// 	// generate Sij for miners
+// 	for _, id := range ids {
+// 		_, err := newDKG.ComputeDKGKeyShare(id)
+// 		if err != nil {
+// 			return nil, nil, fmt.Errorf("failed to compute sij: %v", err)
+// 		}
+// 	}
 
-	newDKG.AggregateSecretKeyShares()
-	newDKG.Pi = newDKG.Si.GetPublicKey()
-	logging.Logger.Debug("dkg PI", zap.String("key", newDKG.Pi.GetHexString()))
-	mpks, err := mb.Mpks.GetMpkMap()
-	if err != nil {
-		return nil, nil, err
-	}
+// 	// for mid := range minerNodes {
+// 	// 	pid := bls.ComputeIDdkg(mid)
+// 	// 	k := pid.GetHexString()
+// 	// 	ids = append(ids, pid)
+// 	// 	logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.Any("summary shares", summary.SecretShares))
+// 	// 	if savedShare, ok := summary.SecretShares[k]; ok {
+// 	// 		if err := newDKG.AddSecretShare(pid, savedShare, false); err != nil {
+// 	// 			return nil, nil, err
+// 	// 		}
+// 	// 		logging.Logger.Debug("new dkg from magic block", zap.String("key", k), zap.String("share", savedShare))
+// 	// 	} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
+// 	// 		daNodes.Added = append(daNodes.Added, k)
+// 	// 		if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
+// 	// 			if err := newDKG.AddSecretShare(pid, share.Share, false); err != nil {
+// 	// 				return nil, nil, err
+// 	// 			}
+// 	// 		}
+// 	// 	}
+// 	// }
 
-	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
-		return nil, nil, err
-	}
+// 	// for k := range summary.SecretShares {
+// 	// 	if _, ok := minerNodes[k]; !ok {
+// 	// 		daNodes.Deleted = append(daNodes.Deleted, k)
+// 	// 	}
+// 	// }
 
-	return newDKG, &daNodes, nil
-}
+// 	if !newDKG.HasAllSecretShares() {
+// 		logging.Logger.Error("not enough secret shares for dkg",
+// 			zap.Int("new DKG T", newDKG.T),
+// 			zap.Int("total secret shares", len(newDKG.GetSecretKeyShares())))
+// 		return nil, nil, common.NewError("failed to set dkg from store",
+// 			"not enough secret shares for dkg")
+// 	}
 
-func (c *Chain) SetDKGFromPreviousSummary(ctx context.Context, mb *block.MagicBlock) error {
-	summary, err := LoadDKGSummary(ctx, mb.MagicBlockNumber-1)
-	if err != nil {
-		return err
-	}
+// 	newDKG.AggregateSecretKeyShares()
+// 	newDKG.Pi = newDKG.Si.GetPublicKey()
+// 	logging.Logger.Debug("dkg PI", zap.String("key", newDKG.Pi.GetHexString()))
+// 	mpks, err := mb.Mpks.GetMpkMap()
+// 	if err != nil {
+// 		return nil, nil, err
+// 	}
 
-	newDKG, deleteAddNodes, err := NewDKGWithMagicBlock(mb, summary)
-	if err != nil {
-		return err
-	}
+// 	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
+// 		return nil, nil, err
+// 	}
 
-	if len(deleteAddNodes.Deleted) > 0 {
-		for _, k := range deleteAddNodes.Deleted {
-			delete(summary.SecretShares, k)
-		}
-	}
+// 	return newDKG, &daNodes, nil
+// }
 
-	if err := StoreDKGSummary(ctx, summary); err != nil {
-		return fmt.Errorf("failed to store dkg summary: %v", err)
-	}
+// func (c *Chain) SetDKGFromPreviousSummary(ctx context.Context, mb *block.MagicBlock) error {
+// 	summary, err := LoadDKGSummary(ctx, mb.MagicBlockNumber-1)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	if err = c.SetDKG(newDKG); err != nil {
-		logging.Logger.Error("failed to set dkg", zap.Error(err))
-		return err // error
-	}
-	return nil
-}
+// 	newDKG, deleteAddNodes, err := NewDKGWithMagicBlock(mb, summary)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	if len(deleteAddNodes.Deleted) > 0 {
+// 		for _, k := range deleteAddNodes.Deleted {
+// 			delete(summary.SecretShares, k)
+// 		}
+// 	}
+
+// 	if err := StoreDKGSummary(ctx, summary); err != nil {
+// 		return fmt.Errorf("failed to store dkg summary: %v", err)
+// 	}
+
+// 	if err = c.SetDKG(newDKG); err != nil {
+// 		logging.Logger.Error("failed to set dkg", zap.Error(err))
+// 		return err // error
+// 	}
+// 	return nil
+// }
 
 // ComputeBlsID Handy API to get the ID used in the library
 func ComputeBlsID(key string) string {

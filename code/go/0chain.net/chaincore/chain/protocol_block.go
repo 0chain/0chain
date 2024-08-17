@@ -442,17 +442,17 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 			return err
 		}
 
-		if !node.Self.IsSharder() {
-			// update DKG and Summary
-			if err := c.SetDKGFromPreviousSummary(ctx, fb.MagicBlock); err != nil {
-				logging.Logger.Error("finalize block - update dkg failed",
-					zap.Int64("round", fb.Round),
-					zap.Int64("MB number", fb.MagicBlock.MagicBlockNumber),
-					zap.Int64("mb_starting_round", fb.MagicBlock.StartingRound),
-					zap.Error(err))
-				return err
-			}
-		}
+		// if !node.Self.IsSharder() {
+		// 	// update DKG and Summary
+		// 	if err := c.SetDKGFromPreviousSummary(ctx, fb.MagicBlock); err != nil {
+		// 		logging.Logger.Error("finalize block - update dkg failed",
+		// 			zap.Int64("round", fb.Round),
+		// 			zap.Int64("MB number", fb.MagicBlock.MagicBlockNumber),
+		// 			zap.Int64("mb_starting_round", fb.MagicBlock.StartingRound),
+		// 			zap.Error(err))
+		// 		return err
+		// 	}
+		// }
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
