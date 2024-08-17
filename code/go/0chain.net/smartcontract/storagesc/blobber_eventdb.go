@@ -30,16 +30,24 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 			LastHealthCheck: b.LastHealthCheck,
 			TotalStake:      staked,
 		},
-		OffersTotal:  sp.TotalOffers,
-		IsRestricted: b.IsRestricted != nil && *b.IsRestricted,
+		OffersTotal: sp.TotalOffers,
 	}
 
 	if err = cstate.WithActivation(balances, "electra", func() error {
+		if v2, ok := sn.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
+			data.IsRestricted = *v2.IsRestricted
+		}
 		return nil
 	}, func() error {
 		if sn.Entity().GetVersion() == "v3" {
-			if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
-				data.IsEnterprise = *v3.IsEnterprise
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
+				if v3.IsRestricted != nil {
+					data.IsRestricted = *v3.IsRestricted
+				}
+				if v3.IsEnterprise != nil {
+					data.IsEnterprise = *v3.IsEnterprise
+				}
 			}
 		}
 		return nil
@@ -67,7 +75,6 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		Allocated:    b.Allocated,
 		SavedData:    b.SavedData,
 		NotAvailable: false,
-		IsRestricted: b.IsRestricted != nil && *b.IsRestricted,
 		Provider: event.Provider{
 			ID:              b.ID,
 			DelegateWallet:  b.StakePoolSettings.DelegateWallet,
@@ -88,11 +95,23 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 	}
 
 	if err = cstate.WithActivation(balances, "electra", func() error {
+		if v2, ok := sn.Entity().(*storageNodeV2); ok {
+			if v2.IsRestricted != nil {
+				data.IsRestricted = *v2.IsRestricted
+			}
+		}
 		return nil
 	}, func() error {
 		if sn.Entity().GetVersion() == "v3" {
-			if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
-				data.IsEnterprise = *v3.IsEnterprise
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
+				if v3.IsRestricted != nil {
+					data.IsRestricted = *v3.IsRestricted
+				}
+
+				if v3.IsEnterprise != nil {
+					data.IsEnterprise = *v3.IsEnterprise
+				}
 			}
 		}
 		return nil

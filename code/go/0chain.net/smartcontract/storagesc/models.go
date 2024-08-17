@@ -1577,8 +1577,7 @@ func (sab *storageAllocationBase) validateEachBlobber(
 			continue
 		}
 
-		snBase := sn.mustBase()
-		if (b.IsEnterprise) || (snBase.IsRestricted != nil && *snBase.IsRestricted) {
+		if (b.IsEnterprise) || (b.IsRestricted) {
 			success, err := verifyBlobberAuthTicket(balances, sab.Owner, blobberAuthTickets[i], sn.mustBase().PublicKey)
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("blobber %s auth ticket verification failed: %v", b.ID, err.Error()))
