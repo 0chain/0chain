@@ -106,7 +106,7 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 			v3, ok := sn.Entity().(*storageNodeV3)
 			if ok {
 				if v3.IsRestricted != nil {
-					data.IsEnterprise = *v3.IsRestricted
+					data.IsRestricted = *v3.IsRestricted
 				}
 
 				if v3.IsEnterprise != nil {
