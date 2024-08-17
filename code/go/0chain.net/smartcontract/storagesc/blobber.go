@@ -523,6 +523,15 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 			"can't Save blobber: "+err.Error())
 	}
 
+	blobEncode := blobber.Encode()
+
+	var blobberResponse map[string]interface{}
+	_ = json.Unmarshal(blobEncode, &blobberResponse)
+
+	if _, ok := blobberResponse["version"]; ok {
+		delete(blobberResponse, "version")
+	}
+
 	return string(blobber.Encode()), nil
 }
 

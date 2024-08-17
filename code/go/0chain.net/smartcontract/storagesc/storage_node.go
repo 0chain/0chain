@@ -20,7 +20,7 @@ import (
 func init() {
 	entitywrapper.RegisterWrapper(&StorageNode{},
 		map[string]entitywrapper.EntityI{
-			entitywrapper.DefaultOriginVersion: &storageNodeV1{},
+			entitywrapper.DefaultOriginVersion: &storageNodeV2{},
 			"v2":                               &storageNodeV2{},
 			"v3":                               &storageNodeV3{},
 		})
@@ -146,50 +146,6 @@ func (sn *StorageNode) Decode(input []byte) error {
 	return nil
 }
 
-type storageNodeV1 struct {
-	provider.Provider
-	BaseURL                 string  `json:"url"`
-	Terms                   Terms   `json:"terms"`     // terms
-	Capacity                int64   `json:"capacity"`  // total blobber capacity
-	Allocated               int64   `json:"allocated"` // allocated capacity
-	PublicKey               string  `json:"-"`
-	SavedData               int64   `json:"saved_data"`
-	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
-	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
-	// StakePoolSettings used initially to create and setup stake pool.
-	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
-	RewardRound       RewardRound        `json:"reward_round"`
-	NotAvailable      bool               `json:"not_available"`
-}
-
-func (sn1 *storageNodeV1) GetVersion() string {
-	return entitywrapper.DefaultOriginVersion
-}
-
-func (sn1 *storageNodeV1) InitVersion() {
-	// do nothing cause it's original version of storage node
-}
-
-// use storageNodeV1 as the base
-type storageNodeBaseV1 storageNodeV1
-
-func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
-	b := storageNodeBaseV1(*sn1)
-	return &b
-}
-
-func (sb *storageNodeBaseV1) CommitChangesTo(e entitywrapper.EntityI) {
-	switch v := e.(type) {
-	case *storageNodeV1:
-		*v = storageNodeV1(*sb)
-	}
-}
-
-func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI) error {
-	// nothing to migrate as this is original version of the storage node
-	return nil
-}
-
 // use storageNodeV2 as the base
 type storageNodeBase storageNodeV2
 
@@ -234,7 +190,6 @@ func (sn2 *storageNodeV2) InitVersion() {
 func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 	return &storageNodeBase{
 		Provider:                sn2.Provider,
-		Version:                 sn2.Version,
 		BaseURL:                 sn2.BaseURL,
 		Terms:                   sn2.Terms,
 		Capacity:                sn2.Capacity,
