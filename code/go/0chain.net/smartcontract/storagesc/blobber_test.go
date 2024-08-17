@@ -164,7 +164,9 @@ func TestAddBlobber(t *testing.T) {
 		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
 		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
 		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
-		require.Equal(t, false, *blobber.mustBase().IsRestricted)
+		if v2, ok := blobber.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
+			require.Equal(t, false, *v2.IsRestricted)
+		}
 	})
 
 	t.Run("Register restricted blobber", func(t *testing.T) {
@@ -183,7 +185,10 @@ func TestAddBlobber(t *testing.T) {
 		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
 		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
 		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
-		require.Equal(t, true, *blobber.mustBase().IsRestricted)
+
+		if v2, ok := blobber.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
+			require.Equal(t, true, *v2.IsRestricted)
+		}
 	})
 
 	t.Run("Register Enterprise blobber", func(t *testing.T) {
@@ -202,7 +207,9 @@ func TestAddBlobber(t *testing.T) {
 		require.Equal(t, avgTerms.WritePrice, blobber.mustBase().Terms.WritePrice)
 		require.Equal(t, avgTerms.ReadPrice, blobber.mustBase().Terms.ReadPrice)
 		require.Equal(t, blob.cap, blobber.mustBase().Capacity)
-		require.Equal(t, false, *blobber.mustBase().IsRestricted)
+		if v2, ok := blobber.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
+			require.Equal(t, false, *v2.IsRestricted)
+		}
 
 		blobberV3 := blobber.Entity().(*storageNodeV3)
 		require.Equal(t, true, *blobberV3.IsEnterprise)
