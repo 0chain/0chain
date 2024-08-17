@@ -161,7 +161,7 @@ func (sb *storageNodeBase) CommitChangesTo(e entitywrapper.EntityI) {
 // StorageNode represents Blobber configurations.
 type storageNodeV2 struct {
 	provider.Provider
-	Version                 string  `json:"version" msg:"version"`
+	Version                 string  `json:"version,omitempty" msg:"version"`
 	BaseURL                 string  `json:"url"`
 	Terms                   Terms   `json:"terms"`     // terms
 	Capacity                int64   `json:"capacity"`  // total blobber capacity
@@ -190,6 +190,7 @@ func (sn2 *storageNodeV2) InitVersion() {
 func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 	return &storageNodeBase{
 		Provider:                sn2.Provider,
+		Version:                 sn2.Version,
 		BaseURL:                 sn2.BaseURL,
 		Terms:                   sn2.Terms,
 		Capacity:                sn2.Capacity,
@@ -211,6 +212,7 @@ func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI) error {
 
 func (sn2 *storageNodeV2) ApplyBaseChanges(snc storageNodeBase) {
 	sn2.Provider = snc.Provider
+	sn2.Version = snc.Version
 	sn2.BaseURL = snc.BaseURL
 	sn2.Terms = snc.Terms
 	sn2.Capacity = snc.Capacity
@@ -226,7 +228,7 @@ func (sn2 *storageNodeV2) ApplyBaseChanges(snc storageNodeBase) {
 
 type storageNodeV3 struct {
 	provider.Provider
-	Version                 string  `json:"version" msg:"version"`
+	Version                 string  `json:"version,omitempty" msg:"version"`
 	BaseURL                 string  `json:"url"`
 	Terms                   Terms   `json:"terms"`     // terms
 	Capacity                int64   `json:"capacity"`  // total blobber capacity
@@ -240,7 +242,7 @@ type storageNodeV3 struct {
 	RewardRound       RewardRound        `json:"reward_round"`
 	NotAvailable      bool               `json:"not_available"`
 	IsRestricted      *bool              `json:"is_restricted,omitempty"`
-	IsEnterprise      *bool              `json:"is_enterprise"`
+	IsEnterprise      *bool              `json:"is_enterprise,omitempty"`
 }
 
 const storageNodeV3Version = "v3"
@@ -256,6 +258,7 @@ func (sn3 *storageNodeV3) InitVersion() {
 func (sn3 *storageNodeV3) GetBase() entitywrapper.EntityBaseI {
 	return &storageNodeBase{
 		Provider:                sn3.Provider,
+		Version:                 sn3.Version,
 		BaseURL:                 sn3.BaseURL,
 		Terms:                   sn3.Terms,
 		Capacity:                sn3.Capacity,
@@ -283,6 +286,7 @@ func (sn3 *storageNodeV3) MigrateFrom(e entitywrapper.EntityI) error {
 
 func (sn3 *storageNodeV3) ApplyBaseChanges(snc storageNodeBase) {
 	sn3.Provider = snc.Provider
+	sn3.Version = snc.Version
 	sn3.BaseURL = snc.BaseURL
 	sn3.Terms = snc.Terms
 	sn3.Capacity = snc.Capacity
