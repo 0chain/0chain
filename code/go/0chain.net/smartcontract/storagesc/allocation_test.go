@@ -1061,7 +1061,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 				ProviderType:    spenum.Blobber,
 				LastHealthCheck: 0,
 			},
-			Version:   "v2",
+			Version:   "v3",
 			PublicKey: publicKeys[i-1],
 			BaseURL:   "http://blobber" + strconv.Itoa(i) + ".test.ru:9100/api",
 			Terms: Terms{
