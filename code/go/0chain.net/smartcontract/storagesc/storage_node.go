@@ -161,7 +161,7 @@ func (sb *storageNodeBase) CommitChangesTo(e entitywrapper.EntityI) {
 // StorageNode represents Blobber configurations.
 type storageNodeV2 struct {
 	provider.Provider
-	Version                 string  `json:"version" msg:"version"`
+	Version                 string  `json:"version,omitempty" msg:"version"`
 	BaseURL                 string  `json:"url"`
 	Terms                   Terms   `json:"terms"`     // terms
 	Capacity                int64   `json:"capacity"`  // total blobber capacity
@@ -174,7 +174,7 @@ type storageNodeV2 struct {
 	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
 	RewardRound       RewardRound        `json:"reward_round"`
 	NotAvailable      bool               `json:"not_available"`
-	IsRestricted      *bool              `json:"is_restricted"`
+	IsRestricted      *bool              `json:"is_restricted,omitempty"`
 }
 
 const storageNodeV2Version = "v2"
