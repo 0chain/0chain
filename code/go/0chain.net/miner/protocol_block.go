@@ -679,6 +679,18 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 	transaction.RemoveFromPool(cleanPoolCtx, txns)
+
+	pn, err := mc.GetPhaseOfBlock(b)
+	if err != nil {
+		logging.Logger.Error("update finalized block - get phase of block failed", zap.Error(err))
+		return
+	}
+
+	logging.Logger.Debug("[mvc] update finalized block - send phase node",
+		zap.Int64("round", b.Round),
+		zap.Int64("start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
+	go mc.SendPhaseNode(context.Background(), chain.PhaseEvent{Phase: pn})
 }
 
 /*FinalizeBlock - finalize the transactions in the block */

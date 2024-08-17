@@ -87,16 +87,132 @@ func (vcp *viewChangeProcess) init(mc *Chain) {
 }
 
 func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
+	logging.Logger.Info("manual view change process started!!")
+	// for {
+	// 	select {
+	// 	case <-ctx.Done():
+	// 		return
+	// 	case vce := <-mc.manualViewChangeC:
+	// 		if vce == nil {
+	// 			continue
+	// 		}
+
+	// 		mc.SetDKGSFromStore(ctx, vce.MagicBlock)
+	// 	}
+	// }
+	// DKG process constants
+	// const (
+	// 	repeat = 5 * time.Second // repeat phase from sharders
+	// )
+
+	var (
+		// phaseEventsChan = mc.PhaseEvents()
+		newPhaseEvent chain.PhaseEvent
+
+		// start round of the accepted phase
+		phaseStartRound int64
+
+		// flag indicating whether previous share phase failed
+		// and should be retried with the already generated shares
+		retrySharePhase bool
+	)
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case vce := <-mc.manualViewChangeC:
-			if vce == nil {
-				continue
+		default:
+			pe, ok := mc.PhaseEvents().First()
+			if !ok {
+				time.Sleep(200 * time.Millisecond)
 			}
 
-			mc.SetDKGSFromStore(ctx, vce.MagicBlock)
+			newPhaseEvent = pe.Data.(chain.PhaseEvent)
+		}
+
+		pn := newPhaseEvent.Phase
+		// only retry if new phase is share phase
+		retrySharePhase = pn.Phase == minersc.Share && retrySharePhase
+
+		if pn.StartRound == phaseStartRound {
+			if !retrySharePhase {
+				continue // phase already accepted
+			}
+		}
+
+		var (
+			lfb = mc.GetLatestFinalizedBlock()
+			// active = mc.IsActiveInChain()
+			active = true
+		)
+
+		// if active && newPhaseEvent.Sharders {
+		// 	active = false // obviously, miner is not active, or is stuck
+		// }
+
+		logging.Logger.Debug("dkg process: trying",
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.String("next_phase", pn.Phase.String()),
+			// zap.Bool("active", active),
+			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
+
+		// only go through if pn.Phase is expected
+		if !(pn.Phase == minersc.Start ||
+			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
+			logging.Logger.Debug(
+				"dkg process: jumping over a phase; skip and wait for restart",
+				zap.String("current_phase", mc.CurrentPhase().String()),
+				zap.String("next_phase", pn.Phase.String()))
+			mc.SetCurrentPhase(minersc.Unknown)
+			continue
+		}
+
+		logging.Logger.Info("dkg process: start",
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.String("next_phase", pn.Phase.String()),
+			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
+
+		var phaseFunc, ok = mc.viewChangeProcess.phaseFuncs[pn.Phase]
+		if !ok {
+			logging.Logger.Debug("dkg process: no such phase func",
+				zap.String("phase", pn.Phase.String()))
+			continue
+		}
+
+		logging.Logger.Debug("dkg process: run phase function",
+			zap.String("name", getFunctionName(phaseFunc)))
+
+		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+		if lfmb == nil {
+			logging.Logger.Error("can't get lfmb")
+			return
+		}
+		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
+		if err != nil {
+			logging.Logger.Error("dkg process: phase func failed",
+				zap.String("current_phase", mc.CurrentPhase().String()),
+				zap.String("next_phase", pn.Phase.String()),
+				zap.Error(err),
+			)
+			if pn.Phase != minersc.Share {
+				continue
+			}
+			retrySharePhase = true
+		}
+
+		logging.Logger.Debug("dkg process: move phase",
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.Any("next_phase", pn),
+			zap.Any("txn", txn))
+
+		if txn == nil || mc.ConfirmTransaction(ctx, txn, 0) {
+			prevPhase := mc.CurrentPhase()
+			mc.SetCurrentPhase(pn.Phase)
+			phaseStartRound = pn.StartRound
+			logging.Logger.Debug("dkg process: moved phase",
+				zap.String("prev_phase", prevPhase.String()),
+				zap.String("current_phase", mc.CurrentPhase().String()),
+			)
 		}
 	}
 }

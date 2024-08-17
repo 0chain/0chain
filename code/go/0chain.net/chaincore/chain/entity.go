@@ -210,7 +210,8 @@ type Chain struct {
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	syncMissingNodesC     chan syncPathNodes
 	// precise DKG phases tracking
-	phaseEvents chan PhaseEvent
+	// phaseEvents       chan PhaseEvent
+	phaseEvents *orderbuffer.OrderBuffer
 
 	vldTxnsMtx               *sync.Mutex
 	validatedTxnsCache       map[string]string // validated transactions, key as hash, value as signature
@@ -1083,7 +1084,8 @@ func Provider() datastore.Entity {
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncMissingNodesC = make(chan syncPathNodes, 1)
 
-	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
+	// c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
+	c.phaseEvents = orderbuffer.New(100)
 
 	c.vldTxnsMtx = &sync.Mutex{}
 	c.validatedTxnsCache = make(map[string]string)
@@ -2559,7 +2561,7 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) ( //nolint
 
 	// even if it executed on a shader we don't treat this phase as obtained
 	// from sharders
-	c.sendPhase(pn, false) // optimistic, never block here
+	c.SendPhaseNode(context.TODO(), PhaseEvent{Phase: pn, Sharders: false}) // optimistic, never block here
 
 	// this work is different for miners and sharders
 	return c.viewChanger.ViewChange(ctx, lfb)
