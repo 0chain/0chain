@@ -234,6 +234,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
+	logging.Logger.Debug("[mvc] adjust_view_change: clear dkg miners list", zap.Int64("round", b.Round))
 	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return common.NewErrorf("adjust_view_change",
 			"can't cleanup DKG miners: %v", err)
@@ -250,26 +251,32 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
-	configuration := config.Configuration()
-	isViewChange := configuration.ChainConfig.IsViewChangeEnabled()
-	if isViewChange {
+	var (
+		configuration = config.Configuration()
+		isViewChange  = configuration.ChainConfig.IsViewChangeEnabled()
+		b             = balances.GetBlock()
+	)
+
+	if isViewChange || b.Round == gn.ViewChange {
 		// TODO: cache the phase node so if when there's no view change happens, we
 		// can avoid unnecessary MPT access
+		logging.Logger.Debug("[mvc] payFees: view change, get phase node", zap.Int64("round", b.Round))
 		var pn *PhaseNode
 		if pn, err = GetPhaseNode(balances); err != nil {
 			return
 		}
-		if err = msc.setPhaseNode(balances, pn, gn, t, isViewChange); err != nil {
-			return "", common.NewErrorf("pay_fees",
-				"error inserting phase node: %v", err)
+
+		logging.Logger.Debug("[mvc] payFees: view change, set phase node", zap.Int64("round", b.Round))
+		if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
+			return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
 		}
 
+		logging.Logger.Debug("[mvc] payFees: view change, adjust view change", zap.Int64("round", b.Round))
 		if err = msc.adjustViewChange(gn, balances); err != nil {
 			return // adjusting view change error
 		}
 	}
 
-	b := balances.GetBlock()
 	if b.Round == gn.ViewChange {
 		if err := msc.SetMagicBlock(gn, balances); err != nil {
 			return "", common.NewErrorf("pay_fees",

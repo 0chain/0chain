@@ -178,67 +178,38 @@ func (msc *MinerSmartContract) DeleteMiner(
 		return "", common.NewError("delete_miner", err.Error())
 	}
 
-	lfmb := balances.GetLastestFinalizedMagicBlock()
-	cloneMB := lfmb.MagicBlock.Clone()
-	cloneMB.Miners.Delete(mn.ID)
-	cloneMB.Mpks.Delete(mn.ID)
-	cloneMB.ShareOrSigns.Delete(mn.ID)
+	// lfmb := balances.GetLastestFinalizedMagicBlock()
+	// cloneMB := lfmb.MagicBlock.Clone()
+	// cloneMB.Miners.Delete(mn.ID)
+	// cloneMB.Mpks.Delete(mn.ID)
+	// cloneMB.ShareOrSigns.Delete(mn.ID)
 
-	cloneMB.PreviousMagicBlockHash = lfmb.MagicBlock.Hash
-	cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
+	// cloneMB.PreviousMagicBlockHash = lfmb.MagicBlock.Hash
+	// cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
 	nvcPeriod := PhaseRounds[Wait]
-	cloneMB.StartingRound = ((balances.GetBlock().Round)/nvcPeriod + 1) * nvcPeriod
+	// cloneMB.StartingRound =
+	startingRound := ((balances.GetBlock().Round)/nvcPeriod + 1) * nvcPeriod
 
-	dkgMiners := NewDKGMinerNodes()
-	dkgMiners.calculateTKN(gn, cloneMB.Miners.Size())
-	cloneMB.T = dkgMiners.T
-	cloneMB.K = dkgMiners.K
-	cloneMB.N = dkgMiners.N
-	cloneMB.Hash = cloneMB.GetHash()
-	logging.Logger.Debug("delete miner, new TKN:",
-		zap.Int("T", cloneMB.T),
-		zap.Int("K", cloneMB.K),
-		zap.Int("N", cloneMB.N),
-		zap.Int64("next vc", cloneMB.StartingRound),
-		zap.Int("MB miner size", cloneMB.Miners.Size()))
+	// dkgMiners := NewDKGMinerNodes()
+	// dkgMiners.calculateTKN(gn, cloneMB.Miners.Size())
+	// cloneMB.T = dkgMiners.T
+	// cloneMB.K = dkgMiners.K
+	// cloneMB.N = dkgMiners.N
+	// cloneMB.Hash = cloneMB.GetHash()
+	// logging.Logger.Debug("delete miner, new TKN:",
+	// 	zap.Int("T", cloneMB.T),
+	// 	zap.Int("K", cloneMB.K),
+	// 	zap.Int("N", cloneMB.N),
+	// 	zap.Int64("next vc", cloneMB.StartingRound),
+	// 	zap.Int("MB miner size", cloneMB.Miners.Size()))
 
-	// msc.createMagicBlock()
-	if err := updateMagicBlock(balances, cloneMB); err != nil {
-		return "", common.NewError("delete_miner could not update magic block", err.Error())
-	}
-
-	// // update DKG and Summary
-	// dkgSummary, err := msc.getDKGSummary(balances, lfmb.MagicBlockNumber)
-	// switch err {
-	// case nil:
-	// case util.ErrValueNotPresent:
-	// 	// load from local store and save to MPT
-	// 	dkgSummary, err = balances.LoadDKGSummary(lfmb.MagicBlockNumber)
-	// 	if err != nil {
-	// 		logging.Logger.Error("delete miner, could not load dkg summary", zap.Error(err))
-	// 		return "", common.NewError("delete_miner could not load dkg summary", err.Error())
-	// 	}
-	// default:
-	// 	return "", common.NewError("delete_miner could not get dkg summary", err.Error())
+	// // msc.createMagicBlock()
+	// if err := updateMagicBlock(balances, cloneMB); err != nil {
+	// 	return "", common.NewError("delete_miner could not update magic block", err.Error())
 	// }
 
-	// delete(dkgSummary.SecretShares, computeBlsID(mn.GetKey()))
-	// dkgSummary.StartingRound = cloneMB.StartingRound
-	// if err := msc.saveDKGSummary(balances, dkgSummary, cloneMB.MagicBlockNumber); err != nil {
-	// 	logging.Logger.Error("delete miner, could not save dkg summary", zap.Error(err))
-	// 	return "", common.NewError("delete_miner could not save dkg summary", err.Error())
-	// }
-
-	// logging.Logger.Info("delete miner, success updated MB and DKG summary",
-	// 	zap.Int64("MB starting round", cloneMB.StartingRound),
-	// 	zap.Int64("DKG summary starting round", dkgSummary.StartingRound))
-
-	// newDKG, err := chain.NewDKGWithMagicBlock(cloneMB, prevDKGSummary)
-	// if err != nil {
-	// 	return "", common.NewError("delete_miner could not create new dkg", err.Error())
-	// }
-
-	gn.ViewChange = cloneMB.StartingRound
+	// gn.ViewChange = cloneMB.StartingRound
+	gn.ViewChange = startingRound
 	if err := gn.save(balances); err != nil {
 		return "", common.NewError("delete_miner could not save global node", err.Error())
 	}
