@@ -40,11 +40,11 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		return nil
 	}, func() error {
 		if sn.Entity().GetVersion() == "v3" {
-			if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
 				if v3.IsRestricted != nil {
-					data.IsRestricted = *v3.IsRestricted
+					data.IsEnterprise = *v3.IsRestricted
 				}
-
 				if v3.IsEnterprise != nil {
 					data.IsEnterprise = *v3.IsEnterprise
 				}
@@ -103,9 +103,10 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		return nil
 	}, func() error {
 		if sn.Entity().GetVersion() == "v3" {
-			if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
 				if v3.IsRestricted != nil {
-					data.IsRestricted = *v3.IsRestricted
+					data.IsEnterprise = *v3.IsRestricted
 				}
 
 				if v3.IsEnterprise != nil {

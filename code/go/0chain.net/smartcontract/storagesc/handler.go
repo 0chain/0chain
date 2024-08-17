@@ -2617,16 +2617,27 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 		NotAvailable:            b.NotAvailable,
 	}
 
-	if b.IsRestricted != nil {
-		sr.IsRestricted = *b.IsRestricted
-	}
-
 	err := cstate.WithActivation(balances, "electra", func() error {
+		sv2, ok := sn.Entity().(*storageNodeV2)
+		if ok && sv2.IsRestricted != nil {
+			sr.IsRestricted = *sv2.IsRestricted
+		}
 		return nil
 	}, func() error {
 		if sn.Entity().GetVersion() == "v3" {
-			if v3, ok := sn.Entity().(*storageNodeV3); ok && v3.IsEnterprise != nil {
-				sr.IsEnterprise = *v3.IsEnterprise
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
+				if v3.IsRestricted != nil {
+					sr.IsEnterprise = *v3.IsRestricted
+				}
+				if v3.IsEnterprise != nil {
+					sr.IsEnterprise = *v3.IsEnterprise
+				}
+			}
+		} else {
+			sv2, ok := sn.Entity().(*storageNodeV2)
+			if ok && sv2.IsRestricted != nil {
+				sr.IsRestricted = *sv2.IsRestricted
 			}
 		}
 		return nil
