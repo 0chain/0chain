@@ -190,7 +190,6 @@ func (sn2 *storageNodeV2) InitVersion() {
 func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 	return &storageNodeBase{
 		Provider:                sn2.Provider,
-		Version:                 sn2.Version,
 		BaseURL:                 sn2.BaseURL,
 		Terms:                   sn2.Terms,
 		Capacity:                sn2.Capacity,
