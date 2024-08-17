@@ -21,6 +21,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/util/orderbuffer"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
@@ -513,18 +514,20 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 }
 
 // PhaseEvents notifications channel.
-func (c *Chain) PhaseEvents() (pe chan PhaseEvent) {
+func (c *Chain) PhaseEvents() *orderbuffer.OrderBuffer {
 	return c.phaseEvents
 }
 
-// The sendPhase optimistically sends given phase to phase trackers.
+// The SendPhaseNode optimistically sends given phase to phase trackers.
 // It never blocks. Skipping event if no one can accept it at this time.
-func (c *Chain) sendPhase(pn minersc.PhaseNode, sharders bool) {
-	select {
-	case c.phaseEvents <- PhaseEvent{Phase: pn, Sharders: sharders}:
-	default:
-		// never block here, be optimistic
-	}
+func (c *Chain) SendPhaseNode(ctx context.Context, pe PhaseEvent) {
+	c.phaseEvents.Add(pe.Phase.StartRound, pe)
+	// select {
+	// // case c.phaseEvents <- PhaseEvent{Phase: pn, Sharders: sharders}:
+	// case c.phaseEvents <- pe:
+	// case <-ctx.Done():
+	// 	logging.Logger.Error("push phase node to channel failed", zap.Error(ctx.Err()))
+	// }
 }
 
 // The GetPhaseFromSharders obtains minersc.PhaseNode from sharders and sends
@@ -576,7 +579,9 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 		zap.Int64("restarts", phase.Restarts))
 
 	const isGivenFromSharders = true // it is given from sharders 100%
-	c.sendPhase(*phase, isGivenFromSharders)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	c.SendPhaseNode(ctx, PhaseEvent{Phase: *phase, Sharders: isGivenFromSharders})
 }
 
 // The GetPhaseOfBlock extracts and returns Miner SC phase node for given block.
