@@ -1886,6 +1886,13 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
+	isEnterprise := false
+	if alloc.Entity().GetVersion() == "v2" {
+		if v2 := alloc.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+			isEnterprise = true
+		}
+	}
+
 	allocBase := alloc.mustBase()
 
 	// Pay cancellation charge if removing a blobber.
@@ -1930,13 +1937,17 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	cp, err := edb.GetChallengePool(allocBase.ID)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
+	cpBalance := int64(0)
+	if !isEnterprise {
+		cp, err := edb.GetChallengePool(allocBase.ID)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLockZCN, err := allocBase.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, false, common.Timestamp(time.Now().Unix()))
+	tokensRequiredToLockZCN, err := allocBase.requiredTokensForUpdateAllocation(currency.Coin(cpBalance), req.Extend, isEnterprise, common.Timestamp(time.Now().Unix()))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
