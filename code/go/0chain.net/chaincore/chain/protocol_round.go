@@ -1,13 +1,14 @@
 package chain
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"errors"
 	"net/url"
 	"sort"
 	"sync"
 	"time"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/config"
 	metrics "github.com/rcrowley/go-metrics"
@@ -321,13 +322,13 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		}
 
 		// perform view change (or not perform)
-		if err := c.viewChanger.ViewChange(ctx, lfb); err != nil {
-			logging.Logger.Error("view_changing_lfb",
-				zap.Int64("round", roundNumber),
-				zap.Int64("lfb_round", lfb.Round),
-				zap.Error(err))
-			return
-		}
+		// if err := c.viewChanger.ViewChange(ctx, lfb); err != nil {
+		// 	logging.Logger.Error("view_changing_lfb",
+		// 		zap.Int64("round", roundNumber),
+		// 		zap.Int64("lfb_round", lfb.Round),
+		// 		zap.Error(err))
+		// 	return
+		// }
 		FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 
 		logging.Logger.Info("finalize round - latest finalized round",

@@ -686,6 +686,13 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		return
 	}
 
+	logging.Logger.Debug("[mvc] set next view change round")
+	// perform view change (or not perform)
+	if err := mc.ViewChange(ctx, b); err != nil {
+		logging.Logger.Error("[mvc] view change", zap.Int64("round", b.Round), zap.Error(err))
+		return
+	}
+
 	logging.Logger.Debug("[mvc] update finalized block - send phase node",
 		zap.Int64("round", b.Round),
 		zap.Int64("start_round", pn.StartRound),
