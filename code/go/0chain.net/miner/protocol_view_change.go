@@ -125,6 +125,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			pe, ok := mc.PhaseEvents().Pop()
 			if !ok {
 				time.Sleep(200 * time.Millisecond)
+				continue
 			}
 
 			newPhaseEvent = pe.Data.(chain.PhaseEvent)
