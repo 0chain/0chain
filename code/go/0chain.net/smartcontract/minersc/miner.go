@@ -186,9 +186,9 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	// cloneMB.PreviousMagicBlockHash = lfmb.MagicBlock.Hash
 	// cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
-	nvcPeriod := PhaseRounds[Wait]
+	// nvcPeriod := PhaseRounds[Wait]
 	// cloneMB.StartingRound =
-	startingRound := ((balances.GetBlock().Round)/nvcPeriod + 1) * nvcPeriod
+	// startingRound := ((balances.GetBlock().Round)/nvcPeriod + 1) * nvcPeriod
 
 	// dkgMiners := NewDKGMinerNodes()
 	// dkgMiners.calculateTKN(gn, cloneMB.Miners.Size())
@@ -209,7 +209,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	// }
 
 	// gn.ViewChange = cloneMB.StartingRound
-	gn.ViewChange = startingRound
+	// gn.ViewChange = startingRound
 	if err := gn.save(balances); err != nil {
 		return "", common.NewError("delete_miner could not save global node", err.Error())
 	}
