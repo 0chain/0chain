@@ -137,6 +137,10 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 
 		if pn.StartRound == phaseStartRound {
 			if !retrySharePhase {
+				logging.Logger.Debug("dkg process: phase already accepted",
+					zap.String("phase", pn.Phase.String()),
+					zap.Int64("start_round", pn.StartRound),
+					zap.Int64("phase start round", phaseStartRound))
 				continue // phase already accepted
 			}
 		}
