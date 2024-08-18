@@ -378,6 +378,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		nvc int64
 	)
 
+	logging.Logger.Debug("[mvc] set next view change round")
 	if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
 		return common.NewErrorf("view_change", "getting nvc: %v", err)
 	}

@@ -383,9 +383,11 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
+	// TODO: do the below in auto VC
 	// sharders
-	allSharderKeepList := new(MinerNodes)
-	return updateShardersKeepList(balances, allSharderKeepList)
+	// allSharderKeepList := new(MinerNodes)
+	// return updateShardersKeepList(balances, allSharderKeepList)
+	return nil
 }
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(
