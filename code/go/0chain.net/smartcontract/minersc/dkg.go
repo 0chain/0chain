@@ -151,7 +151,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 			len(mpks.Mpks), dkgMinersList.K)
 	}
 
-	logging.Logger.Debug("miner sc: move phase to share or publish",
+	logging.Logger.Debug("[mvc] miner sc: move phase to share or publish",
 		zap.Int("mpks", len(mpks.Mpks)),
 		zap.Int("K", dkgMinersList.K),
 		zap.Int64("DB version", int64(balances.GetState().GetVersion())))
@@ -276,28 +276,26 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 
 	logging.Logger.Debug("[mvc] setPhaseNode move phase success", zap.String("phase", pn.Phase.String()))
 	phaseFunc, ok := phaseFuncs[pn.Phase]
-	if !ok {
-		return common.NewErrorf("setPhaseNode", "no phase function found for phase: %v", pn.Phase)
-	}
+	if ok {
+		err = phaseFunc(balances, gn)
+		if err != nil {
+			if cstate.ErrInvalidState(err) {
+				logging.Logger.Debug("[mvc] setPhaseNode move phase failed",
+					zap.Error(err),
+					zap.String("phase", pn.Phase.String()))
+				return err
+			}
 
-	err = phaseFunc(balances, gn)
-	if err != nil {
-		if cstate.ErrInvalidState(err) {
-			logging.Logger.Debug("[mvc] setPhaseNode move phase failed",
+			logging.Logger.Error("[mvc] setPhaseNode failed to set phase node - restarting DKG",
 				zap.Error(err),
 				zap.String("phase", pn.Phase.String()))
-			return err
-		}
 
-		logging.Logger.Error("[mvc] setPhaseNode failed to set phase node - restarting DKG",
-			zap.Error(err),
-			zap.String("phase", pn.Phase.String()))
-
-		if err = msc.RestartDKG(pn, balances); err != nil {
-			logging.Logger.Debug("setPhaseNode move phase failed",
-				zap.Error(err),
-				zap.String("phase", pn.Phase.String()))
-			return err
+			if err = msc.RestartDKG(pn, balances); err != nil {
+				logging.Logger.Debug("setPhaseNode move phase failed",
+					zap.Error(err),
+					zap.String("phase", pn.Phase.String()))
+				return err
+			}
 		}
 	}
 
