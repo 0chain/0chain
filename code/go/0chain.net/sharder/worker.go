@@ -109,12 +109,19 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case tp := <-ticker.C:
-			if tp.Sub(latest) < repeat || len(phaseq) > 0 {
+			if tp.Sub(latest) < repeat || phaseq.Size() > 0 {
 				continue // already have a fresh phase
 			}
 			go sc.GetPhaseFromSharders(ctx)
 			continue
-		case pe = <-phaseq:
+		default:
+			pei, ok := phaseq.Pop()
+			if !ok {
+				time.Sleep(200 * time.Millisecond)
+				continue
+			}
+
+			pe = pei.Data.(chain.PhaseEvent)
 			if !pe.Sharders {
 				latest = time.Now()
 			}
