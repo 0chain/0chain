@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 
-	"0chain.net/core/config"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 
@@ -254,30 +253,31 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	resp string, err error) {
 
 	var (
-		configuration = config.Configuration()
-		isViewChange  = configuration.ChainConfig.IsViewChangeEnabled()
-		b             = balances.GetBlock()
+		// configuration = config.Configuration()
+		// isViewChange  = configuration.ChainConfig.IsViewChangeEnabled()
+		b = balances.GetBlock()
 	)
 
-	if isViewChange || b.Round == gn.ViewChange {
-		// TODO: cache the phase node so if when there's no view change happens, we
-		// can avoid unnecessary MPT access
-		logging.Logger.Debug("[mvc] payFees: view change, get phase node", zap.Int64("round", b.Round))
-		var pn *PhaseNode
-		if pn, err = GetPhaseNode(balances); err != nil {
-			return
-		}
-
-		logging.Logger.Debug("[mvc] payFees: view change, set phase node", zap.Int64("round", b.Round))
-		if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
-			return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
-		}
-
-		logging.Logger.Debug("[mvc] payFees: view change, adjust view change", zap.Int64("round", b.Round))
-		if err = msc.adjustViewChange(gn, balances); err != nil {
-			return // adjusting view change error
-		}
+	// if isViewChange || b.Round == gn.ViewChange {
+	// if isViewChange || b.Round == gn.ViewChange {
+	// TODO: cache the phase node so if when there's no view change happens, we
+	// can avoid unnecessary MPT access
+	logging.Logger.Debug("[mvc] payFees: view change, get phase node", zap.Int64("round", b.Round))
+	var pn *PhaseNode
+	if pn, err = GetPhaseNode(balances); err != nil {
+		return
 	}
+
+	logging.Logger.Debug("[mvc] payFees: view change, set phase node", zap.Int64("round", b.Round))
+	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
+		return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
+	}
+
+	logging.Logger.Debug("[mvc] payFees: view change, adjust view change", zap.Int64("round", b.Round))
+	if err = msc.adjustViewChange(gn, balances); err != nil {
+		return // adjusting view change error
+	}
+	// }
 
 	if b.Round == gn.ViewChange {
 		if err := msc.SetMagicBlock(gn, balances); err != nil {
