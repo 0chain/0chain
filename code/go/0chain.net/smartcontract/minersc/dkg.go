@@ -356,12 +356,12 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 	dkgMiners := NewDKGMinerNodes()
 	if mbMinersNum < allMinersNum && mbMinersNum >= gn.MinN {
-		logging.Logger.Debug("Calculate TKN from lmb",
+		logging.Logger.Debug("[mvc] createDKGMinersForContribute calculate TKN from lmb",
 			zap.Int64("starting round", lmb.StartingRound),
 			zap.Int("miners num", mbMinersNum))
 		dkgMiners.calculateTKN(gn, mbMinersNum)
 	} else {
-		logging.Logger.Debug("Calculate TKN from all miner list",
+		logging.Logger.Debug("[mvc] createDKGMinersForContribute calculate TKN from all miner list",
 			zap.Int("all count", allMinersNum),
 			zap.Int64("gn.LastRound", gn.LastRound))
 		dkgMiners.calculateTKN(gn, allMinersNum)
@@ -372,7 +372,14 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	dkgMiners.StartRound = gn.LastRound
+	logging.Logger.Debug("[mvc] createDKGMinersForContribute, new dkg miners",
+		zap.Int("T", dkgMiners.T),
+		zap.Int("K", dkgMiners.K),
+		zap.Int("N", dkgMiners.N),
+		zap.Int("all count", len(dkgMiners.SimpleNodes)),
+		zap.Int64("start round", dkgMiners.StartRound))
 	if err := updateDKGMinersList(balances, dkgMiners); err != nil {
+		logging.Logger.Error("[mvc] createDKGMinersForContribute, failed to update dkg miners list")
 		return err
 	}
 
