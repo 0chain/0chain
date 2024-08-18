@@ -11,6 +11,7 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 
@@ -319,6 +320,19 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 			zap.Error(err))
 		return err
 	}
+
+	// get deleted miners list
+	dKey, ok := deleteNodeKeyMap[spenum.Miner]
+	if !ok {
+		return fmt.Errorf("get delete node key failed, invalid node type: %s", spenum.Miner)
+	}
+
+	deleteMinersIDs, err := getDeleteNodeIDs(balances, dKey)
+	if err != nil {
+		return err
+	}
+
+	allMinersList.RemoveNodes(deleteMinersIDs)
 
 	if len(allMinersList.Nodes) < gn.MinN {
 		return common.NewErrorf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
