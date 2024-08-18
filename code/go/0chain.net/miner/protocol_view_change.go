@@ -122,7 +122,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			pe, ok := mc.PhaseEvents().First()
+			pe, ok := mc.PhaseEvents().Pop()
 			if !ok {
 				time.Sleep(200 * time.Millisecond)
 			}
@@ -258,7 +258,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		case <-initPhaseTimer.C:
 			go mc.GetPhaseFromSharders(ctx)
 		case tp := <-ticker.C:
-			if tp.Sub(lastPhaseEventTime) <= repeat || len(phaseEventsChan) > 0 {
+			if tp.Sub(lastPhaseEventTime) <= repeat || phaseEventsChan.Size() > 0 {
 				continue // already have a fresh phase
 			}
 			// otherwise, request phase from sharders; since we aren't using
@@ -267,7 +267,13 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			// buffered (at least 1 element in the buffer)
 			go mc.GetPhaseFromSharders(ctx)
 			continue
-		case newPhaseEvent = <-phaseEventsChan:
+		default:
+			pe, ok := phaseEventsChan.Pop()
+			if !ok {
+				time.Sleep(200 * time.Millisecond)
+				continue
+			}
+			newPhaseEvent = pe.Data.(chain.PhaseEvent)
 			if !newPhaseEvent.Sharders {
 				// keep last time the phase given by the miner
 				lastPhaseEventTime = time.Now()
