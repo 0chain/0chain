@@ -313,7 +313,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 
 func (msc *MinerSmartContract) createDKGMinersForContribute(
 	balances cstate.StateContextI, gn *GlobalNode) error {
-
+	logging.Logger.Debug("[mvc] createDKGMinersForContribute start")
 	allMinersList, err := msc.getMinersList(balances)
 	if err != nil {
 		logging.Logger.Error("createDKGMinersForContribute -- failed to get miner list",
@@ -328,35 +328,43 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	deleteMinersIDs, err := getDeleteNodeIDs(balances, dKey)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
+		logging.Logger.Error("[mvc] createDKGMinersForContribute failed to get delete miners IDs", zap.Error(err))
 		return err
 	}
+
+	logging.Logger.Debug("[mvc] createDKGMinersForContribute remove deleted miners", zap.Strings("miners", deleteMinersIDs))
 
 	allMinersList.RemoveNodes(deleteMinersIDs)
 
 	if len(allMinersList.Nodes) < gn.MinN {
+		logging.Logger.Error("[mvc] createDKGMinersForContribute too few miners for dkg",
+			zap.Int("all miners num", len(allMinersList.Nodes)),
+			zap.Int("min miners num", gn.MinN))
 		return common.NewErrorf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
 	}
 
+	var (
+		allMinersNum = len(allMinersList.Nodes)
+		lmb          = balances.GetChainCurrentMagicBlock()
+		mbMinersNum  int
+	)
+
+	if lmb != nil {
+		mbMinersNum = lmb.Miners.Size()
+	}
+
 	dkgMiners := NewDKGMinerNodes()
-	if lmb := balances.GetChainCurrentMagicBlock(); lmb != nil {
-		num := lmb.Miners.Size()
+	if mbMinersNum < allMinersNum && mbMinersNum >= gn.MinN {
 		logging.Logger.Debug("Calculate TKN from lmb",
 			zap.Int64("starting round", lmb.StartingRound),
-			zap.Int("miners num", num))
-		if num >= gn.MinN {
-			dkgMiners.calculateTKN(gn, num)
-		} else {
-			logging.Logger.Debug("Calculate TKN from all miner list",
-				zap.Int("all count", len(allMinersList.Nodes)),
-				zap.Int64("gn.LastRound", gn.LastRound))
-			dkgMiners.calculateTKN(gn, len(allMinersList.Nodes))
-		}
+			zap.Int("miners num", mbMinersNum))
+		dkgMiners.calculateTKN(gn, mbMinersNum)
 	} else {
 		logging.Logger.Debug("Calculate TKN from all miner list",
-			zap.Int("all count", len(allMinersList.Nodes)),
+			zap.Int("all count", allMinersNum),
 			zap.Int64("gn.LastRound", gn.LastRound))
-		dkgMiners.calculateTKN(gn, len(allMinersList.Nodes))
+		dkgMiners.calculateTKN(gn, allMinersNum)
 	}
 
 	for _, nd := range allMinersList.Nodes {
