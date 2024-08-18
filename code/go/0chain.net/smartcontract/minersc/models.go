@@ -1045,11 +1045,7 @@ func getShardersKeepList(balances cstate.CommonStateContextI) (*MinerNodes, erro
 	return sharders, nil
 }
 
-func updateShardersKeepList(state cstate.StateContextI, sharders *MinerNodes) error {
-	nodeIDs := make(NodeIDs, len(sharders.Nodes))
-	for i, n := range sharders.Nodes {
-		nodeIDs[i] = n.ID
-	}
+func updateShardersKeepList(state cstate.StateContextI, nodeIDs NodeIDs) error {
 	_, err := state.InsertTrieNode(ShardersKeepKey, &nodeIDs)
 	return err
 }

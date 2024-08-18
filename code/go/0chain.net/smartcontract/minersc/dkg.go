@@ -98,23 +98,24 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 func (msc *MinerSmartContract) moveToShareOrPublish(
 	balances cstate.StateContextI, pn *PhaseNode, gn *GlobalNode) error {
 
-	shardersKeep, err := getShardersKeepList(balances)
-	if err != nil {
-		return common.NewErrorf("move_to_share_or_publish_failed",
-			"failed to get sharders keep list: %v", err)
-	}
+	// TODO: do sharders in auto VC
+	// shardersKeep, err := getShardersKeepList(balances)
+	// if err != nil {
+	// 	return common.NewErrorf("move_to_share_or_publish_failed",
+	// 		"failed to get sharders keep list: %v", err)
+	// }
 
-	if len(shardersKeep.Nodes) < gn.MinS {
-		return common.NewErrorf("move_to_share_or_publish_failed",
-			"not enough sharders in keep list to move phase keep: %d, min_s: %d", len(shardersKeep.Nodes), gn.MinS)
-	}
+	// if len(shardersKeep.Nodes) < gn.MinS {
+	// 	return common.NewErrorf("move_to_share_or_publish_failed",
+	// 		"not enough sharders in keep list to move phase keep: %d, min_s: %d", len(shardersKeep.Nodes), gn.MinS)
+	// }
 
-	if !gn.hasPrevShader(shardersKeep, balances) {
-		return common.NewErrorf("move_to_share_or_publish_failed",
-			"missing at least one sharder from previous set in "+
-				"sharders keep list to move phase, keep: %d, min_s: %d",
-			len(shardersKeep.Nodes), gn.MinS)
-	}
+	// if !gn.hasPrevShader(shardersKeep, balances) {
+	// 	return common.NewErrorf("move_to_share_or_publish_failed",
+	// 		"missing at least one sharder from previous set in "+
+	// 			"sharders keep list to move phase, keep: %d, min_s: %d",
+	// 		len(shardersKeep.Nodes), gn.MinS)
+	// }
 
 	dkgMinersList, err := getDKGMinersList(balances)
 	if err != nil {
@@ -546,14 +547,16 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
-	if sharders == nil || len(sharders.Nodes) == 0 {
-		sharders = allSharderList
-	} else {
-		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
-		if err != nil {
-			return err
-		}
-	}
+	// TODO: reduce sharders in auto VC
+	// if sharders == nil || len(sharders.Nodes) == 0 {
+	// 	sharders = allSharderList
+	// } else {
+	// 	sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	sharders = allSharderList
 
 	if err = dkgMinersList.reduceNodes(true, gn, balances); err != nil {
 		logging.Logger.Error("create magic block for wait - reduce nodes failed", zap.Error(err))
@@ -605,8 +608,8 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	// if err != nil {
 	// 	return err
 	// }
-	allSharderKeepList := new(MinerNodes)
-	return updateShardersKeepList(balances, allSharderKeepList)
+	// allSharderKeepList := new(MinerNodes)
+	return updateShardersKeepList(balances, NodeIDs{})
 }
 
 func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
@@ -912,11 +915,11 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		return err
 	}
 
-	sharderKeepList := new(MinerNodes)
-	if err := updateShardersKeepList(balances, sharderKeepList); err != nil {
-		logging.Logger.Error("failed to restart dkg", zap.Error(err))
-		return err
-	}
+	// TODO: do the below in auto VC
+	// if err := updateShardersKeepList(balances, NodeIDs{}); err != nil {
+	// 	logging.Logger.Error("failed to restart dkg", zap.Error(err))
+	// 	return err
+	// }
 	pn.Phase = Start
 	pn.Restarts++
 	pn.StartRound = pn.CurrentRound
