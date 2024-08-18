@@ -52,7 +52,7 @@ var wallets []*wallet.Wallet
 
 var dkgShares []*DKGKeyShareImpl
 
-//GenerateWallets - generate the wallets used to participate in DKG
+// GenerateWallets - generate the wallets used to participate in DKG
 func GenerateWallets(n int) {
 	for i := 0; i < n; i++ {
 		w := &wallet.Wallet{}
@@ -63,7 +63,7 @@ func GenerateWallets(n int) {
 	}
 }
 
-//InitializeDKGShares - initialize DKG Share structures
+// InitializeDKGShares - initialize DKG Share structures
 func InitializeDKGShares() {
 	dkgShares = dkgShares[:0]
 	for _, w := range wallets {
@@ -76,7 +76,7 @@ func InitializeDKGShares() {
 	}
 }
 
-//GenerateDKGKeyShare - create Si(x) and corresponding Pi(x) polynomial coefficients
+// GenerateDKGKeyShare - create Si(x) and corresponding Pi(x) polynomial coefficients
 func (dkgs *DKGKeyShareImpl) GenerateDKGKeyShare(t int) {
 	var dsk bls.SecretKey
 	dsk.SetByCSPRNG()
@@ -84,7 +84,7 @@ func (dkgs *DKGKeyShareImpl) GenerateDKGKeyShare(t int) {
 	dkgs.mpk = bls.GetMasterPublicKey(dkgs.Msk)
 }
 
-//GenerateSij - generate secret key shares from i for each party j
+// GenerateSij - generate secret key shares from i for each party j
 func (dkgs *DKGKeyShareImpl) GenerateSij(ids []DKGID) {
 	dkgs.sij = make(map[bls.ID]bls.SecretKey)
 	for _, id := range ids {
@@ -96,7 +96,7 @@ func (dkgs *DKGKeyShareImpl) GenerateSij(ids []DKGID) {
 	}
 }
 
-//ValidateShare - validate Sij using Pj coefficients
+// ValidateShare - validate Sij using Pj coefficients
 func (dkgs *DKGKeyShareImpl) ValidateShare(jpk []bls.PublicKey, sij bls.SecretKey) bool {
 	var expectedSijPK bls.PublicKey
 	if err := expectedSijPK.Set(jpk, &dkgs.id); err != nil {
@@ -106,9 +106,9 @@ func (dkgs *DKGKeyShareImpl) ValidateShare(jpk []bls.PublicKey, sij bls.SecretKe
 	return expectedSijPK.IsEqual(sijPK)
 }
 
-//AggregateSecretShares - compute Si = Sigma(Sij), j in qual and Pi = g^Si
-//Useful to compute self secret key share and associated public key share
-//For other parties, the public key share can be derived using the Pj(x) coefficients
+// AggregateSecretShares - compute Si = Sigma(Sij), j in qual and Pi = g^Si
+// Useful to compute self secret key share and associated public key share
+// For other parties, the public key share can be derived using the Pj(x) coefficients
 func (dkgs *DKGKeyShareImpl) AggregateSecretKeyShares(qual []DKGID, dkgShares map[bls.ID]*DKGKeyShareImpl) {
 	var sk bls.SecretKey
 	for _, id := range qual {
@@ -123,7 +123,7 @@ func (dkgs *DKGKeyShareImpl) AggregateSecretKeyShares(qual []DKGID, dkgShares ma
 	dkgs.pi = dkgs.si.GetPublicKey()
 }
 
-//ComputePublicKeyShare - compute the public key share of any party j, based on the coefficients of Pj(x)
+// ComputePublicKeyShare - compute the public key share of any party j, based on the coefficients of Pj(x)
 func (dkgs *DKGKeyShareImpl) ComputePublicKeyShare(qual []DKGID, dkgShares map[bls.ID]*DKGKeyShareImpl) bls.PublicKey {
 	var pk bls.PublicKey
 	for _, id := range qual {
@@ -140,7 +140,7 @@ func (dkgs *DKGKeyShareImpl) ComputePublicKeyShare(qual []DKGID, dkgShares map[b
 	return pk
 }
 
-//AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
+// AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
 func (dkgs *DKGKeyShareImpl) AggregatePublicKeyShares(qual []DKGID, dkgShares map[bls.ID]*DKGKeyShareImpl) {
 	dkgs.gmpk = dkgs.gmpk[:0]
 	for k := 0; k < len(dkgs.mpk); k++ {
@@ -156,22 +156,22 @@ func (dkgs *DKGKeyShareImpl) AggregatePublicKeyShares(qual []DKGID, dkgShares ma
 	}
 }
 
-//Sign - sign using the group secret key share
+// Sign - sign using the group secret key share
 func (dkgs *DKGKeyShareImpl) Sign(msg string) string {
 	return dkgs.si.Sign(msg).GetHexString()
 }
 
-//VerifySignature - verify the signature using the group public key share
+// VerifySignature - verify the signature using the group public key share
 func (dkgs *DKGKeyShareImpl) VerifySignature(msg string, sig *bls.Sign) bool {
 	return sig.Verify(dkgs.pi, msg)
 }
 
-//VerifyGroupSignature - verify group signature using group public key
+// VerifyGroupSignature - verify group signature using group public key
 func (dkgs *DKGKeyShareImpl) VerifyGroupSignature(msg string, sig *bls.Sign) bool {
 	return sig.Verify(&dkgs.gmpk[0], msg)
 }
 
-//Recover - given t signature shares, recover the group signature (using lagrange interpolation)
+// Recover - given t signature shares, recover the group signature (using lagrange interpolation)
 func (dkgs *DKGKeyShareImpl) Recover(dkgSigShares []DKGSignatureShare) (*bls.Sign, error) {
 	var aggSig bls.Sign
 	var signatures []Sign

@@ -132,6 +132,10 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		}
 
 		pn := newPhaseEvent.Phase
+		logging.Logger.Debug("[mvc] process: receive phase",
+			zap.String("phase", pn.Phase.String()),
+			zap.Int64("start_round", pn.StartRound),
+			zap.Int64("phase start round", phaseStartRound))
 		// only retry if new phase is share phase
 		retrySharePhase = pn.Phase == minersc.Share && retrySharePhase
 

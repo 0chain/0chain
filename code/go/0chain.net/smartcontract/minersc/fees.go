@@ -189,14 +189,17 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
+	logging.Logger.Debug("[mvc] adjust view change...")
 	var b = balances.GetBlock()
 
 	if b.Round != gn.ViewChange {
+		logging.Logger.Debug("[mvc] adjust view change: not a view change round")
 		return // don't do anything, not a view change
 	}
 
 	var dmn *DKGMinerNodes
 	if dmn, err = getDKGMinersList(balances); err != nil {
+		logging.Logger.Error("[mvc] adjust view change: can't get DKG miners", zap.Error(err))
 		return common.NewErrorf("adjust_view_change",
 			"can't get DKG miners: %v", err)
 	}
@@ -212,8 +215,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	err = dmn.reduceNodes(true, gn, balances)
 	if err == nil && waited < dmn.K {
-		err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
-			waited, dmn.K)
+		err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d", waited, dmn.K)
 	}
 	if err != nil {
 		logging.Logger.Error("adjust_view_change", zap.Error(err))
