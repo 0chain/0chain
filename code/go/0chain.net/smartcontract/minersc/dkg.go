@@ -223,9 +223,9 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	pn *PhaseNode,
 	gn *GlobalNode,
 	t *transaction.Transaction) (err error) {
-
 	defer func() {
 		if err == nil {
+			// TODO: optimize this to check if there are any changes, avoid unnecessary MPT saving
 			_, err = balances.InsertTrieNode(pn.GetKey(), pn)
 			return
 		}
@@ -237,7 +237,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		return nil
 	}
 
-	logging.Logger.Debug("setPhaseNode",
+	logging.Logger.Debug("[mvc] setPhaseNode",
 		zap.String("phase", pn.Phase.String()),
 		zap.Int64("phase current round", pn.CurrentRound),
 		zap.Int64("phase start round", pn.StartRound))
@@ -246,7 +246,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	err = currentMoveFunc(balances, pn, gn)
 	if err != nil {
 		if cstate.ErrInvalidState(err) {
-			logging.Logger.Error("setPhaseNode failed",
+			logging.Logger.Error("[mvc] setPhaseNode failed",
 				zap.Error(err),
 				zap.String("phase", pn.Phase.String()),
 				zap.Int64("phase current round", pn.CurrentRound),
@@ -255,7 +255,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		}
 
 		funcName := getFunctionName(currentMoveFunc)
-		logging.Logger.Error("failed to move phase, restartDKG",
+		logging.Logger.Error("[mvc] failed to move phase, restartDKG",
 			zap.String("phase", pn.Phase.String()),
 			zap.Int64("phase start round", pn.StartRound),
 			zap.Int64("phase current round", pn.CurrentRound),
@@ -263,7 +263,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 			zap.Error(err))
 		err = msc.RestartDKG(pn, balances)
 		if err != nil {
-			logging.Logger.Error("setPhaseNode restart DKG failed",
+			logging.Logger.Error("[mvc] setPhaseNode restart DKG failed",
 				zap.Error(err),
 				zap.Int64("phase start round", pn.StartRound),
 				zap.Int64("phase current round", pn.CurrentRound),
@@ -272,7 +272,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		return err
 	}
 
-	logging.Logger.Debug("setPhaseNode move phase success", zap.String("phase", pn.Phase.String()))
+	logging.Logger.Debug("[mvc] setPhaseNode move phase success", zap.String("phase", pn.Phase.String()))
 	phaseFunc, ok := phaseFuncs[pn.Phase]
 	if !ok {
 		return common.NewErrorf("setPhaseNode", "no phase function found for phase: %v", pn.Phase)
@@ -281,13 +281,13 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	err = phaseFunc(balances, gn)
 	if err != nil {
 		if cstate.ErrInvalidState(err) {
-			logging.Logger.Debug("setPhaseNode move phase failed",
+			logging.Logger.Debug("[mvc] setPhaseNode move phase failed",
 				zap.Error(err),
 				zap.String("phase", pn.Phase.String()))
 			return err
 		}
 
-		logging.Logger.Error("setPhaseNode failed to set phase node - restarting DKG",
+		logging.Logger.Error("[mvc] setPhaseNode failed to set phase node - restarting DKG",
 			zap.Error(err),
 			zap.String("phase", pn.Phase.String()))
 
@@ -306,7 +306,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		pn.Phase++
 	}
 	pn.StartRound = pn.CurrentRound
-	logging.Logger.Debug("setPhaseNode", zap.String("next_phase", pn.Phase.String()))
+	logging.Logger.Debug("[mvc] setPhaseNode", zap.String("next_phase", pn.Phase.String()))
 	return nil
 }
 
