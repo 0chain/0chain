@@ -209,7 +209,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			retrySharePhase = true
 		}
 
-		if txn == nil || mc.ConfirmTransaction(ctx, txn, 0) {
+		if txn == nil || mc.ConfirmTransaction(ctx, txn, 10) {
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
 			phaseStartRound = pn.StartRound
