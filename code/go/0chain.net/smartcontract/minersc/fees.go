@@ -192,7 +192,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	var b = balances.GetBlock()
 
 	if b.Round != gn.ViewChange {
-		logging.Logger.Debug("[mvc] adjust view change: not a view change round")
+		// logging.Logger.Debug("[mvc] adjust view change: not a view change round")
 		return // don't do anything, not a view change
 	}
 
@@ -268,12 +268,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return
 	}
 
-	logging.Logger.Debug("[mvc] payFees: view change, set phase node", zap.Int64("round", b.Round))
+	// logging.Logger.Debug("[mvc] payFees: view change, set phase node", zap.Int64("round", b.Round))
 	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
 		return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
 	}
 
-	logging.Logger.Debug("[mvc] payFees: view change, adjust view change", zap.Int64("round", b.Round))
+	// logging.Logger.Debug("[mvc] payFees: view change, adjust view change", zap.Int64("round", b.Round))
 	if err = msc.adjustViewChange(gn, balances); err != nil {
 		return // adjusting view change error
 	}
