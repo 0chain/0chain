@@ -613,24 +613,28 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	string, error) {
-	logging.Logger.Debug("miner smart contract, contribute Mpk")
+	logging.Logger.Debug("[mvc] miner smart contract, contribute Mpk")
 	pn, err := GetPhaseNode(balances)
 	if err != nil {
-		return "", common.NewErrorf("contribute_mpk_failed",
-			"can't get phase node: %v", err)
+		logging.Logger.Error("[mvc] contribute mpk failed to get phase node", zap.Error(err))
+		return "", common.NewErrorf("contribute_mpk_failed", "can't get phase node: %v", err)
 	}
 
 	if pn.Phase != Contribute {
+		logging.Logger.Error("[mvc] contribute mpk, not the correct phase to contribute mpk",
+			zap.String("phase", pn.Phase.String()))
 		return "", common.NewErrorf("contribute_mpk_failed",
 			"this is not the correct phase to contribute mpk: %v", pn.Phase.String())
 	}
 
 	dmn, err := getDKGMinersList(balances)
 	if err != nil {
+		logging.Logger.Error("[mvc] contribute mpk failed to get dkg miners", zap.Error(err))
 		return "", err
 	}
 
 	if _, ok := dmn.SimpleNodes[t.ClientID]; !ok {
+		logging.Logger.Error("[mvc] contribute mpk miner not part of dkg set", zap.String("miner", t.ClientID))
 		return "", common.NewError("contribute_mpk_failed",
 			"miner not part of dkg set")
 	}
@@ -645,6 +649,8 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	if len(mpk.Mpk) != dmn.T {
+		logging.Logger.Error("[mvc] contribute mpk, mpk sent (size: %v) is not correct size: %v",
+			zap.Int("mpk size", len(mpk.Mpk)), zap.Int("dkg size", dmn.T))
 		return "", common.NewErrorf("contribute_mpk_failed",
 			"mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T)
 	}
@@ -653,6 +659,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	switch err {
 	case util.ErrValueNotPresent:
 		// the mpks could be empty when the first time to contribute mpks
+		logging.Logger.Debug("[mvc] contribute create new mpks")
 		mpks = block.NewMpks()
 	case nil:
 	default:
@@ -660,8 +667,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	}
 
 	if _, ok := mpks.Mpks[mpk.ID]; ok {
-		return "", common.NewError("contribute_mpk_failed",
-			"already have mpk for miner")
+		return "", common.NewError("contribute_mpk_failed", "already have mpk for miner")
 	}
 
 	mpks.Mpks[mpk.ID] = mpk
@@ -669,7 +675,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
 
-	logging.Logger.Debug("contribute_mpk success",
+	logging.Logger.Debug("[mvc] contribute_mpk success",
 		zap.Int64("DB version", int64(balances.GetState().GetVersion())),
 		zap.String("mpk id", mpk.ID),
 		zap.Int("len", len(mpks.Mpks)),
