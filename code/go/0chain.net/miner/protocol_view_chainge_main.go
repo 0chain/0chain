@@ -120,7 +120,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	}
 	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
 		logging.Logger.Error("[mvc] publishShareOrSigns, miner not part of mpks", zap.String("miner", selfNodeKey))
-		return // (nil, nil)
+		return nil, common.NewError("publish_sos", "miner not part of mpks")
 	}
 
 	var sos = mc.viewChangeProcess.shareOrSigns // local reference
@@ -143,6 +143,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners DKG", zap.Error(err))
 		return nil, err
 	}
+
 	if len(dmn.SimpleNodes) == 0 {
 		logging.Logger.Error("[mvc] publishShareOrSigns, no miners in DKG")
 		return nil, common.NewError("publish_sos", "no miners in DKG")
@@ -153,10 +154,10 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		publicKeys[n.ID] = n.PublicKey
 	}
 
-	var _, ok = sos.Validate(mpks, publicKeys,
-		chain.GetServerChain().GetSignatureScheme())
+	_, ok := sos.Validate(mpks, publicKeys, chain.GetServerChain().GetSignatureScheme())
 	if !ok {
 		logging.Logger.Error("[mvc] failed to verify share or signs", zap.Any("mpks", mpks))
+		return nil, common.NewError("publish_sos", "failed to verify share or signs")
 	}
 
 	var data = &httpclientutil.SmartContractTxnData{}
@@ -164,7 +165,6 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	data.InputArgs = sos.Clone()
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
-
 	var minerUrls []string
 	for id := range dmn.SimpleNodes {
 		var nodeSend = node.GetNode(id)

@@ -159,11 +159,18 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		// 	active = false // obviously, miner is not active, or is stuck
 		// }
 
+		phaseFunc, ok := mc.viewChangeProcess.phaseFuncs[pn.Phase]
+		if !ok {
+			logging.Logger.Debug("[mvc] dkg process: no such phase func",
+				zap.String("phase", pn.Phase.String()))
+			continue
+		}
+
 		logging.Logger.Debug("[mvc] dkg process: trying",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.String("next_phase", pn.Phase.String()),
 			// zap.Bool("active", active),
-			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
+			zap.String("phase funcs", getFunctionName(phaseFunc)))
 
 		// only go through if pn.Phase is expected
 		if !(pn.Phase == minersc.Start ||
@@ -181,21 +188,14 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			zap.String("next_phase", pn.Phase.String()),
 			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
-		var phaseFunc, ok = mc.viewChangeProcess.phaseFuncs[pn.Phase]
-		if !ok {
-			logging.Logger.Debug("[mvc] dkg process: no such phase func",
-				zap.String("phase", pn.Phase.String()))
-			continue
-		}
-
-		logging.Logger.Debug("[mvc] dkg process: run phase function",
-			zap.String("name", getFunctionName(phaseFunc)))
-
 		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 		if lfmb == nil {
 			logging.Logger.Error("can't get lfmb")
 			return
 		}
+
+		logging.Logger.Debug("[mvc] dkg process: run phase function",
+			zap.String("name", getFunctionName(phaseFunc)))
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("[mvc] dkg process: phase func failed",
