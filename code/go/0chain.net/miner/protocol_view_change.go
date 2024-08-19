@@ -159,7 +159,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		// 	active = false // obviously, miner is not active, or is stuck
 		// }
 
-		logging.Logger.Debug("dkg process: trying",
+		logging.Logger.Debug("[mvc] dkg process: trying",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.String("next_phase", pn.Phase.String()),
 			// zap.Bool("active", active),
@@ -169,26 +169,26 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		if !(pn.Phase == minersc.Start ||
 			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
 			logging.Logger.Debug(
-				"dkg process: jumping over a phase; skip and wait for restart",
+				"[mvc] dkg process: jumping over a phase; skip and wait for restart",
 				zap.String("current_phase", mc.CurrentPhase().String()),
 				zap.String("next_phase", pn.Phase.String()))
 			mc.SetCurrentPhase(minersc.Unknown)
 			continue
 		}
 
-		logging.Logger.Info("dkg process: start",
+		logging.Logger.Info("[mvc] dkg process: start",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.String("next_phase", pn.Phase.String()),
 			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
 
 		var phaseFunc, ok = mc.viewChangeProcess.phaseFuncs[pn.Phase]
 		if !ok {
-			logging.Logger.Debug("dkg process: no such phase func",
+			logging.Logger.Debug("[mvc] dkg process: no such phase func",
 				zap.String("phase", pn.Phase.String()))
 			continue
 		}
 
-		logging.Logger.Debug("dkg process: run phase function",
+		logging.Logger.Debug("[mvc] dkg process: run phase function",
 			zap.String("name", getFunctionName(phaseFunc)))
 
 		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
@@ -198,7 +198,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		}
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
-			logging.Logger.Error("dkg process: phase func failed",
+			logging.Logger.Error("[mvc] dkg process: phase func failed",
 				zap.String("current_phase", mc.CurrentPhase().String()),
 				zap.String("next_phase", pn.Phase.String()),
 				zap.Error(err),
@@ -209,7 +209,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			retrySharePhase = true
 		}
 
-		logging.Logger.Debug("dkg process: move phase",
+		logging.Logger.Debug("[mvc] dkg process: move phase",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.Any("next_phase", pn),
 			zap.Any("txn", txn))
@@ -218,7 +218,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
 			phaseStartRound = pn.StartRound
-			logging.Logger.Debug("dkg process: moved phase",
+			logging.Logger.Debug("[mvc] dkg process: moved phase",
 				zap.String("prev_phase", prevPhase.String()),
 				zap.String("current_phase", mc.CurrentPhase().String()),
 			)
@@ -659,13 +659,15 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	failNum := len(sendFail)
 	successNum := totalSentNum - failNum
 	if failNum > 0 && totalSentNum > mb.K && successNum < mb.K {
-		logging.Logger.Error("failed to send sijs",
+		logging.Logger.Error("[mvc] failed to send sijs",
 			zap.Int("total sent num", totalSentNum),
 			zap.Int("fail num", failNum),
 			zap.Int("K", mb.K),
 			zap.Strings("fail to miners", sendFail))
 		return nil, errors.New("failed to send sijs")
 	}
+	logging.Logger.Debug("[mvc] send sijs success", zap.Int("total sent num", totalSentNum),
+		zap.Int("success num", successNum))
 
 	return // (nil, nil)
 }
@@ -1120,6 +1122,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	defer mc.viewChangeProcess.Unlock()
 
 	if !mc.viewChangeProcess.isDKGSet() {
+		logging.Logger.Error("[mvc] sign share failed, dkg is not set")
 		return nil, common.NewError("sign_share", "DKG is not set")
 	}
 
@@ -1128,19 +1131,19 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		lmpks, dkgt = len(mpks), mc.viewChangeProcess.viewChangeDKG.T
 	)
 	if lmpks < dkgt {
+		logging.Logger.Error("[mvc] sign share failed, not enough mpks yet",
+			zap.Int("mpks num", lmpks), zap.Int("dkg t", dkgt))
 		return nil, common.NewErrorf("sign_share", "don't have enough mpks"+
 			" yet, l mpks (%d) < dkg t (%d)", lmpks, dkgt)
 	}
 
 	var (
-		message = datastore.GetEntityMetadata("dkg_share").
-			Instance().(*bls.DKGKeyShare)
-
-		share bls.Key
+		message = datastore.GetEntityMetadata("dkg_share").Instance().(*bls.DKGKeyShare)
+		share   bls.Key
 	)
 
 	if err = share.SetHexString(secShare); err != nil {
-		logging.Logger.Error("failed to set hex string", zap.Error(err))
+		logging.Logger.Error("[mvc] failed to set hex string", zap.Error(err))
 		return nil, common.NewErrorf("sign_share",
 			"setting hex string: %v", err)
 	}
@@ -1151,25 +1154,29 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	}
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
-		logging.Logger.Error("failed to verify dkg share", zap.String("share", secShare),
-			zap.String("node_id", nodeID))
+		logging.Logger.Error("[mvc] failed to verify dkg share",
+			zap.String("share", secShare), zap.String("node_id", nodeID))
 		return nil, common.NewError("sign_share", "failed to verify DKG share")
 	}
 
-	err = mc.viewChangeProcess.viewChangeDKG.AddSecretShare(
-		bls.ComputeIDdkg(nodeID), secShare, false)
+	err = mc.viewChangeProcess.viewChangeDKG.AddSecretShare(bls.ComputeIDdkg(nodeID), secShare, false)
 	if err != nil {
-		return nil, common.NewErrorf("sign_share",
-			"adding secret share: %v", err)
+		logging.Logger.Error("[mvc] failed to add secret share", zap.Error(err))
+		return nil, common.NewErrorf("sign_share", "adding secret share: %v", err)
 	}
 
 	message.Message = encryption.Hash(secShare)
 	message.Sign, err = node.Self.Sign(message.Message)
 	if err != nil {
-		logging.Logger.Error("failed to sign DKG share message", zap.Error(err))
+		logging.Logger.Error("[mvc] failed to sign DKG share message", zap.Error(err))
 		return nil, common.NewErrorf("sign_share",
 			"signing DKG share message: %v", err)
 	}
+
+	logging.Logger.Debug("[mvc] sign share request success",
+		zap.String("share", secShare),
+		zap.String("node_id", nodeID),
+		zap.Int("shares num", mc.viewChangeProcess.viewChangeDKG.GetSecretSharesSize()))
 
 	return afterSignShareRequestHandler(message, nodeID)
 }
