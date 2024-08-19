@@ -691,11 +691,15 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, can't get phase node",
+			zap.Error(err))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"can't get phase node: %v", err)
 	}
 
 	if pn.Phase != Publish {
+		logging.Logger.Error("[mvc] shareSignsOrShares, not in publish phase",
+			zap.String("phase", pn.Phase.String()))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"this is not the correct phase to publish signs or shares, phase node: %v",
 			string(pn.Encode()))
@@ -708,28 +712,37 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	case util.ErrValueNotPresent:
 		gsos = block.NewGroupSharesOrSigns()
 	default:
+		logging.Logger.Error("[mvc] failed to get group share or signs",
+			zap.Error(err))
 		return "", common.NewError("share_signs_or_shares_failed", err.Error())
 	}
 
 	var ok bool
 	if _, ok = gsos.Shares[t.ClientID]; ok {
+		logging.Logger.Error("[mvc] shareSignsOrShares, already have share or signs for miner",
+			zap.String("miner", t.ClientID))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"already have share or signs for miner %v", t.ClientID)
 	}
 
 	var dmn *DKGMinerNodes
 	if dmn, err = getDKGMinersList(balances); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get miners DKG list",
+			zap.Error(err))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"getting miners DKG list %v", err)
 	}
 
 	var sos = block.NewShareOrSigns()
 	if err = sos.Decode(inputData); err != nil {
-		return "", common.NewErrorf("share_signs_or_shares",
-			"decoding input %v", err)
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to decode sc input", zap.Error(err))
+		return "", common.NewErrorf("share_signs_or_shares", "decoding input %v", err)
 	}
 
 	if len(sos.ShareOrSigns) < dmn.K-1 {
+		logging.Logger.Debug("[mvc] shareSignsOrShares, not enough share or signs for this dkg",
+			zap.Int("l_sos", len(sos.ShareOrSigns)),
+			zap.Int("K", dmn.K-1))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
 			len(sos.ShareOrSigns), dmn.K-1)
@@ -741,6 +754,8 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	var mpks *block.Mpks
 	mpks, err = getMinersMPKs(balances)
 	if err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, getting miners MPKs",
+			zap.Error(err))
 		return "", common.NewError("share_signs_or_shares_failed", err.Error())
 	}
 
@@ -752,8 +767,8 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	var shares []string
 	shares, ok = sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
 	if !ok {
-		return "", common.NewError("share_signs_or_shares",
-			"share or signs failed validation")
+		logging.Logger.Error("[mvc] shareSignsOrShares, validation failed")
+		return "", common.NewError("share_signs_or_shares", "share or signs failed validation")
 	}
 
 	for _, share := range shares {
@@ -763,19 +778,25 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	sos.ID = t.ClientID
 	gsos.Shares[t.ClientID] = sos
 
-	logging.Logger.Debug("update gsos",
-		zap.Int64("gn.LastRound", gn.LastRound),
-		zap.Int64("state.version", int64(balances.GetState().GetVersion())))
 	err = updateGroupShareOrSigns(balances, gsos)
 	if err != nil {
+		logging.Logger.Error("[mvc] miner sc: shareSignsOrShares, failed to save group share of signs",
+			zap.Error(err))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"saving group share of signs: %v", err)
 	}
 
 	if err := updateDKGMinersList(balances, dmn); err != nil {
+		logging.Logger.Error("[mvc] miner sc: shareSignsOrShares, failed to save DKG miners",
+			zap.Error(err))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"saving DKG miners: %v", err)
 	}
+
+	logging.Logger.Debug("[mvc] miner sc: shareSignsOrShares, update gsos",
+		zap.String("miner", t.ClientID),
+		zap.Int("gsos shares len", len(gsos.Shares)),
+		zap.Int64("gn.LastRound", gn.LastRound))
 
 	return string(sos.Encode()), nil
 }
