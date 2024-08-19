@@ -110,7 +110,8 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		newPhaseEvent chain.PhaseEvent
 
 		// start round of the accepted phase
-		phaseStartRound int64
+		phaseStartRound    int64
+		hadTxnAndConfirmed bool
 
 		// flag indicating whether previous share phase failed
 		// and should be retried with the already generated shares
@@ -139,14 +140,19 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		// only retry if new phase is share phase
 		retrySharePhase = pn.Phase == minersc.Share && retrySharePhase
 
-		if pn.StartRound == phaseStartRound {
-			if !retrySharePhase {
-				// logging.Logger.Debug("dkg process: phase already accepted",
-				// 	zap.String("phase", pn.Phase.String()),
-				// 	zap.Int64("start_round", pn.StartRound),
-				// 	zap.Int64("phase start round", phaseStartRound))
-				continue // phase already accepted
-			}
+		notMoveRound := pn.StartRound == phaseStartRound
+
+		if !retrySharePhase && notMoveRound && hadTxnAndConfirmed {
+			// skip if not retry share phase, and not the move round, also previously, txn was confirmed,
+			continue
+		}
+
+		if notMoveRound && hadTxnAndConfirmed && !retrySharePhase {
+			// logging.Logger.Debug("dkg process: phase already accepted",
+			// 	zap.String("phase", pn.Phase.String()),
+			// 	zap.Int64("start_round", pn.StartRound),
+			// 	zap.Int64("phase start round", phaseStartRound))
+			continue // phase already accepted
 		}
 
 		var (
@@ -166,11 +172,13 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			continue
 		}
 
+		phaseFuncName := getFunctionName(phaseFunc)
+
 		logging.Logger.Debug("[mvc] dkg process: trying",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.String("next_phase", pn.Phase.String()),
 			// zap.Bool("active", active),
-			zap.String("phase funcs", getFunctionName(phaseFunc)))
+			zap.String("phase funcs", phaseFuncName))
 
 		// only go through if pn.Phase is expected
 		if !(pn.Phase == minersc.Start ||
@@ -186,7 +194,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		logging.Logger.Info("[mvc] dkg process: start",
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.String("next_phase", pn.Phase.String()),
-			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
+			zap.String("phase funcs", phaseFuncName))
 
 		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 		if lfmb == nil {
@@ -210,6 +218,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		}
 
 		if txn == nil || mc.ConfirmTransaction(ctx, txn, 10) {
+			hadTxnAndConfirmed = true
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
 			phaseStartRound = pn.StartRound
@@ -218,6 +227,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 				zap.String("current_phase", mc.CurrentPhase().String()),
 			)
 		} else {
+			hadTxnAndConfirmed = false
 			logging.Logger.Debug("[mvc] dkg process: failed to move phase",
 				zap.String("current_phase", mc.CurrentPhase().String()),
 				zap.Any("next_phase", pn),
