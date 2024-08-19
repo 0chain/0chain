@@ -886,7 +886,8 @@ func (msc *MinerSmartContract) createMagicBlock(
 		mn := NewMinerNode()
 		mn.SimpleNode = v
 		mn.Status = n.Status
-		emitAddMiner(mn, balances)
+		// TODO: should not emit add miner for existing miner
+		// emitAddMiner(mn, balances)
 	}
 
 	for _, v := range sharders.Nodes {
@@ -908,7 +909,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 
 		sn := v
 		sn.Status = n.Status
-		emitAddSharder(sn, balances)
+		// emitAddSharder(sn, balances)
 	}
 
 	magicBlock.Hash = magicBlock.GetHash()
