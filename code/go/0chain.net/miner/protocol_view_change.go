@@ -209,11 +209,6 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			retrySharePhase = true
 		}
 
-		logging.Logger.Debug("[mvc] dkg process: move phase",
-			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.Any("next_phase", pn),
-			zap.Any("txn", txn))
-
 		if txn == nil || mc.ConfirmTransaction(ctx, txn, 0) {
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
@@ -222,6 +217,11 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 				zap.String("prev_phase", prevPhase.String()),
 				zap.String("current_phase", mc.CurrentPhase().String()),
 			)
+		} else {
+			logging.Logger.Debug("[mvc] dkg process: failed to move phase",
+				zap.String("current_phase", mc.CurrentPhase().String()),
+				zap.Any("next_phase", pn),
+				zap.Any("txn", txn))
 		}
 	}
 }

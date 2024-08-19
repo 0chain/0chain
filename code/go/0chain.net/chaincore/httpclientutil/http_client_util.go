@@ -783,6 +783,8 @@ func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []st
 		return err
 	}
 
+	logging.Logger.Debug("[mvc] send transaction", zap.Int64("txn nonce", txn.Nonce), zap.String("txn hash", txn.Hash))
+
 	SendTransaction(txn, minerUrls, node.Self.Underlying().GetKey(),
 		node.Self.Underlying().PublicKey)
 	return nil
