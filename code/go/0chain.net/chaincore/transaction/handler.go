@@ -23,7 +23,12 @@ func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
 }
 
 func GetTransactionByHash(ctx context.Context, hash string) (interface{}, error) {
-	return datastore.GetEntityByHash(ctx, transactionEntityMetadata, hash)
+	tem := datastore.GetEntityMetadata("txn")
+	if tem == nil {
+		return nil, nil
+	}
+
+	return datastore.GetEntityByHash(ctx, tem, hash)
 }
 
 /*PutTransaction - Given a transaction data, it stores it */
