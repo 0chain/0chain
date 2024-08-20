@@ -133,9 +133,9 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		active = c.IsActiveInChain()
 		mb     = c.GetCurrentMagicBlock()
 
-		found, pastTime bool
-		urls            []string
-		cctx, cancel    = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
+		found, pastTime, invalidTxn bool
+		urls                        []string
+		cctx, cancel                = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
 	defer cancel()
@@ -146,10 +146,18 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 	}
 
-	for !found && !pastTime {
+	txnPoolCheckingTime := time.NewTimer(3 * time.Second)
+	for !found && !pastTime && !invalidTxn {
 		select {
 		case <-cctx.Done():
 			return false
+		case <-txnPoolCheckingTime.C:
+			_, err := transaction.GetTransactionByHash(ctx, t.Hash)
+			if err != nil {
+				logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+				invalidTxn = true
+			}
+
 		default:
 		}
 
@@ -172,7 +180,8 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 			time.Sleep(time.Second)
 		}
 	}
-	return found
+
+	return found && !invalidTxn
 }
 
 func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {

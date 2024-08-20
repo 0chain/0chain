@@ -212,7 +212,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		}
 
 		logging.Logger.Debug("[mvc] dkg process: run phase function",
-			zap.String("name", getFunctionName(phaseFunc)))
+			zap.String("name", phaseFuncName))
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("[mvc] dkg process: phase func failed",
@@ -226,7 +226,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			retrySharePhase = true
 		}
 
-		if txn == nil || mc.ConfirmTransaction(ctx, txn, 10) {
+		if txn == nil || mc.ConfirmTransaction(ctx, txn, 7) {
 			hadTxnAndConfirmed = true
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)

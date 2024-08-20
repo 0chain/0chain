@@ -22,6 +22,10 @@ func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
 }
 
+func GetTransactionByHash(ctx context.Context, hash string) (interface{}, error) {
+	return datastore.GetEntityByHash(ctx, transactionEntityMetadata, hash)
+}
+
 /*PutTransaction - Given a transaction data, it stores it */
 func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, error) {
 	txn, ok := entity.(*Transaction)
