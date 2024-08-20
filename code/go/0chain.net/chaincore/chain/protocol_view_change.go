@@ -178,12 +178,19 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 
 		found = err == nil && txn != nil
-		if !found {
-			time.Sleep(time.Second)
+		if found {
+			return true
 		}
+
+		if invalidTxn {
+			logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
+			return false
+		}
+
+		time.Sleep(time.Second)
 	}
 
-	return found && !invalidTxn
+	return found
 }
 
 func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
