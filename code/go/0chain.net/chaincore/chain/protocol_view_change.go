@@ -133,10 +133,10 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		active = c.IsActiveInChain()
 		mb     = c.GetCurrentMagicBlock()
 
-		found, pastTime, invalidTxn bool
-		urls                        []string
-		minerUrls                   = make([]string, 0, mb.Miners.Size())
-		cctx, cancel                = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
+		found, pastTime, notPendingTxn bool
+		urls                           []string
+		minerUrls                      = make([]string, 0, mb.Miners.Size())
+		cctx, cancel                   = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
 	defer cancel()
@@ -163,7 +163,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 				txn, err := transaction.GetTransactionByHash(ctx, t.Hash)
 				if err != nil {
 					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
-					invalidTxn = true
+					notPendingTxn = true
 				} else {
 					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
 				}
@@ -171,13 +171,17 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 				txn, err := httpclientutil.GetTransactionPendingStatus(t.Hash, minerUrls)
 				if err != nil {
 					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
-					invalidTxn = true
+					notPendingTxn = true
 				} else {
 					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
 				}
 			}
+			// default:
+		}
 
-		default:
+		if !notPendingTxn {
+			// in the txn pool, pending
+			continue
 		}
 
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
@@ -199,12 +203,12 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 			return true
 		}
 
-		if invalidTxn {
+		if notPendingTxn {
 			logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
 			return false
 		}
 
-		time.Sleep(time.Second)
+		// time.Sleep(time.Second)
 	}
 
 	return found
