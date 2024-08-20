@@ -208,6 +208,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 				"failed to contribute mpk: dkg is not set yet")
 		}
 
+		logging.Logger.Debug("[mvc] contribute_mpk set VC")
 		var vc = bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
 		vc.MagicBlockNumber = mb.MagicBlockNumber + 1
 		mc.viewChangeProcess.viewChangeDKG = vc

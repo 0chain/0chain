@@ -401,6 +401,7 @@ func getFunctionName(i interface{}) string {
 }
 
 func (vcp *viewChangeProcess) clearViewChange() {
+	logging.Logger.Warn("[mvc] clear view change")
 	vcp.shareOrSigns = block.NewShareOrSigns()
 	vcp.shareOrSigns.ID = node.Self.Underlying().GetKey()
 	vcp.mpks = block.NewMpks()
