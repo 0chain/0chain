@@ -153,10 +153,12 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 			return false
 		case <-txnPoolCheckingTime.C:
 			if !node.Self.IsSharder() {
-				_, err := transaction.GetTransactionByHash(ctx, t.Hash)
+				txn, err := transaction.GetTransactionByHash(ctx, t.Hash)
 				if err != nil {
 					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
 					invalidTxn = true
+				} else {
+					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
 				}
 			}
 
