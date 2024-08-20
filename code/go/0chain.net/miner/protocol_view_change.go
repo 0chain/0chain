@@ -892,8 +892,11 @@ func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
 	}
 
 	// don't set DKG until MB finalized
-
-	mc.viewChangeProcess.clearViewChange()
+	// mc.viewChangeProcess.clearViewChange()
+	//
+	// start new magic block will clear the view change anyway. before that, we should not clear it as the
+	// transaction could fail due to invalid nonce, we need to re-do the wait transaction.
+	//
 
 	// create 'wait' transaction
 	if tx, err = mc.waitTransaction(mb); err != nil {
