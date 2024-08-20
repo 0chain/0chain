@@ -830,6 +830,7 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 	}
 
 	dmn.Waited[t.ClientID] = true
+	logging.Logger.Debug("[mvc] wait", zap.Int("dkg miners num", len(dmn.SimpleNodes)))
 
 	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return "", common.NewErrorf("msc - wait", "saving DKG miners: %v", err)
