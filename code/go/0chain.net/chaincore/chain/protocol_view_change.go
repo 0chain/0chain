@@ -135,6 +135,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 
 		found, pastTime, invalidTxn bool
 		urls                        []string
+		minerUrls                   = make([]string, 0, mb.Miners.Size())
 		cctx, cancel                = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
@@ -146,14 +147,28 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 	}
 
+	for _, m := range mb.Miners.CopyNodesMap() {
+		if !active || m.GetStatus() == node.NodeStatusActive {
+			minerUrls = append(minerUrls, m.GetN2NURLBase())
+		}
+	}
+
 	txnPoolCheckingTime := time.NewTicker(3 * time.Second)
-	for !found && !pastTime && !invalidTxn {
+	for !found && !pastTime {
 		select {
 		case <-cctx.Done():
 			return false
 		case <-txnPoolCheckingTime.C:
 			if !node.Self.IsSharder() {
 				txn, err := transaction.GetTransactionByHash(ctx, t.Hash)
+				if err != nil {
+					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+					invalidTxn = true
+				} else {
+					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+				}
+			} else {
+				txn, err := httpclientutil.GetTransactionPendingStatus(t.Hash, minerUrls)
 				if err != nil {
 					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
 					invalidTxn = true
