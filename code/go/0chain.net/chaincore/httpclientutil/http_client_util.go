@@ -763,21 +763,21 @@ func syncClientNonce(sharders []string) (int64, error) {
 
 func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []string) error {
 	nextNonce := node.Self.GetNextNonce()
-	// if nextNonce == 0 {
-	nonce, err := syncClientNonce(sharderUrls)
-	if err != nil {
-		logging.Logger.Error("can't get nonce from remote", zap.Error(err))
+	if nextNonce == 0 {
+		nonce, err := syncClientNonce(sharderUrls)
+		if err != nil {
+			logging.Logger.Error("can't get nonce from remote", zap.Error(err))
+		}
+		node.Self.SetNonce(nonce)
+		nextNonce = node.Self.GetNextNonce()
 	}
-	node.Self.SetNonce(nonce)
-	nextNonce = node.Self.GetNextNonce()
-	// }
 	txn.Nonce = nextNonce
 
 	signer := func(hash string) (string, error) {
 		return node.Self.Sign(hash)
 	}
 
-	err = txn.ComputeHashAndSign(signer)
+	err := txn.ComputeHashAndSign(signer)
 	if err != nil {
 		logging.Logger.Error("Signing Failed during registering miner to the mining network", zap.Error(err))
 		return err
