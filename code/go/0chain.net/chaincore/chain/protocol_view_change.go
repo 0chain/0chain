@@ -146,7 +146,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 	}
 
-	txnPoolCheckingTime := time.NewTimer(3 * time.Second)
+	txnPoolCheckingTime := time.NewTicker(3 * time.Second)
 	for !found && !pastTime && !invalidTxn {
 		select {
 		case <-cctx.Done():

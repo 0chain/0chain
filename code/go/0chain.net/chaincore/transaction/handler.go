@@ -28,7 +28,9 @@ func GetTransactionByHash(ctx context.Context, hash string) (interface{}, error)
 		return nil, nil
 	}
 
-	return datastore.GetEntityByHash(ctx, tem, hash)
+	cctx := memorystore.WithConnection(ctx)
+	defer memorystore.Close(cctx)
+	return datastore.GetEntityByHash(cctx, tem, hash)
 }
 
 /*PutTransaction - Given a transaction data, it stores it */
