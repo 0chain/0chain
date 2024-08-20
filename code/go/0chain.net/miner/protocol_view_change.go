@@ -231,9 +231,11 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			prevPhase := mc.CurrentPhase()
 			mc.SetCurrentPhase(pn.Phase)
 			phaseStartRound = pn.StartRound
+			mb := mc.GetLatestMagicBlock()
 			logging.Logger.Debug("[mvc] dkg process: moved phase",
 				zap.String("prev_phase", prevPhase.String()),
 				zap.String("current_phase", mc.CurrentPhase().String()),
+				zap.Int64("magic block number", mb.MagicBlockNumber),
 			)
 		} else {
 			hadTxnAndConfirmed = false
