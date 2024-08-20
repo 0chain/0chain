@@ -164,6 +164,15 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		// if active && newPhaseEvent.Sharders {
 		// 	active = false // obviously, miner is not active, or is stuck
 		// }
+		lfbPhaseNode, err := mc.GetPhaseOfBlock(lfb)
+		if err != nil {
+			logging.Logger.Error("update finalized block - get phase of block failed", zap.Error(err))
+			return
+		}
+
+		if lfbPhaseNode.Phase > pn.Phase {
+			continue
+		}
 
 		phaseFunc, ok := mc.viewChangeProcess.phaseFuncs[pn.Phase]
 		if !ok {
