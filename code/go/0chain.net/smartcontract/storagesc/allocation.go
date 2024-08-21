@@ -514,11 +514,13 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 }
 
 // validate request
+// @audit-info how can we make indivisual requests to remove a blobber ??
 func (uar *updateAllocationRequest) validate(
 	conf *Config,
 	alloc *StorageAllocation,
 ) error {
 	if uar.Size == 0 &&
+		//len(uar.RemoveBlobberId) == 0 &&
 		!uar.Extend &&
 		len(uar.AddBlobberId) == 0 &&
 		len(uar.Name) == 0 &&
