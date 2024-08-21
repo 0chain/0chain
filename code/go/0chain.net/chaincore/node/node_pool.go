@@ -66,6 +66,9 @@ func (np *Pool) Size() int {
 // AddNode - add a node to the pool
 func (np *Pool) AddNode(node *Node) error {
 	if np.Type != node.Type {
+		logging.Logger.Error("incorrect node type",
+			zap.String("node_type", node.Type.String()),
+			zap.String("pool_type", np.Type.String()))
 		return errors.New("incorrect node type")
 	}
 
