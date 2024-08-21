@@ -2472,6 +2472,10 @@ func (c *Chain) GetLatestFinalizedMagicBlock(ctx context.Context) (lfb *block.Bl
 func (c *Chain) GetLatestFinalizedMagicBlockClone(ctx context.Context) (lfb *block.Block) {
 	select {
 	case lfb = <-c.getLFMBClone:
+		logging.Logger.Debug("[mvc] get lfmb",
+			zap.Int64("magic block number", lfb.MagicBlockNumber),
+			zap.Int("miners num", lfb.Miners.Size()),
+			zap.Int("sharders num", lfb.Sharders.Size()))
 	case <-ctx.Done():
 	}
 	return

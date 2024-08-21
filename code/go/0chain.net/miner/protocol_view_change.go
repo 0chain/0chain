@@ -800,13 +800,8 @@ func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
 //
 
 // Wait create 'wait' transaction to commit the miner
-// TODO: dkg will be set to nil if this function was called in
-// current view change round. We could have flag to indicate this situation
-// instead of reporting the 'DKG is not set' error.
-func (mc *Chain) Wait(ctx context.Context, lfb *block.Block,
-	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
-	err error) {
-
+func (mc *Chain) Wait(ctx context.Context,
+	lfb *block.Block, mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction, err error) {
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
