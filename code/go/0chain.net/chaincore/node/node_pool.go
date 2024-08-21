@@ -379,6 +379,7 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 
 	np.Nodes = make([]*Node, 0, len(d.NodesMap))
 	np.NodesMap = make(map[string]*Node, len(d.NodesMap))
+	np.Type = d.Type
 	for k := range d.NodesMap {
 		n := d.NodesMap[k]
 		if n.SigScheme == nil {
