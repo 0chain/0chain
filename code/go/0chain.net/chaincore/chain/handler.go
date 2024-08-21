@@ -603,11 +603,11 @@ func (c *Chain) infraHealthInATable(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "DKG phase / restarts")
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "<td class='number'>")
-		if !c.ChainConfig.IsViewChangeEnabled() {
-			fmt.Fprint(w, "DKG process disabled")
-		} else {
-			fmt.Fprintf(w, "%s / %d", phase.String(), restarts)
-		}
+		// if !c.ChainConfig.IsViewChangeEnabled() {
+		// 	fmt.Fprint(w, "DKG process disabled")
+		// } else {
+		fmt.Fprintf(w, "%s / %d", phase.String(), restarts)
+		// }
 		fmt.Fprintf(w, "</td>")
 		fmt.Fprintf(w, "</tr>")
 	}
