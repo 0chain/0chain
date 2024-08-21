@@ -2446,6 +2446,8 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	logging.Logger.Warn("update lfmb",
 		zap.Int64("mb_sr", b.MagicBlock.StartingRound),
 		zap.String("mb_hash", b.MagicBlock.Hash),
+		zap.String("miners pool type", b.Miners.Type.String()),
+		zap.String("sharders pool type", b.Sharders.Type.String()),
 		zap.Int("miners num:", b.Miners.Size()),
 		zap.Int("sharders num:", b.Sharders.Size()),
 	)

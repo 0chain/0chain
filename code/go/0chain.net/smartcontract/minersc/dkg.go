@@ -865,7 +865,9 @@ func (msc *MinerSmartContract) createMagicBlock(
 
 	logging.Logger.Debug("create magic block",
 		zap.Int64("view change", magicBlock.StartingRound),
-		zap.Int("dkg miners num", len(dkgMinersList.SimpleNodes)))
+		zap.Int("dkg miners num", len(dkgMinersList.SimpleNodes)),
+		zap.String("mb miners pool type", magicBlock.Miners.Type.String()),
+		zap.String("mb sharders pool type", magicBlock.Sharders.Type.String()))
 
 	for _, v := range dkgMinersList.SimpleNodes {
 		n := node.Provider()
@@ -972,7 +974,10 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 	logging.Logger.Debug("SetMagicBlock",
 		zap.String("hash", magicBlock.Hash),
 		zap.Int64("starting round", magicBlock.StartingRound),
-		zap.Int("miners num", magicBlock.Miners.Size()))
+		zap.String("miners pool type", magicBlock.Miners.Type.String()),
+		zap.String("sharders pool type", magicBlock.Sharders.Type.String()),
+		zap.Int("miners num", magicBlock.Miners.Size()),
+		zap.Int("sharders num", magicBlock.Sharders.Size()))
 	balances.SetMagicBlock(magicBlock)
 	return nil
 }
