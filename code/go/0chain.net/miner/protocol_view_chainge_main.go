@@ -120,7 +120,8 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	}
 	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
 		logging.Logger.Error("[mvc] publishShareOrSigns, miner not part of mpks", zap.String("miner", selfNodeKey))
-		return nil, common.NewError("publish_sos", "miner not part of mpks")
+		// return nil, common.NewError("publish_sos", "miner not part of mpks")
+		return nil, nil
 	}
 
 	var sos = mc.viewChangeProcess.shareOrSigns // local reference
