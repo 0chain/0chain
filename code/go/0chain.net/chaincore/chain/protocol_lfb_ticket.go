@@ -391,12 +391,12 @@ func (c *Chain) StartLFMBWorker(ctx context.Context) {
 		case c.getLFMB <- lfmb:
 		case c.getLFMBClone <- clone:
 		case v := <-c.updateLFMB:
-			logging.Logger.Debug("receive update LFMB",
-				zap.Int64("round", lfmb.Round),
-				zap.Int("miners", lfmb.Miners.Size()),
-				zap.Int("sharders", lfmb.Sharders.Size()))
 			lfmb = v.block
 			clone = v.clone
+			logging.Logger.Debug("receive update LFMB",
+				zap.Int64("round", clone.Round),
+				zap.Int("miners", clone.Miners.Size()),
+				zap.Int("sharders", clone.Sharders.Size()))
 			v.reply <- struct{}{}
 		case <-ctx.Done():
 			return
