@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"0chain.net/smartcontract/provider"
+	"go.uber.org/zap"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/core/datastore"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/statecache"
 )
 
@@ -104,6 +106,9 @@ func (mn *MinerNode) Save(p spenum.Provider, id string, balances cstate.StateCon
 }
 
 func (mn *MinerNode) save(balances cstate.StateContextI) error {
+	logging.Logger.Error("[mvc] save miner node",
+		zap.String("id", mn.ID),
+		zap.String("type", mn.Type().String()))
 	if _, err := balances.InsertTrieNode(mn.GetKey(), mn); err != nil {
 		return fmt.Errorf("saving miner node: %v", err)
 	}
