@@ -10,7 +10,9 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -137,9 +139,11 @@ func (mb *MagicBlock) Clone() *MagicBlock {
 		clone.Mpks = mb.Mpks.Clone()
 	}
 	if mb.Miners != nil {
+		logging.Logger.Debug("update LFMB - clone miners", zap.Int("miners size", mb.Miners.Size()))
 		clone.Miners = mb.Miners.Clone()
 	}
 	if mb.Sharders != nil {
+		logging.Logger.Debug("update LFMB - clone sharders", zap.Int("sharders size", mb.Sharders.Size()))
 		clone.Sharders = mb.Sharders.Clone()
 	}
 

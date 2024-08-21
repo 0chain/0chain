@@ -114,6 +114,63 @@ func createMiners(np *node.Pool) {
 	np.AddNode(&ns)
 }
 
+func createSharders(np *node.Pool) {
+	sd := node.Node{Host: "127.0.0.1", Port: 7171, Type: node.NodeTypeSharder, Status: node.NodeStatusActive}
+	sigScheme1 := encryption.NewBLS0ChainScheme()
+	err := sigScheme1.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sd.SetSignatureScheme(sigScheme1)
+	np.AddNode(&sd)
+
+	sb := node.Node{Host: "127.0.0.2", Port: 7172, Type: node.NodeTypeSharder, Status: node.NodeStatusActive}
+	sigScheme2 := encryption.NewBLS0ChainScheme()
+	err = sigScheme2.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	sb.SetSignatureScheme(sigScheme2)
+	np.AddNode(&sb)
+
+	ns := node.Node{Host: "127.0.0.3", Port: 7173, Type: node.NodeTypeSharder, Status: node.NodeStatusActive}
+	sigScheme3 := encryption.NewBLS0ChainScheme()
+	err = sigScheme3.GenerateKeys()
+	if err != nil {
+		panic(err)
+	}
+	np.AddNode(&ns)
+}
+
+func TestMagicBlockClone(t *testing.T) {
+	b := NewBlock("", 1)
+	mb := NewMagicBlock()
+	b.MagicBlock = mb
+	mpool := node.NewPool(node.NodeTypeMiner)
+	createMiners(mpool)
+	mb.Miners = mpool
+
+	mb.Sharders = node.NewPool(node.NodeTypeSharder)
+	createSharders(mb.Sharders)
+
+	clone := b.Clone()
+	if clone.Sharders == nil {
+		t.Fatal("clone sharders is nil")
+	}
+
+	t.Log("clone sharders size", clone.Sharders.Size())
+
+	if clone.Sharders.Size() != b.Sharders.Size() {
+		t.Fatal("clone sharders size is not equal to original sharders size")
+	}
+
+	for _, n := range clone.Sharders.CopyNodesMap() {
+		if _, ok := mb.Sharders.CopyNodesMap()[n.GetKey()]; !ok {
+			t.Fatal("clone sharders doesn't contain original sharder")
+		}
+	}
+}
+
 func TestMagicBlock_Encode(t *testing.T) {
 	mb := NewMagicBlock()
 	mpool := node.NewPool(node.NodeTypeMiner)
