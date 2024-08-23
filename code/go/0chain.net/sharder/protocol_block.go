@@ -142,7 +142,8 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) bool 
 	if b.Round == 100 && c == 0 {
 		Logger.Debug("debug - update finalized block - round 100")
 		atomic.AddInt64(&debugFBCount, 1)
-		return false
+		panic("debug - update finalized block")
+		// return false
 	}
 
 	// Persist LFB, do this after all above succeed to make sure the LFB will not be set
