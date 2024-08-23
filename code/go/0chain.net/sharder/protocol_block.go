@@ -38,10 +38,8 @@ func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []
 
 }
 
-var debugFBCount int64
-
 /*UpdateFinalizedBlock - updates the finalized block */
-func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) bool {
+func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error {
 	fr := sc.GetRoundClone(b.Round)
 	if fr == nil {
 		fr = round.NewRound(b.Round)
@@ -134,7 +132,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) bool 
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Error(err))
-		return false
+		return err
 	}
 
 	// Persist LFB, do this after all above succeed to make sure the LFB will not be set
@@ -150,7 +148,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) bool 
 
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
-	return true
+	return nil
 }
 
 func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error { //nolint: unused

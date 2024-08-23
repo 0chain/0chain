@@ -445,10 +445,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	wg.Run("finalize block - update finalized block", fb.Round, func() error {
-		if !bsh.UpdateFinalizedBlock(ctx, fb) {
-			return fmt.Errorf("update finalized block failed")
-		}
-		return nil
+		return bsh.UpdateFinalizedBlock(ctx, fb)
 	})
 
 	// the bsh.UpdateFinalizedBlock() above will set the round as finalized, but following process

@@ -646,7 +646,7 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) bool {
+func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error {
 	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()))
 	if config.Development() {
 		for _, t := range b.Txns {
@@ -678,7 +678,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) bool 
 	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 	transaction.RemoveFromPool(cleanPoolCtx, txns)
-	return true
+	return nil
 }
 
 /*FinalizeBlock - finalize the transactions in the block */
