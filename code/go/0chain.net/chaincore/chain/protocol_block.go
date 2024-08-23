@@ -448,8 +448,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	// restarting the sharder will start the LFB from it.
 	var fbPersisted bool
 	wg.Run("finalize block - update finalized block", fb.Round, func() error {
-		bsh.UpdateFinalizedBlock(ctx, fb) //
-		fbPersisted = true
+		fbPersisted = bsh.UpdateFinalizedBlock(ctx, fb) //
 		return nil
 	})
 
