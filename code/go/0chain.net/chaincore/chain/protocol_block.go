@@ -446,9 +446,12 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 
 	// fbPersisted indicates whether the finalizing block is saved to state db, i.e
 	// restarting the sharder will start the LFB from it.
-	var fbPersisted bool
+	// var fbPersisted bool
 	wg.Run("finalize block - update finalized block", fb.Round, func() error {
-		fbPersisted = bsh.UpdateFinalizedBlock(ctx, fb) //
+		if !bsh.UpdateFinalizedBlock(ctx, fb) {
+			return fmt.Errorf("update finalized block failed")
+		}
+		// fbPersisted = true
 		return nil
 	})
 
@@ -466,37 +469,41 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}()
 
 	if err = wg.Wait(); err != nil {
-		if !waitgroup.ErrIsPanic(err) {
-			return err
-		}
+		// if !waitgroup.ErrIsPanic(err) {
+		// 	return err
+		// }
 
 		// commit the event db as long as the state db is persisted successfully
 		if eventTx != nil {
-			if fbPersisted {
-				// commit the events changes
-				if cerr := eventTx.Commit(); cerr != nil {
-					logging.Logger.Error("finalize block - commit events failed",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash),
-						zap.Error(cerr))
-				} else {
-					c.GetEventDb().AddToEventsCounter(uint64(eventsCount))
-					logging.Logger.Debug("finalize block - commit events",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash))
-				}
+			// if fbPersisted {
+			// 	// commit the events changes
+			// 	if cerr := eventTx.Commit(); cerr != nil {
+			// 		logging.Logger.Error("finalize block - commit events failed",
+			// 			zap.Int64("round", fb.Round),
+			// 			zap.String("block", fb.Hash),
+			// 			zap.Error(cerr))
+			// 	} else {
+			// 		c.GetEventDb().AddToEventsCounter(uint64(eventsCount))
+			// 		logging.Logger.Debug("finalize block - commit events",
+			// 			zap.Int64("round", fb.Round),
+			// 			zap.String("block", fb.Hash))
+			// 	}
+			// } else {
+			if rerr := eventTx.Rollback(); rerr != nil {
+				logging.Logger.Error("finalize block - rollback events failed",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash),
+					zap.Error(rerr))
 			} else {
-				if rerr := eventTx.Rollback(); rerr != nil {
-					logging.Logger.Error("finalize block - rollback events failed",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash),
-						zap.Error(rerr))
-				} else {
-					logging.Logger.Debug("finalize block - rollback events",
-						zap.Int64("round", fb.Round),
-						zap.String("block", fb.Hash))
-				}
+				logging.Logger.Debug("finalize block - rollback events",
+					zap.Int64("round", fb.Round),
+					zap.String("block", fb.Hash))
 			}
+			// }
+		}
+
+		if !waitgroup.ErrIsPanic(err) {
+			return err
 		}
 
 		// continue panic up in development mode
@@ -509,6 +516,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	}
 
 	if eventTx != nil {
+		// if fbPersisted {
 		if err := eventTx.Commit(); err != nil {
 			logging.Logger.Error("finalize block - commit events failed",
 				zap.Int64("round", fb.Round),
@@ -521,6 +529,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		logging.Logger.Debug("finalize block - commit events",
 			zap.Int64("round", fb.Round),
 			zap.String("block", fb.Hash))
+		// }
 	}
 
 	wg = waitgroup.New(1)
