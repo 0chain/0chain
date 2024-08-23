@@ -6,7 +6,6 @@ import (
 	"math"
 	"net/url"
 	"strconv"
-	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/node"
@@ -136,14 +135,6 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) bool 
 			zap.String("block", b.Hash),
 			zap.Error(err))
 		return false
-	}
-
-	c := atomic.LoadInt64(&debugFBCount)
-	if b.Round == 100 && c == 0 {
-		Logger.Debug("debug - update finalized block - round 100")
-		atomic.AddInt64(&debugFBCount, 1)
-		panic("debug - update finalized block")
-		// return false
 	}
 
 	// Persist LFB, do this after all above succeed to make sure the LFB will not be set
