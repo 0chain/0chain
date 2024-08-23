@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/core/util/entitywrapper"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -59,7 +58,8 @@ type Client struct {
 	// blobber
 	terms        Terms
 	cap          int64
-	isRestricted *bool
+	isRestricted bool
+	isEnterprise bool
 
 	// user or blobber
 	balance currency.Coin
@@ -84,6 +84,24 @@ func newClient(balance currency.Coin, balances chainState.StateContextI) (
 	return
 }
 
+func newClientWithBalance(balance currency.Coin, balances chainState.StateContextI) (
+	client *Client) {
+
+	var scheme = encryption.NewBLS0ChainScheme()
+	scheme.GenerateKeys() //nolint
+
+	client = new(Client)
+	client.balance = balance
+	client.scheme = scheme
+
+	client.pk = scheme.GetPublicKey()
+	pub := bls.PublicKey{}
+	pub.DeserializeHexStr(client.pk)
+	client.id = encryption.Hash(pub.Serialize())
+
+	return
+}
+
 func getBlobberURL(id string) string {
 	return "http://" + id + ":9081/api/v1"
 }
@@ -98,10 +116,12 @@ func getValidatorURL(id string) string {
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn := &StorageNode{}
-	sne := &storageNodeV2{
+	sne := &storageNodeV3{
 		IsRestricted: new(bool),
+		IsEnterprise: new(bool),
 	}
 	sne.ID = c.id
+	sne.PublicKey = c.pk
 	sne.BaseURL = getBlobberURL(c.id)
 	sne.Terms = c.terms
 	sne.Capacity = c.cap
@@ -109,13 +129,10 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sne.LastHealthCheck = 0
 	sne.StakePoolSettings.MaxNumDelegates = 100
 	sne.StakePoolSettings.ServiceChargeRatio = 0.30 // 30%
-	sne.StakePoolSettings.DelegateWallet = c.id
+	sne.StakePoolSettings.DelegateWallet = "rand_delegate_wallet"
+	*sne.IsRestricted = c.isRestricted
+	*sne.IsEnterprise = c.isEnterprise
 	sn.SetEntity(sne)
-	sn.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
-		b := e.(*storageNodeV2)
-		b.IsRestricted = c.isRestricted
-		return nil
-	})
 
 	return mustEncode(t, &sn)
 }
@@ -153,6 +170,7 @@ func (c *Client) callAddBlobber(t testing.TB, ssc *StorageSmartContract,
 	txVal, err := currency.Float64ToCoin(float64(c.terms.WritePrice) * sizeInGB(c.cap))
 	require.NoError(t, err)
 	var tx = newTransaction(c.id, ADDRESS, txVal, now)
+	tx.PublicKey = c.pk
 	balances.(*testBalances).setTransaction(t, tx)
 	var input = c.addBlobRequest(t)
 	return ssc.addBlobber(tx, input, balances)
@@ -164,7 +182,7 @@ func (c *Client) callAddValidator(t testing.TB, ssc *StorageSmartContract,
 	var tx = newTransaction(c.id, ADDRESS, 0, now)
 	balances.(*testBalances).setTransaction(t, tx)
 	blobber := &StorageNode{}
-	b := &storageNodeV2{
+	b := &storageNodeV3{
 		Provider: provider.Provider{
 			ID:           c.id,
 			ProviderType: spenum.Blobber,
@@ -196,7 +214,7 @@ func updateBlobber(t testing.TB, blob *StorageNode, value currency.Coin, now int
 
 	var (
 		input = blob.Encode()
-		tx    = newTransaction(blob.Id(), ADDRESS, value, now)
+		tx    = newTransaction("rand_delegate_wallet", ADDRESS, value, now)
 	)
 	balances.(*testBalances).setTransaction(t, tx)
 	return ssc.updateBlobberSettings(tx, input, balances)
@@ -249,7 +267,7 @@ func healthCheckValidator(t testing.TB, validator *ValidationNode, value currenc
 
 // addBlobber to SC
 func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
-	terms Terms, balance currency.Coin, balances chainState.StateContextI) (
+	terms Terms, balance currency.Coin, balances chainState.StateContextI, isRestricted, isEnterprise bool) (
 	blob *Client) {
 
 	var scheme = encryption.NewBLS0ChainScheme()
@@ -260,6 +278,9 @@ func addBlobber(t testing.TB, ssc *StorageSmartContract, cap, now int64,
 	blob.cap = cap
 	blob.balance = balance
 	blob.scheme = scheme
+
+	blob.isRestricted = isRestricted
+	blob.isEnterprise = isEnterprise
 
 	blob.pk = scheme.GetPublicKey()
 	blob.id = encryption.Hash(blob.pk)
@@ -354,7 +375,7 @@ var avgTerms = Terms{
 
 // add allocation and 20 blobbers
 func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
-	now, allocSize, blobberCapacity int64, blobberBalance, lockTokens currency.Coin, nblobs int, balances chainState.StateContextI, preStakeTokens bool) (
+	now, allocSize, blobberCapacity int64, blobberBalance, lockTokens currency.Coin, nblobs int, balances chainState.StateContextI, preStakeTokens, isRestricted, IsEnterpriseAllocation bool, terms ...Terms) (
 	allocID string, blobs []*Client) {
 
 	if nblobs <= 0 {
@@ -381,7 +402,9 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.Owner = client.id
 	nar.OwnerPublicKey = client.pk
 	nar.ReadPriceRange = PriceRange{1 * x10, 10 * x10}
-	nar.WritePriceRange = PriceRange{2 * x10, 20 * x10}
+	nar.WritePriceRange = PriceRange{0 * x10, 20 * x10}
+
+	nar.IsEnterprise = IsEnterpriseAllocation
 
 	if allocSize == 0 {
 		nar.Size = 1 * GB // 20 GB
@@ -390,9 +413,21 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	}
 
 	for i := 0; i < nblobs; i++ {
-		var b = addBlobber(t, ssc, blobberCapacity, now, avgTerms, blobberBalance, balances)
+		blobberTerms := avgTerms
+		if len(terms) > 0 {
+			blobberTerms = terms[0]
+		}
+		var b = addBlobber(t, ssc, blobberCapacity, now, blobberTerms, blobberBalance, balances, isRestricted, IsEnterpriseAllocation)
 		nar.Blobbers = append(nar.Blobbers, b.id)
-		nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
+
+		if isRestricted || IsEnterpriseAllocation {
+			blobberAuthTicket, err := b.scheme.Sign(client.id)
+			require.NoError(t, err)
+			nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, blobberAuthTicket)
+		} else {
+			nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, "")
+		}
+
 		blobs = append(blobs, b)
 	}
 
@@ -411,7 +446,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	var deco StorageAllocation
 	require.NoError(t, deco.Decode([]byte(resp)))
 
-	return deco.ID, blobs
+	return deco.mustBase().ID, blobs
 }
 
 func mustSave(t testing.TB, key datastore.Key, val util.MPTSerializable,
@@ -501,8 +536,9 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	valids *partitions.Partitions, allocID string,
 	blobber *StorageNode, balances chainState.StateContextI) {
 
-	alloc, err := ssc.getAllocation(allocID, balances)
+	sa, err := ssc.getAllocation(allocID, balances)
 	require.NoError(t, err)
+	alloc := sa.mustBase()
 
 	allocChall, err := ssc.getAllocationChallenges(allocID, balances)
 	if err != nil && !errors.Is(err, util.ErrValueNotPresent) {
@@ -553,7 +589,7 @@ func genChall(t testing.TB, ssc *StorageSmartContract, now, roundCreatedAt int64
 	alloc.Stats.OpenChallenges++
 	alloc.Stats.TotalChallenges++
 
-	err = alloc.save(balances, ssc.ID)
+	err = sa.save(balances, ssc.ID)
 	require.NoError(t, err)
 	return
 }

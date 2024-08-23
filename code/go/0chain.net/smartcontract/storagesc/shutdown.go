@@ -176,7 +176,7 @@ func (_ *StorageSmartContract) shutdownValidator(
 	}
 
 	if len(sp.GetPools()) == 0 {
-		_, err = balances.DeleteTrieNode(validator.GetKey(""))
+		_, err = balances.DeleteTrieNode(validator.GetKey())
 		if err != nil {
 			return "", common.NewErrorf("shutdown_validator_failed", "deleting validator: %v", err)
 		}
@@ -188,7 +188,7 @@ func (_ *StorageSmartContract) shutdownValidator(
 		return "", nil
 	}
 
-	_, err = balances.InsertTrieNode(validator.GetKey(""), validator)
+	_, err = balances.InsertTrieNode(validator.GetKey(), validator)
 	if err != nil {
 		return "", common.NewError("shutdown_validator_failed", "saving validator: "+err.Error())
 	}

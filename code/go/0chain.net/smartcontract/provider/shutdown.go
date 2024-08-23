@@ -32,45 +32,21 @@ func ShutDown(
 		return err
 	}
 
-	actErr := cstate.WithActivation(balances, "apollo", func() (e error) {
-		if p.IsShutDown() {
-			e = fmt.Errorf("already shutdown")
-		}
-		if p.IsKilled() {
-			e = fmt.Errorf("already killed")
-		}
-		return e
-	}, func() (e error) {
-		if p.IsKilled() || p.IsShutDown() {
-			if refreshProvider != nil {
-				e = refreshProvider(req)
-				if e != nil {
-					return e
-				}
+	if p.IsKilled() || p.IsShutDown() {
+		if refreshProvider != nil {
+			err = refreshProvider(req)
+			if err != nil {
+				return err
 			}
-
-			e = AlreadyShutdownError
 		}
-		return e
-	})
 
-	if actErr != nil {
-		return actErr
+		return AlreadyShutdownError
 	}
 
 	p.ShutDown()
 
-	actErr = cstate.WithActivation(balances, "apollo",
-		func() (e error) { return nil },
-		func() (e error) {
-			if err = sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
-				e = fmt.Errorf("can't kill the stake pool: %v", err)
-			}
-			return e
-		})
-
-	if actErr != nil {
-		return actErr
+	if err = sp.Kill(killSlash, p.Id(), p.Type(), balances); err != nil {
+		return fmt.Errorf("can't kill the stake pool: %v", err)
 	}
 
 	if err = sp.Save(p.Type(), clientId, balances); err != nil {
