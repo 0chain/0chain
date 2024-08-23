@@ -93,21 +93,25 @@ func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) 
 }
 
 func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
-	s, err := chain.GetStateById(bState, minerId)
-	if err != nil {
-		if cstate.ErrInvalidState(err) {
-			mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
-		}
+	nextNonce := node.Self.GetNextNonce()
+	if nextNonce == 0 {
+		s, err := chain.GetStateById(bState, minerId)
+		if err != nil {
+			if cstate.ErrInvalidState(err) {
+				mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
+			}
 
-		if err != util.ErrValueNotPresent {
-			logging.Logger.Error("can't get nonce", zap.Error(err))
-			return 0, err
-		}
+			if !errors.Is(err, util.ErrValueNotPresent) {
+				logging.Logger.Error("can't get nonce", zap.Error(err))
+				return 0, err
+			}
 
-		return 1, nil
+			return 1, nil
+		}
+		node.Self.SetNonce(s.Nonce)
+		nextNonce = node.Self.GetNextNonce()
 	}
-	node.Self.SetNonce(s.Nonce)
-	return node.Self.GetNextNonce(), nil
+	return nextNonce, nil
 }
 
 func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) (*transaction.Transaction, error) {
