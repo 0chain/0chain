@@ -6,6 +6,7 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/chaincore/node"
@@ -37,6 +38,8 @@ func init() {
 func (sc *Chain) UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity) {
 
 }
+
+var debugFBCount int64
 
 /*UpdateFinalizedBlock - updates the finalized block */
 func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) bool {
@@ -132,6 +135,13 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) bool 
 			zap.Int64("round", b.Round),
 			zap.String("block", b.Hash),
 			zap.Error(err))
+		return false
+	}
+
+	c := atomic.LoadInt64(&debugFBCount)
+	if b.Round == 100 && c == 0 {
+		Logger.Debug("debug - update finalized block - round 100")
+		atomic.AddInt64(&debugFBCount, 1)
 		return false
 	}
 
