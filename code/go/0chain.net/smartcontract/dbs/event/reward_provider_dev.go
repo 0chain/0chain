@@ -1,10 +1,11 @@
 package event
 
 import (
-	"0chain.net/smartcontract/stakepool/spenum"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/url"
+
+	"0chain.net/smartcontract/stakepool/spenum"
+	"github.com/pkg/errors"
 )
 
 func (edb *EventDb) GetRewardToProviders(blockNumber, startBlockNumber, endBlockNumber string, rewardType int) ([]RewardProvider, error) {
