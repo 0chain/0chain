@@ -27,6 +27,7 @@ func SetupWorkers(ctx context.Context) {
 	go mc.BlockWorker(ctx)              // 4) sync blocks when stuck
 
 	go mc.SyncLFBStateWorker(ctx)
+	go mc.SyncLFBTicketWorker(ctx)
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.GetRoundDkg())
 	go mc.UpdateMagicBlockWorker(ctx)
@@ -82,6 +83,20 @@ func (mc *Chain) MessageWorker(ctx context.Context) {
 						zap.Duration("duration", time.Since(ts)))
 				}
 			}(msg)
+		}
+	}
+}
+
+func (mc *Chain) SyncLFBTicketWorker(ctx context.Context) {
+	logging.Logger.Info("SyncLFBTicketWorker started")
+	defer logging.Logger.Info("SyncLFBTicketWorker stopped")
+	tk := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tk.C:
+			BumpLFBTicket(ctx, mc)
 		}
 	}
 }
