@@ -130,6 +130,8 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 		return "", common.NewErrorf("add_miner", "save failed: %v", err)
 	}
 
+	logging.Logger.Debug("add_miner: miner added", zap.String("miner", newMiner.ID))
+
 	emitAddMiner(newMiner, balances)
 
 	return string(newMiner.Encode()), nil
