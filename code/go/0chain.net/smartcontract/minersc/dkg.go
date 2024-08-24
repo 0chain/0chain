@@ -332,7 +332,9 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	logging.Logger.Debug("[mvc] createDKGMinersForContribute remove deleted miners", zap.Strings("miners", deleteMinersIDs))
+	logging.Logger.Debug("[mvc] createDKGMinersForContribute remove deleted miners",
+		zap.Strings("miners", deleteMinersIDs),
+		zap.Int("all miners num", len(allMinersList.Nodes)))
 
 	allMinersList.RemoveNodes(deleteMinersIDs)
 
