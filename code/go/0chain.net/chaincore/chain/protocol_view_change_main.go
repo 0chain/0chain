@@ -16,7 +16,7 @@ func (c *Chain) SetupSC(ctx context.Context) {
 	// create timer with 0 duration to start it immediately
 	var (
 		tm            = time.NewTicker(1)
-		timeout       = 10 * time.Second
+		timeout       = 1 * time.Minute
 		doneC         = make(chan struct{})
 		channelClosed = false
 	)
@@ -50,10 +50,10 @@ func (c *Chain) SetupSC(ctx context.Context) {
 				case reg := <-isRegisteredC:
 					if reg {
 						logging.Logger.Debug("SetupSC - node is already registered")
-						if !channelClosed {
-							close(doneC)
-							channelClosed = true
-						}
+						// if !channelClosed {
+						// close(doneC)
+						// 	channelClosed = true
+						// }
 						return
 					}
 				case <-cctx.Done():
@@ -70,10 +70,10 @@ func (c *Chain) SetupSC(ctx context.Context) {
 
 				if txn != nil && c.ConfirmTransaction(ctx, txn, 30) {
 					logging.Logger.Debug("Register node transaction confirmed")
-					if !channelClosed {
-						close(doneC)
-						channelClosed = true
-					}
+					// if !channelClosed {
+					// 	close(doneC)
+					// 	channelClosed = true
+					// }
 					return
 				}
 
