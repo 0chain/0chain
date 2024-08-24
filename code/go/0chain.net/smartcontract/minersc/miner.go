@@ -294,6 +294,11 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, fmt.Errorf("saving node %v", err.Error())
 	}
 
+	n2nKey := deleteNode.GetN2NHostKey(ADDRESS)
+	if _, err := balances.DeleteTrieNode(n2nKey); err != nil {
+		return nil, fmt.Errorf("deleting node n2n key failed: %v", err)
+	}
+
 	return deleteNode, nil
 }
 
