@@ -134,6 +134,14 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	emitAddMiner(newMiner, balances)
 
+	// TODO: remove debug code
+	allMs, err := getMinersList(balances)
+	if err != nil {
+		logging.Logger.Error("[mvc] add_miner: failed to get all miners list", zap.Error(err))
+	} else {
+		logging.Logger.Info("[mvc] add_miner: all miners list", zap.Int("num", len(allMs.Nodes)))
+	}
+
 	return string(newMiner.Encode()), nil
 }
 
