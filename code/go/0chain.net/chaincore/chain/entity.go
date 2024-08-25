@@ -1567,9 +1567,15 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		if eb != b {
 			c.MergeVerificationTickets(eb, b.GetVerificationTickets())
 			if b.IsStateComputed() {
-				eb.SetStateStatus(b.GetBlockState())
-				if b.GetStateStatus() == block.StateSuccessful {
+				if !eb.IsStateComputed() {
+					eb.SetStateStatus(b.GetBlockState())
 					eb.SetClientState(b.ClientState)
+				} else {
+					// eb state is also computed, overwrite it only if it's synced
+					if eb.GetStateStatus() == block.StateSynched {
+						eb.SetStateStatus(b.GetBlockState())
+						eb.SetClientState(b.ClientState)
+					}
 				}
 			}
 		}
