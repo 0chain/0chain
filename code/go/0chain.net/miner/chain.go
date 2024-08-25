@@ -235,7 +235,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr := mc.CreateRound(r)
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
-	mc.AddRoundBlock(mr, b)
+	b = mc.AddRoundBlock(mr, b)
 	// mr.SetFinalized()
 	mr.Finalize(b)
 	mc.AddNotarizedBlock(mr, b)
