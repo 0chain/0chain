@@ -1568,6 +1568,9 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 			c.MergeVerificationTickets(eb, b.GetVerificationTickets())
 			if b.IsStateComputed() {
 				eb.SetStateStatus(b.GetBlockState())
+				if b.GetStateStatus() == block.StateSuccessful {
+					eb.SetClientState(b.ClientState)
+				}
 			}
 		}
 		return eb
