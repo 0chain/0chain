@@ -806,7 +806,7 @@ func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) *block.Block 
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Float64("weight", b.Weight()))
 	//mc.StartVerification(ctx, mr)
-	b = mc.AddRoundBlock(mr, b)
+	b = mc.AddBlock(b)
 	mr.AddBlockToVerify(b)
 	return b
 }
