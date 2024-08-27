@@ -6,6 +6,8 @@ import (
 
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/dbs"
@@ -287,6 +289,7 @@ func (edb *EventDb) updateMinerBlocksFinalised(minerID string) error {
 }
 
 func (edb *EventDb) deleteMiner(id string) error {
+	logging.Logger.Debug("[mvc] event db: deleting miner", zap.String("id", id))
 	result := edb.Store.Get().
 		Where(&Miner{Provider: Provider{ID: id}}).
 		Delete(&Miner{})
