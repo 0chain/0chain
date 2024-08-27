@@ -238,7 +238,7 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	mr := mc.CreateRound(r)
 	mr = mc.AddRound(mr).(*Round)
 	mc.SetRandomSeed(mr, b.GetRoundRandomSeed())
-	mc.AddRoundBlock(mr, b)
+	b = mc.AddRoundBlock(mr, b)
 	// mr.SetFinalized()
 	mr.Finalize(b)
 	mc.AddNotarizedBlock(mr, b)
@@ -288,16 +288,7 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		return fmt.Errorf("can't init block state: %v", err) // fatal
 	}
 
-	r := mc.GetRound(b.Round)
-	if r == nil {
-		r = round.NewRound(b.Round)
-	}
-
 	mc.SetLatestFinalizedBlock(ctx, b)
-
-	// c.SetRandomSeed(r, b.GetRoundRandomSeed())
-	// r.Finalize(b)
-	// c.SetLatestFinalizedBlock(b)
 
 	logging.Logger.Info("load_lfb setup LFB from store",
 		zap.String("block", b.Hash),

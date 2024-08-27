@@ -166,70 +166,7 @@ func (msc *MinerSmartContract) DeleteSharder(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	actErr := cstate.WithActivation(balances, "ares", func() error {
-		return nil
-	}, func() error {
-		return errors.New("delete sharder is disabled")
-	})
-	if actErr != nil {
-		return "", actErr
-	}
-
-	var err error
-	var deleteSharder = NewMinerNode()
-	if err = deleteSharder.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delete_sharder",
-			"decoding request: %v", err)
-	}
-
-	var sn *MinerNode
-	sn, err = msc.getSharderNode(deleteSharder.ID, balances)
-	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
-
-	updatedSn, err := msc.deleteNode(gn, sn, balances)
-	if err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
-
-	if err = msc.deleteSharderFromViewChange(updatedSn, balances); err != nil {
-		return "", common.NewError("delete_sharder", err.Error())
-	}
-
-	return "", nil
-}
-
-func (msc *MinerSmartContract) deleteSharderFromViewChange(sn *MinerNode, balances cstate.StateContextI) error {
-	pn, err := GetPhaseNode(balances)
-	if err != nil {
-		return err
-	}
-
-	if pn.Phase == Unknown {
-		return common.NewError("failed to delete from view change", "phase is unknown")
-	}
-
-	if pn.Phase == Wait {
-		return common.NewError("failed to delete from view change", "magic block has already been created for next view change")
-	}
-
-	sharderIDs, err := getNodeIDs(balances, ShardersKeepKey)
-	if err != nil {
-		logging.Logger.Error("delete_sharder_from_view_change: Error in getting list from the DB", zap.Error(err))
-		return common.NewErrorf("delete_sharder_from_view_change", "failed to get sharder ids: %v", err)
-	}
-
-	for i, id := range sharderIDs {
-		if id == sn.ID {
-			sharderIDs = append(sharderIDs[:i], sharderIDs[i+1:]...)
-
-			emitDeleteSharder(sn.ID, balances)
-			break
-		}
-	}
-
-	return sharderIDs.save(balances, ShardersKeepKey)
+	return "", errors.New("delete sharder is disabled")
 }
 
 // ------------- local functions ---------------------

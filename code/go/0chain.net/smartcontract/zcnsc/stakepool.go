@@ -44,6 +44,7 @@ func (sp *StakePool) save(sscKey, providerID string, balances cstate.StateContex
 }
 
 // empty a delegate pool if possible, call update before the empty
+//
 //nolint:unused
 func (sp *StakePool) empty(sscID, clientID string, balances cstate.StateContextI) (bool, error) {
 	var dp, ok = sp.Pools[clientID]
@@ -106,27 +107,17 @@ func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, p
 // SC functions
 
 // get existing stake pool or create new one not saving it
-func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
+func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	authorizerID datastore.Key,
 	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
-	beforeFunc := func() (e error) {
-		return validateStakePoolSettings(settings)
+	gn, err := GetGlobalNode(ctx)
+	if err != nil {
+		return nil, err
 	}
-
-	afterFunc := func() (e error) {
-		gn, e = GetGlobalNode(ctx)
-		if e != nil {
-			return
-		}
-
-		return validateStakePoolSettings(settings, gn)
-	}
-
-	actErr := cstate.WithActivation(ctx, "apollo", beforeFunc, afterFunc)
-	if actErr != nil {
-		return nil, actErr
+	if err = validateStakePoolSettings(settings, gn); err != nil {
+		return nil, err
 	}
 
 	changed := false

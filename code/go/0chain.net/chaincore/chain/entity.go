@@ -98,7 +98,7 @@ type BlockStateHandler interface {
 	// nil if it don't have this ability.
 	SaveMagicBlock() MagicBlockSaveFunc
 	UpdatePendingBlock(ctx context.Context, b *block.Block, txns []datastore.Entity)
-	UpdateFinalizedBlock(ctx context.Context, b *block.Block)
+	UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 }
 
 type updateLFMBWithReply struct {
@@ -463,18 +463,18 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					zap.String("block", b.Hash),
 					zap.String("prev block", b.PrevHash))
 
-				var pb *block.Block
-				if err == ErrNoPreviousBlock {
-					// fetch the previous block
-					pb, _ = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-				} else if ErrNoPreviousState.Is(err) {
-					// get the previous block from local
-					pb, _ = c.GetBlock(ctx, b.PrevHash)
-				} else {
+				if err != ErrNoPreviousBlock && !ErrNoPreviousState.Is(err) {
 					continue
 				}
 
-				if pb == nil {
+				var pb *block.Block
+				pb, err = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
+				if err != nil {
+					logging.Logger.Error("process block, failed to fetch previous block",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("prev block", b.PrevHash),
+						zap.Error(err))
 					continue
 				}
 
@@ -583,14 +583,6 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 
 	// pull related magic block if missing
 	var err error
-	// if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
-	// 	logging.Logger.Error("pulling related magic block", zap.Error(err),
-	// 		zap.Int64("round", b.Round),
-	// 		zap.String("block", b.Hash),
-	// 		zap.Int64("related mbr", b.LatestFinalizedMagicBlockRound))
-	// 	return fmt.Errorf("could not pull related magic block, err: %v", err)
-	// }
-
 	if err = b.Validate(ctx); err != nil {
 		logging.Logger.Error("block validation", zap.Int64("round", b.Round),
 			zap.String("hash", b.Hash), zap.Error(err))
@@ -700,16 +692,24 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 		logging.Logger.Error("AddNotarizedBlock failed to compute state",
 			zap.Int64("round", b.Round),
 			zap.Error(err))
-		// if node.Self.IsSharder() {
 		return err
-		// }
 	}
 
-	c.SetCurrentRound(r.GetRoundNumber())
+	var (
+		rn         = r.GetRoundNumber()
+		cr         = c.GetCurrentRound()
+		moveToNext bool
+	)
+	if cr+1 == rn {
+		c.SetCurrentRound(r.GetRoundNumber())
+		if !node.Self.IsSharder() {
+			moveToNext = true
+		}
+	}
+
 	c.UpdateNodeState(b)
 
-	// TODO: notarization to move to next round
-	if !node.Self.IsSharder() {
+	if moveToNext {
 		c.notifyMoveToNextRound(r)
 	}
 
@@ -1298,11 +1298,7 @@ func (c *Chain) storeEventsFunc(ssc cstate.StateContextI) func(e event.BlockEven
 			return nil
 		}
 
-		return cstate.WithActivation(ssc, "artemis",
-			func() error { return nil },
-			func() error {
-				return c.storeLastNEvents(e)
-			})
+		return c.storeLastNEvents(e)
 	}
 }
 
@@ -1582,7 +1578,16 @@ func (c *Chain) addBlock(b *block.Block) *block.Block {
 		if eb != b {
 			c.MergeVerificationTickets(eb, b.GetVerificationTickets())
 			if b.IsStateComputed() {
-				eb.SetStateStatus(b.GetBlockState())
+				if !eb.IsStateComputed() {
+					eb.SetStateStatus(b.GetBlockState())
+					eb.SetClientState(b.ClientState)
+				} else {
+					// eb state is also computed, overwrite it only if it's synced
+					if eb.GetStateStatus() == block.StateSynched {
+						eb.SetStateStatus(b.GetBlockState())
+						eb.SetClientState(b.ClientState)
+					}
+				}
 			}
 		}
 		return eb

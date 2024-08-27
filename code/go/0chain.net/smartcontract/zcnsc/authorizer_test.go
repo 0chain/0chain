@@ -75,6 +75,13 @@ func Test_AddingDuplicateAuthorizerShouldFail(t *testing.T) {
 	ctx := MakeMockStateContext()
 	delegateWallet := authorizersID[0] + ":10"
 
+	//node := CreateSmartContractGlobalNode()
+	//node.MinStakeAmount = currency.Coin(100 * 1e10)
+	//node.MaxDelegates = 1000000
+	//
+	//err := node.Save(ctx)
+	//require.NoError(t, err)
+
 	input := CreateAuthorizerParamPayload(delegateWallet, AuthorizerPublicKey)
 	sc := CreateZCNSmartContract()
 	tr := CreateAddAuthorizerTransaction(ownerId, ctx)

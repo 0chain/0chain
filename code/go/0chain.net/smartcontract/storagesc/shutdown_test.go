@@ -30,7 +30,7 @@ func TestStorageSmartContract_shutdownBlobber(t *testing.T) {
 			clientID:         "blobber_id",
 			expectedStateFunc: func(t *testing.T, state *testBalances) {
 				var b StorageNode
-				b.SetEntity(&storageNodeV2{
+				b.SetEntity(&storageNodeV3{
 					Provider: provider.Provider{
 						ID: "blobber_id",
 					},
@@ -51,7 +51,7 @@ func TestStorageSmartContract_shutdownBlobber(t *testing.T) {
 			clientID:         "blobber_id",
 			expectedStateFunc: func(t *testing.T, state *testBalances) {
 				var b StorageNode
-				b.SetEntity(&storageNodeV2{
+				b.SetEntity(&storageNodeV3{
 					Provider: provider.Provider{
 						ID: "blobber_id",
 					},
@@ -79,7 +79,7 @@ func TestStorageSmartContract_shutdownBlobber(t *testing.T) {
 			clientID: "blobber_id",
 			expectedStateFunc: func(t *testing.T, state *testBalances) {
 				var b StorageNode
-				b.SetEntity(&storageNodeV2{
+				b.SetEntity(&storageNodeV3{
 					Provider: provider.Provider{
 						ID:           "blobber_id",
 						ProviderType: spenum.Blobber,
@@ -113,7 +113,7 @@ func TestStorageSmartContract_shutdownBlobber(t *testing.T) {
 
 			// Create a blobber and a stake pool
 			blobber := &StorageNode{}
-			blobber.SetEntity(&storageNodeV2{
+			blobber.SetEntity(&storageNodeV3{
 				Provider: provider.Provider{
 					ID:           "blobber_id",
 					ProviderType: spenum.Blobber,
@@ -148,13 +148,11 @@ func TestStorageSmartContract_shutdownValidator(t *testing.T) {
 			input:     []byte(`{"provider_id":"validator_id"}`),
 			clientID:  "validator_id",
 			expectedStateFunc: func(t *testing.T, state *testBalances) {
-				var b StorageNode
-				b.SetEntity(&storageNodeV2{
-					Provider: provider.Provider{
-						ID: "validator_id",
-					},
-				})
-				err := state.GetTrieNode(b.GetKey(), &b)
+				var v ValidationNode
+				v.Provider = provider.Provider{
+					ID: "validator_id",
+				}
+				err := state.GetTrieNode(v.GetKey(), &v)
 				require.Error(t, util.ErrValueNotPresent, err)
 
 				var s stakepool.StakePool
@@ -175,14 +173,12 @@ func TestStorageSmartContract_shutdownValidator(t *testing.T) {
 			input:    []byte(`{"provider_id":"validator_id"}`),
 			clientID: "validator_id",
 			expectedStateFunc: func(t *testing.T, state *testBalances) {
-				var b StorageNode
-				b.SetEntity(&storageNodeV2{
-					Provider: provider.Provider{
-						ID:           "validator_id",
-						ProviderType: spenum.Validator,
-					},
-				})
-				err := state.GetTrieNode(b.GetKey(), &b)
+				var v ValidationNode
+				v.Provider = provider.Provider{
+					ID:           "validator_id",
+					ProviderType: spenum.Validator,
+				}
+				err := state.GetTrieNode(v.GetKey(), &v)
 				require.NoError(t, err)
 
 				var sp stakePool
@@ -215,7 +211,7 @@ func TestStorageSmartContract_shutdownValidator(t *testing.T) {
 					ProviderType: spenum.Validator,
 				},
 			}
-			balances.InsertTrieNode(vn.GetKey(""), vn)
+			balances.InsertTrieNode(vn.GetKey(), vn)
 			balances.InsertTrieNode(stakePoolKey(spenum.Validator, vn.ID), tc.stakePool)
 
 			// Call the killBlobber method

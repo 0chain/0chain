@@ -42,34 +42,12 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 			"cannot get smart contract configurations: "+err.Error())
 	}
 
-	var returnNil bool
-
-	beforeFunc := func() (e error) {
-		if conf.BlockReward.BlockReward == 0 {
-			returnNil = true
-		}
-		return nil
+	if balances.GetBlock().Round%conf.BlockReward.TriggerPeriod != 0 {
+		return common.NewError("blobber_block_rewards_failed",
+			"block reward trigger period not reached")
 	}
 
-	afterFunc := func() (e error) {
-		if conf.BlockReward.BlockReward == 0 || conf.BlockReward.TriggerPeriod == 0 {
-			returnNil = true
-		}
-
-		if balances.GetBlock().Round%conf.BlockReward.TriggerPeriod != 0 {
-			e = common.NewError("blobber_block_rewards_failed",
-				"block reward trigger period not reached")
-		}
-
-		return e
-	}
-
-	actErr := cstate.WithActivation(balances, "apollo", beforeFunc, afterFunc)
-	if actErr != nil {
-		return actErr
-	}
-
-	if returnNil {
+	if conf.BlockReward.BlockReward == 0 || conf.BlockReward.TriggerPeriod == 0 {
 		return nil
 	}
 
@@ -91,17 +69,14 @@ func (ssc *StorageSmartContract) blobberBlockRewards(t *transaction.Transaction,
 		if ferr != nil {
 			return
 		}
-		ferr = cstate.WithActivation(balances, "apollo", func() (e error) { return nil }, func() (e error) {
-			logging.Logger.Info("blobber_block_rewards : cleaning older partition",
-				zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
+		logging.Logger.Info("blobber_block_rewards : cleaning older partition",
+			zap.Any("round", BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod))))
 
-			_, e = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
-			if e != nil {
-				logging.Logger.Error("blobber_block_rewards_failed",
-					zap.String("deleting blobber reward node", e.Error()))
-			}
-			return e
-		})
+		_, ferr = balances.DeleteTrieNode(BlobberRewardKey(GetPreviousRewardRound(balances.GetBlock().Round, conf.BlockReward.TriggerPeriod)))
+		if ferr != nil {
+			logging.Logger.Error("blobber_block_rewards_failed",
+				zap.String("deleting blobber reward node", ferr.Error()))
+		}
 	}()
 
 	hashString := encryption.Hash(balances.GetTransaction().Hash + balances.GetBlock().PrevHash)

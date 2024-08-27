@@ -138,7 +138,3 @@ func emitUpdateSharder(sn *MinerNode, balances cstate.StateContextI, updateStatu
 	logging.Logger.Warn("emit sharder - update sharder")
 	return nil
 }
-
-func emitDeleteSharder(id string, balances cstate.StateContextI) {
-	balances.EmitEvent(event.TypeStats, event.TagDeleteSharder, id, id)
-}

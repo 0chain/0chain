@@ -115,7 +115,7 @@ func Benchmark_newAllocationRequest(b *testing.B) {
 			// call the addAllocation to create and stake n blobbers, the resulting
 			// allocation will not be used
 			tp += 1
-			addAllocation(b, ssc, client, tp, 0, 0, 0, 0, n, balances, false)
+			addAllocation(b, ssc, client, tp, 0, 0, 0, 0, n, balances, false, false, false)
 
 			conf.MinAllocSize = 1 * KB
 			mustSave(b, scConfigKey(ADDRESS), conf, balances)
@@ -193,7 +193,7 @@ func Benchmark_generateChallenges(b *testing.B) {
 	b.Log("add 1k blobbers")
 	tp += 1
 	balances.skipMerge = true // don't merge transactions for now
-	_, blobs = addAllocation(b, ssc, client, tp, 0, 0, 0, 0, 1000, balances, false)
+	_, blobs = addAllocation(b, ssc, client, tp, 0, 0, 0, 0, 1000, balances, false, false, false)
 
 	// 2. and 1000 corresponding validators
 	b.Log("add 1k corresponding validators")
@@ -228,21 +228,22 @@ func Benchmark_generateChallenges(b *testing.B) {
 		var deco StorageAllocation
 		require.NoError(b, deco.Decode([]byte(resp)))
 
-		allocs = append(allocs, deco.ID)
+		allocs = append(allocs, deco.mustBase().ID)
 	}
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
 	for _, allocID := range allocs {
-		var alloc *StorageAllocation
-		alloc, err = ssc.getAllocation(allocID, balances)
+		var sa *StorageAllocation
+		sa, err = ssc.getAllocation(allocID, balances)
 		require.NoError(b, err)
+		alloc := sa.mustBase()
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
 		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		_, err = balances.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 		require.NoError(b, err)
 	}
 
@@ -319,7 +320,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 	b.Log("add 1k blobbers")
 	tp += 1
 	balances.skipMerge = true // don't merge transactions for now
-	_, blobs = addAllocation(b, ssc, client, tp, 0, 0, 0, 0, 1000, balances, false)
+	_, blobs = addAllocation(b, ssc, client, tp, 0, 0, 0, 0, 1000, balances, false, false, false)
 
 	// 2. and 1000 corresponding validators
 	b.Log("add 1k corresponding validators")
@@ -360,21 +361,22 @@ func Benchmark_verifyChallenge(b *testing.B) {
 		var deco StorageAllocation
 		require.NoError(b, deco.Decode([]byte(resp)))
 
-		allocs = append(allocs, deco.ID)
+		allocs = append(allocs, deco.mustBase().ID)
 	}
 
 	// 4. "write" 10 files for every one of the allocations
 	b.Log("write 10k files")
 	for _, allocID := range allocs {
-		var alloc *StorageAllocation
-		alloc, err = ssc.getAllocation(allocID, balances)
+		var sa *StorageAllocation
+		sa, err = ssc.getAllocation(allocID, balances)
 		require.NoError(b, err)
+		alloc := sa.mustBase()
 		alloc.Stats = new(StorageAllocationStats)
 		alloc.Stats.NumWrites += 10 // 10 files
 		for _, d := range alloc.BlobberAllocs {
 			d.AllocationRoot = "allocation-root"
 		}
-		_, err = balances.InsertTrieNode(alloc.GetKey(ssc.ID), alloc)
+		_, err = balances.InsertTrieNode(sa.GetKey(ssc.ID), sa)
 		require.NoError(b, err)
 	}
 
@@ -415,7 +417,7 @@ func Benchmark_verifyChallenge(b *testing.B) {
 				require.NoError(b, err)
 
 				// 6.3 keep for the benchmark
-				blobberID = alloc.BlobberAllocs[rand.Intn(len(alloc.BlobberAllocs))].BlobberID
+				blobberID = alloc.mustBase().BlobberAllocs[rand.Intn(len(alloc.mustBase().BlobberAllocs))].BlobberID
 
 				var (
 					challID    = encryption.Hash(fmt.Sprintf("chall-%d", tp))

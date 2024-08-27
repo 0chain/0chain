@@ -1880,30 +1880,39 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		eAlloc.Expiration = common.ToTime(now).Add(conf.TimeUnit).Unix() // new expiration
 	}
 
-	alloc, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
+	alloc, _, err := allocationTableToStorageAllocationBlobbers(eAlloc, edb)
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
 	}
 
+	isEnterprise := false
+	if alloc.Entity().GetVersion() == "v2" {
+		if v2 := alloc.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+			isEnterprise = true
+		}
+	}
+
+	allocBase := alloc.mustBase()
+
 	// Pay cancellation charge if removing a blobber.
 	if req.RemoveBlobberId != "" {
-		allocCancellationCharge, err := alloc.cancellationCharge(conf.CancellationCharge)
+		allocCancellationCharge, err := allocBase.cancellationCharge(conf.CancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
 		}
 
 		totalWritePriceBefore := float64(0)
-		for _, blobber := range alloc.BlobberAllocs {
+		for _, blobber := range allocBase.BlobberAllocs {
 			totalWritePriceBefore += float64(blobber.Terms.WritePrice)
 		}
 
-		removedBlobber := alloc.BlobberAllocsMap[req.RemoveBlobberId]
+		removedBlobber := allocBase.BlobberAllocsMap[req.RemoveBlobberId]
 
 		blobberCancellationCharge := currency.Coin(float64(allocCancellationCharge) * (float64(removedBlobber.Terms.WritePrice) / totalWritePriceBefore))
 
-		alloc.WritePool, err = currency.MinusCoin(alloc.WritePool, blobberCancellationCharge)
+		allocBase.WritePool, err = currency.MinusCoin(allocBase.WritePool, blobberCancellationCharge)
 		if err != nil {
 			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 			return
@@ -1911,7 +1920,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	}
 
 	if req.Extend {
-		if err := updateAllocBlobberTerms(edb, &alloc.StorageAllocation); err != nil {
+		if err := updateAllocBlobberTerms(edb, allocBase); err != nil {
 			common.Respond(w, r, nil, err)
 			return
 		}
@@ -1919,7 +1928,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 	if err = changeBlobbersEventDB(
 		edb,
-		&alloc.StorageAllocation,
+		allocBase,
 		conf,
 		req.AddBlobberId,
 		req.RemoveBlobberId,
@@ -1928,13 +1937,17 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		return
 	}
 
-	cp, err := edb.GetChallengePool(alloc.ID)
-	if err != nil {
-		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
-		return
+	cpBalance := int64(0)
+	if !isEnterprise {
+		cp, err := edb.GetChallengePool(allocBase.ID)
+		if err != nil {
+			common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
+			return
+		}
+		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLockZCN, err := alloc.requiredTokensForUpdateAllocation(currency.Coin(cp.Balance), req.Extend, common.Timestamp(time.Now().Unix()))
+	tokensRequiredToLockZCN, err := allocBase.requiredTokensForUpdateAllocation(currency.Coin(cpBalance), req.Extend, isEnterprise, common.Timestamp(time.Now().Unix()))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1950,10 +1963,11 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 
 func changeBlobbersEventDB(
 	edb *event.EventDb,
-	sa *StorageAllocation,
+	saBase *storageAllocationBase,
 	conf *Config,
 	addID, removeID string,
 	now common.Timestamp) error {
+
 	if len(addID) == 0 {
 		if len(removeID) > 0 {
 			return fmt.Errorf("could not remove blobber without adding a new one")
@@ -1962,7 +1976,7 @@ func changeBlobbersEventDB(
 		return nil
 	}
 
-	_, ok := sa.BlobberAllocsMap[addID]
+	_, ok := saBase.BlobberAllocsMap[addID]
 	if ok {
 		return fmt.Errorf("allocation already has blobber %s", addID)
 	}
@@ -1983,21 +1997,21 @@ func changeBlobbersEventDB(
 		},
 	}
 
-	ba := newBlobberAllocation(sa.bSize(), sa, addBlobber, conf, now)
+	ba := newBlobberAllocation(saBase.bSize(), saBase, addBlobber, conf, now)
 
 	removedIdx := 0
 
 	if len(removeID) > 0 {
-		_, ok := sa.BlobberAllocsMap[removeID]
+		_, ok := saBase.BlobberAllocsMap[removeID]
 		if !ok {
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
-		delete(sa.BlobberAllocsMap, removeID)
+		delete(saBase.BlobberAllocsMap, removeID)
 
 		var found bool
-		for i, d := range sa.BlobberAllocs {
+		for i, d := range saBase.BlobberAllocs {
 			if d.BlobberID == removeID {
-				sa.BlobberAllocs[i] = nil
+				saBase.BlobberAllocs[i] = nil
 				found = true
 				removedIdx = i
 				break
@@ -2007,14 +2021,14 @@ func changeBlobbersEventDB(
 			return fmt.Errorf("cannot find blobber %s in allocation", removeID)
 		}
 
-		sa.BlobberAllocs[removedIdx] = ba
-		sa.BlobberAllocsMap[addID] = ba
+		saBase.BlobberAllocs[removedIdx] = ba
+		saBase.BlobberAllocsMap[addID] = ba
 	} else {
 		// If we are not removing a blobber, then the number of shards must increase.
-		sa.ParityShards++
+		saBase.ParityShards++
 
-		sa.BlobberAllocs = append(sa.BlobberAllocs, ba)
-		sa.BlobberAllocsMap[addID] = ba
+		saBase.BlobberAllocs = append(saBase.BlobberAllocs, ba)
+		saBase.BlobberAllocsMap[addID] = ba
 	}
 
 	return nil
@@ -2022,9 +2036,9 @@ func changeBlobbersEventDB(
 
 func updateAllocBlobberTerms(
 	edb *event.EventDb,
-	alloc *StorageAllocation) error {
-	bIDs := make([]string, 0, len(alloc.BlobberAllocs))
-	for _, ba := range alloc.BlobberAllocs {
+	allocBase *storageAllocationBase) error {
+	bIDs := make([]string, 0, len(allocBase.BlobberAllocs))
+	for _, ba := range allocBase.BlobberAllocs {
 		bIDs = append(bIDs, ba.BlobberID)
 	}
 
@@ -2041,8 +2055,8 @@ func updateAllocBlobberTerms(
 		}
 	}
 
-	for i := range alloc.BlobberAllocs {
-		alloc.BlobberAllocs[i].Terms = bTerms[i]
+	for i := range allocBase.BlobberAllocs {
+		allocBase.BlobberAllocs[i].Terms = bTerms[i]
 	}
 
 	return nil
@@ -2226,7 +2240,7 @@ func (srh *StorageRestHandler) getAllocation(w http.ResponseWriter, r *http.Requ
 		common.Respond(w, r, nil, smartcontract.NewErrNoResourceOrErrInternal(err, true, "can't get allocation"))
 		return
 	}
-	sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
+	_, sa, err := allocationTableToStorageAllocationBlobbers(allocation, edb)
 	if err != nil {
 		logging.Logger.Error("unable to create allocation response",
 			zap.String("allocation", allocationID),
@@ -2591,9 +2605,10 @@ type storageNodeResponse struct {
 	CreatedAt                time.Time     `json:"created_at"`
 
 	IsRestricted bool `json:"is_restricted"`
+	IsEnterprise bool `json:"is_enterprise"`
 }
 
-func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
+func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {
 	b := sn.mustBase()
 	sr := storageNodeResponse{
 		ID:                      b.ID,
@@ -2613,35 +2628,37 @@ func StoragNodeToStorageNodeResponse(sn StorageNode) storageNodeResponse {
 		NotAvailable:            b.NotAvailable,
 	}
 
-	sv2, ok := sn.Entity().(*storageNodeV2)
-	if ok && sv2.IsRestricted != nil {
-		sr.IsRestricted = *sv2.IsRestricted
+	err := cstate.WithActivation(balances, "electra", func() error {
+		sv2, ok := sn.Entity().(*storageNodeV2)
+		if ok && sv2.IsRestricted != nil {
+			sr.IsRestricted = *sv2.IsRestricted
+		}
+		return nil
+	}, func() error {
+		if sn.Entity().GetVersion() == "v3" {
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
+				if v3.IsRestricted != nil {
+					sr.IsRestricted = *v3.IsRestricted
+				}
+				if v3.IsEnterprise != nil {
+					sr.IsEnterprise = *v3.IsEnterprise
+				}
+			}
+		} else {
+			sv2, ok := sn.Entity().(*storageNodeV2)
+			if ok && sv2.IsRestricted != nil {
+				sr.IsRestricted = *sv2.IsRestricted
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return storageNodeResponse{}, err
 	}
 
-	return sr
-}
-
-func storageNodeResponseToStorageNodeV1(snr storageNodeResponse) *storageNodeV1 {
-	return &storageNodeV1{
-		Provider: provider.Provider{
-			ID:              snr.ID,
-			ProviderType:    spenum.Blobber,
-			LastHealthCheck: snr.LastHealthCheck,
-			HasBeenKilled:   snr.IsKilled,
-			HasBeenShutDown: snr.IsShutdown,
-		},
-		BaseURL:                 snr.BaseURL,
-		Terms:                   snr.Terms,
-		Capacity:                snr.Capacity,
-		Allocated:               snr.Allocated,
-		PublicKey:               snr.PublicKey,
-		SavedData:               snr.SavedData,
-		DataReadLastRewardRound: snr.DataReadLastRewardRound,
-		LastRewardDataReadRound: snr.LastRewardDataReadRound,
-		StakePoolSettings:       snr.StakePoolSettings,
-		RewardRound:             snr.RewardRound,
-		NotAvailable:            snr.NotAvailable,
-	}
+	return sr, nil
 }
 
 func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 {
@@ -2653,6 +2670,7 @@ func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 
 			HasBeenKilled:   snr.IsKilled,
 			HasBeenShutDown: snr.IsShutdown,
 		},
+		Version:                 "v2",
 		BaseURL:                 snr.BaseURL,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
@@ -2665,6 +2683,32 @@ func storageNodeResponseToStorageNodeV2(snr storageNodeResponse) *storageNodeV2 
 		RewardRound:             snr.RewardRound,
 		NotAvailable:            snr.NotAvailable,
 		IsRestricted:            &snr.IsRestricted,
+	}
+}
+
+func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 {
+	return &storageNodeV3{
+		Provider: provider.Provider{
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
+		},
+		Version:                 "v3",
+		BaseURL:                 snr.BaseURL,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            &snr.IsRestricted,
+		IsEnterprise:            &snr.IsEnterprise,
 	}
 }
 
@@ -2701,6 +2745,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		NotAvailable:             blobber.NotAvailable,
 		CreatedAt:                blobber.CreatedAt,
 		IsRestricted:             blobber.IsRestricted,
+		IsEnterprise:             blobber.IsEnterprise,
 	}
 }
 

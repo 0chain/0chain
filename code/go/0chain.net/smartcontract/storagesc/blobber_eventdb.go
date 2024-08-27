@@ -33,8 +33,26 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 		OffersTotal: sp.TotalOffers,
 	}
 
-	if v2, ok := sn.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
-		data.IsRestricted = *v2.IsRestricted
+	if err = cstate.WithActivation(balances, "electra", func() error {
+		if v2, ok := sn.Entity().(*storageNodeV2); ok && v2.IsRestricted != nil {
+			data.IsRestricted = *v2.IsRestricted
+		}
+		return nil
+	}, func() error {
+		if sn.Entity().GetVersion() == "v3" {
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
+				if v3.IsRestricted != nil {
+					data.IsRestricted = *v3.IsRestricted
+				}
+				if v3.IsEnterprise != nil {
+					data.IsEnterprise = *v3.IsEnterprise
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateBlobber, b.ID, data)
@@ -76,10 +94,29 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		CreationRound: balances.GetBlock().Round,
 	}
 
-	if v2, ok := sn.Entity().(*storageNodeV2); ok {
-		if v2.IsRestricted != nil {
-			data.IsRestricted = *v2.IsRestricted
+	if err = cstate.WithActivation(balances, "electra", func() error {
+		if v2, ok := sn.Entity().(*storageNodeV2); ok {
+			if v2.IsRestricted != nil {
+				data.IsRestricted = *v2.IsRestricted
+			}
 		}
+		return nil
+	}, func() error {
+		if sn.Entity().GetVersion() == "v3" {
+			v3, ok := sn.Entity().(*storageNodeV3)
+			if ok {
+				if v3.IsRestricted != nil {
+					data.IsRestricted = *v3.IsRestricted
+				}
+
+				if v3.IsEnterprise != nil {
+					data.IsEnterprise = *v3.IsEnterprise
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, b.ID, data)

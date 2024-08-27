@@ -647,7 +647,7 @@ func (mc *Chain) signBlock(ctx context.Context, b *block.Block) (*block.BlockVer
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error {
 	logging.Logger.Info("update finalized block", zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round), zap.Int64("current_round", mc.GetCurrentRound()), zap.Float64("weight", b.Weight()))
 	if config.Development() {
 		for _, t := range b.Txns {
@@ -683,13 +683,13 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 	pn, err := mc.GetPhaseOfBlock(b)
 	if err != nil {
 		logging.Logger.Error("update finalized block - get phase of block failed", zap.Error(err))
-		return
+		return err
 	}
 
 	// perform view change (or not perform)
 	if err := mc.ViewChange(ctx, b); err != nil {
 		logging.Logger.Error("[mvc] view change", zap.Int64("round", b.Round), zap.Error(err))
-		return
+		return err
 	}
 
 	logging.Logger.Debug("[mvc] update finalized block - send phase node",
@@ -697,6 +697,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) {
 		zap.Int64("start_round", pn.StartRound),
 		zap.String("phase", pn.Phase.String()))
 	go mc.SendPhaseNode(context.Background(), chain.PhaseEvent{Phase: pn})
+	return nil
 }
 
 /*FinalizeBlock - finalize the transactions in the block */
@@ -706,20 +707,6 @@ func (mc *Chain) FinalizeBlock(ctx context.Context, b *block.Block) error {
 		modifiedTxns[idx] = txn
 	}
 	return mc.deleteTxns(modifiedTxns)
-}
-
-func getLatestBlockFromSharders(ctx context.Context) *block.Block {
-	mc := GetMinerChain()
-	mb := mc.GetCurrentMagicBlock()
-	mb.Sharders.OneTimeStatusMonitor(ctx, mb.StartingRound)
-	lfBlocks := mc.GetLatestFinalizedBlockFromSharder(ctx)
-	if len(lfBlocks) > 0 {
-		logging.Logger.Info("bc-1 latest finalized Block",
-			zap.Int64("lfb_round", lfBlocks[0].Round))
-		return lfBlocks[0].Block
-	}
-	logging.Logger.Info("bc-1 sharders returned no lfb.")
-	return nil
 }
 
 // NotarizedBlockFetched - handler to process fetched notarized block

@@ -92,7 +92,7 @@ type ChallengeResponseTxData struct {
 }
 
 /*UpdateFinalizedBlock - update the latest finalized block */
-func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
+func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error {
 	mc.updateFinalizedBlock(ctx, b)
 
 	addResultIfAdversarialValidatorTest(b)
@@ -104,6 +104,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) {
 			log.Panicf("Conductor: error while sending round info result: %v", err)
 		}
 	}
+	return nil
 }
 
 func addResultIfAdversarialValidatorTest(b *block.Block) {
@@ -229,7 +230,7 @@ func (mc *Chain) createGenerateChallengeTxn(b *block.Block) (*transaction.Transa
 	s := crpc.Client().State()
 
 	if !s.GenerateAllChallenges && (s.GenerateChallenge == nil || s.StopChallengeGeneration || node.Self.ID != s.GenerateChallenge.MinerID) {
-		logging.Logger.Info("createGenerateChallengeTxn: Challenge generation has been stopped for the whole system or for this miner only", 
+		logging.Logger.Info("createGenerateChallengeTxn: Challenge generation has been stopped for the whole system or for this miner only",
 			zap.Bool("stopChalGen", s.StopChallengeGeneration),
 			zap.String("current_miner", node.Self.ID))
 		return nil, nil
