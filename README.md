@@ -157,7 +157,7 @@ Start sharder first because miners need the genesis magic block. On the sharder 
 ../bin/start.b0sharder.sh
 ```
 
-Wait till the cassandra is started and the sharder is ready to listen to requests.
+Wait till the postgres is started and the sharder is ready to listen to requests.
 
 On the respective miner terminal, use
 
@@ -206,10 +206,10 @@ Redis used for transactions:
 ../bin/run.miner.sh redis_txns redis-cli
 ```
 
-4. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
+4. Connecting to postgres used in the sharder (you are within the appropriate sharder directories)
 
 ```
-../bin/run.sharder.sh cassandra cqlsh
+../bin/run.sharder.sh postgres psql -U zchain_user -d events_db
 ```
 
 ## Restarting the nodes
