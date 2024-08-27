@@ -301,7 +301,8 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, fmt.Errorf("deleting node n2n key failed: %v", err)
 	}
 
-	emitDeleteMiner(deleteNode.ID, balances)
+	// emitDeleteMiner(deleteNode.ID, balances)
+	emitUpdateMiner(deleteNode, balances, false)
 
 	return deleteNode, nil
 }
