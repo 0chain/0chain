@@ -177,10 +177,7 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 	return nil
 }
 
-func emitDeleteMiner(id string, balances cstate.StateContextI) error {
-
+func emitDeleteMiner(id string, balances cstate.StateContextI) {
 	logging.Logger.Info("emitting delete miner event")
-
 	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, id)
-	return nil
 }

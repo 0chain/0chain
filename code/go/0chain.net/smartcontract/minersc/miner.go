@@ -301,6 +301,8 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, fmt.Errorf("deleting node n2n key failed: %v", err)
 	}
 
+	emitDeleteMiner(deleteNode.ID, balances)
+
 	return deleteNode, nil
 }
 
@@ -325,7 +327,7 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 				return
 			}
 
-			err = emitDeleteMiner(mn.ID, balances)
+			// err = emitDeleteMiner(mn.ID, balances)
 		}
 	} else {
 		err = common.NewError("failed to delete from view change", "magic block has already been created for next view change")
