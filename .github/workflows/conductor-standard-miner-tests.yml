@@ -7,6 +7,10 @@ on:
         description: 'Input branch for 0chain repo'
         default: ''
         required: false
+      machine:
+        description: 'Machine to run the tests on'
+        default: 'conductor-test'
+        required: false
   workflow_call:
     inputs:
       chain_branch:
@@ -22,7 +26,7 @@ env:
 jobs:
   CONDUCTOR_MINER_STANDARD_TESTS:
     name: CONDUCTOR-MINER-STANDARD-TESTS
-    runs-on: [self-hosted, conductor-test]
+    runs-on: ${{ inputs.machine || 'conductor-test' }}
 
     outputs:
       branch: ${{ steps.chain.outputs.BRANCH_OUT }}
