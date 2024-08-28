@@ -267,9 +267,9 @@ func main() {
 	// TODO: all update latest magic block from sharders should be adjusted when VC is enabled
 	// this is because miners will now start from the LFB it stopped, so would not start immediately
 	// from the LFB from sharders, therefore, the latest magic block from sharders would be incorrect
-	if err = mc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
-		logging.Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
-	}
+	// if err = mc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
+	// 	logging.Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
+	// }
 
 	// ignoring error and without retries, restart round will resolve it
 	// if there is errors

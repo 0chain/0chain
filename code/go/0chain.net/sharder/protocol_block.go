@@ -186,50 +186,50 @@ func (sc *Chain) hasRelatedMagicBlock(b *block.Block) (ok bool) {
 }
 
 // pull related magic block if missing (sync)
-func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
-	err error) {
+// func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
+// 	err error) {
 
-	if sc.hasRelatedMagicBlock(b) {
-		return // already have the MB, nothing to do
-	}
+// 	if sc.hasRelatedMagicBlock(b) {
+// 		return // already have the MB, nothing to do
+// 	}
 
-	// TODO (sfxdx): get magic block by number/hash/round to be sure its
-	//               really related, not just latest
-	if err = sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
-		return // got error
-	}
+// 	// TODO (sfxdx): get magic block by number/hash/round to be sure its
+// 	//               really related, not just latest
+// 	if err = sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
+// 		return // got error
+// 	}
 
-	if !sc.hasRelatedMagicBlock(b) {
-		return fmt.Errorf("can't pull related magic block for %d", b.Round)
-	}
+// 	if !sc.hasRelatedMagicBlock(b) {
+// 		return fmt.Errorf("can't pull related magic block for %d", b.Round)
+// 	}
 
-	return
-}
+// 	return
+// }
 
 // AfterFetch used to pull related MB (if missing) for blocks fetched by
 // AsyncFetch* function in LFB-tickets worker. E.g. for blocks kicked by
 // a LFB ticket.
-func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
+// func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
 
-	// pull related magic block if missing
-	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
-		Logger.Error("after_fetch -- pulling related magic block",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-			zap.Error(err))
-		return
-	}
+// 	// pull related magic block if missing
+// 	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
+// 		Logger.Error("after_fetch -- pulling related magic block",
+// 			zap.Int64("round", b.Round), zap.String("block", b.Hash),
+// 			zap.Error(err))
+// 		return
+// 	}
 
-	// ok, already have or just pulled, check out LFB
+// 	// ok, already have or just pulled, check out LFB
 
-	var lfb = sc.GetLatestFinalizedBlock()
-	if lfb.Round < b.Round {
-		Logger.Warn("after_fetch - newer finalize round",
-			zap.Int64("round", b.Round),
-			zap.Int64("lfb round", lfb.Round))
-	}
+// 	var lfb = sc.GetLatestFinalizedBlock()
+// 	if lfb.Round < b.Round {
+// 		Logger.Warn("after_fetch - newer finalize round",
+// 			zap.Int64("round", b.Round),
+// 			zap.Int64("lfb round", lfb.Round))
+// 	}
 
-	return // everything is done
-}
+// 	return // everything is done
+// }
 
 func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRange int64, scan HealthCheckScan) *round.Round {
 	bss := sc.BlockSyncStats

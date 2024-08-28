@@ -207,42 +207,42 @@ func (c *Chain) GetLatestFinalizedMagicBlockBrief() *MagicBlockBrief {
 	return getMagicBlockBrief(c.GetLatestFinalizedMagicBlock(context.Background()))
 }
 
-func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
-	saveFunc MagicBlockSaveFunc) (err error) {
+// func (c *Chain) repairChain(ctx context.Context, newMB *block.Block,
+// 	saveFunc MagicBlockSaveFunc) (err error) {
 
-	lfmb := c.GetLatestFinalizedMagicBlockBrief()
-	if lfmb == nil {
-		return common.NewError("repair_mb_chain", "can't get lfmb")
-	}
+// 	lfmb := c.GetLatestFinalizedMagicBlockBrief()
+// 	if lfmb == nil {
+// 		return common.NewError("repair_mb_chain", "can't get lfmb")
+// 	}
 
-	if newMB.MagicBlockNumber <= lfmb.MagicBlockNumber {
-		return common.NewError("repair_mb_chain", "already have such MB")
-	}
+// 	if newMB.MagicBlockNumber <= lfmb.MagicBlockNumber {
+// 		return common.NewError("repair_mb_chain", "already have such MB")
+// 	}
 
-	if newMB.MagicBlockNumber == lfmb.MagicBlockNumber+1 {
-		if newMB.PreviousMagicBlockHash != lfmb.MagicBlockHash {
-			return common.NewError("repair_mb_chain", "invalid prev-MB ref.")
-		}
-		return // it's just next MB
-	}
+// 	if newMB.MagicBlockNumber == lfmb.MagicBlockNumber+1 {
+// 		if newMB.PreviousMagicBlockHash != lfmb.MagicBlockHash {
+// 			return common.NewError("repair_mb_chain", "invalid prev-MB ref.")
+// 		}
+// 		return // it's just next MB
+// 	}
 
-	// here the newBM is not next but newer
+// 	// here the newBM is not next but newer
 
-	logging.Logger.Info("repair_mb_chain: repair from-to mb_number",
-		zap.Int64("from", lfmb.MagicBlockNumber),
-		zap.Int64("to", newMB.MagicBlockNumber))
+// 	logging.Logger.Info("repair_mb_chain: repair from-to mb_number",
+// 		zap.Int64("from", lfmb.MagicBlockNumber),
+// 		zap.Int64("to", newMB.MagicBlockNumber))
 
-	// until the end of the days
-	if err = c.VerifyChainHistoryAndRepair(ctx, newMB, saveFunc); err != nil {
-		logging.Logger.Error("repair_mb_chain", zap.Error(err))
-		return common.NewErrorf("repair_mb_chain", err.Error())
-	}
+// 	// until the end of the days
+// 	if err = c.VerifyChainHistoryAndRepair(ctx, newMB, saveFunc); err != nil {
+// 		logging.Logger.Error("repair_mb_chain", zap.Error(err))
+// 		return common.NewErrorf("repair_mb_chain", err.Error())
+// 	}
 
-	// the VerifyChainHistoryAndRepair doesn't save the newMB
-	// finalizeRound will do it next step
+// 	// the VerifyChainHistoryAndRepair doesn't save the newMB
+// 	// finalizeRound will do it next step
 
-	return // ok
-}
+// 	return // ok
+// }
 
 // FinalizedBlockWorker - a worker that processes finalized blocks.
 func (c *Chain) FinalizedBlockWorker(ctx context.Context, bsh BlockStateHandler) {
@@ -362,13 +362,13 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 	// a magic block; we already have verified and valid MB chain at this
 	// moment, let's keep it updated and verified too
 
-	if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
-		var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
-		if err != nil {
-			logging.Logger.Error("finalize block - repairing MB chain", zap.Error(err))
-			return fmt.Errorf("repair chain failed: %v", err)
-		}
-	}
+	// if fb.MagicBlock != nil && node.Self.Type == node.NodeTypeSharder {
+	// var err = c.repairChain(ctx, fb, bsh.SaveMagicBlock())
+	// if err != nil {
+	// 	logging.Logger.Error("finalize block - repairing MB chain", zap.Error(err))
+	// 	return fmt.Errorf("repair chain failed: %v", err)
+	// }
+	// }
 
 	// if isSharder {
 	// get previous finalized block
@@ -671,98 +671,98 @@ type MagicBlockSaver interface {
 // from sharders and verifies magic blocks chain. The method blocks
 // execution flow (it's synchronous). It uses given MagicBlock to get list
 // of sharders to request.
-func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
-	mb *block.MagicBlock) (err error) {
+// func (c *Chain) UpdateLatestMagicBlockFromShardersOn(ctx context.Context,
+// 	mb *block.MagicBlock) (err error) {
 
-	lfmb := c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
-	if lfmb == nil {
-		logging.Logger.Warn("no new finalized magic lfmb from sharders given",
-			zap.Strings("URLs", mb.Sharders.N2NURLs()))
-		return nil
-	}
+// 	lfmb := c.GetLatestFinalizedMagicBlockFromShardersOn(ctx, mb)
+// 	if lfmb == nil {
+// 		logging.Logger.Warn("no new finalized magic lfmb from sharders given",
+// 			zap.Strings("URLs", mb.Sharders.N2NURLs()))
+// 		return nil
+// 	}
 
-	cmb := c.GetLatestFinalizedMagicBlock(ctx)
-	if cmb == nil {
-		return errors.New("can't get cmb")
-	}
-	if lfmb.Hash == cmb.Hash {
-		return nil
-	}
+// 	cmb := c.GetLatestFinalizedMagicBlock(ctx)
+// 	if cmb == nil {
+// 		return errors.New("can't get cmb")
+// 	}
+// 	if lfmb.Hash == cmb.Hash {
+// 		return nil
+// 	}
 
-	logging.Logger.Info("get magic lfmb from sharders",
-		zap.Int64("number", lfmb.MagicBlockNumber),
-		zap.Int64("sr", lfmb.StartingRound),
-		zap.String("hash", lfmb.Hash),
-		zap.Int64("local lfmb", lfmb.StartingRound))
+// 	logging.Logger.Info("get magic lfmb from sharders",
+// 		zap.Int64("number", lfmb.MagicBlockNumber),
+// 		zap.Int64("sr", lfmb.StartingRound),
+// 		zap.String("hash", lfmb.Hash),
+// 		zap.Int64("local lfmb", lfmb.StartingRound))
 
-	if lfmb.MagicBlock.StartingRound <= cmb.StartingRound {
-		if lfmb.MagicBlock.StartingRound == cmb.StartingRound && lfmb.MagicBlock.Hash == cmb.Hash {
-			lfmb.MagicBlock = cmb.MagicBlock
-			c.SetLatestFinalizedMagicBlock(lfmb)
-			logging.Logger.Debug(
-				"updated lfmb to add lfmb's parent lfmb to magicBlockStartRounds cache",
-				zap.String("lfmb hash", lfmb.Hash),
-				zap.Int64("lfmb round", lfmb.Round),
-				zap.Int64("lfmb starting round", lfmb.StartingRound),
-			)
-		}
-		return nil // earlier than the current one
-	}
+// 	if lfmb.MagicBlock.StartingRound <= cmb.StartingRound {
+// 		if lfmb.MagicBlock.StartingRound == cmb.StartingRound && lfmb.MagicBlock.Hash == cmb.Hash {
+// 			lfmb.MagicBlock = cmb.MagicBlock
+// 			c.SetLatestFinalizedMagicBlock(lfmb)
+// 			logging.Logger.Debug(
+// 				"updated lfmb to add lfmb's parent lfmb to magicBlockStartRounds cache",
+// 				zap.String("lfmb hash", lfmb.Hash),
+// 				zap.Int64("lfmb round", lfmb.Round),
+// 				zap.Int64("lfmb starting round", lfmb.StartingRound),
+// 			)
+// 		}
+// 		return nil // earlier than the current one
+// 	}
 
-	var saveMagicBlock MagicBlockSaveFunc
-	if c.magicBlockSaver != nil {
-		saveMagicBlock = c.magicBlockSaver.SaveMagicBlock()
-	}
+// 	var saveMagicBlock MagicBlockSaveFunc
+// 	if c.magicBlockSaver != nil {
+// 		saveMagicBlock = c.magicBlockSaver.SaveMagicBlock()
+// 	}
 
-	err = c.VerifyChainHistoryAndRepair(ctx, lfmb, saveMagicBlock)
-	if err != nil {
-		return fmt.Errorf("failed to verify chain history: %v", err.Error())
-	}
+// 	err = c.VerifyChainHistoryAndRepair(ctx, lfmb, saveMagicBlock)
+// 	if err != nil {
+// 		return fmt.Errorf("failed to verify chain history: %v", err.Error())
+// 	}
 
-	if err = c.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
-		return fmt.Errorf("failed to update magic lfmb: %v", err.Error())
-	}
-	c.SetLatestFinalizedMagicBlock(lfmb)
+// 	if err = c.UpdateMagicBlock(lfmb.MagicBlock); err != nil {
+// 		return fmt.Errorf("failed to update magic lfmb: %v", err.Error())
+// 	}
+// 	c.SetLatestFinalizedMagicBlock(lfmb)
 
-	return // ok, updated
-}
+// 	return // ok, updated
+// }
 
 // UpdateLatestMagicBlockFromSharders pulls latest finalized magic block
 // from sharders and verifies magic blocks chain. The method blocks
 // execution flow (it's synchronous).
-func (c *Chain) UpdateLatestMagicBlockFromSharders(ctx context.Context) (
-	err error) {
-	return c.UpdateLatestMagicBlockFromShardersOn(ctx, c.GetLatestMagicBlock())
-}
+// func (c *Chain) UpdateLatestMagicBlockFromSharders(ctx context.Context) (
+// 	err error) {
+// 	return c.UpdateLatestMagicBlockFromShardersOn(ctx, c.GetLatestMagicBlock())
+// }
 
 // UpdateMagicBlockWorker updates latest finalized magic block from active
 // sharders periodically.
-func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
+// func (c *Chain) UpdateMagicBlockWorker(ctx context.Context) {
 
-	var (
-		tick = time.NewTicker(5 * time.Second)
+// 	var (
+// 		tick = time.NewTicker(5 * time.Second)
 
-		tickq = tick.C
-		doneq = ctx.Done()
+// 		tickq = tick.C
+// 		doneq = ctx.Done()
 
-		err error
-	)
+// 		err error
+// 	)
 
-	defer tick.Stop()
+// 	defer tick.Stop()
 
-	for {
-		select {
-		case <-doneq:
-			return
-		case <-tickq:
-		}
+// 	for {
+// 		select {
+// 		case <-doneq:
+// 			return
+// 		case <-tickq:
+// 		}
 
-		if err = c.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
-			logging.Logger.Error("update_mb_worker", zap.Error(err))
-		}
-	}
+// 		if err = c.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
+// 			logging.Logger.Error("update_mb_worker", zap.Error(err))
+// 		}
+// 	}
 
-}
+// }
 
 // ComputeBlockStateWithLock compute block state one by one
 func (c *Chain) ComputeBlockStateWithLock(ctx context.Context, f func() error) (err error) {
