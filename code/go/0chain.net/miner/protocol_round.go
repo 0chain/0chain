@@ -1984,15 +1984,21 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		return // can't continue
 	}
 
+	logging.Logger.Debug("[mvc] load latest MB",
+		zap.Int64("mb number", latest.MagicBlockNumber),
+		zap.Int64("mb sr", latest.StartingRound),
+		zap.String("mb hash", latest.Hash))
+
 	// don't setup the latest MB since it can be promoted
 
-	if latest.MagicBlockNumber <= 1 {
-		return // done
-	}
-	// otherwise, load and setup previous
+	// if latest.MagicBlockNumber <= 1 {
+	// 	return // done
+	// }
+	// // otherwise, load and setup previous
 	var (
 		prev *block.MagicBlock
-		id   = strconv.FormatInt(latest.MagicBlockNumber-1, 10)
+		// id   = strconv.FormatInt(latest.MagicBlockNumber-1, 10)
+		id = strconv.FormatInt(latest.MagicBlockNumber, 10)
 	)
 	if prev, err = LoadMagicBlock(ctx, id); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- loading previous MB",
