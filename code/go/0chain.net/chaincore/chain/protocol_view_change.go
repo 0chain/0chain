@@ -205,6 +205,8 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 
 		if notPendingTxn {
 			logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
+			// reset the local nonce
+			node.Self.SetNonce(0)
 			return false
 		}
 
