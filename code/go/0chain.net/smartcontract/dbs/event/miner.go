@@ -262,10 +262,10 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
 	var miner = Miner{Provider: Provider{ID: updates.Id}}
 	exists, err := miner.exists(edb)
-
 	if err != nil {
 		return err
 	}
+
 	if !exists {
 		return fmt.Errorf("miner %v not in database cannot update",
 			miner.ID)
@@ -294,7 +294,14 @@ func (edb *EventDb) deleteMiner(id string) error {
 		Where(&Miner{Provider: Provider{ID: id}}).
 		Delete(&Miner{})
 
-	return result.Error
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// delete from provider rewards table
+	return edb.Store.Get().Where(&ProviderRewards{ProviderID: id}).Delete(&ProviderRewards{}).Error
+
+	// return result.Error
 }
 
 func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {
