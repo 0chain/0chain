@@ -75,32 +75,32 @@ func GetEndpoints(rh rest.RestHandlerI) []rest.Endpoint {
 //
 // parameters:
 //
-//	 +name: offset
-//	  description: offset for pagination
-//	  in: query
-//	  type: string
-//	 +name: limit
-//	  description: limit for pagination
-//	  in: query
-//	  type: string
-//	 +name: sort
-//	  description: Sort direction (desc or asc)
-//	  in: query
-//	  type: string
-//	 +name: start
-//	  description: start block from which to get rewards
-//	  required: true
-//	  in: query
-//	  type: string
-//	 +name: end
-//	  description: last block until which to get rewards
-//	  required: true
-//	  in: query
-//	  type: string
-//   +name: pool_id
-//    description: ID of the delegate pool for which to get rewards
-//    in: query
-//    type: string
+//		 +name: offset
+//		  description: offset for pagination
+//		  in: query
+//		  type: string
+//		 +name: limit
+//		  description: limit for pagination
+//		  in: query
+//		  type: string
+//		 +name: sort
+//		  description: Sort direction (desc or asc)
+//		  in: query
+//		  type: string
+//		 +name: start
+//		  description: start block from which to get rewards
+//		  required: true
+//		  in: query
+//		  type: string
+//		 +name: end
+//		  description: last block until which to get rewards
+//		  required: true
+//		  in: query
+//		  type: string
+//	  +name: pool_id
+//	   description: ID of the delegate pool for which to get rewards
+//	   in: query
+//	   type: string
 //
 // responses:
 //
@@ -135,32 +135,32 @@ func (mrh *MinerRestHandler) getDelegateRewards(w http.ResponseWriter, r *http.R
 //
 // parameters:
 //
-//	 +name: offset
-//	  description: offset for pagination
-//	  in: query
-//	  type: string
-//	 +name: limit
-//	  description: limit for pagination
-//	  in: query
-//	  type: string
-//	 +name: sort
-//	  description: Sort direction (desc or asc)
-//	  in: query
-//	  type: string
-//	 +name: start
-//	  description: start time of interval
-//	  required: true
-//	  in: query
-//	  type: string
-//	 +name: end
-//	  description: end time of interval
-//	  required: true
-//	  in: query
-//	  type: string
-//   +name: id
-//    description: ID of the provider for which to get rewards
-//    in: query
-//    type: string
+//		 +name: offset
+//		  description: offset for pagination
+//		  in: query
+//		  type: string
+//		 +name: limit
+//		  description: limit for pagination
+//		  in: query
+//		  type: string
+//		 +name: sort
+//		  description: Sort direction (desc or asc)
+//		  in: query
+//		  type: string
+//		 +name: start
+//		  description: start time of interval
+//		  required: true
+//		  in: query
+//		  type: string
+//		 +name: end
+//		  description: end time of interval
+//		  required: true
+//		  in: query
+//		  type: string
+//	  +name: id
+//	   description: ID of the provider for which to get rewards
+//	   in: query
+//	   type: string
 //
 // responses:
 //
@@ -815,6 +815,7 @@ func (mrh *MinerRestHandler) getMinerList(w http.ResponseWriter, r *http.Request
 
 	filter := event.MinerQuery{
 		IsKilled: null.BoolFrom(false),
+		Delete:   null.BoolFrom(false),
 	}
 	if isKilledString != "" {
 		active, err := strconv.ParseBool(isKilledString)
@@ -1015,7 +1016,6 @@ type DelegatePoolStat struct {
 	RoundCreated int64            `json:"round_created"`
 	StakedAt     common.Timestamp `json:"staked_at"`
 }
-
 
 // swagger:model stakePoolStat
 type StakePoolStat struct {
