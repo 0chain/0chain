@@ -687,6 +687,7 @@ func (mrh *MinerRestHandler) getSharderList(w http.ResponseWriter, r *http.Reque
 
 	filter := event.SharderQuery{
 		IsKilled: null.BoolFrom(false),
+		Delete:   null.BoolFrom(false),
 	}
 	if isKilledString != "" {
 		active, err := strconv.ParseBool(isKilledString)
