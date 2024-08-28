@@ -8,6 +8,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
+	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
@@ -305,6 +306,29 @@ func (msc *MinerSmartContract) deleteNode(
 	emitUpdateMiner(deleteNode, balances, false)
 
 	return deleteNode, nil
+}
+
+func saveDeleteNodeID(state state.StateContextI, pType spenum.Provider, id string) error {
+	dKey, ok := deleteNodeKeyMap[pType]
+	if !ok {
+		return fmt.Errorf("save delete node key failed, invalid node type: %s", pType)
+	}
+
+	ids, err := getDeleteNodeIDs(state, dKey)
+	if err != nil {
+		return err
+	}
+
+	for _, eid := range ids {
+		if id == eid {
+			// already exists
+			return nil
+		}
+	}
+
+	ids = append(ids, id)
+	_, err = state.InsertTrieNode(dKey, &ids)
+	return err
 }
 
 func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances cstate.StateContextI) (err error) {
