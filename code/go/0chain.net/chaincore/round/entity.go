@@ -633,7 +633,8 @@ func (r *Round) GetMinersByRank(nodes []*node.Node) []*node.Node {
 				zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", nodes[j].SetIndex),
 				zap.String("node", nodes[j].ID))
 		}
-		return idxi > idxj
+		// return idxi > idxj
+		return idxi < idxj
 	})
 	return nodes
 }
