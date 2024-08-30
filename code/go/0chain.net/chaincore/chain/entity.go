@@ -943,7 +943,14 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
 	c.mbMutex.RUnlock()
-	return entity.(*block.MagicBlock)
+	mb := entity.(*block.MagicBlock)
+	logging.Logger.Debug("[mvc] GetMagicBlock",
+		zap.Int64("round", round),
+		zap.Int64("mb_starting_round", mb.StartingRound),
+		zap.String("mb_hash", mb.Hash),
+		zap.Int("mb_miners_size", mb.Miners.Size()),
+		zap.Int("mb_sharders_size", mb.Sharders.Size()))
+	return mb
 }
 
 // GetMagicBlockNoOffset returns magic block of a given round with out offset
@@ -1742,6 +1749,12 @@ func (c *Chain) GetGeneratorsNumOfMagicBlock(mb *block.MagicBlock) int {
 // GetGeneratorsNumOfRound returns the number of generators of a given round
 func (c *Chain) GetGeneratorsNumOfRound(r int64) int {
 	if mb := c.GetMagicBlock(r); mb != nil {
+		logging.Logger.Debug("[mvc] GetGeneratorsNumOfRound - get MB",
+			zap.Int64("round", r),
+			zap.Int64("mb_round", mb.StartingRound),
+			zap.String("mb_hash", mb.Hash),
+			zap.Int("miners num", mb.Miners.Size()),
+			zap.Int("sharders num", mb.Sharders.Size()))
 		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators(), c.GeneratorsPercent())
 	}
 
@@ -1795,7 +1808,8 @@ func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder 
 
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
-	miner := c.GetMiners(r.GetRoundNumber()).GetNode(b.MinerID)
+	mb := c.GetMagicBlock(r.GetRoundNumber())
+	miner := mb.Miners.GetNode(b.MinerID)
 	if miner == nil {
 		return false
 	}
@@ -1803,7 +1817,12 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	isGen := c.IsRoundGenerator(r, miner)
 	if !isGen {
 		//This is a Byzantine condition?
-		logging.Logger.Info("Received a block from non-generator", zap.Int("miner", miner.SetIndex), zap.Int64("RRS", r.GetRandomSeed()))
+		logging.Logger.Info("Received a block from non-generator",
+			zap.Int("miner", miner.SetIndex),
+			zap.String("miner_id", b.MinerID),
+			zap.Int64("RRS", r.GetRandomSeed()),
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.Int64("mb_round", mb.StartingRound))
 		gens := c.GetGenerators(r)
 
 		logging.Logger.Info("Generators are: ", zap.Int64("round", r.GetRoundNumber()))
