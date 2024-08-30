@@ -107,12 +107,11 @@ func (zcn *ZCNSmartContract) getStakePoolAdapter(providerType spenum.Provider, p
 // SC functions
 
 // get existing stake pool or create new one not saving it
-func (zcn *ZCNSmartContract) getOrUpdateStakePool(gn *GlobalNode,
+func (zcn *ZCNSmartContract) getOrUpdateStakePool(
 	authorizerID datastore.Key,
 	settings stakepool.Settings,
 	ctx cstate.StateContextI,
 ) (*StakePool, error) {
-
 	gn, err := GetGlobalNode(ctx)
 	if err != nil {
 		return nil, err

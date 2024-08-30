@@ -46,7 +46,7 @@ func (sa *StorageAllocation) UnmarshalMsg(data []byte) ([]byte, error) {
 
 	*sa = StorageAllocation(*d)
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		base.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 		for _, blobberAllocation := range base.BlobberAllocs {
 			base.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
@@ -104,7 +104,7 @@ func (sa *StorageAllocation) Decode(input []byte) error {
 		return err
 	}
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		base.BlobberAllocsMap = make(map[string]*BlobberAllocation)
 		for _, blobberAllocation := range base.BlobberAllocs {
 			base.BlobberAllocsMap[blobberAllocation.BlobberID] = blobberAllocation
@@ -444,22 +444,18 @@ func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Co
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) usedDurationInTimeunit(now common.Timestamp, timeUnit time.Duration) (float64, error) {
-	usedTime := sab.Expiration - now
-	if usedTime < 0 {
-		return 0, errors.New("negative duration")
+func (sab *storageAllocationBase) usedDurationInTimeunit(now common.Timestamp, timeUnit time.Duration) float64 {
+	unUsedTime := sab.Expiration - now
+	if unUsedTime < 0 {
+		return 1
 	}
-	return 1 - float64(usedTime.Duration())/float64(timeUnit), nil
+	return 1 - float64(unUsedTime.Duration())/float64(timeUnit)
 }
 
 func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transaction.Transaction, conf *Config, sps []*stakePool, balances cstate.StateContextI) (currency.Coin, error) {
-	var rdtu float64
-	var err error
+	var usedDuration float64
 	if sab.Expiration > t.CreationDate {
-		rdtu, err = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
-		if err != nil {
-			return 0, fmt.Errorf("failed to get used duration in time units: %v", err)
-		}
+		usedDuration = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
 	}
 
 	var cost currency.Coin
@@ -470,7 +466,7 @@ func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transa
 		}
 
 		if sab.Expiration > t.CreationDate {
-			c, err = currency.MultFloat64(c, rdtu)
+			c, err = currency.MultFloat64(c, usedDuration)
 			if err != nil {
 				return 0, err
 			}
@@ -501,11 +497,10 @@ func (sab *storageAllocationBase) payCostForDtuForEnterpriseAllocation(t *transa
 	return cost, nil
 }
 
-func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *transaction.Transaction, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
-	rdtu, err := sab.restDurationInTimeUnits(t.CreationDate, sab.TimeUnit)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get rest duration in time units: %v", err)
-
+func (sab *storageAllocationBase) payCostForDtuForReplaceEnterpriseBlobber(t *transaction.Transaction, conf *Config, sp *stakePool, blobberID string, balances cstate.StateContextI) (currency.Coin, error) {
+	var usedDuration float64
+	if sab.Expiration > t.CreationDate {
+		usedDuration = sab.usedDurationInTimeunit(t.CreationDate, conf.TimeUnit)
 	}
 
 	var cost currency.Coin
@@ -516,7 +511,7 @@ func (sab *storageAllocationBase) payCostForRdtuForReplaceEnterpriseBlobber(t *t
 				return 0, err
 			}
 
-			c, err = currency.MultFloat64(c, rdtu)
+			c, err = currency.MultFloat64(c, usedDuration)
 			if err != nil {
 				return 0, err
 			}

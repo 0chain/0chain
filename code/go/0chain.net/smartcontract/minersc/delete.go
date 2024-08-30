@@ -102,29 +102,6 @@ func getDeleteNodeIDs(state state.StateContextI, key string) (NodeIDs, error) {
 	return ids, nil
 }
 
-func saveDeleteNodeID(state state.StateContextI, pType spenum.Provider, id string) error {
-	dKey, ok := deleteNodeKeyMap[pType]
-	if !ok {
-		return fmt.Errorf("save delete node key failed, invalid node type: %s", pType)
-	}
-
-	ids, err := getDeleteNodeIDs(state, dKey)
-	if err != nil {
-		return err
-	}
-
-	for _, eid := range ids {
-		if id == eid {
-			// already exists
-			return nil
-		}
-	}
-
-	ids = append(ids, id)
-	_, err = state.InsertTrieNode(dKey, &ids)
-	return err
-}
-
 func resetDeleteNodeIDs(state state.StateContextI, key string) error {
 	_, err := state.InsertTrieNode(key, &NodeIDs{})
 	return err

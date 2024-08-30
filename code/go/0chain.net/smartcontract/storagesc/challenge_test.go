@@ -470,7 +470,7 @@ func TestPopulateGenerateChallenge(t *testing.T) {
 		validators, err := getValidatorsList(balances)
 		require.NoError(t, err)
 
-		challengeReadyParts, partsWeight, err := partitionsChallengeReadyBlobbers(balances)
+		_, partsWeight, err := partitionsChallengeReadyBlobbers(balances)
 		require.NoError(t, err)
 
 		hashSeed := encryption.Hash(txn.Hash + "txn.PrevHash")
@@ -482,7 +482,6 @@ func TestPopulateGenerateChallenge(t *testing.T) {
 		require.NoError(t, err)
 
 		result, err := ssc.populateGenerateChallenge(
-			challengeReadyParts,
 			partsWeight,
 			int64(seedSource),
 			validators,

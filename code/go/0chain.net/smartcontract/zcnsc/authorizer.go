@@ -122,7 +122,7 @@ func (zcn *ZCNSmartContract) AddAuthorizer(
 	// Creating Provider
 
 	var sp *StakePool
-	sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, params.StakePoolSettings, ctx)
+	sp, err = zcn.getOrUpdateStakePool(authorizerID, params.StakePoolSettings, ctx)
 	if err != nil {
 		return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 	}
@@ -238,11 +238,9 @@ func (zcn *ZCNSmartContract) UpdateAuthorizerStakePool(
 		return "", fmt.Errorf("authorizer(authorizerID: %v) not found", authorizerID)
 	case err == nil:
 
-		globalNode, _ := GetGlobalNode(ctx)
-
 		// existing
 		var sp *StakePool
-		sp, err = zcn.getOrUpdateStakePool(globalNode, authorizerID, poolSettings, ctx)
+		sp, err = zcn.getOrUpdateStakePool(authorizerID, poolSettings, ctx)
 		if err != nil {
 			return "", common.NewError(code, "failed to get or create stake pool: "+err.Error())
 		}

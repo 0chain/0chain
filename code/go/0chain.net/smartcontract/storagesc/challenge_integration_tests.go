@@ -4,14 +4,11 @@
 package storagesc
 
 import (
-	"math/rand"
 	"time"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
-	crpc "0chain.net/conductor/conductrpc"
-	"0chain.net/smartcontract/partitions"
 )
 
 var curTime = time.Now()
@@ -25,22 +22,6 @@ func (sc *StorageSmartContract) generateChallenge(
 ) (err error) {
 	err = sc.genChal(t, b, input, conf, balances)
 	return
-}
-
-// selectBlobberForChallenge select blobber for challenge in random manner
-func selectBlobberForChallenge(
-	selection challengeBlobberSelection,
-	challengeBlobbersPartition *partitions.Partitions,
-	r *rand.Rand,
-	balances cstate.StateContextI,
-	conf *Config,
-) (string, error) {
-
-	s := crpc.Client().State()
-	if s.GenerateChallenge != nil {
-		return s.GenerateChallenge.BlobberID, nil
-	}
-	return selectRandomBlobber(selection, challengeBlobbersPartition, r, balances, conf)
 }
 
 func (sc *StorageSmartContract) challengePassed(

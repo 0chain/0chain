@@ -58,8 +58,6 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"unexpected error: %v", err)
 	}
 
-	logging.Logger.Info("Jayash add_allocation", zap.Any("alloc_id", alloc), zap.Any("alloc_base", alloc.mustBase()))
-
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
 		return "", common.NewErrorf("add_allocation_failed",
@@ -412,13 +410,10 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 		m.tick("create_challenge_pool")
 	}
 
-	if err := sa.mustUpdateBase(func(sab *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(sab *storageAllocationBase) error {
 		alloc.deepCopy(sab)
 		return nil
-	}); err != nil {
-		logging.Logger.Error("new_allocation_request_failed: error updating storage allocation", zap.Error(err))
-		return "", common.NewErrorf("allocation_creation_failed", "updating storage allocation: %v", err)
-	}
+	})
 
 	if resp, err = sc.addAllocation(sa, balances); err != nil {
 		logging.Logger.Error("new_allocation_request_failed: error adding allocation",
@@ -429,7 +424,7 @@ func (sc *StorageSmartContract) newAllocationRequestInternal(
 	m.tick("add_allocation")
 
 	// emit event to eventDB
-	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, txn)
+	emitAddOrOverwriteAllocationBlobberTerms(alloc, balances, txn)
 
 	return resp, err
 }
@@ -513,7 +508,7 @@ func setupNewAllocation(
 
 	saBase.StartTime = now
 
-	sa.mustUpdateBase(func(sab *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(sab *storageAllocationBase) error {
 		saBase.deepCopy(sab)
 		return nil
 	})
@@ -1184,7 +1179,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cpBalance, request.Extend, t.CreationDate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cpBalance, request.Extend, isEnterprise, t.CreationDate)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
@@ -1207,19 +1202,17 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// lock tokens if this transaction provides them
 
-	if err := sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
-	}); err != nil {
-		return "", common.NewError("allocation_updating_failed", err.Error())
-	}
+	})
 
 	err = sa.saveUpdatedAllocation(blobbers, balances)
 	if err != nil {
 		return "", common.NewErrorf("allocation_reducing_failed", "%v", err)
 	}
 
-	emitAddOrOverwriteAllocationBlobberTerms(sa, balances, t)
+	emitAddOrOverwriteAllocationBlobberTerms(alloc, balances, t)
 
 	return string(sa.Encode()), nil
 }
@@ -1486,7 +1479,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 		return "", common.NewErrorf("alloc_cancel_failed", "could not delete allocation: %v", err)
 	}
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
 	})
@@ -1607,7 +1600,7 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 
 	alloc.Finalized = true
 
-	sa.mustUpdateBase(func(base *storageAllocationBase) error {
+	_ = sa.mustUpdateBase(func(base *storageAllocationBase) error {
 		alloc.deepCopy(base)
 		return nil
 	})
