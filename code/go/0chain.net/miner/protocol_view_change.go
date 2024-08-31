@@ -89,22 +89,6 @@ func (vcp *viewChangeProcess) init(mc *Chain) {
 
 func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 	logging.Logger.Info("manual view change process started!!")
-	// for {
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		return
-	// 	case vce := <-mc.manualViewChangeC:
-	// 		if vce == nil {
-	// 			continue
-	// 		}
-
-	// 		mc.SetDKGSFromStore(ctx, vce.MagicBlock)
-	// 	}
-	// }
-	// DKG process constants
-	// const (
-	// 	repeat = 5 * time.Second // repeat phase from sharders
-	// )
 
 	var (
 		// phaseEventsChan = mc.PhaseEvents()
@@ -662,6 +646,11 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
 
+	if mc.IsBlockSyncing() {
+		logging.Logger.Debug("[mvc] sendsijs, block is syncing")
+		return nil, nil
+	}
+
 	var (
 		sendFail []string
 		sendTo   []string
@@ -820,6 +809,14 @@ func (mc *Chain) Wait(ctx context.Context,
 		logging.Logger.Error("chain wait failed, magic miners does not have self node")
 		mc.viewChangeProcess.clearViewChange()
 		return // node leaves BC, don't do anything here
+	}
+
+	if mc.IsBlockSyncing() {
+		// Just store the magic block and return
+		if err = StoreMagicBlock(ctx, magicBlock); err != nil {
+			logging.Logger.Panic("failed to store magic block", zap.Error(err))
+		}
+		return nil, nil
 	}
 
 	var (

@@ -100,6 +100,10 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
+	if mc.IsBlockSyncing() {
+		logging.Logger.Debug("[mvc] sendsijs, block is syncing")
+		return nil, nil
+	}
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
@@ -187,6 +191,11 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
 	err error) {
+
+	if mc.IsBlockSyncing() {
+		logging.Logger.Debug("[mvc] contribute_mpk, block is syncing")
+		return nil, nil
+	}
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
