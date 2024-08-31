@@ -1978,8 +1978,20 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 	var (
 		latest *block.MagicBlock
 		err    error
+		// lfb    = mc.GetLatestFinalizedBlock()
 	)
-	if latest, err = LoadLatestMB(ctx); err != nil {
+
+	lfbr, err := mc.LoadLFBRound()
+	if err != nil {
+		logging.Logger.Error("load_lfb - could not load lfb from state DB", zap.Error(err))
+		return
+	}
+
+	logging.Logger.Debug("load_lfb - load from stateDB",
+		zap.Int64("round", lfbr.Round),
+		zap.String("block", lfbr.Hash))
+
+	if latest, err = LoadLatestMB(ctx, lfbr.Round, lfbr.MagicBlockNumber); err != nil {
 		logging.Logger.Error("load_mbs_and_dkg -- loading the latest MB",
 			zap.Error(err))
 		return // can't continue

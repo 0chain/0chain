@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 
 	"net/http"
 	"path/filepath"
@@ -1008,20 +1009,27 @@ func ReadDKGSummaryFile(path string) (dkgs *bls.DKGSummary, err error) {
 // Latest MB from store
 //
 
-func LoadLatestMB(ctx context.Context) (mb *block.MagicBlock, err error) {
+func LoadLatestMB(ctx context.Context, lfbRound, mbNumber int64) (mb *block.MagicBlock, err error) {
+	if mbNumber > 0 {
+		mbStr := strconv.FormatInt(mbNumber, 10)
+		mb, err = LoadMagicBlock(ctx, mbStr)
+		if err != nil {
+			logging.Logger.Error("load_latest_mb", zap.Error(err), zap.Int64("mb number", mbNumber))
+			return
+		}
+		return mb, nil
+	}
 
 	var (
 		mbemd = datastore.GetEntityMetadata("magicblockdata")
 		rctx  = ememorystore.WithEntityConnection(ctx, mbemd)
+		conn  = ememorystore.GetEntityCon(rctx, mbemd)
 	)
 	defer ememorystore.Close(rctx)
 
-	var (
-		conn = ememorystore.GetEntityCon(rctx, mbemd)
-		iter = conn.Conn.NewIterator(conn.ReadOptions)
-	)
+	iter := conn.Conn.NewIterator(conn.ReadOptions)
 	defer iter.Close()
-
+	// the first time the hardfork is happened
 	var data = mbemd.Instance().(*block.MagicBlockData)
 	iter.SeekToLast() // from last
 
