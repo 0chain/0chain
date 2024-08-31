@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -642,48 +641,6 @@ func (mc *Chain) setSecretShares(shareOrSignSuccess map[string]*bls.DKGKeyShare)
 	}
 }
 
-func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
-	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
-	err error) {
-
-	if mc.IsBlockSyncing() {
-		logging.Logger.Debug("[mvc] sendsijs, block is syncing")
-		return nil, nil
-	}
-
-	var (
-		sendFail []string
-		sendTo   []string
-	)
-
-	// it locks the mutex, but after, its free
-	if sendTo, err = mc.sendSijsPrepare(ctx, lfb, mb, active); err != nil {
-		return
-	}
-
-	for _, key := range sendTo {
-		if err := mc.sendDKGShare(ctx, key); err != nil {
-			sendFail = append(sendFail, fmt.Sprintf("%s(%v);", key, err))
-		}
-	}
-
-	totalSentNum := len(sendTo)
-	failNum := len(sendFail)
-	successNum := totalSentNum - failNum
-	if failNum > 0 && totalSentNum > mb.K && successNum < mb.K {
-		logging.Logger.Error("[mvc] failed to send sijs",
-			zap.Int("total sent num", totalSentNum),
-			zap.Int("fail num", failNum),
-			zap.Int("K", mb.K),
-			zap.Strings("fail to miners", sendFail))
-		return nil, errors.New("failed to send sijs")
-	}
-	logging.Logger.Debug("[mvc] send sijs success", zap.Int("total sent num", totalSentNum),
-		zap.Int("success num", successNum))
-
-	return // (nil, nil)
-}
-
 func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
 	active bool) (magicBlock *block.MagicBlock, err error) {
 
@@ -783,121 +740,6 @@ func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
 	defer vcp.nvcmx.Unlock()
 
 	vcp.nextViewChange = round
-}
-
-//
-//                               W A I T
-//
-
-// Wait create 'wait' transaction to commit the miner
-func (mc *Chain) Wait(ctx context.Context,
-	lfb *block.Block, mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction, err error) {
-	mc.viewChangeProcess.Lock()
-	defer mc.viewChangeProcess.Unlock()
-
-	if !mc.viewChangeProcess.isDKGSet() {
-		return nil, common.NewError("vc_wait", "DKG is not set")
-	}
-
-	var magicBlock *block.MagicBlock
-	if magicBlock, err = mc.GetMagicBlockFromSC(ctx, lfb, mb, active); err != nil {
-		logging.Logger.Error("chain wait failed", zap.Error(err))
-		return // error
-	}
-
-	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
-		logging.Logger.Error("chain wait failed, magic miners does not have self node")
-		mc.viewChangeProcess.clearViewChange()
-		return // node leaves BC, don't do anything here
-	}
-
-	if mc.IsBlockSyncing() {
-		// Just store the magic block and return
-		if err = StoreMagicBlock(ctx, magicBlock); err != nil {
-			logging.Logger.Panic("failed to store magic block", zap.Error(err))
-		}
-		return nil, nil
-	}
-
-	var (
-		mpks        = mc.viewChangeProcess.mpks.GetMpks()
-		vcdkg       = mc.viewChangeProcess.viewChangeDKG
-		selfNodeKey = node.Self.Underlying().GetKey()
-	)
-
-	for key, share := range magicBlock.GetShareOrSigns().GetShares() {
-		if key == selfNodeKey {
-			continue // skip self
-		}
-		var myShare, ok = share.ShareOrSigns[selfNodeKey]
-		if ok && myShare.Share != "" {
-			var share bls.Key
-			if err := share.SetHexString(myShare.Share); err != nil {
-				return nil, err
-			}
-			lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
-			if err != nil {
-				return nil, err
-			}
-
-			var validShare = vcdkg.ValidateShare(lmpks, share)
-			if !validShare {
-				continue
-			}
-			err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
-				true)
-			if err != nil {
-				return nil, common.NewErrorf("vc_wait",
-					"adding secret share: %v", err)
-			}
-		}
-	}
-
-	var miners []string
-	for key := range mc.viewChangeProcess.mpks.GetMpks() {
-		if _, ok := magicBlock.Mpks.Mpks[key]; !ok {
-			miners = append(miners, key)
-		}
-	}
-	vcdkg.DeleteFromSet(miners)
-	mpkMap, err := magicBlock.Mpks.GetMpkMap()
-	if err != nil {
-		return nil, err
-	}
-	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
-		return nil, err
-	}
-
-	vcdkg.AggregateSecretKeyShares()
-	vcdkg.StartingRound = magicBlock.StartingRound
-	vcdkg.MagicBlockNumber = magicBlock.MagicBlockNumber
-	// set T and N from the magic block
-	vcdkg.T = magicBlock.T
-	vcdkg.N = magicBlock.N
-
-	// save DKG and MB
-	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
-		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
-	}
-
-	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
-		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
-	}
-
-	// don't set DKG until MB finalized
-	// mc.viewChangeProcess.clearViewChange()
-	//
-	// start new magic block will clear the view change anyway. before that, we should not clear it as the
-	// transaction could fail due to invalid nonce, we need to re-do the wait transaction.
-	//
-
-	// create 'wait' transaction
-	if tx, err = mc.waitTransaction(mb); err != nil {
-		return nil, common.NewErrorf("vc_wait",
-			"sending 'wait' transaction: %v", err)
-	}
-
-	return // the transaction
 }
 
 // ========================================================================== //

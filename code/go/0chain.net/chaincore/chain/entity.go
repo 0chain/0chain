@@ -426,6 +426,17 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				}
 				// see no block in buffer to process
 				syncing = false
+
+				// see if the miner is in the MB, and if not, continue to sync blocks
+				mb := c.GetMagicBlock(cr)
+				if !mb.Miners.HasNode(node.Self.Underlying().GetKey()) {
+					logging.Logger.Debug("process block, miner not in the MB, continue to sync blocks",
+						zap.Int64("current round", cr),
+						zap.Int64("mb round", mb.StartingRound))
+					syncBlocksTimer.Reset(0)
+					continue
+				}
+
 				time.Sleep(100 * time.Millisecond)
 				continue
 			}
