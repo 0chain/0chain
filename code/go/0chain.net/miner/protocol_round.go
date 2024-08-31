@@ -569,7 +569,7 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			return nil, ErrRRSMismatch
 		}
 
-		mc.AddRoundBlock(r, b)
+		b = mc.AddRoundBlock(r, b)
 		if generationTries > 1 {
 			logging.Logger.Info("generate block - multiple tries",
 				zap.Int64("round", b.Round), zap.Int("tries", generationTries))
@@ -584,7 +584,7 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 		return nil, nil
 	}
 
-	mc.addToRoundVerification(r, b)
+	b = mc.addToRoundVerification(r, b)
 	r.AddProposedBlock(b)
 
 	go mc.SendBlock(ctx, b)
@@ -798,7 +798,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 	return nil
 }
 
-func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
+func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) *block.Block {
 	logging.Logger.Info("adding block to verify",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
@@ -806,7 +806,9 @@ func (mc *Chain) addToRoundVerification(mr *Round, b *block.Block) {
 		zap.String("state_hash", util.ToHex(b.ClientStateHash)),
 		zap.Float64("weight", b.Weight()))
 	//mc.StartVerification(ctx, mr)
+	b = mc.AddBlock(b)
 	mr.AddBlockToVerify(b)
+	return b
 }
 
 func (mc *Chain) StartVerification(ctx context.Context, mr *Round) {
@@ -1001,7 +1003,7 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 			initiateVerification()
 		case b := <-r.GetBlocksToVerifyChannel():
 			r.AddProposedBlock(b)
-			mc.AddRoundBlock(r, b)
+			b = mc.AddRoundBlock(r, b)
 
 			if sendVerification {
 				// Is this better than the current best block
