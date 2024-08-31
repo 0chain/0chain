@@ -314,10 +314,11 @@ func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 
 	var (
 		self = node.Self.Underlying()
-		rank = mr.GetMinerRank(self)
+		mn   = mc.GetMagicBlock(rn).Miners.GetNode(self.GetKey())
+		rank = mr.GetMinerRank(mn)
 	)
 
-	if !mc.IsRoundGenerator(mr, self) {
+	if !mc.IsRoundGenerator(mr, mn) {
 		logging.Logger.Info("TOC_FIX Not a generator", zap.Int64("round", rn),
 			zap.Int("index", self.SetIndex),
 			zap.Int("rank", rank),
