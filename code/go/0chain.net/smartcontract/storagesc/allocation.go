@@ -981,7 +981,7 @@ func (sc *StorageSmartContract) extendAllocation(
 				if err != nil {
 					return err
 				}
-				if err := sp.reduceOffer(coin); err != nil {
+				if err := sp.reduceOffer(balances, coin); err != nil {
 					return fmt.Errorf("reduce offer: %v", err)
 				}
 			}
@@ -1445,7 +1445,7 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			return "", common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		if err := sp.reduceOffer(d.Offer()); err != nil {
+		if err := sp.reduceOffer(balances, d.Offer()); err != nil {
 			return "", common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
@@ -1572,7 +1572,7 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 			return nil, common.NewError("fini_alloc_failed",
 				"can't get stake pool of "+d.BlobberID+": "+err.Error())
 		}
-		if err := sp.reduceOffer(d.Offer()); err != nil {
+		if err := sp.reduceOffer(balances, d.Offer()); err != nil {
 			return nil, common.NewError("fini_alloc_failed",
 				"error removing offer: "+err.Error())
 		}
