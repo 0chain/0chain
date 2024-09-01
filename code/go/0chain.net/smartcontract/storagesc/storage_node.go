@@ -357,7 +357,7 @@ type storageNodeV4 struct {
 	IsRestricted      *bool              `json:"is_restricted"`
 	IsEnterprise      *bool              `json:"is_enterprise"`
 
-	ManagingWallet string `json:"managing_wallet"`
+	ManagingWallet *string `json:"managing_wallet"`
 }
 
 const storageNodeV4Version = "v4"

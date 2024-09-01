@@ -23,6 +23,7 @@ type StorageDtoNode struct {
 	RewardRound             *RewardRound `json:"reward_round,omitempty"`
 	NotAvailable            *bool        `json:"not_available,omitempty"`
 	IsRestricted            *bool        `json:"is_restricted,omitempty"`
+	DelegateWallet          *string      `json:"delegate_wallet,omitempty"`
 }
 
 type RewardRound struct {

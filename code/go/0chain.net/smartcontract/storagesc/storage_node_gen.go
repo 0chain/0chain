@@ -688,7 +688,11 @@ func (z *storageNodeV4) MarshalMsg(b []byte) (o []byte, err error) {
 	}
 	// string "ManagingWallet"
 	o = append(o, 0xae, 0x4d, 0x61, 0x6e, 0x61, 0x67, 0x69, 0x6e, 0x67, 0x57, 0x61, 0x6c, 0x6c, 0x65, 0x74)
-	o = msgp.AppendString(o, z.ManagingWallet)
+	if z.ManagingWallet == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o = msgp.AppendString(o, *z.ManagingWallet)
+	}
 	return
 }
 
@@ -823,10 +827,21 @@ func (z *storageNodeV4) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				}
 			}
 		case "ManagingWallet":
-			z.ManagingWallet, bts, err = msgp.ReadStringBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "ManagingWallet")
-				return
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.ManagingWallet = nil
+			} else {
+				if z.ManagingWallet == nil {
+					z.ManagingWallet = new(string)
+				}
+				*z.ManagingWallet, bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "ManagingWallet")
+					return
+				}
 			}
 		default:
 			bts, err = msgp.Skip(bts)
@@ -854,6 +869,11 @@ func (z *storageNodeV4) Msgsize() (s int) {
 	} else {
 		s += msgp.BoolSize
 	}
-	s += 15 + msgp.StringPrefixSize + len(z.ManagingWallet)
+	s += 15
+	if z.ManagingWallet == nil {
+		s += msgp.NilSize
+	} else {
+		s += msgp.StringPrefixSize + len(*z.ManagingWallet)
+	}
 	return
 }
