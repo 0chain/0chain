@@ -338,3 +338,80 @@ func (sn3 *storageNodeV3) ApplyBaseChanges(snc storageNodeBase) {
 	sn3.RewardRound = snc.RewardRound
 	sn3.NotAvailable = snc.NotAvailable
 }
+
+type storageNodeV4 struct {
+	provider.Provider
+	Version                 string  `json:"version" msg:"version"`
+	BaseURL                 string  `json:"url"`
+	Terms                   Terms   `json:"terms"`     // terms
+	Capacity                int64   `json:"capacity"`  // total blobber capacity
+	Allocated               int64   `json:"allocated"` // allocated capacity
+	PublicKey               string  `json:"-"`
+	SavedData               int64   `json:"saved_data"`
+	DataReadLastRewardRound float64 `json:"data_read_last_reward_round"` // in GB
+	LastRewardDataReadRound int64   `json:"last_reward_data_read_round"` // last round when data read was updated
+	// StakePoolSettings used initially to create and setup stake pool.
+	StakePoolSettings stakepool.Settings `json:"stake_pool_settings"`
+	RewardRound       RewardRound        `json:"reward_round"`
+	NotAvailable      bool               `json:"not_available"`
+	IsRestricted      *bool              `json:"is_restricted"`
+	IsEnterprise      *bool              `json:"is_enterprise"`
+
+	ManagingWallet string `json:"managing_wallet"`
+}
+
+const storageNodeV4Version = "v4"
+
+func (sn4 *storageNodeV4) GetVersion() string {
+	return storageNodeV4Version
+}
+
+func (sn4 *storageNodeV4) InitVersion() {
+	sn4.Version = storageNodeV4Version
+}
+
+func (sn4 *storageNodeV4) GetBase() entitywrapper.EntityBaseI {
+	return &storageNodeBase{
+		Provider:                sn4.Provider,
+		BaseURL:                 sn4.BaseURL,
+		Terms:                   sn4.Terms,
+		Capacity:                sn4.Capacity,
+		Allocated:               sn4.Allocated,
+		PublicKey:               sn4.PublicKey,
+		SavedData:               sn4.SavedData,
+		DataReadLastRewardRound: sn4.DataReadLastRewardRound,
+		LastRewardDataReadRound: sn4.LastRewardDataReadRound,
+		StakePoolSettings:       sn4.StakePoolSettings,
+		RewardRound:             sn4.RewardRound,
+		NotAvailable:            sn4.NotAvailable,
+	}
+}
+
+func (sn4 *storageNodeV4) MigrateFrom(e entitywrapper.EntityI) error {
+	v3, ok := e.(*storageNodeV3)
+	if !ok {
+		return errors.New("struct migrate fail, wrong storageNode type")
+	}
+
+	base := v3.GetBase().(*storageNodeBase)
+	sn4.ApplyBaseChanges(*base)
+	sn4.Version = "v4"
+	sn4.IsRestricted = v3.IsRestricted
+	sn4.IsEnterprise = v3.IsEnterprise
+	return nil
+}
+
+func (sn4 *storageNodeV4) ApplyBaseChanges(snc storageNodeBase) {
+	sn4.Provider = snc.Provider
+	sn4.BaseURL = snc.BaseURL
+	sn4.Terms = snc.Terms
+	sn4.Capacity = snc.Capacity
+	sn4.Allocated = snc.Allocated
+	sn4.PublicKey = snc.PublicKey
+	sn4.SavedData = snc.SavedData
+	sn4.DataReadLastRewardRound = snc.DataReadLastRewardRound
+	sn4.LastRewardDataReadRound = snc.LastRewardDataReadRound
+	sn4.StakePoolSettings = snc.StakePoolSettings
+	sn4.RewardRound = snc.RewardRound
+	sn4.NotAvailable = snc.NotAvailable
+}
