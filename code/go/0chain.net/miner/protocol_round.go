@@ -1992,7 +1992,8 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		zap.Int64("round", lfbr.Round),
 		zap.String("block", lfbr.Hash))
 
-	if latest, err = LoadLatestMB(ctx, lfbr.Round, lfbr.MagicBlockNumber); err != nil {
+	latest, err = LoadLatestMB(ctx, lfbr.Round, lfbr.MagicBlockNumber)
+	if err != nil {
 		logging.Logger.Error("load_mbs_and_dkg -- loading the latest MB",
 			zap.Error(err))
 		return // can't continue
@@ -2003,40 +2004,25 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		zap.Int64("mb sr", latest.StartingRound),
 		zap.String("mb hash", latest.Hash))
 
-	// don't setup the latest MB since it can be promoted
-
-	// if latest.MagicBlockNumber <= 1 {
-	// 	return // done
-	// }
-	// // otherwise, load and setup previous
-	var (
-		prev *block.MagicBlock
-		// id   = strconv.FormatInt(latest.MagicBlockNumber-1, 10)
-		id = strconv.FormatInt(latest.MagicBlockNumber, 10)
-	)
-	if prev, err = LoadMagicBlock(ctx, id); err != nil {
-		logging.Logger.Info("load_mbs_and_dkg -- loading previous MB",
-			zap.String("sr", id), zap.Error(err))
-		return // can't continue
-	}
-	if err = mc.setupLoadedMagicBlock(prev); err != nil {
+	if err = mc.setupLoadedMagicBlock(latest); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- updating previous MB",
 			zap.Error(err))
 		return // can't continue
 	}
-	mc.SetMagicBlock(prev)
-
-	// don't setup latest MB since it can be promoted
-	//
-	//	// and then setup the latest again for proper nodes registration,
-	//	// ignoring its error
-	//	mc.setupLoadedMagicBlock(latest)
-	// DKG relates previous MB
-
-	if err = mc.SetDKGSFromStore(ctx, prev); err != nil {
+	mc.SetMagicBlock(latest)
+	if err = mc.SetDKGSFromStore(ctx, latest); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- loading previous DKG",
 			zap.Error(err))
 	}
+
+	// get the block from remote
+	lfmb, err := mc.GetNotarizedBlockFromSharders(ctx, "", latest.StartingRound)
+	if err != nil {
+		logging.Logger.Error("load_mbs_and_dkg -- getting latest MB from sharders",
+			zap.Error(err))
+		return // can't continue
+	}
+	mc.SetLatestFinalizedMagicBlock(lfmb)
 	// everything is OK
 }
 
