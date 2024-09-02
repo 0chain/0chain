@@ -2015,14 +2015,6 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 			zap.Error(err))
 	}
 
-	// get the block from remote
-	lfmb, err := mc.GetNotarizedBlockFromSharders(ctx, "", latest.StartingRound)
-	if err != nil {
-		logging.Logger.Error("load_mbs_and_dkg -- getting latest MB from sharders",
-			zap.Error(err))
-		return // can't continue
-	}
-	mc.SetLatestFinalizedMagicBlock(lfmb)
 	// everything is OK
 }
 

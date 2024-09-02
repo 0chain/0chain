@@ -850,7 +850,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 	pn *PhaseNode,
 ) (*block.MagicBlock, error) {
 
-	pmb := balances.GetLastestFinalizedMagicBlock()
+	pmb := balances.GetChainCurrentMagicBlock()
 
 	magicBlock := block.NewMagicBlock()
 
@@ -861,8 +861,8 @@ func (msc *MinerSmartContract) createMagicBlock(
 	magicBlock.T = dkgMinersList.T
 	magicBlock.K = dkgMinersList.K
 	magicBlock.N = dkgMinersList.N
-	magicBlock.MagicBlockNumber = pmb.MagicBlock.MagicBlockNumber + 1
-	magicBlock.PreviousMagicBlockHash = pmb.MagicBlock.Hash
+	magicBlock.MagicBlockNumber = pmb.MagicBlockNumber + 1
+	magicBlock.PreviousMagicBlockHash = pmb.Hash
 	magicBlock.StartingRound = pn.CurrentRound + PhaseRounds[Wait]
 
 	logging.Logger.Debug("create magic block",
