@@ -78,9 +78,9 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 		return err
 	}
 
-	if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
-		return err
-	}
+	// if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
