@@ -267,17 +267,26 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.String("block", lfbr.Hash))
 
 	// fetch from sharders
-	b, err := mc.GetNotarizedBlockFromSharders(ctx, lfbr.Hash, lfbr.Round)
-	if err != nil {
-		logging.Logger.Error("load_lfb - could not fetch block from sharders, try fetch from miners",
-			zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
-		// try fetch from miners
-		b, err = mc.GetNotarizedBlockFromMiners(ctx, lfbr.Hash, lfbr.Round, true)
+	retry := 3 // retry 3 times, each time wait for about 5 seconds
+	var b *block.Block
+	for i := 0; i < retry; i++ {
+		b, err = mc.GetNotarizedBlockFromSharders(ctx, lfbr.Hash, lfbr.Round)
 		if err != nil {
-			logging.Logger.Error("load_lfb - could not fetch block from miners",
+			logging.Logger.Error("load_lfb - could not fetch block from sharders, wait for retry...",
 				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
-			return fmt.Errorf("load_lfb - could not fetch block from miners, round: %d, err: %v", lfbr.Round, err)
+			// try fetch from miners
+			time.Sleep(5 * time.Second)
+			// b, err = mc.GetNotarizedBlockFromMiners(ctx, lfbr.Hash, lfbr.Round, true)
+			// if err != nil {
+			// 	logging.Logger.Error("load_lfb - could not fetch block from miners",
+			// 		zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
+			// 	return fmt.Errorf("load_lfb - could not fetch block from miners, round: %d, err: %v", lfbr.Round, err)
+			// }
 		}
+	}
+
+	if b == nil {
+		return fmt.Errorf("load_lfb - could not fetch block from sharders, round: %d", lfbr.Round)
 	}
 
 	b.SetStateStatus(block.StateSuccessful)

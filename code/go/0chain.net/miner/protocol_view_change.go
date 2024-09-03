@@ -90,7 +90,6 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 	logging.Logger.Info("manual view change process started!!")
 
 	var (
-		// phaseEventsChan = mc.PhaseEvents()
 		newPhaseEvent chain.PhaseEvent
 
 		// start round of the accepted phase
@@ -133,23 +132,15 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		}
 
 		if notMoveRound && hadTxnAndConfirmed && !retrySharePhase {
-			// logging.Logger.Debug("dkg process: phase already accepted",
-			// 	zap.String("phase", pn.Phase.String()),
-			// 	zap.Int64("start_round", pn.StartRound),
-			// 	zap.Int64("phase start round", phaseStartRound))
 			logging.Logger.Debug("[mvc] process: phase already accepted - skip")
 			continue // phase already accepted
 		}
 
 		var (
-			lfb = mc.GetLatestFinalizedBlock()
-			// active = mc.IsActiveInChain()
+			lfb    = mc.GetLatestFinalizedBlock()
 			active = true
 		)
 
-		// if active && newPhaseEvent.Sharders {
-		// 	active = false // obviously, miner is not active, or is stuck
-		// }
 		lfbPhaseNode, err := mc.GetPhaseOfBlock(lfb)
 		if err != nil {
 			logging.Logger.Error("[mvc] update finalized block - get phase of block failed", zap.Error(err))
@@ -172,12 +163,6 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 
 		phaseFuncName := getFunctionName(phaseFunc)
 
-		logging.Logger.Debug("[mvc] dkg process: trying",
-			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.String("next_phase", pn.Phase.String()),
-			// zap.Bool("active", active),
-			zap.String("phase funcs", phaseFuncName))
-
 		// only go through if pn.Phase is expected
 		if !(pn.Phase == minersc.Start ||
 			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
@@ -189,19 +174,18 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			continue
 		}
 
-		logging.Logger.Info("[mvc] dkg process: start",
-			zap.String("current_phase", mc.CurrentPhase().String()),
-			zap.String("next_phase", pn.Phase.String()),
-			zap.String("phase funcs", phaseFuncName))
-
 		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
 		if lfmb == nil {
-			logging.Logger.Error("can't get lfmb")
+			logging.Logger.Error("[mvc] dkg process: can't get lfmb")
 			return
 		}
 
 		logging.Logger.Debug("[mvc] dkg process: run phase function",
-			zap.String("name", phaseFuncName))
+			zap.String("name", phaseFuncName),
+			zap.String("current_phase", mc.CurrentPhase().String()),
+			zap.String("next_phase", pn.Phase.String()),
+			zap.Int64("lfb round", lfb.Round))
+
 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
 		if err != nil {
 			logging.Logger.Error("[mvc] dkg process: phase func failed",
