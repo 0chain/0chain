@@ -116,10 +116,6 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		}
 
 		pn := newPhaseEvent.Phase
-		logging.Logger.Debug("[mvc] process: receive phase",
-			zap.String("phase", pn.Phase.String()),
-			zap.Int64("start_round", pn.StartRound),
-			zap.Int64("phase start round", phaseStartRound))
 		// only retry if new phase is share phase
 		retrySharePhase = pn.Phase == minersc.Share && retrySharePhase
 
@@ -134,6 +130,10 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			continue // phase already accepted
 		}
 
+		logging.Logger.Debug("[mvc] process: in phase",
+			zap.String("phase", pn.Phase.String()),
+			zap.Int64("start_round", pn.StartRound),
+			zap.Int64("phase start round", phaseStartRound))
 		var (
 			lfb    = mc.GetLatestFinalizedBlock()
 			active = true
@@ -172,7 +172,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			continue
 		}
 
-		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+		lfmb := mc.GetCurrentMagicBlock()
 		if lfmb == nil {
 			logging.Logger.Error("[mvc] dkg process: can't get lfmb")
 			return
@@ -184,7 +184,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			zap.String("next_phase", pn.Phase.String()),
 			zap.Int64("lfb round", lfb.Round))
 
-		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
+		txn, err := phaseFunc(ctx, lfb, lfmb, active)
 		if err != nil {
 			logging.Logger.Error("[mvc] dkg process: phase func failed",
 				zap.String("current_phase", mc.CurrentPhase().String()),

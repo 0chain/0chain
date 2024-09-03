@@ -188,7 +188,6 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	balances cstate.StateContextI) (err error) {
 
-	logging.Logger.Debug("[mvc] adjust view change...")
 	var b = balances.GetBlock()
 
 	if b.Round != gn.ViewChange {
@@ -262,22 +261,19 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	// if isViewChange || b.Round == gn.ViewChange {
 	// TODO: cache the phase node so if when there's no view change happens, we
 	// can avoid unnecessary MPT access
-	logging.Logger.Debug("[mvc] payFees: view change, get phase node", zap.Int64("round", b.Round))
+	// logging.Logger.Debug("[mvc] payFees: view change, get phase node", zap.Int64("round", b.Round))
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
 		return
 	}
 
-	// logging.Logger.Debug("[mvc] payFees: view change, set phase node", zap.Int64("round", b.Round))
 	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
 		return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
 	}
 
-	// logging.Logger.Debug("[mvc] payFees: view change, adjust view change", zap.Int64("round", b.Round))
 	if err = msc.adjustViewChange(gn, balances); err != nil {
 		return // adjusting view change error
 	}
-	// }
 
 	if b.Round == gn.ViewChange {
 		if err := msc.SetMagicBlock(gn, balances); err != nil {
