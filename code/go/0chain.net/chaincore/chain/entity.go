@@ -433,6 +433,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					logging.Logger.Debug("process block, miner not in the MB, continue to sync blocks",
 						zap.Int64("current round", cr),
 						zap.Int64("mb round", mb.StartingRound))
+					time.Sleep(100 * time.Millisecond)
 					syncBlocksTimer.Reset(0)
 					continue
 				}
