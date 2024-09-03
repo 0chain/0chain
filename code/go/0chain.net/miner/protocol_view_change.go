@@ -46,7 +46,7 @@ const (
 // PhaseFunc represents local VC function returns optional
 // Miner SC transactions.
 type PhaseFunc func(ctx context.Context, lfb *block.Block,
-	lfmb *block.MagicBlock, isActive bool) (tx *httpclientutil.Transaction,
+	lfmb *block.MagicBlock) (tx *httpclientutil.Transaction,
 	err error)
 
 // view change process controlling
@@ -134,11 +134,8 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			zap.String("phase", pn.Phase.String()),
 			zap.Int64("start_round", pn.StartRound),
 			zap.Int64("phase start round", phaseStartRound))
-		var (
-			lfb    = mc.GetLatestFinalizedBlock()
-			active = true
-		)
 
+		lfb := mc.GetLatestFinalizedBlock()
 		lfbPhaseNode, err := mc.GetPhaseOfBlock(lfb)
 		if err != nil {
 			logging.Logger.Error("[mvc] update finalized block - get phase of block failed", zap.Error(err))
@@ -184,7 +181,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			zap.String("next_phase", pn.Phase.String()),
 			zap.Int64("lfb round", lfb.Round))
 
-		txn, err := phaseFunc(ctx, lfb, lfmb, active)
+		txn, err := phaseFunc(ctx, lfb, lfmb)
 		if err != nil {
 			logging.Logger.Error("[mvc] dkg process: phase func failed",
 				zap.String("current_phase", mc.CurrentPhase().String()),
@@ -338,7 +335,7 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			logging.Logger.Error("can't get lfmb")
 			return
 		}
-		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock, active)
+		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock)
 		if err != nil {
 			logging.Logger.Error("dkg process: phase func failed",
 				zap.String("current_phase", mc.CurrentPhase().String()),
@@ -387,7 +384,7 @@ func (vcp *viewChangeProcess) clearViewChange() {
 
 // DKGProcessStart represents 'start' phase function.
 func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
-	*block.MagicBlock, bool) (*httpclientutil.Transaction, error) {
+	*block.MagicBlock) (*httpclientutil.Transaction, error) {
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
@@ -402,84 +399,27 @@ func (vcp *viewChangeProcess) isNeedCreateSijs() (ok bool) {
 }
 
 func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
-	active bool) (mpks *block.Mpks, err error) {
-
-	if active {
-
-		mpks = block.NewMpks()
-		err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
-		if err != nil {
-			return
-		}
-
-		return mpks, nil
+) (mpks *block.Mpks, err error) {
+	mpks = block.NewMpks()
+	err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
+	if err != nil {
+		return
 	}
 
-	var (
-		got util.Serializable
-		ok  bool
-	)
-
-	got = chain.GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetMinersMPKS,
-		mb.Sharders.N2NURLs(), func() util.Serializable {
-			return block.NewMpks()
-		}, func(val util.Serializable) bool {
-			return false // keep all (how to reject old?)
-		}, func(val util.Serializable) int64 {
-			return 0 // no highness for MPKs
-		})
-
-	if mpks, ok = got.(*block.Mpks); !ok {
-		return nil, common.NewError("get_mpks_from_sharders", "no MPKs given")
-	}
-
-	return
+	return mpks, nil
 }
 
-func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
-	active bool) (dmn *minersc.DKGMinerNodes, err error) {
-
-	if active {
-
-		dmn = minersc.NewDKGMinerNodes()
-		err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey, dmn)
-		if err != nil {
-			return
-		}
-		return dmn, nil
+func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (
+	dmn *minersc.DKGMinerNodes, err error) {
+	dmn = minersc.NewDKGMinerNodes()
+	err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey, dmn)
+	if err != nil {
+		return
 	}
-
-	var (
-		cmb = mc.GetCurrentMagicBlock() // mb is for request, cmb is for filter
-		got util.Serializable
-		ok  bool
-	)
-
-	got = chain.GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetDKGMiners,
-		mb.Sharders.N2NURLs(), func() util.Serializable {
-			return new(minersc.DKGMinerNodes)
-		}, func(val util.Serializable) bool {
-			if dmn, ok := val.(*minersc.DKGMinerNodes); ok {
-				return dmn.StartRound < cmb.StartingRound
-			}
-			return true // reject
-		}, func(val util.Serializable) (high int64) {
-			if dmn, ok := val.(*minersc.DKGMinerNodes); ok {
-				return dmn.StartRound // its starting round
-			}
-			return // zero
-		})
-
-	if dmn, ok = got.(*minersc.DKGMinerNodes); !ok {
-		return nil, common.NewError("get_dkg_miner_nodes_from_sharders",
-			"no DKG miner nodes given")
-	}
-
-	return
+	return dmn, nil
 }
 
-func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
-	active bool) (err error) {
+func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (err error) {
 
 	if !mc.viewChangeProcess.isDKGSet() {
 		return common.NewError("createSijs", "DKG is not set")
@@ -490,13 +430,13 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 	}
 
 	var mpks *block.Mpks
-	if mpks, err = mc.getMinersMpks(ctx, lfb, mb, active); err != nil {
+	if mpks, err = mc.getMinersMpks(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("can't share", zap.Error(err))
 		return
 	}
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("can't share", zap.Error(err))
 		return
 	}
@@ -561,9 +501,8 @@ func (vcp *viewChangeProcess) isDKGSet() bool {
 //                                 S H A R E
 //
 
-func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
-	mb *block.MagicBlock, active bool) (sendTo []string, err error) {
-
+func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (
+	sendTo []string, err error) {
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -572,7 +511,7 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 	}
 
 	var dkgMiners *minersc.DKGMinerNodes
-	if dkgMiners, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
+	if dkgMiners, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		return // error
 	}
 
@@ -583,7 +522,7 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 		return // (nil, nil)
 	}
 
-	if err = mc.createSijs(ctx, lfb, mb, active); err != nil {
+	if err = mc.createSijs(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("[mvc] failed to create sijs", zap.Error(err))
 		return // error
 	}
@@ -632,43 +571,12 @@ func (mc *Chain) setSecretShares(shareOrSignSuccess map[string]*bls.DKGKeyShare)
 	}
 }
 
-func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
-	active bool) (magicBlock *block.MagicBlock, err error) {
-
-	if active {
-		magicBlock = block.NewMagicBlock()
-		err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey, magicBlock)
-		if err != nil {
-			return nil, err
-		}
-
-		return
-	}
-
-	var (
-		cmb = mc.GetCurrentMagicBlock() // mb is for requests, cmb is for filter
-		got util.Serializable
-		ok  bool
-	)
-
-	got = chain.GetFromSharders(ctx, minersc.ADDRESS, scRestAPIGetMagicBlock,
-		mb.Sharders.N2NURLs(), func() util.Serializable {
-			return block.NewMagicBlock()
-		}, func(val util.Serializable) bool {
-			if mx, ok := val.(*block.MagicBlock); ok {
-				return mx.StartingRound < cmb.StartingRound
-			}
-			return true // reject
-		}, func(val util.Serializable) (high int64) {
-			if mx, ok := val.(*block.MagicBlock); ok {
-				return mx.StartingRound
-			}
-			return // zero
-		})
-
-	if magicBlock, ok = got.(*block.MagicBlock); !ok {
-		return nil, common.NewError("get_magic_block_from_sharders",
-			"no magic block given")
+func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (
+	magicBlock *block.MagicBlock, err error) {
+	magicBlock = block.NewMagicBlock()
+	err = mc.GetBlockStateNode(lfb, minersc.MagicBlockKey, magicBlock)
+	if err != nil {
+		return nil, err
 	}
 
 	return

@@ -100,7 +100,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 //
 
 func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
-	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
+	mb *block.MagicBlock) (tx *httpclientutil.Transaction,
 	err error) {
 	if mc.isSyncingBlocks() {
 		logging.Logger.Debug("[mvc] sendsijs, block is syncing")
@@ -120,7 +120,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	)
 
 	var mpks *block.Mpks
-	if mpks, err = mc.getMinersMpks(ctx, lfb, mb, active); err != nil {
+	if mpks, err = mc.getMinersMpks(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners mpks", zap.Error(err))
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	}
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners DKG", zap.Error(err))
 		return nil, err
 	}
@@ -191,7 +191,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 //
 
 func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
-	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
+	mb *block.MagicBlock) (tx *httpclientutil.Transaction,
 	err error) {
 
 	if mc.isSyncingBlocks() {
@@ -200,7 +200,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	}
 
 	var dmn *minersc.DKGMinerNodes
-	if dmn, err = mc.getDKGMiners(ctx, lfb, mb, active); err != nil {
+	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("can't contribute", zap.Error(err))
 		return
 	}
@@ -255,7 +255,7 @@ func afterSignShareRequestHandler(message *bls.DKGKeyShare, nodeID string) (mess
 //
 
 func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
-	mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction,
+	mb *block.MagicBlock) (tx *httpclientutil.Transaction,
 	err error) {
 
 	if mc.isSyncingBlocks() {
@@ -269,7 +269,7 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	)
 
 	// it locks the mutex, but after, its free
-	if sendTo, err = mc.sendSijsPrepare(ctx, lfb, mb, active); err != nil {
+	if sendTo, err = mc.sendSijsPrepare(ctx, lfb, mb); err != nil {
 		return
 	}
 
@@ -302,7 +302,7 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 
 // Wait create 'wait' transaction to commit the miner
 func (mc *Chain) Wait(ctx context.Context,
-	lfb *block.Block, mb *block.MagicBlock, active bool) (tx *httpclientutil.Transaction, err error) {
+	lfb *block.Block, mb *block.MagicBlock) (tx *httpclientutil.Transaction, err error) {
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
@@ -311,7 +311,7 @@ func (mc *Chain) Wait(ctx context.Context,
 	}
 
 	var magicBlock *block.MagicBlock
-	if magicBlock, err = mc.GetMagicBlockFromSC(ctx, lfb, mb, active); err != nil {
+	if magicBlock, err = mc.GetMagicBlockFromSC(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("chain wait failed", zap.Error(err))
 		return // error
 	}
