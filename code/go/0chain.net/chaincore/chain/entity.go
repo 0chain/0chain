@@ -186,8 +186,8 @@ type Chain struct {
 
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 	viewChanger                  ViewChanger
-	afterFetcher                 AfterFetcher
-	magicBlockSaver              MagicBlockSaver
+	// afterFetcher                 AfterFetcher
+	magicBlockSaver MagicBlockSaver
 
 	pruneStats *util.PruneStats
 
@@ -2168,9 +2168,9 @@ func (c *Chain) SetViewChanger(vcr ViewChanger) {
 	c.viewChanger = vcr
 }
 
-func (c *Chain) SetAfterFetcher(afr AfterFetcher) {
-	c.afterFetcher = afr
-}
+// func (c *Chain) SetAfterFetcher(afr AfterFetcher) {
+// 	c.afterFetcher = afr
+// }
 
 func (c *Chain) SetMagicBlockSaver(mbs MagicBlockSaver) {
 	c.magicBlockSaver = mbs

@@ -41,7 +41,7 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.BlockTxnCache = cache.NewLRUCache[string, *transaction.TransactionSummary](transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
-	c.SetAfterFetcher(sharderChain)
+	// c.SetAfterFetcher(sharderChain)
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	c.RoundF = SharderRoundFactory{}
