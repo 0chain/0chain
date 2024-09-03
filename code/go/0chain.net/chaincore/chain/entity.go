@@ -2255,7 +2255,7 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 		// on restarting
 		cmb := c.GetCurrentMagicBlock()
 		if err := c.StoreLFBRound(b.Round, cmb.MagicBlockNumber, b.Hash); err != nil {
-			logging.Logger.Warn("set lfb - store round to state DB failed",
+			logging.Logger.Warn("[mvc] set lfb - store round to state DB failed",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Error(err))

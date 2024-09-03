@@ -756,6 +756,7 @@ func StoreMagicBlock(ctx context.Context, magicBlock *block.MagicBlock) (
 	}
 
 	var connection = ememorystore.GetEntityCon(dctx, emd)
+	logging.Logger.Info("[mvc] store mb", zap.Int64("mb number", magicBlock.MagicBlockNumber))
 	return connection.Commit()
 }
 
