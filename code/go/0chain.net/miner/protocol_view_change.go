@@ -127,12 +127,10 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 
 		if !retrySharePhase && notMoveRound && hadTxnAndConfirmed {
 			// skip if not retry share phase, and not the move round, also previously, txn was confirmed,
-			logging.Logger.Debug("[mvc] process: not retry share phase - skip")
 			continue
 		}
 
 		if notMoveRound && hadTxnAndConfirmed && !retrySharePhase {
-			logging.Logger.Debug("[mvc] process: phase already accepted - skip")
 			continue // phase already accepted
 		}
 

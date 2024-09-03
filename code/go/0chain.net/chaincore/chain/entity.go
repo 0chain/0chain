@@ -956,12 +956,12 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	}
 	c.mbMutex.RUnlock()
 	mb := entity.(*block.MagicBlock)
-	logging.Logger.Debug("[mvc] GetMagicBlock",
-		zap.Int64("round", round),
-		zap.Int64("mb_starting_round", mb.StartingRound),
-		zap.String("mb_hash", mb.Hash),
-		zap.Int("mb_miners_size", mb.Miners.Size()),
-		zap.Int("mb_sharders_size", mb.Sharders.Size()))
+	// logging.Logger.Debug("[mvc] GetMagicBlock",
+	// 	zap.Int64("round", round),
+	// 	zap.Int64("mb_starting_round", mb.StartingRound),
+	// 	zap.String("mb_hash", mb.Hash),
+	// 	zap.Int("mb_miners_size", mb.Miners.Size()),
+	// 	zap.Int("mb_sharders_size", mb.Sharders.Size()))
 	return mb
 }
 
@@ -1765,12 +1765,6 @@ func (c *Chain) GetGeneratorsNumOfMagicBlock(mb *block.MagicBlock) int {
 // GetGeneratorsNumOfRound returns the number of generators of a given round
 func (c *Chain) GetGeneratorsNumOfRound(r int64) int {
 	if mb := c.GetMagicBlock(r); mb != nil {
-		logging.Logger.Debug("[mvc] GetGeneratorsNumOfRound - get MB",
-			zap.Int64("round", r),
-			zap.Int64("mb_round", mb.StartingRound),
-			zap.String("mb_hash", mb.Hash),
-			zap.Int("miners num", mb.Miners.Size()),
-			zap.Int("sharders num", mb.Sharders.Size()))
 		return getGeneratorsNum(mb.Miners.Size(), c.MinGenerators(), c.GeneratorsPercent())
 	}
 
