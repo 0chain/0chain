@@ -1990,7 +1990,8 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 
 	logging.Logger.Debug("load_lfb - load from stateDB",
 		zap.Int64("round", lfbr.Round),
-		zap.String("block", lfbr.Hash))
+		zap.String("block", lfbr.Hash),
+		zap.Int64("mb_round", lfbr.MagicBlockNumber))
 
 	latest, err = LoadLatestMB(ctx, lfbr.Round, lfbr.MagicBlockNumber)
 	if err != nil {

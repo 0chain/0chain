@@ -282,7 +282,9 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 			// 		zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
 			// 	return fmt.Errorf("load_lfb - could not fetch block from miners, round: %d, err: %v", lfbr.Round, err)
 			// }
+			continue
 		}
+		break
 	}
 
 	if b == nil {

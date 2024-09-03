@@ -849,6 +849,7 @@ func LoadLatestMB(ctx context.Context, lfbRound, mbNumber int64) (mb *block.Magi
 			logging.Logger.Error("load_latest_mb", zap.Error(err), zap.Int64("mb number", mbNumber))
 			return
 		}
+		logging.Logger.Info("[mvc] find latest MB by magic bock number", zap.Int64("mb number", mbNumber))
 		return mb, nil
 	}
 
@@ -875,6 +876,7 @@ func LoadLatestMB(ctx context.Context, lfbRound, mbNumber int64) (mb *block.Magi
 	}
 
 	mb = data.MagicBlock
+	logging.Logger.Info("[mvc] seek to the last in MB store", zap.Int64("mb number", mb.MagicBlockNumber))
 	return
 }
 
