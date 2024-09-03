@@ -128,6 +128,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 
 		if !retrySharePhase && notMoveRound && hadTxnAndConfirmed {
 			// skip if not retry share phase, and not the move round, also previously, txn was confirmed,
+			logging.Logger.Debug("[mvc] process: not retry share phase - skip")
 			continue
 		}
 
@@ -136,6 +137,7 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 			// 	zap.String("phase", pn.Phase.String()),
 			// 	zap.Int64("start_round", pn.StartRound),
 			// 	zap.Int64("phase start round", phaseStartRound))
+			logging.Logger.Debug("[mvc] process: phase already accepted - skip")
 			continue // phase already accepted
 		}
 
@@ -150,11 +152,14 @@ func (mc *Chain) ManualViewChangeProcess(ctx context.Context) {
 		// }
 		lfbPhaseNode, err := mc.GetPhaseOfBlock(lfb)
 		if err != nil {
-			logging.Logger.Error("update finalized block - get phase of block failed", zap.Error(err))
+			logging.Logger.Error("[mvc] update finalized block - get phase of block failed", zap.Error(err))
 			return
 		}
 
 		if lfbPhaseNode.Phase > pn.Phase {
+			logging.Logger.Error("[mvc] lfb phase > pn phase - skip",
+				zap.String("lfb_phase", lfbPhaseNode.Phase.String()),
+				zap.String("pn_phase", pn.Phase.String()))
 			continue
 		}
 
@@ -514,6 +519,8 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		return
 	}
 
+	logging.Logger.Debug("[mvc] createSijs", zap.Int("mpks num", len(mpks.Mpks)))
+
 	for k := range mpks.Mpks {
 		if node.GetNode(k) != nil {
 			continue // already registered
@@ -532,6 +539,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		n.Info.BuildTag = v.BuildTag
 		n.SetStatus(node.NodeStatusActive)
 		if err := node.Setup(n); err != nil {
+			logging.Logger.Error("[mvc] createSijs failed to setup node", zap.Error(err))
 			return err
 		}
 		node.RegisterNode(n)
@@ -588,12 +596,13 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block,
 
 	var selfNodeKey = node.Self.Underlying().GetKey()
 	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
-		logging.Logger.Error("failed to send sijs", zap.Bool("dkg_set", mc.isDKGSet()),
+		logging.Logger.Error("[mvc] failed to send sijs", zap.Bool("dkg_set", mc.isDKGSet()),
 			zap.Bool("ok", ok))
 		return // (nil, nil)
 	}
 
 	if err = mc.createSijs(ctx, lfb, mb, active); err != nil {
+		logging.Logger.Error("[mvc] failed to create sijs", zap.Error(err))
 		return // error
 	}
 
