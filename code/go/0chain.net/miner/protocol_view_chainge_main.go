@@ -395,6 +395,11 @@ func (mc *Chain) Wait(ctx context.Context,
 		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
 	}
 
+	// if err := SetDKG(ctx, mb); err != nil {
+	// 	return nil, common.NewErrorf("vc_wait", "set DKG failed: %v", err)
+	// }
+	mc.SetDKG(vcdkg)
+
 	// don't set DKG until MB finalized
 	// mc.viewChangeProcess.clearViewChange()
 	//
