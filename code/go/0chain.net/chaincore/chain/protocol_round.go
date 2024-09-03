@@ -610,22 +610,35 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *b
 
 // GetLatestFinalizedMagicBlockRound returns LFMB for given round number
 func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
-	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
-	// TODO: improve this lfmbMutex
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
 	rn = mbRoundOffset(rn) // round number with mb offset
-	if len(c.magicBlockStartingRounds) > 0 {
-		lfmbr := int64(-1)
-		for r := range c.magicBlockStartingRounds {
-			if r <= rn && r > lfmbr {
-				lfmbr = r
+	if len(c.magicBlockStartingRoundsMap) > 0 {
+		c.lfmbMutex.RLock()
+		r := c.magicBlockStaringRounds.Prev()
+		ringSize := c.magicBlockStaringRounds.Len()
+		for i := 0; i < ringSize; i++ {
+			startRound := r.Value.(int64)
+			r = r.Prev()
+			// Use the magic block starting round that is greater than the offset round(rn) as the magic block. However,
+			// how can we ensure that it's not a newer magic block, which has a higher starting round.
+			// An easy way to check is reduce the magic block by 100, and if it's below this round, then
+			// we can safely say it's the magic block for this round. This is because two magic block could never be
+			// done in 100 rounds.
+			//
+			//
+			if startRound >= rn && startRound-100 < rn {
+				lfmb := c.magicBlockStartingRoundsMap[startRound]
+				c.lfmbMutex.RUnlock()
+				return lfmb
 			}
 		}
-		if lfmbr >= 0 {
-			lfmb = c.magicBlockStartingRounds[lfmbr]
-		}
+		c.lfmbMutex.RUnlock()
 	}
+	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
+	logging.Logger.Warn("GetLatestFinalizedMagicBlockRound: no magic block found for round, use the latest one",
+		zap.Int64("round", rn),
+		zap.Int64("lfmb starting round", lfmb.StartingRound),
+		zap.Int64("mb number", lfmb.MagicBlockNumber),
+		zap.String("mb hash", lfmb.MagicBlock.Hash))
 	return lfmb
 }
 

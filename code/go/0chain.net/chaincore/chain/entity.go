@@ -18,6 +18,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/config"
 	"0chain.net/core/util/orderbuffer"
+	"0chain.net/core/util/ringbuffer"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -57,6 +58,9 @@ const (
 	genesisRandomSeed = 839695260482366273
 	// genesisBlockCreationDate is the time when the genesis block was created.
 	genesisBlockCreationDate = 1676096659 // TODO: make it configurable
+
+	// magicBlockStartingRoundsMax represents the maximum number of rounds store in memory for the magic block starting rounds.
+	magicBlockStartingRoundsMax = 1000
 )
 
 var (
@@ -196,7 +200,8 @@ type Chain struct {
 	configInfoStore datastore.Store
 	RoundF          round.RoundFactory
 
-	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
+	magicBlockStartingRoundsMap map[int64]*block.Block // block MB by starting round VC
+	magicBlockStaringRounds     *ringbuffer.RingBuffer
 
 	EventDb    *event.EventDb
 	eventMutex *sync.RWMutex
@@ -1142,7 +1147,8 @@ func (c *Chain) Initialize() {
 	// c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]uint64)
-	c.magicBlockStartingRounds = make(map[int64]*block.Block)
+	c.magicBlockStartingRoundsMap = make(map[int64]*block.Block)
+	c.magicBlockStaringRounds = ringbuffer.New(magicBlockStartingRoundsMax)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
 	}
@@ -2488,7 +2494,8 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	)
 
 	c.lfmbMutex.Lock()
-	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
+	c.magicBlockStartingRoundsMap[b.MagicBlock.StartingRound] = b
+	c.magicBlockStaringRounds.Add(b.StartingRound)
 	c.lfmbMutex.Unlock()
 
 	if latest == nil || b.StartingRound >= latest.StartingRound {
