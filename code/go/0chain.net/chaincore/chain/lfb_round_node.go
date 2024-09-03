@@ -24,7 +24,10 @@ type LfbRound struct {
 
 // StoreLFBRound stores LFB round to state DB
 func (c *Chain) StoreLFBRound(round, magicBlockNum int64, blockHash string) error {
-	logging.Logger.Debug("store lfb", zap.Int64("round", round), zap.String("block", blockHash))
+	logging.Logger.Debug("store lfb",
+		zap.Int64("round", round),
+		zap.String("block", blockHash),
+		zap.Int64("mb number", magicBlockNum))
 	lfbr := &LfbRound{
 		Round:            round,
 		Hash:             blockHash,
