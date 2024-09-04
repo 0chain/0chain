@@ -542,6 +542,8 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	if err != nil {
 		return err
 	}
+	logging.Logger.Debug("[mvc] sharder keep list", zap.Int("num", len(sharders.Nodes)))
+
 	allSharderList, err := getAllShardersList(balances)
 	if err != nil {
 		return err
@@ -549,6 +551,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	// TODO: reduce sharders in auto VC
 	if sharders == nil || len(sharders.Nodes) == 0 {
+		logging.Logger.Debug("[mvc] sharder list is empty, use all sharder list")
 		sharders = allSharderList
 	} else {
 		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
