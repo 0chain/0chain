@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
@@ -19,6 +20,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/logging"
 	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
@@ -145,6 +147,18 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 
 	//nolint:errcheck
 	notifyConductor(b)
+
+	pn, err := sc.GetPhaseOfBlock(b)
+	if err != nil {
+		logging.Logger.Error("[mvc] update finalized block - get phase of block failed", zap.Error(err))
+		return err
+	}
+
+	logging.Logger.Debug("[mvc] update finalized block - send phase node",
+		zap.Int64("round", b.Round),
+		zap.Int64("start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
+	go sc.SendPhaseNode(context.Background(), chain.PhaseEvent{Phase: pn})
 
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))

@@ -627,16 +627,5 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 // The GetPhaseOfBlock extracts and returns Miner SC phase node for given block.
 func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode, err error) {
 	err = c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
-	// if err != nil && err != util.ErrValueNotPresent {
-	// 	err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
-	// 		err, b.Round)
-	// 	return
-	// }
-
-	// if err == util.ErrValueNotPresent {
-	// 	err = nil // not a real error, Miner SC just is not started (yet)
-	// 	return
-	// }
-
 	return // ok
 }
