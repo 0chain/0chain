@@ -619,6 +619,7 @@ func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 			startRound := r.Value.(int64)
 			r = r.Prev()
 			if startRound <= rn {
+				c.lfmbMutex.RUnlock()
 				return c.magicBlockStartingRoundsMap[startRound]
 			}
 		}
