@@ -451,7 +451,7 @@ func (msc *MinerSmartContract) reduceShardersList(
 	}
 
 	if len(simpleNodes) < gn.MinS {
-		return nil, fmt.Errorf("to few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
+		return nil, fmt.Errorf("too few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
 	}
 
 	var pmbrss int64
@@ -548,15 +548,15 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	}
 
 	// TODO: reduce sharders in auto VC
-	// if sharders == nil || len(sharders.Nodes) == 0 {
-	// 	sharders = allSharderList
-	// } else {
-	// 	sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-	sharders = allSharderList
+	if sharders == nil || len(sharders.Nodes) == 0 {
+		sharders = allSharderList
+	} else {
+		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
+		if err != nil {
+			return err
+		}
+	}
+	// sharders = allSharderList
 
 	if err = dkgMinersList.reduceNodes(true, gn, balances); err != nil {
 		logging.Logger.Error("create magic block for wait - reduce nodes failed", zap.Error(err))
