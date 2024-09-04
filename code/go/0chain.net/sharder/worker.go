@@ -84,36 +84,20 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
-	if !sc.ChainConfig.IsViewChangeEnabled() {
-		return // don't send sharder_keep if view_change is false
-	}
-
-	// common register sharder keep constants
-	const (
-		repeat = 5 * time.Second // repeat every 5 seconds
-	)
+	// if !sc.ChainConfig.IsViewChangeEnabled() {
+	// 	return // don't send sharder_keep if view_change is false
+	// }
 
 	var (
-		ticker = time.NewTicker(repeat)
 		phaseq = sc.PhaseEvents()
 		pe     chain.PhaseEvent //
-		latest time.Time        // last time phase updated by the node itself
 
 		phaseRound int64 // starting round of latest accepted phase
 	)
 
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
-			return
-		case tp := <-ticker.C:
-			if tp.Sub(latest) < repeat || phaseq.Size() > 0 {
-				continue // already have a fresh phase
-			}
-			go sc.GetPhaseFromSharders(ctx)
-			continue
 		default:
 			pei, ok := phaseq.Pop()
 			if !ok {
@@ -122,9 +106,6 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			}
 
 			pe = pei.Data.(chain.PhaseEvent)
-			if !pe.Sharders {
-				latest = time.Now()
-			}
 		}
 
 		if pe.Phase.StartRound < phaseRound {
@@ -141,27 +122,24 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			continue
 		}
 
-		logging.Logger.Debug("Start to register to sharder keep list")
+		logging.Logger.Debug("[mvc] register_sharder_keep_worker - start to register to sharder keep list")
 		var txn, err = sc.RegisterSharderKeep()
 		if err != nil {
-			logging.Logger.Error("Register sharder keep failed",
+			logging.Logger.Error("[mvc] register_sharder_keep_worker - register sharder keep failed",
 				zap.Int64("phase start round", pe.Phase.StartRound),
 				zap.Int64("phase current round", pe.Phase.CurrentRound),
 				zap.Error(err))
 			continue // repeat next time
 		}
 
-		// so, transaction sent, let's verify it
-
 		if !sc.ConfirmTransaction(ctx, txn, 0) {
-			logging.Logger.Debug("register_sharder_keep_worker -- failed "+
-				"to confirm transaction", zap.Any("txn", txn))
+			logging.Logger.Debug("[mvc] register_sharder_keep_worker - register sharder keep txn failed",
+				zap.Any("txn", txn))
 			continue
 		}
 
-		logging.Logger.Info("register_sharder_keep_worker -- registered")
+		logging.Logger.Info("[mvc] register_sharder_keep_worker - register success")
 		phaseRound = pe.Phase.StartRound // accepted
-
 	}
 }
 
