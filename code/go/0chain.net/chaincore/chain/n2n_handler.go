@@ -92,14 +92,6 @@ func SetupX2XResponders(c *Chain) {
 	}
 	http.HandleFunc("/v1/_x2x/state/get_nodes", middleHandlers(StateNodesHandler))
 	http.HandleFunc("/v1/_x2x/block/state_change/get", middleHandlers(c.BlockStateChangeHandler))
-	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", middleHandlers(LatestFinalizedBlockHandler(c)))
-}
-
-// LatestFinalizedBlockHandler - handle latest finalized block
-func LatestFinalizedBlockHandler(c Chainer) common.JSONResponderF {
-	return func(ctx context.Context, r *http.Request) (interface{}, error) {
-		return c.GetLatestFinalizedBlock(), nil
-	}
 }
 
 // StateNodesHandler - return a list of state nodes

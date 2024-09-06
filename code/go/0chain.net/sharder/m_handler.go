@@ -142,3 +142,16 @@ func (sc *Chain) RejectNotarizedBlock(hash string) bool {
 		return false
 	}
 }
+
+// LatestFinalizedBlockHandler - handle latest finalized block
+func LatestFinalizedBlockHandler(c Chainer) common.JSONResponderF {
+	return func(ctx context.Context, r *http.Request) (interface{}, error) {
+		return c.GetLatestFinalizedBlock(), nil
+	}
+}
+
+/*SetupM2SResponders - setup handlers for all the requests from the miner */
+func SetupM2SResponders(sc Chainer) {
+	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", common.N2NRateLimit(
+		node.ToS2MSendEntityHandler(LatestFinalizedBlockHandler(sc))))
+}
