@@ -78,7 +78,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
-				LatestFinalizedBlockHandler,
+				LatestFinalizedBlockHandlerSummary,
 			),
 		)),
 		"/v1/block/get/latest_finalized_magic_block_summary": common.WithCORS(common.UserRateLimit(

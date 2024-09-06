@@ -176,7 +176,7 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 			}
 			logging.Logger.Debug("[wait not ahead] [4*] still ahead, can't move on")
 			if tk.Round < lfb.Round {
-				BumpLFBTicket(ctx, mc)
+				mc.BumpLFBTicket(ctx)
 			}
 
 		case ntk := <-tksubq: // the ntk can't be nil
@@ -1228,94 +1228,6 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.TryCancelBlockGeneration()
 }
 
-type BlockConsensus struct {
-	*block.Block
-	Consensus int
-}
-
-// GetLatestFinalizedBlockFromSharder - request for latest finalized block from
-// all the sharders.
-func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
-	fbs []*BlockConsensus) {
-
-	mb := mc.GetLatestFinalizedMagicBlockBrief()
-	if mb == nil {
-		return
-	}
-
-	fbs = make([]*BlockConsensus, 0, len(mb.ShardersN2NURLs))
-	fbc := make(chan *block.Block, len(mb.ShardersN2NURLs))
-
-	var handler = func(ctx context.Context, entity datastore.Entity) (
-		resp interface{}, err error) {
-
-		var fb, ok = entity.(*block.Block)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		if fb.Round == 0 {
-			return
-		}
-
-		if err = fb.Validate(ctx); err != nil {
-			logging.Logger.Error("lfb from sharder - invalid",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			return
-		}
-		select {
-		case fbc <- fb:
-		default:
-		}
-
-		return fb, nil
-	}
-
-	mc.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
-	close(fbc)
-
-	cctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	for fb := range fbc {
-		// increase consensus
-		for i, b := range fbs {
-			if b.Hash == fb.Hash {
-				fbs[i].Consensus++
-				continue
-			}
-		}
-
-		if err := mc.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(), fb.Round); err != nil {
-			// return err
-			logging.Logger.Error("lfb from sharder - notarization failed",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			continue
-		}
-
-		// don't use the round, just create it or make sure it's created
-		mc.getOrCreateRound(cctx, fb.Round) // can' return nil
-
-		// add new block
-		fbs = append(fbs, &BlockConsensus{
-			Block:     fb,
-			Consensus: 1,
-		})
-	}
-
-	// highest (the first sorting order), most popular (the second order)
-	sort.Slice(fbs, func(i int, j int) bool {
-		if fbs[i].Round == fbs[j].Round {
-			return fbs[i].Consensus > fbs[j].Consensus
-		}
-
-		return fbs[i].Round > fbs[j].Round
-	})
-
-	return
-}
-
 // SyncFetchFinalizedBlockFromSharders fetches FB from sharders by hash.
 // It used by miner to get FB by LFB ticket in restart round.
 func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
@@ -1592,7 +1504,7 @@ func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
 }
 
 func (mc *Chain) restartRound(ctx context.Context, rn int64) {
-	BumpLFBTicket(ctx, mc)
+	mc.BumpLFBTicket(ctx)
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
 	mc.IncrementRoundTimeoutCount()
@@ -1738,7 +1650,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 	// received latest finalized block is one around ahead of local latest finalized block
 	if have != nil && rcvd.Round-1 == have.Round {
 		rcvd.SetPreviousBlock(have)
-		mc.bumpLFBTicket(ctx, rcvd)
+		mc.BumpTicket(ctx, rcvd)
 		if err := mc.GetBlockStateChange(rcvd); err != nil {
 			logging.Logger.Error("ensure lfb", zap.Error(err))
 		}
@@ -1776,7 +1688,7 @@ func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
 		rcvd.SetPreviousBlock(pb)
 	}
 
-	mc.bumpLFBTicket(ctx, rcvd)
+	mc.BumpTicket(ctx, rcvd)
 
 	mc.SetLatestFinalizedBlock(ctx, rcvd)
 	logging.Logger.Info("ensure_lfb - set lfb",
@@ -1866,18 +1778,6 @@ func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
 	return
 }
 
-// bump the ticket if necessary
-func (mc *Chain) bumpLFBTicket(ctx context.Context, lfb *block.Block) {
-	if lfb == nil {
-		return
-	}
-	var tk = mc.GetLatestLFBTicket(ctx) // is the worker starts
-	if tk == nil || tk.Round < lfb.Round {
-		logging.Logger.Debug("bumpLFBTicket", zap.Int64("lfb_round", lfb.Round))
-		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{Round: lfb.Round})
-	}
-}
-
 func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	mr *Round) {
 
@@ -1885,7 +1785,7 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 		return // nil
 	}
 
-	mc.bumpLFBTicket(ctx, lfb)
+	mc.BumpTicket(ctx, lfb)
 
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {
@@ -1905,18 +1805,6 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	return mc.GetMinerRound(lfb.Round)
 }
 
-func BumpLFBTicket(ctx context.Context, mc *Chain) {
-	list := mc.GetLatestFinalizedBlockFromSharder(ctx)
-	if len(list) == 0 {
-		logging.Logger.Debug("ensure_lfb - no new lfb received")
-		return // no LFB given
-	}
-
-	rcvd := list[0].Block // the highest received LFB
-	// received latest finalized block is one around ahead of local latest finalized block
-	mc.bumpLFBTicket(ctx, rcvd)
-}
-
 func StartProtocol(ctx context.Context, gb *block.Block) {
 
 	var (
@@ -1929,14 +1817,14 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		// return
 	}
 
-	BumpLFBTicket(ctx, mc)
+	mc.BumpLFBTicket(ctx)
 
 	lfb := mc.GetLatestFinalizedBlock()
 	if lfb != nil {
 		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {
 		// start on genesis block
-		mc.bumpLFBTicket(ctx, gb)
+		mc.BumpTicket(ctx, gb)
 		var r = round.NewRound(gb.Round)
 		mr = mc.CreateRound(r)
 		mr = mc.AddRound(mr).(*Round)

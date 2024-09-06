@@ -50,12 +50,6 @@ func (sc *Chain) AcceptMessage(entityName string, entityID string) bool {
 	}
 }
 
-/*SetupM2SResponders - setup handlers for all the requests from the miner */
-func SetupM2SResponders(sc Chainer) {
-	http.HandleFunc("/v1/_m2s/block/latest_finalized/get", common.N2NRateLimit(
-		node.ToS2MSendEntityHandler(LatestFinalizedBlockHandler(sc))))
-}
-
 /*FinalizedBlockHandler - handle the finalized block */
 func FinalizedBlockHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 	return func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
@@ -146,12 +140,5 @@ func (sc *Chain) RejectNotarizedBlock(hash string) bool {
 	default:
 		// should not happen here
 		return false
-	}
-}
-
-/*LatestFinalizedBlockHandler - handle latest finalized block*/
-func LatestFinalizedBlockHandler(c Chainer) common.JSONResponderF {
-	return func(ctx context.Context, r *http.Request) (interface{}, error) {
-		return c.GetLatestFinalizedBlock(), nil
 	}
 }

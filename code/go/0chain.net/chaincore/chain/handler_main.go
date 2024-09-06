@@ -17,8 +17,8 @@ import (
 //
 // responses:
 //  200: BlockSummary
-/*LatestFinalizedBlockHandler - provide the latest finalized block by this miner */
-func LatestFinalizedBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+/*LatestFinalizedBlockHandlerSummary - provide the latest finalized block by this miner */
+func LatestFinalizedBlockHandlerSummary(ctx context.Context, r *http.Request) (interface{}, error) {
 	return GetServerChain().GetLatestFinalizedBlockSummary(), nil
 }
 

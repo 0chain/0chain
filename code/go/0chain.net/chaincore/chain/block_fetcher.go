@@ -361,6 +361,7 @@ type Chainer interface {
 	GetLatestFinalizedMagicBlockRound(rn int64) *block.Block
 	GetRound(roundNumber int64) round.RoundI
 	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
+	GetLatestFinalizedBlock() *block.Block
 }
 
 //

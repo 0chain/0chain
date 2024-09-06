@@ -30,6 +30,7 @@ func (c *Chain) SetupWorkers(ctx context.Context) {
 	go c.PruneClientStateWorker(ctx)
 	go c.blockFetcher.StartBlockFetchWorker(ctx, c)
 	go c.StartLFBTicketWorker(ctx, c.GetLatestFinalizedBlock())
+	go c.SyncLFBTicketWorker(ctx)
 	go node.Self.Underlying().MemoryUsage()
 }
 
@@ -774,4 +775,20 @@ func (c *Chain) ComputeBlockStateWithLock(ctx context.Context, f func() error) (
 		err = ctx.Err()
 	}
 	return
+}
+
+// SyncLFBTicketWorker - a worker that gets the latest finalized block from other sharders
+// and bump the LFB ticket.
+func (c *Chain) SyncLFBTicketWorker(ctx context.Context) {
+	logging.Logger.Info("SyncLFBTicketWorker started")
+	defer logging.Logger.Info("SyncLFBTicketWorker stopped")
+	tk := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-tk.C:
+			c.BumpLFBTicket(ctx)
+		}
+	}
 }
