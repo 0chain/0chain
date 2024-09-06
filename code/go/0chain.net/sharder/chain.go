@@ -551,6 +551,10 @@ loop:
 			return err
 		}
 
+		if bl.lfb.Round > sc.GetCurrentRound() {
+			sc.SetCurrentRound(bl.lfb.Round)
+		}
+
 		logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")
 		// and then, check out related LFMB can be missing
 		bl.lfmb, err = sc.loadLatestFinalizedMagicBlockFromStore(ctx, bl.lfb)
