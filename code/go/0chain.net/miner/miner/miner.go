@@ -527,7 +527,7 @@ func initN2NHandlers(c *miner.Chain) {
 	miner.SetupM2MReceivers(c)
 	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
-	miner.SetupM2SRequestors()
+	// miner.SetupM2SRequestors()
 	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()
