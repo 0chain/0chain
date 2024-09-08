@@ -954,7 +954,9 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	c.mbMutex.RLock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
-		entity = c.MagicBlockStorage.GetLatest()
+		c.mbMutex.RUnlock()
+		logging.Logger.Panic(fmt.Sprintf("[mvc] could not get magic block of round: %v", round))
+		// entity = c.MagicBlockStorage.GetLatest()
 	}
 	if entity == nil {
 		logging.Logger.Panic("failed to get magic block from mb storage")
@@ -2018,7 +2020,8 @@ func (c *Chain) getBlocks() []*block.Block {
 
 // SetRoundRank - set the round rank of the block.
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
-	miners := c.GetMiners(r.GetRoundNumber())
+	mb := c.GetMagicBlock(r.GetRoundNumber())
+	miners := mb.Miners
 	if miners == nil || miners.Size() == 0 {
 		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 	}
@@ -2029,6 +2032,13 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 		return
 	}
 	b.RoundRank = r.GetMinerRank(bNode)
+	logging.Logger.Debug("[mvc] set round rank",
+		zap.Int64("round", r.GetRoundNumber()),
+		zap.Int("randk", b.RoundRank),
+		zap.Int64("mb_round", mb.StartingRound),
+		zap.Int("mb_number", int(mb.MagicBlockNumber)),
+		zap.String("mb_hash", mb.Hash))
+
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
