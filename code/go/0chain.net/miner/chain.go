@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"go.uber.org/zap"
 
@@ -371,63 +372,150 @@ func (mc *Chain) SaveClients(clients []*client.Client) error {
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
-	if !mc.ChainConfig.IsViewChangeEnabled() {
-		return
+	// if !mc.ChainConfig.IsViewChangeEnabled() {
+	// 	return
+	// }
+
+	// var (
+	if b.MagicBlock == nil {
+		return nil
+	}
+
+	mb := b.MagicBlock
+	// )
+
+	if !mb.Miners.HasNode(node.Self.Underlying().GetKey()) {
+		logging.Logger.Error("[mvc] view change, magic miners does not have self node")
+		return // node leaves BC, don't do anything here
+	}
+
+	if mc.isSyncingBlocks() {
+		// Just store the magic block and return
+		if err = StoreMagicBlock(ctx, mb); err != nil {
+			logging.Logger.Panic("[mvc] failed to store magic block", zap.Error(err))
+		}
+		return nil
 	}
 
 	var (
-		mb  = b.MagicBlock
-		nvc int64
+		mpks        = mc.viewChangeProcess.mpks.GetMpks()
+		vcdkg       = mc.viewChangeProcess.viewChangeDKG
+		selfNodeKey = node.Self.Underlying().GetKey()
 	)
 
-	logging.Logger.Debug("[mvc] set next view change round")
-	if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
-		return common.NewErrorf("view_change", "getting nvc: %v", err)
+	for key, share := range mb.GetShareOrSigns().GetShares() {
+		if key == selfNodeKey {
+			continue // skip self
+		}
+		var myShare, ok = share.ShareOrSigns[selfNodeKey]
+		if ok && myShare.Share != "" {
+			var share bls.Key
+			if err := share.SetHexString(myShare.Share); err != nil {
+				return err
+			}
+			lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
+			if err != nil {
+				return err
+			}
+
+			var validShare = vcdkg.ValidateShare(lmpks, share)
+			if !validShare {
+				continue
+			}
+			err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
+				true)
+			if err != nil {
+				return common.NewErrorf("view_change", "adding secret share: %v", err)
+			}
+		}
 	}
 
-	// set / update the next view change of protocol view change (RAM)
-	//
-	// note: this approach works where a miners is active and finalizes blocks
-	//       but for inactive miners we have to set next view change based on
-	//       blocks fetched from sharders
-	mc.SetNextViewChange(nvc)
-
-	// next view change is expected, but not given;
-	// it means the MB rejected by Miner SC
-	if b.Round == nvc && mb == nil {
-		return // no MB no VC
+	var miners []string
+	for key := range mc.viewChangeProcess.mpks.GetMpks() {
+		if _, ok := mb.Mpks.Mpks[key]; !ok {
+			miners = append(miners, key)
+		}
+	}
+	vcdkg.DeleteFromSet(miners)
+	mpkMap, err := mb.Mpks.GetMpkMap()
+	if err != nil {
+		return err
+	}
+	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
+		return err
 	}
 
-	// just skip the block if it hasn't a MB
-	if mb == nil {
-		return // no MB, no VC
+	vcdkg.AggregateSecretKeyShares()
+	vcdkg.StartingRound = mb.StartingRound
+	vcdkg.MagicBlockNumber = mb.MagicBlockNumber
+	// set T and N from the magic block
+	vcdkg.T = mb.T
+	vcdkg.N = mb.N
+
+	// save DKG and MB
+	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
+		return common.NewErrorf("view_change", "saving DKG summary: %v", err)
 	}
 
-	// view change
-
-	if err = mc.UpdateMagicBlock(mb); err != nil {
-		return common.NewErrorf("view_change", "updating MB: %v", err)
+	if err = StoreMagicBlock(ctx, mb); err != nil {
+		return common.NewErrorf("view_change", "saving MB data: %v", err)
 	}
 
-	mc.SetLatestFinalizedMagicBlock(b)
-
-	go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
-		mc.GetRoundDkg(), mc.MagicBlockStorage)
-
-	// set DKG if this node is miner of new MB (it have to have the DKG)
-	var selfNodeKey = node.Self.Underlying().GetKey()
-
-	if !mb.Miners.HasNode(selfNodeKey) {
-		return // ok, all done
-	}
-
-	// this must be ok, if not -- return error
-	if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
-		logging.Logger.Error("view_change - set DKG failed",
-			zap.Int64("mb_starting_round", mb.StartingRound),
+	if err := SetDKG(ctx, mb); err != nil {
+		logging.Logger.Debug("[mvc] view change set dkg failed",
+			zap.Int64("mb number", mb.MagicBlockNumber),
+			zap.Int64("mb sr", mb.StartingRound),
 			zap.Error(err))
-		return
 	}
+
+	// logging.Logger.Debug("[mvc] set next view change round")
+	// if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
+	// 	return common.NewErrorf("view_change", "getting nvc: %v", err)
+	// }
+
+	// // set / update the next view change of protocol view change (RAM)
+	// //
+	// // note: this approach works where a miners is active and finalizes blocks
+	// //       but for inactive miners we have to set next view change based on
+	// //       blocks fetched from sharders
+	// mc.SetNextViewChange(nvc)
+
+	// // next view change is expected, but not given;
+	// // it means the MB rejected by Miner SC
+	// if b.Round == nvc && mb == nil {
+	// 	return // no MB no VC
+	// }
+
+	// // just skip the block if it hasn't a MB
+	// if mb == nil {
+	// 	return // no MB, no VC
+	// }
+
+	// // view change
+
+	// if err = mc.UpdateMagicBlock(mb); err != nil {
+	// 	return common.NewErrorf("view_change", "updating MB: %v", err)
+	// }
+
+	// mc.SetLatestFinalizedMagicBlock(b)
+
+	// go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
+	// 	mc.GetRoundDkg(), mc.MagicBlockStorage)
+
+	// // set DKG if this node is miner of new MB (it have to have the DKG)
+	// var selfNodeKey = node.Self.Underlying().GetKey()
+
+	// if !mb.Miners.HasNode(selfNodeKey) {
+	// 	return // ok, all done
+	// }
+
+	// // this must be ok, if not -- return error
+	// if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
+	// 	logging.Logger.Error("view_change - set DKG failed",
+	// 		zap.Int64("mb_starting_round", mb.StartingRound),
+	// 		zap.Error(err))
+	// 	return
+	// }
 
 	// new miners has no previous round, and LFB, this block becomes
 	// LFB and new miners have to get it from miners or sharders to

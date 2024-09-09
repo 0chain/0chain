@@ -457,12 +457,12 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				zap.String("block", cfb.Hash))
 		}
 		// perform view change or not perform
-		if err := c.viewChanger.ViewChange(ctx, b); err != nil {
-			logging.Logger.Error("view_changing_lfb",
-				zap.Int64("lfb_round", b.Round),
-				zap.Error(err))
-			return
-		}
+		// if err := c.viewChanger.ViewChange(ctx, b); err != nil {
+		// 	logging.Logger.Error("view_changing_lfb",
+		// 		zap.Int64("lfb_round", b.Round),
+		// 		zap.Error(err))
+		// 	return
+		// }
 		c.SetLatestOwnFinalizedBlockRound(b.Round)
 		c.SetLatestFinalizedBlock(b)
 		return
