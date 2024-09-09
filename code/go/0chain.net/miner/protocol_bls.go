@@ -15,6 +15,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
+	"github.com/0chain/common/core/logging"
 	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
@@ -42,6 +43,15 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 			return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
 				" may be damaged or permissions may not be available?",
 				err.Error())
+		} else {
+			dkg := mc.GetDKG(mb.StartingRound)
+			logging.Logger.Debug("[mvc] dkg process set dkg success",
+				zap.Int("dkg T", dkg.T),
+				zap.Int("dkg N", dkg.N),
+				zap.Int("gmpk len", len(dkg.GetMPKs())),
+				zap.Int64("mb number", mb.MagicBlockNumber),
+				zap.Int64("mb sr", mb.StartingRound),
+			)
 		}
 	} else {
 		Logger.Info("DKG is not enabled. So, starting protocol")

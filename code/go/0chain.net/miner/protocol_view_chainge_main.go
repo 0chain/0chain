@@ -395,10 +395,24 @@ func (mc *Chain) Wait(ctx context.Context,
 		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
 	}
 
-	// if err := SetDKG(ctx, mb); err != nil {
-	// 	return nil, common.NewErrorf("vc_wait", "set DKG failed: %v", err)
+	if err := SetDKG(ctx, mb); err != nil {
+		logging.Logger.Debug("[mvc] dkg process set dkg failed",
+			zap.Int64("mb number", magicBlock.MagicBlockNumber),
+			zap.Int64("mb sr", magicBlock.StartingRound),
+			zap.Error(err))
+	}
+
+	// if err := mc.SetDKG(vcdkg); err != nil {
+	// 	logging.Logger.Error("[mvc] dkg process set dkg failed", zap.Error(err))
+	// } else {
+	// 	logging.Logger.Debug("[mvc] dkg process set dkg success",
+	// 		zap.Int("dkg T", vcdkg.T),
+	// 		zap.Int("dkg N", vcdkg.N),
+	// 		zap.Int("gmpk len", len(vcdkg.GetMPKs())),
+	// 		zap.Int64("mb number", magicBlock.MagicBlockNumber),
+	// 		zap.Int64("mb sr", magicBlock.StartingRound),
+	// 	)
 	// }
-	mc.SetDKG(vcdkg)
 
 	// don't set DKG until MB finalized
 	// mc.viewChangeProcess.clearViewChange()
