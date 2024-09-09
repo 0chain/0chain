@@ -23,6 +23,16 @@ func (c *Chain) GetDKG(round int64) *bls.DKG {
 	return entity.(*bls.DKG)
 }
 
+func (c *Chain) GetDKGByStartingRound(round int64) *bls.DKG {
+	c.roundDkgMu.RLock()
+	defer c.roundDkgMu.RUnlock()
+	entity := c.roundDkg.Get(round)
+	if entity == nil {
+		return nil
+	}
+	return entity.(*bls.DKG)
+}
+
 // SetDKG sets DKG for the start round
 func (c *Chain) SetDKG(dkg *bls.DKG) error {
 	c.roundDkgMu.Lock()

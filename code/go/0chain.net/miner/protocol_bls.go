@@ -44,7 +44,7 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 				" may be damaged or permissions may not be available?",
 				err.Error())
 		} else {
-			dkg := mc.GetDKG(mb.StartingRound)
+			dkg := mc.GetDKGByStartingRound(mb.StartingRound)
 			logging.Logger.Debug("[mvc] dkg process set dkg success",
 				zap.Int("dkg T", dkg.T),
 				zap.Int("dkg N", dkg.N),
