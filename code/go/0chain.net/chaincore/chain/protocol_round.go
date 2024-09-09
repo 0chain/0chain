@@ -611,20 +611,21 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *b
 // GetLatestFinalizedMagicBlockRound returns LFMB for given round number
 func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
 	rn = mbRoundOffset(rn) // round number with mb offset
+	c.lfmbMutex.RLock()
 	if len(c.magicBlockStartingRoundsMap) > 0 {
-		c.lfmbMutex.RLock()
 		r := c.magicBlockStaringRounds.Prev()
 		ringSize := c.magicBlockStaringRounds.Len()
 		for i := 0; i < ringSize; i++ {
 			startRound := r.Value.(int64)
 			r = r.Prev()
 			if startRound <= rn {
+				b := c.magicBlockStartingRoundsMap[startRound]
 				c.lfmbMutex.RUnlock()
-				return c.magicBlockStartingRoundsMap[startRound]
+				return b
 			}
 		}
-		c.lfmbMutex.RUnlock()
 	}
+	c.lfmbMutex.RUnlock()
 	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	logging.Logger.Warn("GetLatestFinalizedMagicBlockRound: no magic block found for round, use the latest one",
 		zap.Int64("round", rn),
