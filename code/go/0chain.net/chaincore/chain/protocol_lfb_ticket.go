@@ -291,17 +291,6 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 			continue
 		}
 
-		if err := c.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(), fb.Round); err != nil {
-			// return err
-			logging.Logger.Error("lfb from sharder - notarization failed",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			continue
-		}
-
-		// don't use the round, just create it or make sure it's created
-		// c.getOrCreateRound(cctx, fb.Round) // can' return nil
-
 		// add new block
 		fbs = append(fbs, &BlockConsensus{
 			Block:     fb,
