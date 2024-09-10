@@ -283,6 +283,14 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 			}
 		}
 
+		if fb.Round < c.GetCurrentRound() {
+			logging.Logger.Debug("lfb from sharder - round too old",
+				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+				zap.Int64("current_round", c.GetCurrentRound()),
+			)
+			continue
+		}
+
 		if err := c.VerifyNotarization(ctx, fb.Hash, fb.GetVerificationTickets(), fb.Round); err != nil {
 			// return err
 			logging.Logger.Error("lfb from sharder - notarization failed",

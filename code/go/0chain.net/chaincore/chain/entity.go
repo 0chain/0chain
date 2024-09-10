@@ -954,10 +954,12 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	c.mbMutex.RLock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
-		c.mbMutex.RUnlock()
-		logging.Logger.Panic(fmt.Sprintf("[mvc] could not get magic block of round: %v", round))
-		// entity = c.MagicBlockStorage.GetLatest()
+		entity = c.MagicBlockStorage.GetLatest()
+		logging.Logger.Warn("[mvc] could not get related magic block, use latest one",
+			zap.Int64("round", round),
+			zap.Int64("current_round", c.GetCurrentRound()))
 	}
+
 	if entity == nil {
 		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
