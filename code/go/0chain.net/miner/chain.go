@@ -376,13 +376,16 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	// 	return
 	// }
 
-	// var (
 	if b.MagicBlock == nil {
 		return nil
 	}
 
 	mb := b.MagicBlock
-	// )
+
+	// persist the MB whenever see it. Miners could restart with lfb with this mb_number
+	if err = StoreMagicBlock(ctx, mb); err != nil {
+		return common.NewErrorf("view_change", "saving MB data: %v", err)
+	}
 
 	if !mb.Miners.HasNode(node.Self.Underlying().GetKey()) {
 		logging.Logger.Error("[mvc] view change, magic miners does not have self node")
@@ -455,10 +458,6 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	// save DKG and MB
 	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
 		return common.NewErrorf("view_change", "saving DKG summary: %v", err)
-	}
-
-	if err = StoreMagicBlock(ctx, mb); err != nil {
-		return common.NewErrorf("view_change", "saving MB data: %v", err)
 	}
 
 	if err := SetDKG(ctx, mb); err != nil {
