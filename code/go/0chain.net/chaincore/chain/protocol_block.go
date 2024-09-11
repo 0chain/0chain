@@ -74,7 +74,7 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 }
 
 func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block, skipTicketsVerify ...bool) error {
-	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round); err != nil {
+	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round, b.LatestFinalizedMagicBlockRound); err != nil {
 		return err
 	}
 
@@ -94,8 +94,7 @@ func (c *Chain) InViewChangeWindow(round int64) bool {
 
 // VerifyNotarization - verify that the notarization is correct.
 func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
-	bvt []*block.VerificationTicket, round int64) (err error) {
-
+	bvt []*block.VerificationTicket, round, mbRound int64) (err error) {
 	if bvt == nil {
 		return common.NewError("no_verification_tickets",
 			"No verification tickets for this block")
@@ -115,8 +114,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
 		ticketsMap[vt.VerifierID] = true
 	}
 
-	// check tickets sufficience only when this block is not in VC window
-	if !c.InViewChangeWindow(round) && !c.reachedNotarization(round, hash, bvt) {
+	if !c.reachedNotarization(round, mbRound, hash, bvt) {
 		return common.NewError("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
@@ -183,7 +181,7 @@ func (c *Chain) UpdateBlockNotarization(b *block.Block) bool {
 	return false
 }
 
-func (c *Chain) reachedNotarization(round int64, hash string,
+func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
@@ -192,6 +190,12 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		threshold = c.GetNotarizationThresholdCount(num)
 		err       error
 	)
+
+	if mb.StartingRound != mbRound {
+		// return true when local MB does not match the block's mb_round,
+		// this could be the miner just started, and try to fetch the MagicBlock from remote
+		return true
+	}
 
 	if c.ThresholdByCount() > 0 {
 		var numSignatures = len(bvt)

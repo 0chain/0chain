@@ -773,7 +773,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 
 		// reset ctx so the timeout of parent ctx would not stop the ticket verification here
 		ctx = context.Background()
-		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), b.Round-1); err != nil {
+		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), b.Round-1, pb.LatestFinalizedMagicBlockRound); err != nil {
 			logging.Logger.Error("update prev block notarization failed",
 				zap.Int64("round", pr.Number), zap.String("miner_id", b.MinerID),
 				zap.String("block", b.PrevHash),
