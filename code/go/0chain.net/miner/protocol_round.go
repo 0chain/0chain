@@ -1698,7 +1698,7 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		return
 	}
 
-	logging.Logger.Debug("load_lfb - load from stateDB",
+	logging.Logger.Debug("load_lfb - load magic blocks and dkg",
 		zap.Int64("round", lfbr.Round),
 		zap.String("block", lfbr.Hash),
 		zap.Int64("mb_round", lfbr.MagicBlockNumber))

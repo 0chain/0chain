@@ -339,15 +339,15 @@ func main() {
 	// to subscribe to its events
 	go mc.RestartRoundEventWorker(ctx)
 
-	var activeMiner = mb.Miners.HasNode(node.Self.Underlying().GetKey())
-	if activeMiner {
-		// mb = mc.GetLatestMagicBlock()
-		// if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
-		// 	logging.Logger.Error("failed to set DKG", zap.Error(err))
-		// } else {
-		miner.StartProtocol(ctx, gb)
-		// }
-	}
+	// var activeMiner = mb.Miners.HasNode(node.Self.Underlying().GetKey())
+	// if activeMiner {
+	// 	// mb = mc.GetLatestMagicBlock()
+	// 	// if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
+	// 	// 	logging.Logger.Error("failed to set DKG", zap.Error(err))
+	// 	// } else {
+	// 	// }
+	// }
+	miner.StartProtocol(ctx, gb)
 	mc.SetStarted()
 	miner.SetupWorkers(ctx)
 
