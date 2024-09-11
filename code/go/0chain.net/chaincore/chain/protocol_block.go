@@ -73,7 +73,7 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 	})
 }
 
-func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) error {
+func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block, skipTicketsVerify ...bool) error {
 	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round); err != nil {
 		return err
 	}
@@ -83,6 +83,13 @@ func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) err
 	// }
 
 	return nil
+}
+
+// InViewChangeWindow means the MB of this round is in the view change window that
+// new MB may be created. So it's not safe to use latest MB to verify the block of this round.
+func (c *Chain) InViewChangeWindow(round int64) bool {
+	lfb := c.GetLatestFinalizedBlock()
+	return round-ViewChangeOffset > lfb.Round
 }
 
 // VerifyNotarization - verify that the notarization is correct.
@@ -108,7 +115,8 @@ func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
 		ticketsMap[vt.VerifierID] = true
 	}
 
-	if !c.reachedNotarization(round, hash, bvt) {
+	// check tickets sufficience only when this block is not in VC window
+	if !c.InViewChangeWindow(round) && !c.reachedNotarization(round, hash, bvt) {
 		return common.NewError("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
