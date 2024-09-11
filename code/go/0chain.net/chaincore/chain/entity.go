@@ -76,9 +76,8 @@ const (
 	Generator  = 12
 	Generators = 13
 
-	// ViewChangeOffset is offset between block with new MB (501) and the block
-	// where the new MB should be used (505).
-	ViewChangeOffset = 8
+	// ViewChangeOffset is offset between block with new MB and the block where the new MB should be used.
+	ViewChangeOffset = 25
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
