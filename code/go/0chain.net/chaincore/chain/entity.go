@@ -2031,8 +2031,10 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	if bNode == nil {
 		logging.Logger.Warn("set_round_rank  --  get node by id", zap.Int64("round", r.GetRoundNumber()),
 			zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
+		b.RoundRank = -1
 		return
 	}
+
 	b.RoundRank = r.GetMinerRank(bNode)
 	logging.Logger.Debug("[mvc] set round rank",
 		zap.Int64("round", r.GetRoundNumber()),
@@ -2040,7 +2042,6 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 		zap.Int64("mb_round", mb.StartingRound),
 		zap.Int("mb_number", int(mb.MagicBlockNumber)),
 		zap.String("mb_hash", mb.Hash))
-
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
