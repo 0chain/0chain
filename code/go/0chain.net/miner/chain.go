@@ -308,9 +308,10 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		if err != nil {
 			logging.Logger.Error("load_lfb - could not fetch latest finalized magic block from sharders",
 				zap.Int64("mb_starting_round", lfmb.StartingRound), zap.Error(err))
+			time.Sleep(5 * time.Second)
 			continue
 		}
-		mc.SetLatestFinalizedMagicBlock(mb)
+		mc.updateMagicBlocks(mb)
 		break
 	}
 

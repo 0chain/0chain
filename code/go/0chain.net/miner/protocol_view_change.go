@@ -798,6 +798,13 @@ func (mc *Chain) updateMagicBlocks(mbs ...*block.Block) {
 		}
 		if err := mc.UpdateMagicBlock(mb.MagicBlock); err == nil {
 			mc.SetLatestFinalizedMagicBlock(mb)
+		} else {
+			logging.Logger.Error("update magic block failed",
+				zap.Error(err),
+				zap.Int64("mb number", mb.MagicBlockNumber),
+				zap.Int64("mb sr", mb.StartingRound),
+				zap.String("mb hash", mb.Hash),
+			)
 		}
 	}
 }
