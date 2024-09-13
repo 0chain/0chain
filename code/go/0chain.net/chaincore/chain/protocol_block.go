@@ -173,7 +173,7 @@ func (c *Chain) UpdateBlockNotarization(b *block.Block) bool {
 		return false
 	}
 
-	if c.reachedNotarization(b.Round, b.Hash, b.GetVerificationTickets()) {
+	if c.reachedNotarization(b.Round, b.LatestFinalizedMagicBlockRound, b.Hash, b.GetVerificationTickets()) {
 		b.SetBlockNotarized()
 		return true
 	}
