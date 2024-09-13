@@ -460,9 +460,10 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	}
 
 	var (
-		mpks        = mc.viewChangeProcess.mpks.GetMpks()
-		vcdkg       = mc.viewChangeProcess.viewChangeDKG
+		mpks = mc.viewChangeProcess.mpks.GetMpks()
+		// vcdkg       = mc.viewChangeProcess.viewChangeDKG
 		selfNodeKey = node.Self.Underlying().GetKey()
+		vcdkg       = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
 	)
 
 	for key, share := range mb.GetShareOrSigns().GetShares() {
