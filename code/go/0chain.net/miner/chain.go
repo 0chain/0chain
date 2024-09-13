@@ -480,6 +480,8 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		if ok && myShare.Share != "" {
 			if err := vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share, true); err != nil {
 				return common.NewErrorf("view_change", "adding secret share: %v", err)
+			} else {
+				logging.Logger.Debug("[mvc] view_change find no share for key", zap.String("key", key))
 			}
 
 			// var share bls.Key
@@ -496,6 +498,8 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 			// if !validShare {
 			// 	continue
 			// }
+		} else {
+			logging.Logger.Debug("[mvc] view_change find no share", zap.String("self key", selfNodeKey))
 		}
 	}
 
