@@ -303,16 +303,18 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 	mc.SetLatestFinalizedBlock(ctx, b)
 
 	lfmb := mc.GetLatestMagicBlock()
-	for i := 0; i < retry; i++ {
-		mb, err := mc.GetNotarizedBlockFromSharders(ctx, "", lfmb.StartingRound)
-		if err != nil {
-			logging.Logger.Error("load_lfb - could not fetch latest finalized magic block from sharders",
-				zap.Int64("mb_starting_round", lfmb.StartingRound), zap.Error(err))
-			time.Sleep(5 * time.Second)
-			continue
+	if lfmb.StartingRound > 0 {
+		for i := 0; i < retry; i++ {
+			mb, err := mc.GetNotarizedBlockFromSharders(ctx, "", lfmb.StartingRound)
+			if err != nil {
+				logging.Logger.Error("load_lfb - could not fetch latest finalized magic block from sharders",
+					zap.Int64("mb_starting_round", lfmb.StartingRound), zap.Error(err))
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			mc.updateMagicBlocks(mb)
+			break
 		}
-		mc.updateMagicBlocks(mb)
-		break
 	}
 
 	logging.Logger.Info("load_lfb setup LFB from store",
