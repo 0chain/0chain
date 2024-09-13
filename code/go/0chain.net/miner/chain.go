@@ -460,7 +460,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	}
 
 	var (
-		mpks = mc.viewChangeProcess.mpks.GetMpks()
+		// mpks = mc.viewChangeProcess.mpks.GetMpks()
 		// vcdkg       = mc.viewChangeProcess.viewChangeDKG
 		selfNodeKey = node.Self.Underlying().GetKey()
 		vcdkg       = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
@@ -472,34 +472,34 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		}
 		var myShare, ok = share.ShareOrSigns[selfNodeKey]
 		if ok && myShare.Share != "" {
-			var share bls.Key
-			if err := share.SetHexString(myShare.Share); err != nil {
-				return err
-			}
-			lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
-			if err != nil {
-				return err
-			}
-
-			var validShare = vcdkg.ValidateShare(lmpks, share)
-			if !validShare {
-				continue
-			}
-			err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
-				true)
-			if err != nil {
+			if err := vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share, true); err != nil {
 				return common.NewErrorf("view_change", "adding secret share: %v", err)
 			}
+
+			// var share bls.Key
+			// if err := share.SetHexString(myShare.Share); err != nil {
+			// 	return err
+			// }
+			// lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
+			// if err != nil {
+			// 	// return err
+			// 	continue
+			// }
+
+			// var validShare = vcdkg.ValidateShare(lmpks, share)
+			// if !validShare {
+			// 	continue
+			// }
 		}
 	}
 
-	var miners []string
-	for key := range mc.viewChangeProcess.mpks.GetMpks() {
-		if _, ok := mb.Mpks.Mpks[key]; !ok {
-			miners = append(miners, key)
-		}
-	}
-	vcdkg.DeleteFromSet(miners)
+	// var miners []string
+	// for key := range mc.viewChangeProcess.mpks.GetMpks() {
+	// 	if _, ok := mb.Mpks.Mpks[key]; !ok {
+	// 		miners = append(miners, key)
+	// 	}
+	// }
+	// vcdkg.DeleteFromSet(miners)
 	mpkMap, err := mb.Mpks.GetMpkMap()
 	if err != nil {
 		return err
