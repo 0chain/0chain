@@ -127,9 +127,6 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 						zap.Error(err), zap.String("share", share.Share))
 					return err
 				}
-			} else {
-				logging.Logger.Error("[mvc] failed to get share or signs", zap.String("self key",
-					node.Self.Underlying().GetKey()), zap.String("share", share.Share))
 			}
 		}
 	}
