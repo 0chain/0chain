@@ -1657,6 +1657,8 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		// return
 	}
 
+	mc.loadLatestFinalizedMagicBlockFromStore(ctx)
+
 	mc.BumpLFBTicket(ctx)
 
 	lfb := mc.GetLatestFinalizedBlock()
