@@ -466,6 +466,12 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		vcdkg       = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
 	)
 
+	if mb.Miners.GetNode(selfNodeKey) == nil {
+		// miner is not in the MB, don't do anything here
+		logging.Logger.Debug("[mvc] view_change, miner not in the MB, skip")
+		return nil
+	}
+
 	for key, share := range mb.GetShareOrSigns().GetShares() {
 		if key == selfNodeKey {
 			continue // skip self
