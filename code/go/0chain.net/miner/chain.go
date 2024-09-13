@@ -302,20 +302,19 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 
 	mc.SetLatestFinalizedBlock(ctx, b)
 
-	lfmb := mc.GetLatestMagicBlock()
-	if lfmb.StartingRound > 0 {
-		for i := 0; i < retry; i++ {
-			mb, err := mc.GetNotarizedBlockFromSharders(ctx, "", lfmb.StartingRound)
-			if err != nil {
-				logging.Logger.Error("load_lfb - could not fetch latest finalized magic block from sharders",
-					zap.Int64("mb_starting_round", lfmb.StartingRound), zap.Error(err))
-				time.Sleep(5 * time.Second)
-				continue
-			}
-			mc.updateMagicBlocks(mb)
-			break
-		}
-	}
+	// if lfmb.StartingRound > 0 {
+	// 	for i := 0; i < retry; i++ {
+	// 		mb, err := mc.GetNotarizedBlockFromSharders(ctx, "", lfmb.StartingRound)
+	// 		if err != nil {
+	// 			logging.Logger.Error("load_lfb - could not fetch latest finalized magic block from sharders",
+	// 				zap.Int64("mb_starting_round", lfmb.StartingRound), zap.Error(err))
+	// 			time.Sleep(5 * time.Second)
+	// 			continue
+	// 		}
+	// 		mc.updateMagicBlocks(mb)
+	// 		break
+	// 	}
+	// }
 
 	logging.Logger.Info("load_lfb setup LFB from store",
 		zap.String("block", b.Hash),
@@ -323,6 +322,51 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
 	return nil
+}
+
+func (mc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context) {
+	lfmb := mc.GetLatestMagicBlock()
+	// load the latest N magic blocks
+	n := int64(5)
+	retry := 3
+
+	if lfmb.MagicBlockNumber <= 1 {
+		return
+	}
+
+	// magic block number start from 1, the genesis block
+	startNum := int64(2) // 1 is the genesis block, we have it locally, so don't need to fetch from remote
+	if lfmb.MagicBlockNumber < startNum {
+		// genesis block, return
+		return
+	}
+
+	newStart := lfmb.MagicBlockNumber - n
+	if newStart > startNum {
+		startNum = newStart
+	}
+
+	for i := startNum; i <= lfmb.MagicBlockNumber; i++ {
+		// load MB from local store
+		mbStr := strconv.FormatInt(i, 10)
+		mb, err := LoadMagicBlock(ctx, mbStr)
+		if err != nil {
+			logging.Logger.Panic("load_latest_mb", zap.Error(err), zap.Int64("mb number", i))
+		}
+
+		logging.Logger.Info("[mvc] load MB by magic bock number", zap.Int64("mb number", i))
+		for j := 0; j < retry; j++ {
+			bmb, err := mc.GetNotarizedBlockFromSharders(ctx, "", mb.StartingRound)
+			if err != nil {
+				logging.Logger.Error("load_lfb - could not fetch latest finalized magic block from sharders",
+					zap.Int64("mb_starting_round", lfmb.StartingRound), zap.Error(err))
+				time.Sleep(3 * time.Second)
+				continue
+			}
+			mc.updateMagicBlocks(bmb)
+			break
+		}
+	}
 }
 
 func (mc *Chain) deleteTxns(txns []datastore.Entity) error {
