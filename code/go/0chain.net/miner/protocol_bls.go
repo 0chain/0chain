@@ -103,6 +103,9 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		return common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
 	}
 
+	logging.Logger.Debug("[mvc] dkg summary",
+		zap.Int("secrets shares", len(summary.SecretShares)))
+
 	for k := range mb.Miners.CopyNodesMap() {
 		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
 			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
