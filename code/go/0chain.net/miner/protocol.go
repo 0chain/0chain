@@ -57,7 +57,7 @@ type ProtocolBlock interface {
 	VerifyBlock(ctx context.Context, b *block.Block) (*block.BlockVerificationTicket, error)
 
 	VerifyTickets(ctx context.Context, blockHash string, vts []*block.VerificationTicket, round int64) error
-	VerifyNotarization(ctx context.Context, hash datastore.Key, bvt []*block.VerificationTicket, round int64) error
+	VerifyNotarization(ctx context.Context, hash datastore.Key, bvt []*block.VerificationTicket, round, mbRound int64) error
 
 	AddVerificationTicket(b *block.Block, bvt *block.VerificationTicket) bool
 	UpdateBlockNotarization(b *block.Block) bool
