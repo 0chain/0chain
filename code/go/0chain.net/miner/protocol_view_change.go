@@ -482,6 +482,13 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 			if err := mc.viewChangeDKG.AddSecretShare(id, share.GetHexString(), false); err != nil {
 				return err
 			}
+
+			if err := StoreDKGKey(ctx, &block.DKGKey{
+				Key:           share.GetHexString(),
+				StartingRound: mc.viewChangeDKG.MagicBlockNumber}); err != nil {
+				logging.Logger.Error("can't store dkg key", zap.Error(err))
+				return err
+			}
 			foundSelf = true
 		}
 	}
@@ -686,6 +693,41 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 }
 
 // DKG save / load
+
+func StoreDKGKey(ctx context.Context, dkgKey *block.DKGKey) error {
+	var (
+		dkgKeyData     = block.NewDKGKeyData(dkgKey)
+		dkgKeyMetadata = dkgKeyData.GetEntityMetadata()
+		dctx           = ememorystore.WithEntityConnection(ctx, dkgKeyMetadata)
+	)
+
+	defer ememorystore.Close(dctx)
+
+	if err := dkgKeyData.Write(dctx); err != nil {
+		return err
+	}
+
+	con := ememorystore.GetEntityCon(dctx, dkgKeyMetadata)
+	return con.Commit()
+}
+
+func LoadDKGKey(ctx context.Context, mbNum int64) (dkgKey *block.DKGKey, err error) {
+	id := strconv.FormatInt(mbNum, 10)
+	dkgKeyData := datastore.GetEntity("dkgkeydata").(*block.DKGKeyData)
+	dkgKeyData.ID = id
+
+	var (
+		emd  = dkgKeyData.GetEntityMetadata()
+		dctx = ememorystore.WithEntityConnection(ctx, emd)
+	)
+	defer ememorystore.Close(dctx)
+
+	if err = dkgKeyData.Read(dctx, dkgKeyData.GetKey()); err != nil {
+		return
+	}
+
+	return dkgKeyData.DKGKey, nil
+}
 
 // StoreDKGSummary in DB.
 func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {

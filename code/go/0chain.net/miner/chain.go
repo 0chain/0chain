@@ -462,15 +462,16 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 	var (
-		mpks        = mc.viewChangeProcess.mpks.GetMpks()
-		vcdkg       = mc.viewChangeProcess.viewChangeDKG
+		// mpks = mc.viewChangeProcess.mpks.GetMpks()
+		vcd         = mc.viewChangeProcess.viewChangeDKG
 		selfNodeKey = node.Self.Underlying().GetKey()
+		vcdkg       = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
 	)
 
-	if len(mpks) == 0 {
-		// the miner may just start up, the viewChangeProcess is not set yet
-		return nil
-	}
+	// if len(mpks) == 0 {
+	// 	// the miner may just start up, the viewChangeProcess is not set yet
+	// 	return nil
+	// }
 
 	for key, share := range mb.GetShareOrSigns().GetShares() {
 		if key == selfNodeKey {
@@ -482,15 +483,15 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 			if err := share.SetHexString(myShare.Share); err != nil {
 				return err
 			}
-			lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
-			if err != nil {
-				return err
-			}
+			// lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
+			// if err != nil {
+			// 	return err
+			// }
 
-			var validShare = vcdkg.ValidateShare(lmpks, share)
-			if !validShare {
-				continue
-			}
+			// var validShare = vcdkg.ValidateShare(lmpks, share)
+			// if !validShare {
+			// 	continue
+			// }
 			err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
 				true)
 			if err != nil {
@@ -499,19 +500,41 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		}
 	}
 
-	var miners []string
-	for key := range mc.viewChangeProcess.mpks.GetMpks() {
-		if _, ok := mb.Mpks.Mpks[key]; !ok {
-			miners = append(miners, key)
-		}
-	}
-	vcdkg.DeleteFromSet(miners)
+	// var miners []string
+	// for key := range mc.viewChangeProcess.mpks.GetMpks() {
+	// 	if _, ok := mb.Mpks.Mpks[key]; !ok {
+	// 		miners = append(miners, key)
+	// 	}
+	// }
+	// vcdkg.DeleteFromSet(miners)
 	mpkMap, err := mb.Mpks.GetMpkMap()
 	if err != nil {
 		return err
 	}
 	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
 		return err
+	}
+
+	// get self dkg share
+	pid := bls.ComputeIDdkg(selfNodeKey)
+	share, ok := vcd.GetSecretShare(selfNodeKey)
+	if !ok {
+		// load from store
+		dkgKey, err := LoadDKGKey(ctx, mb.MagicBlockNumber)
+		if err != nil {
+			logging.Logger.Debug("[mvc] view_change failed to load dkg key",
+				zap.Error(err),
+				zap.Int64("mb number", mb.MagicBlockNumber))
+		}
+		if err := vcdkg.AddSecretShare(pid, dkgKey.Key, true); err != nil {
+			logging.Logger.Error("[mvc] view_change, failed to add self dkg share from store", zap.Error(err))
+			return err
+		}
+	} else {
+		if err := vcdkg.AddSecretShare(pid, share.GetHexString(), true); err != nil {
+			logging.Logger.Error("[mvc] view_change failed to add self dkg share", zap.Error(err))
+			return err
+		}
 	}
 
 	vcdkg.AggregateSecretKeyShares()

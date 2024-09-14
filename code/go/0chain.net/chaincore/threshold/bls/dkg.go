@@ -259,6 +259,13 @@ func (dkg *DKG) HasSecretShare(key string) bool {
 	return ok
 }
 
+func (dkg *DKG) GetSecretShare(key string) (Key, bool) {
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
+	share, ok := dkg.receivedSecretShares[ComputeIDdkg(key)]
+	return share, ok
+}
+
 // Sign - sign using the group secret key share
 func (dkg *DKG) Sign(msg string) *Sign {
 	logging.Logger.Debug("dkg sign", zap.String("key", dkg.Si.GetHexString()))

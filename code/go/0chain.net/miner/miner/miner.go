@@ -503,6 +503,9 @@ func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost
 
 	block.SetupMagicBlockData(ememoryStorage)
 	block.SetupMagicBlockDataDB(workdir)
+
+	block.SetupDKGKeyEntity(ememoryStorage)
+	block.SetupDKGKeyDB(workdir)
 }
 
 func initHandlers(c chain.Chainer) {
