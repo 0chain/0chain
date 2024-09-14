@@ -10,8 +10,8 @@ import (
 )
 
 type DKGKey struct {
-	StartingRound int64
-	Key           string
+	MagicBlockNum int64
+	KeyShare      string
 }
 
 type DKGKeyData struct {
@@ -62,7 +62,7 @@ func (dkgKey *DKGKeyData) Delete(ctx context.Context) error {
 
 func NewDKGKeyData(dkgKey *DKGKey) *DKGKeyData {
 	dkgKeyData := datastore.GetEntityMetadata("dkgkeydata").Instance().(*DKGKeyData)
-	dkgKeyData.ID = strconv.FormatInt(dkgKey.StartingRound, 10)
+	dkgKeyData.ID = strconv.FormatInt(dkgKey.MagicBlockNum, 10)
 	dkgKeyData.DKGKey = dkgKey
 	return dkgKeyData
 }

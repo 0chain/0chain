@@ -526,7 +526,10 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 				zap.Error(err),
 				zap.Int64("mb number", mb.MagicBlockNumber))
 		}
-		if err := vcdkg.AddSecretShare(pid, dkgKey.Key, true); err != nil {
+		logging.Logger.Debug("[mvc] view_change, load dkg key from store",
+			zap.String("dkg key", dkgKey.KeyShare),
+			zap.Int64("mb number", mb.MagicBlockNumber))
+		if err := vcdkg.AddSecretShare(pid, dkgKey.KeyShare, true); err != nil {
 			logging.Logger.Error("[mvc] view_change, failed to add self dkg share from store", zap.Error(err))
 			return err
 		}

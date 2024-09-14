@@ -484,11 +484,14 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 			}
 
 			if err := StoreDKGKey(ctx, &block.DKGKey{
-				Key:           share.GetHexString(),
-				StartingRound: mc.viewChangeDKG.MagicBlockNumber}); err != nil {
+				KeyShare:      share.GetHexString(),
+				MagicBlockNum: mc.viewChangeDKG.MagicBlockNumber}); err != nil {
 				logging.Logger.Error("can't store dkg key", zap.Error(err))
 				return err
 			}
+			logging.Logger.Debug("add dkg key to store",
+				zap.String("key", share.GetHexString()),
+				zap.Int64("mb number", mc.viewChangeDKG.MagicBlockNumber))
 			foundSelf = true
 		}
 	}
