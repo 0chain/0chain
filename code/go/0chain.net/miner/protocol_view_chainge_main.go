@@ -92,6 +92,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	}
 
 	mc.setSecretShares(shareOrSignSuccess)
+	logging.Logger.Debug("[mvc] sed dkg share", zap.Any("shareOrSignSuccess", shareOrSignSuccess))
 	return
 }
 
