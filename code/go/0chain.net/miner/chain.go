@@ -453,9 +453,9 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 
 	if mc.isSyncingBlocks() {
 		// Just store the magic block and return
-		if err = StoreMagicBlock(ctx, mb); err != nil {
-			logging.Logger.Panic("[mvc] failed to store magic block", zap.Error(err))
-		}
+		// if err = StoreMagicBlock(ctx, mb); err != nil {
+		// 	logging.Logger.Panic("[mvc] failed to store magic block", zap.Error(err))
+		// }
 		return nil
 	}
 
@@ -466,6 +466,11 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		vcdkg       = mc.viewChangeProcess.viewChangeDKG
 		selfNodeKey = node.Self.Underlying().GetKey()
 	)
+
+	if len(mpks) == 0 {
+		// the miner may just start up, the viewChangeProcess is not set yet
+		return nil
+	}
 
 	for key, share := range mb.GetShareOrSigns().GetShares() {
 		if key == selfNodeKey {
