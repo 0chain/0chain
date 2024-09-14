@@ -145,6 +145,10 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		}
 	}
 
+	logging.Logger.Debug("[mvc] create sos",
+		zap.Any("sos", sos),
+		zap.Any("mpks", mpks.Mpks))
+
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners DKG", zap.Error(err))
