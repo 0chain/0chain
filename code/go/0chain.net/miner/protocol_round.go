@@ -1687,10 +1687,10 @@ func (mc *Chain) setupLoadedMagicBlock(mb *block.MagicBlock) (err error) {
 // DKGs. But in a normal case miner can have or haven't the MBs and the DKGs.
 func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 
-	// latest MB
+	// current MB
 	var (
-		latest *block.MagicBlock
-		err    error
+		current *block.MagicBlock
+		err     error
 		// lfb    = mc.GetLatestFinalizedBlock()
 	)
 
@@ -1705,28 +1705,48 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		zap.String("block", lfbr.Hash),
 		zap.Int64("mb_round", lfbr.MagicBlockNumber))
 
-	latest, err = LoadLatestMB(ctx, lfbr.Round, lfbr.MagicBlockNumber)
+	current, err = LoadLatestMB(ctx, lfbr.Round, lfbr.MagicBlockNumber)
 	if err != nil {
 		logging.Logger.Error("load_mbs_and_dkg -- loading the latest MB",
 			zap.Error(err))
 		return // can't continue
 	}
 
-	logging.Logger.Debug("[mvc] load latest MB",
-		zap.Int64("mb number", latest.MagicBlockNumber),
-		zap.Int64("mb sr", latest.StartingRound),
-		zap.String("mb hash", latest.Hash))
+	logging.Logger.Debug("[mvc] load current MB",
+		zap.Int64("mb number", current.MagicBlockNumber),
+		zap.Int64("mb sr", current.StartingRound),
+		zap.String("mb hash", current.Hash))
 
-	if err = mc.setupLoadedMagicBlock(latest); err != nil {
+	if err = mc.setupLoadedMagicBlock(current); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- updating previous MB",
 			zap.Error(err))
 		return // can't continue
 	}
-	mc.SetMagicBlock(latest)
-	if err = mc.SetDKGSFromStore(ctx, latest); err != nil {
+	mc.SetMagicBlock(current)
+	if err = mc.SetDKGSFromStore(ctx, current); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- loading previous DKG",
 			zap.Error(err))
 	}
+
+	// check if there are new MB which is possible, load them into memory store if any
+	newMBNum := lfbr.MagicBlockNumber + 1
+	newMB, err := LoadMagicBlock(ctx, strconv.FormatInt(newMBNum, 10))
+	if err != nil {
+		logging.Logger.Debug("load_mbs_and_dkg -- see no newer MB")
+		return
+	}
+
+	if err := mc.SetDKGSFromStore(ctx, newMB); err != nil {
+		logging.Logger.Info("load_mbs_and_dkg -- see no newer DKG")
+		return
+	}
+
+	logging.Logger.Debug("load_mbs_and_dkg -- load newer MB and DKG",
+		zap.Int64("mb number", newMB.MagicBlockNumber),
+		zap.Int64("mb sr", newMB.StartingRound),
+		zap.String("mb hash", newMB.Hash))
+
+	mc.SetMagicBlock(newMB)
 
 	// everything is OK
 }
