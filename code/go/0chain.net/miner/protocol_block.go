@@ -665,10 +665,6 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 	}
 
 	go mc.SendFinalizedBlock(context.Background(), b)
-	fr := mc.GetRound(b.Round)
-	if fr != nil {
-		fr.Finalize(b)
-	}
 	mc.DeleteRoundsBelow(b.Round)
 
 	var txns []datastore.Entity
@@ -679,24 +675,6 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 	transaction.RemoveFromPool(cleanPoolCtx, txns)
-
-	pn, err := mc.GetPhaseOfBlock(b)
-	if err != nil {
-		logging.Logger.Error("update finalized block - get phase of block failed", zap.Error(err))
-		return err
-	}
-
-	// perform view change (or not perform)
-	if err := mc.ViewChange(ctx, b); err != nil {
-		logging.Logger.Error("[mvc] view change", zap.Int64("round", b.Round), zap.Error(err))
-		return err
-	}
-
-	logging.Logger.Debug("[mvc] update finalized block - send phase node",
-		zap.Int64("round", b.Round),
-		zap.Int64("start_round", pn.StartRound),
-		zap.String("phase", pn.Phase.String()))
-	go mc.SendPhaseNode(context.Background(), chain.PhaseEvent{Phase: pn})
 	return nil
 }
 
