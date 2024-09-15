@@ -443,17 +443,12 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	// }
 
 	if err := SetDKG(ctx, mb); err != nil {
-		logging.Logger.Debug("[mvc] view change set dkg failed",
+		logging.Logger.Error("[mvc] view change set dkg failed",
 			zap.Int64("mb number", mb.MagicBlockNumber),
 			zap.Int64("mb sr", mb.StartingRound),
 			zap.Error(err))
+		return err
 	}
-
-	// // mark the DKG summary as finalized
-	// dkgSum.IsFinalized = true
-	// if err := StoreDKGSummary(ctx, dkgSum); err != nil {
-	// 	return common.NewErrorf("view_change", "finalize DKG summary: %v", err)
-	// }
 
 	return
 }
