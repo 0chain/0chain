@@ -337,70 +337,70 @@ func (mc *Chain) Wait(ctx context.Context,
 	// 	return nil, nil
 	// }
 
-	// var (
-	// 	mpks        = mc.viewChangeProcess.mpks.GetMpks()
-	// 	vcdkg       = mc.viewChangeProcess.viewChangeDKG
-	// 	selfNodeKey = node.Self.Underlying().GetKey()
-	// )
+	var (
+		mpks        = mc.viewChangeProcess.mpks.GetMpks()
+		vcdkg       = mc.viewChangeProcess.viewChangeDKG
+		selfNodeKey = node.Self.Underlying().GetKey()
+	)
 
-	// for key, share := range magicBlock.GetShareOrSigns().GetShares() {
-	// 	if key == selfNodeKey {
-	// 		continue // skip self
-	// 	}
-	// 	var myShare, ok = share.ShareOrSigns[selfNodeKey]
-	// 	if ok && myShare.Share != "" {
-	// 		var share bls.Key
-	// 		if err := share.SetHexString(myShare.Share); err != nil {
-	// 			return nil, err
-	// 		}
-	// 		lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
+	for key, share := range magicBlock.GetShareOrSigns().GetShares() {
+		if key == selfNodeKey {
+			continue // skip self
+		}
+		var myShare, ok = share.ShareOrSigns[selfNodeKey]
+		if ok && myShare.Share != "" {
+			var share bls.Key
+			if err := share.SetHexString(myShare.Share); err != nil {
+				return nil, err
+			}
+			lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
+			if err != nil {
+				return nil, err
+			}
 
-	// 		var validShare = vcdkg.ValidateShare(lmpks, share)
-	// 		if !validShare {
-	// 			continue
-	// 		}
-	// 		err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
-	// 			true)
-	// 		if err != nil {
-	// 			return nil, common.NewErrorf("vc_wait",
-	// 				"adding secret share: %v", err)
-	// 		}
-	// 	}
-	// }
+			var validShare = vcdkg.ValidateShare(lmpks, share)
+			if !validShare {
+				continue
+			}
+			err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
+				true)
+			if err != nil {
+				return nil, common.NewErrorf("vc_wait",
+					"adding secret share: %v", err)
+			}
+		}
+	}
 
-	// var miners []string
-	// for key := range mc.viewChangeProcess.mpks.GetMpks() {
-	// 	if _, ok := magicBlock.Mpks.Mpks[key]; !ok {
-	// 		miners = append(miners, key)
-	// 	}
-	// }
-	// vcdkg.DeleteFromSet(miners)
-	// mpkMap, err := magicBlock.Mpks.GetMpkMap()
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
-	// 	return nil, err
-	// }
+	var miners []string
+	for key := range mc.viewChangeProcess.mpks.GetMpks() {
+		if _, ok := magicBlock.Mpks.Mpks[key]; !ok {
+			miners = append(miners, key)
+		}
+	}
+	vcdkg.DeleteFromSet(miners)
+	mpkMap, err := magicBlock.Mpks.GetMpkMap()
+	if err != nil {
+		return nil, err
+	}
+	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
+		return nil, err
+	}
 
-	// vcdkg.AggregateSecretKeyShares()
-	// vcdkg.StartingRound = magicBlock.StartingRound
-	// vcdkg.MagicBlockNumber = magicBlock.MagicBlockNumber
-	// // set T and N from the magic block
-	// vcdkg.T = magicBlock.T
-	// vcdkg.N = magicBlock.N
+	vcdkg.AggregateSecretKeyShares()
+	vcdkg.StartingRound = magicBlock.StartingRound
+	vcdkg.MagicBlockNumber = magicBlock.MagicBlockNumber
+	// set T and N from the magic block
+	vcdkg.T = magicBlock.T
+	vcdkg.N = magicBlock.N
 
-	// // save DKG and MB
-	// if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
-	// 	return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
-	// }
+	// save DKG and MB
+	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
+		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
+	}
 
-	// if err = StoreMagicBlock(ctx, magicBlock); err != nil {
-	// 	return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
-	// }
+	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
+		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
+	}
 
 	// if err := SetDKG(ctx, mb); err != nil {
 	// 	logging.Logger.Debug("[mvc] dkg process set dkg failed",

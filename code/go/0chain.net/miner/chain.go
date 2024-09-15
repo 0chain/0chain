@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
-	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"go.uber.org/zap"
 
@@ -277,12 +276,6 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
 			// try fetch from miners
 			time.Sleep(5 * time.Second)
-			// b, err = mc.GetNotarizedBlockFromMiners(ctx, lfbr.Hash, lfbr.Round, true)
-			// if err != nil {
-			// 	logging.Logger.Error("load_lfb - could not fetch block from miners",
-			// 		zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
-			// 	return fmt.Errorf("load_lfb - could not fetch block from miners, round: %d, err: %v", lfbr.Round, err)
-			// }
 			continue
 		}
 		break
@@ -302,20 +295,6 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 
 	mc.SetLatestFinalizedBlock(ctx, b)
 
-	// if lfmb.StartingRound > 0 {
-	// 	for i := 0; i < retry; i++ {
-	// 		mb, err := mc.GetNotarizedBlockFromSharders(ctx, "", lfmb.StartingRound)
-	// 		if err != nil {
-	// 			logging.Logger.Error("load_lfb - could not fetch latest finalized magic block from sharders",
-	// 				zap.Int64("mb_starting_round", lfmb.StartingRound), zap.Error(err))
-	// 			time.Sleep(5 * time.Second)
-	// 			continue
-	// 		}
-	// 		mc.updateMagicBlocks(mb)
-	// 		break
-	// 	}
-	// }
-
 	logging.Logger.Info("load_lfb setup LFB from store",
 		zap.String("block", b.Hash),
 		zap.Int64("round", b.Round),
@@ -327,7 +306,7 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 func (mc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context) {
 	lfmb := mc.GetLatestMagicBlock()
 	// load the latest N magic blocks
-	n := int64(5)
+	n := int64(5) // TODO: read from config
 	retry := 3
 
 	if lfmb.MagicBlockNumber <= 1 {
@@ -452,105 +431,16 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 	}
 
 	if mc.isSyncingBlocks() {
-		// Just store the magic block and return
-		// if err = StoreMagicBlock(ctx, mb); err != nil {
-		// 	logging.Logger.Panic("[mvc] failed to store magic block", zap.Error(err))
-		// }
 		return nil
 	}
 
-	mc.viewChangeProcess.Lock()
-	defer mc.viewChangeProcess.Unlock()
-	var (
-		// mpks = mc.viewChangeProcess.mpks.GetMpks()
-		vcd         = mc.viewChangeProcess.viewChangeDKG
-		selfNodeKey = node.Self.Underlying().GetKey()
-		vcdkg       = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
-	)
-
-	// if len(mpks) == 0 {
-	// 	// the miner may just start up, the viewChangeProcess is not set yet
-	// 	return nil
+	// dkgSum, err := LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+	// if err != nil {
+	// 	logging.Logger.Error("[mvc] view change failed to load dkg summary",
+	// 		zap.Error(err),
+	// 		zap.Int64("mb number", mb.MagicBlockNumber))
+	// 	return err
 	// }
-
-	for key, share := range mb.GetShareOrSigns().GetShares() {
-		if key == selfNodeKey {
-			continue // skip self
-		}
-		var myShare, ok = share.ShareOrSigns[selfNodeKey]
-		if ok && myShare.Share != "" {
-			var share bls.Key
-			if err := share.SetHexString(myShare.Share); err != nil {
-				return err
-			}
-			// lmpks, err := bls.ConvertStringToMpk(mpks[key].Mpk)
-			// if err != nil {
-			// 	return err
-			// }
-
-			// var validShare = vcdkg.ValidateShare(lmpks, share)
-			// if !validShare {
-			// 	continue
-			// }
-			err = vcdkg.AddSecretShare(bls.ComputeIDdkg(key), myShare.Share,
-				true)
-			if err != nil {
-				return common.NewErrorf("view_change", "adding secret share: %v", err)
-			}
-		}
-	}
-
-	// var miners []string
-	// for key := range mc.viewChangeProcess.mpks.GetMpks() {
-	// 	if _, ok := mb.Mpks.Mpks[key]; !ok {
-	// 		miners = append(miners, key)
-	// 	}
-	// }
-	// vcdkg.DeleteFromSet(miners)
-	mpkMap, err := mb.Mpks.GetMpkMap()
-	if err != nil {
-		return err
-	}
-	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
-		return err
-	}
-
-	// get self dkg share
-	pid := bls.ComputeIDdkg(selfNodeKey)
-	share, ok := vcd.GetSecretShare(selfNodeKey)
-	if !ok {
-		// load from store
-		dkgKey, err := LoadDKGKey(ctx, mb.MagicBlockNumber)
-		if err != nil {
-			logging.Logger.Debug("[mvc] view_change failed to load dkg key",
-				zap.Error(err),
-				zap.Int64("mb number", mb.MagicBlockNumber))
-		}
-		logging.Logger.Debug("[mvc] view_change, load dkg key from store",
-			zap.String("dkg key", dkgKey.KeyShare),
-			zap.Int64("mb number", mb.MagicBlockNumber))
-		if err := vcdkg.AddSecretShare(pid, dkgKey.KeyShare, true); err != nil {
-			logging.Logger.Error("[mvc] view_change, failed to add self dkg share from store", zap.Error(err))
-			return err
-		}
-	} else {
-		if err := vcdkg.AddSecretShare(pid, share.GetHexString(), true); err != nil {
-			logging.Logger.Error("[mvc] view_change failed to add self dkg share", zap.Error(err))
-			return err
-		}
-	}
-
-	vcdkg.AggregateSecretKeyShares()
-	vcdkg.StartingRound = mb.StartingRound
-	vcdkg.MagicBlockNumber = mb.MagicBlockNumber
-	// set T and N from the magic block
-	vcdkg.T = mb.T
-	vcdkg.N = mb.N
-
-	// save DKG and MB
-	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
-		return common.NewErrorf("view_change", "saving DKG summary: %v", err)
-	}
 
 	if err := SetDKG(ctx, mb); err != nil {
 		logging.Logger.Debug("[mvc] view change set dkg failed",
@@ -559,74 +449,11 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 			zap.Error(err))
 	}
 
-	// logging.Logger.Debug("[mvc] set next view change round")
-	// if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
-	// 	return common.NewErrorf("view_change", "getting nvc: %v", err)
+	// // mark the DKG summary as finalized
+	// dkgSum.IsFinalized = true
+	// if err := StoreDKGSummary(ctx, dkgSum); err != nil {
+	// 	return common.NewErrorf("view_change", "finalize DKG summary: %v", err)
 	// }
-
-	// // set / update the next view change of protocol view change (RAM)
-	// //
-	// // note: this approach works where a miners is active and finalizes blocks
-	// //       but for inactive miners we have to set next view change based on
-	// //       blocks fetched from sharders
-	// mc.SetNextViewChange(nvc)
-
-	// // next view change is expected, but not given;
-	// // it means the MB rejected by Miner SC
-	// if b.Round == nvc && mb == nil {
-	// 	return // no MB no VC
-	// }
-
-	// // just skip the block if it hasn't a MB
-	// if mb == nil {
-	// 	return // no MB, no VC
-	// }
-
-	// // view change
-
-	// if err = mc.UpdateMagicBlock(mb); err != nil {
-	// 	return common.NewErrorf("view_change", "updating MB: %v", err)
-	// }
-
-	// mc.SetLatestFinalizedMagicBlock(b)
-
-	// go mc.PruneRoundStorage(mc.getPruneCountRoundStorage(),
-	// 	mc.GetRoundDkg(), mc.MagicBlockStorage)
-
-	// // set DKG if this node is miner of new MB (it have to have the DKG)
-	// var selfNodeKey = node.Self.Underlying().GetKey()
-
-	// if !mb.Miners.HasNode(selfNodeKey) {
-	// 	return // ok, all done
-	// }
-
-	// // this must be ok, if not -- return error
-	// if err = mc.SetDKGSFromStore(ctx, mb); err != nil {
-	// 	logging.Logger.Error("view_change - set DKG failed",
-	// 		zap.Int64("mb_starting_round", mb.StartingRound),
-	// 		zap.Error(err))
-	// 	return
-	// }
-
-	// new miners has no previous round, and LFB, this block becomes
-	// LFB and new miners have to get it from miners or sharders to
-	// join BC; now we have to kick them to don't wait for while and
-	// get the block from sharders and join BC; anyway the new miners
-	// will pool LFB (501) from sharders and join; but the kick used
-	// to skip a waiting
-
-	// to mine 503 round (new round with new nodes and new MB)
-	// the new miners need:
-	//    - 501 block with MB, corresponding DKG saved locally
-	//    - 502 block and round (for previous round random seed)
-
-	// the flow:
-	//
-	//  - 501 - finalized
-	//  - 502 - finalize round (finalize 501 block)
-	//  - 503 - verify round blocks
-	//  - 504 - generate round (new MB/DKG can be used, but slower, use old)
-	//  - 505 - generate block (use new MB/DKG)
 
 	return
 }

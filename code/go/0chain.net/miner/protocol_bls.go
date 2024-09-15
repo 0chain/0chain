@@ -37,25 +37,25 @@ func init() {
 // SetDKG - starts the DKG process
 func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	mc := GetMinerChain()
-	if mc.ChainConfig.IsDkgEnabled() {
-		err := mc.SetDKGSFromStore(ctx, mb)
-		if err != nil {
-			return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
-				" may be damaged or permissions may not be available?",
-				err.Error())
-		} else {
-			dkg := mc.GetDKGByStartingRound(mb.StartingRound)
-			logging.Logger.Debug("[mvc] dkg process set dkg success",
-				zap.Int("dkg T", dkg.T),
-				zap.Int("dkg N", dkg.N),
-				zap.Int("gmpk len", len(dkg.GetMPKs())),
-				zap.Int64("mb number", mb.MagicBlockNumber),
-				zap.Int64("mb sr", mb.StartingRound),
-			)
-		}
-	} else {
+	if !mc.ChainConfig.IsDkgEnabled() {
 		Logger.Info("DKG is not enabled. So, starting protocol")
+		return nil
 	}
+
+	if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
+		return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
+			" may be damaged or permissions may not be available?",
+			err.Error())
+	}
+
+	dkg := mc.GetDKGByStartingRound(mb.StartingRound)
+	logging.Logger.Debug("[mvc] dkg process set dkg success",
+		zap.Int("dkg T", dkg.T),
+		zap.Int("dkg N", dkg.N),
+		zap.Int("gmpk len", len(dkg.GetMPKs())),
+		zap.Int64("mb number", mb.MagicBlockNumber),
+		zap.Int64("mb sr", mb.StartingRound),
+	)
 	return nil
 }
 
