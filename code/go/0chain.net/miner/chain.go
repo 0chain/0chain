@@ -449,11 +449,13 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 			zap.Int64("mb number", mb.MagicBlockNumber))
 		return err
 	}
+
 	dkgSum.IsFinalized = true
 	if err := StoreDKGSummary(ctx, dkgSum); err != nil {
 		logging.Logger.Error("[mvc] view change failed to update dkg summary",
 			zap.Error(err),
 			zap.Int64("mb number", mb.MagicBlockNumber))
+		return err
 	}
 
 	return
