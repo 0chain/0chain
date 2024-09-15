@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -88,6 +89,10 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 
 	if summary, err = LoadDKGSummary(ctx, id); err != nil {
 		return
+	}
+
+	if mb.StartingRound > 0 && !summary.IsFinalized {
+		return errors.New("DKG summary is not finalized")
 	}
 
 	if summary.SecretShares == nil {

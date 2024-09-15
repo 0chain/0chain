@@ -434,20 +434,26 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return nil
 	}
 
-	// dkgSum, err := LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
-	// if err != nil {
-	// 	logging.Logger.Error("[mvc] view change failed to load dkg summary",
-	// 		zap.Error(err),
-	// 		zap.Int64("mb number", mb.MagicBlockNumber))
-	// 	return err
-	// }
-
 	if err := SetDKG(ctx, mb); err != nil {
 		logging.Logger.Error("[mvc] view change set dkg failed",
 			zap.Int64("mb number", mb.MagicBlockNumber),
 			zap.Int64("mb sr", mb.StartingRound),
 			zap.Error(err))
 		return err
+	}
+
+	dkgSum, err := LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+	if err != nil {
+		logging.Logger.Error("[mvc] view change failed to load dkg summary",
+			zap.Error(err),
+			zap.Int64("mb number", mb.MagicBlockNumber))
+		return err
+	}
+	dkgSum.IsFinalized = true
+	if err := StoreDKGSummary(ctx, dkgSum); err != nil {
+		logging.Logger.Error("[mvc] view change failed to update dkg summary",
+			zap.Error(err),
+			zap.Int64("mb number", mb.MagicBlockNumber))
 	}
 
 	return

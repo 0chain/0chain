@@ -49,6 +49,7 @@ type DKGSummary struct {
 	datastore.IDField
 	StartingRound int64             `json:"starting_round"`
 	SecretShares  map[string]string `json:"secret_shares"`
+	IsFinalized   bool              `json:"is_finalized"`
 }
 
 // LatestMagicBlockID keeps ID of latest MB accepted and stored.
