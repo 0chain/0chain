@@ -214,9 +214,27 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	err = dmn.reduceNodes(true, gn, balances)
 	if err == nil && waited < dmn.K {
 		err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d", waited, dmn.K)
+	} else {
+		mb, err := getMagicBlock(balances)
+		if err != nil {
+			logging.Logger.Error("adjust_view_change, failed to get magic block",
+				zap.Error(err), zap.Int64("round", balances.GetBlock().Round))
+			return common.NewErrorf("adjust_view_change failed to get magic block", "%v", err)
+		}
+
+		for _, n := range mb.Miners.Nodes {
+			if !dmn.Waited[n.GetKey()] {
+				logging.Logger.Error("adjust_view_change, miner not waited",
+					zap.String("miner", n.GetKey()))
+				// return
+				err = common.NewErrorf("adjust_view_change miner not waited", "%v", err)
+				break
+			}
+		}
 	}
+
 	if err != nil {
-		logging.Logger.Error("adjust_view_change", zap.Error(err))
+		logging.Logger.Warn("adjust_view_change no new magic block", zap.Error(err))
 		// don't do this view change, save the gn later
 		// reset the ViewChange to previous one (for miners)
 		var prev = gn.prevMagicBlock(balances)
