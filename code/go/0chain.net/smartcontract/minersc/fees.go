@@ -186,10 +186,8 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 }
 
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
-	balances cstate.StateContextI) (err error) {
-
+	pn *PhaseNode, balances cstate.StateContextI) (err error) {
 	var b = balances.GetBlock()
-
 	if b.Round != gn.ViewChange {
 		// logging.Logger.Debug("[mvc] adjust view change: not a view change round")
 		return // don't do anything, not a view change
@@ -211,44 +209,42 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		waited++
 	}
 
-	err = dmn.reduceNodes(true, gn, balances)
-	if err == nil && waited < dmn.K {
-		err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d", waited, dmn.K)
-	} else {
-		mb, err := getMagicBlock(balances)
-		if err != nil {
-			logging.Logger.Error("adjust_view_change, failed to get magic block",
-				zap.Error(err), zap.Int64("round", balances.GetBlock().Round))
-			return common.NewErrorf("adjust_view_change failed to get magic block", "%v", err)
-		}
+	mb, err := getMagicBlock(balances)
+	if err != nil {
+		logging.Logger.Error("adjust_view_change, failed to get magic block",
+			zap.Error(err), zap.Int64("round", balances.GetBlock().Round))
+		return common.NewErrorf("adjust_view_change failed to get magic block", "%v", err)
+	}
 
-		for _, n := range mb.Miners.Nodes {
-			if !dmn.Waited[n.GetKey()] {
-				logging.Logger.Error("adjust_view_change, miner not waited",
-					zap.String("miner", n.GetKey()))
-				// return
-				err = common.NewErrorf("adjust_view_change miner not waited", "%v", err)
-				break
-			}
+	for _, n := range mb.Miners.Nodes {
+		if !dmn.Waited[n.GetKey()] {
+			logging.Logger.Error("adjust_view_change, miner not waited",
+				zap.String("miner", n.GetKey()))
+			// return
+			err = common.NewErrorf("adjust_view_change miner not waited", "%v", err)
+			break
 		}
 	}
 
+	// restart DKG if any of the miner in new MB is not waited
 	if err != nil {
-		logging.Logger.Warn("adjust_view_change no new magic block", zap.Error(err))
-		// don't do this view change, save the gn later
-		// reset the ViewChange to previous one (for miners)
 		var prev = gn.prevMagicBlock(balances)
 		gn.ViewChange = prev.StartingRound
-		// reset this error, since it's not fatal, we just don't do
-		// this view change, because >= T miners didn't send 'wait' transaction
-		err = nil
-		// don't return here -> reset DKG miners list first
+
+		// reset DKG if any of the
+		logging.Logger.Warn("adjust_view_change no new magic block, restart DKG", zap.Error(err))
+		if err := msc.RestartDKG(pn, balances); err != nil {
+			logging.Logger.Error("adjust_view_change restart DKG failed", zap.Error(err))
+			return err
+		}
+		return nil
 	}
 
-	// don't clear the nodes don't waited from MB, since MB
-	// already saved by miners; if T miners doesn't save their
-	// DKG summary and MB data, then we just don't do the
-	// view change
+	// set magic block when all good
+	if err := msc.SetMagicBlock(gn, balances); err != nil {
+		return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v",
+			b.Round, gn.ViewChange, err)
+	}
 
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
@@ -289,16 +285,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
 	}
 
-	if err = msc.adjustViewChange(gn, balances); err != nil {
+	if err = msc.adjustViewChange(gn, pn, balances); err != nil {
 		return // adjusting view change error
-	}
-
-	if b.Round == gn.ViewChange {
-		if err := msc.SetMagicBlock(gn, balances); err != nil {
-			return "", common.NewErrorf("pay_fees",
-				"can't set magic b round=%d viewChange=%d, %v",
-				b.Round, gn.ViewChange, err)
-		}
 	}
 
 	if t.ClientID != b.MinerID {
