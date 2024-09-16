@@ -329,13 +329,13 @@ func (mc *Chain) Wait(ctx context.Context,
 		return // node leaves BC, don't do anything here
 	}
 
-	// if mc.isSyncingBlocks() {
-	// 	// Just store the magic block and return
-	// 	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
-	// 		logging.Logger.Panic("failed to store magic block", zap.Error(err))
-	// 	}
-	// 	return nil, nil
-	// }
+	if mc.isSyncingBlocks() {
+		// Just store the magic block and return
+		if err = StoreMagicBlock(ctx, magicBlock); err != nil {
+			logging.Logger.Panic("failed to store magic block", zap.Error(err))
+		}
+		return nil, nil
+	}
 
 	var (
 		mpks        = mc.viewChangeProcess.mpks.GetMpks()
