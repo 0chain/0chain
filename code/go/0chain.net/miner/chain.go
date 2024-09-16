@@ -439,7 +439,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		logging.Logger.Error("[mvc] view change failed to load dkg summary",
 			zap.Error(err),
 			zap.Int64("mb number", mb.MagicBlockNumber))
-		return err
+		return nil
 	}
 
 	dkgSum.IsFinalized = true
