@@ -2486,26 +2486,32 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			tp     = int64(10)
 			client = newClient(200000*x10, balances)
 
-			// Allocation
-			beforeAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
-			allocID               = beforeAlloc.ID
+			// Setup Allocation
+			beforeUpdateStorageAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
+			allocID                            = beforeUpdateStorageAlloc.ID
 		)
 
-		require.Equal(t, 0, int(beforeAlloc.WritePool), "Write pool should be zero")
+		require.Equal(t, 0, int(beforeUpdateStorageAlloc.WritePool), "Write pool should be zero")
 
 		var totalLockAmount currency.Coin
-		var writePriceBefore currency.Coin
-		var sizePerBlobber = currency.Coin(sizeInGB(beforeAlloc.Size / int64(beforeAlloc.DataShards)))
+		var totalWritePriceBeforeAlloc currency.Coin
+		var sizePerBlobber = currency.Coin(sizeInGB(beforeUpdateStorageAlloc.Size / int64(beforeUpdateStorageAlloc.DataShards)))
 
-		// Considering first 5 blobbers increased price to 2x and next 2 blobbers decreased price to 0.5x
+		// Define the number of blobbers that will increase or decrease their price
 		increasePriceCount := 5 // Number of blobbers to increase the price for
 		decreasePriceCount := 2 // Number of blobbers to decrease the price for
 
+		// Iterate over each blobber and adjust the price
 		for i, blobber := range blobbers {
 			blobberNode, err := ssc.getBlobber(blobber.id, balances)
 			require.NoError(t, err)
-			writePriceBefore += blobberNode.mustBase().Terms.WritePrice
 
+			// Add current blobber's write price to total
+			//todo:
+			// formula := writePrice * sizePerBlobber
+			totalWritePriceBeforeAlloc += (blobberNode.mustBase().Terms.WritePrice * sizePerBlobber)
+
+			// Adjust price: first `increasePriceCount` blobbers increase price by 2x, next `decreasePriceCount` blobbers decrease price by 0.5x
 			if i < increasePriceCount {
 				blobberNode.mustUpdateBase(func(b *storageNodeBase) error {
 					b.Terms.WritePrice = b.Terms.WritePrice * 2
@@ -2517,59 +2523,69 @@ func TestUpdateAllocationRequest(t *testing.T) {
 					return nil
 				})
 			}
+
 			_, err = updateBlobber(t, blobberNode, 0, tp, ssc, balances)
 			require.NoError(t, err)
+
+			// Add the new blobber price to the total lock amount
 			totalLockAmount += (sizePerBlobber * blobberNode.mustBase().Terms.WritePrice)
 		}
 
-		// upgrade
+		// Prepare for allocation upgrade
 		var uar updateAllocationRequest
 		uar.ID = allocID
 		uar.Size = 10 * GB
+		// 1296000 seconds = 360 hours
 		tp += int64(360 * time.Hour / 1e9)
 
-		var sizeMultiplier = float64(uar.Size+beforeAlloc.Size) / float64(beforeAlloc.Size)
-		var totalExpectedLockAmount = currency.Coin(float64(totalLockAmount) * sizeMultiplier)
-		var totalUpgradeLockAmount = currency.Coin((float64(totalLockAmount) * sizeMultiplier) - float64(writePriceBefore))
-		var totalExpectedSize = uar.Size + beforeAlloc.Size
-
+		// First attempt to upgrade allocation without providing enough lock amount (should fail)
 		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
 		require.Error(t, err)
+
+		// Calculate the total expected lock amount and upgrade lock amount based on size multiplier
+		sizeMultiplier := float64(uar.Size+beforeUpdateStorageAlloc.Size) / float64(beforeUpdateStorageAlloc.Size)
+		totalExpectedLockAmount := currency.Coin(float64(totalLockAmount) * sizeMultiplier)
+		totalUpgradeLockAmount := currency.Coin(float64(totalExpectedLockAmount) - float64(totalWritePriceBeforeAlloc))
+		totalExpectedSize := uar.Size + beforeUpdateStorageAlloc.Size
+
+		// Now provide the correct lock amount for the upgrade (should succeed)
 		resp, err = uar.callUpdateAllocReq(t, client.id, totalUpgradeLockAmount, tp, ssc, balances)
 		require.NoError(t, err)
 
+		// Decode and verify the response allocation
 		var deco StorageAllocation
 		require.NoError(t, deco.Decode([]byte(resp)))
 
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
-
 		afterAllocBase := afterAlloc.mustBase()
 
+		// Get the updated challenge pool
 		cp, err := ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
-		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
-		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
-		assert.Equal(t, int64((totalExpectedSize)), afterAllocBase.Size, "Allocation size should be increased")
+		// Verify that the allocation size, write pool, and expiration have been updated correctly
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be the same")
+		assert.NotEqual(t, beforeUpdateStorageAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+		assert.Equal(t, totalExpectedSize, afterAllocBase.Size, "Allocation size should be increased")
 		require.Equal(t, int(totalExpectedLockAmount-cp.Balance), int(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
 
-		// before any challenge
-		require.Equal(t, int((afterAllocBase.MovedToChallenge)), int(cp.Balance), "Challenge pool should be updated")
+		// Before generating a challenge, verify that the challenge pool has been updated correctly
+		require.Equal(t, int(afterAllocBase.MovedToChallenge), int(cp.Balance), "Challenge pool should be updated")
 
-		//gen a chall
+		// Generate a challenge
 		bk := &block.Block{}
 		bk.Round = 500
 		balances.setBlock(t, bk)
-		var blobber = blobbers[0]
+		blobber := blobbers[0]
 		blobberNode, err := ssc.getBlobber(blobber.id, balances)
 		require.NoError(t, err)
-		challID := fmt.Sprintf("chall-0")
+		challID := "chall-0"
 
 		currentRound := balances.GetBlock().Round
 
-		// add 10 validators
+		// Add 10 validators
 		var valids []*Client
 		tp += 1000
 		for i := 0; i < 10; i++ {
@@ -2578,12 +2594,12 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		validators, err := getValidatorsList(balances)
 		require.NoError(t, err)
 
-		genChall(t, ssc, tp, currentRound-100, challID, 0, validators, beforeAlloc.ID, blobberNode, balances)
-		fmt.Println(challID)
+		genChall(t, ssc, tp, currentRound-100, challID, 0, validators, beforeUpdateStorageAlloc.ID, blobberNode, balances)
+
+		// Create challenge response and validate it
 		chall := &ChallengeResponse{
 			ID: challID,
 		}
-
 		for i := 0; i < 10; i++ {
 			chall.ValidationTickets = append(chall.ValidationTickets,
 				valids[i].validTicket(t, chall.ID, blobber.id, true, tp))
@@ -2596,13 +2612,13 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		require.Equal(t, "challenge passed by blobber", resp)
 
-		//after genration of challenge
-		cp_updated, err := ssc.getChallengePool(allocID, balances)
+		// Verify that the challenge pool has been updated after the challenge
+		cpUpdated, err := ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
+		assert.NotEqual(t, cpUpdated.Balance, cp.Balance, "Challenge Pool should be updated")
 
-		assert.NotEqual(t, cp_updated.Balance, cp.Balance, "Challenge Pool should be updated")
-
-		expectedAlloc := beforeAlloc
+		// Compare allocation data to ensure correctness
+		expectedAlloc := beforeUpdateStorageAlloc
 		expectedAlloc.Tx = afterAllocBase.Tx
 		expectedAlloc.Expiration = afterAllocBase.Expiration
 		expectedAlloc.WritePool = afterAllocBase.WritePool
@@ -2610,23 +2626,28 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.MovedToChallenge = afterAllocBase.MovedToChallenge
 
 		for i, ba := range expectedAlloc.BlobberAllocs {
+			// Adjust ChallengePoolIntegralValue based on price changes
 			if i < increasePriceCount {
-				ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue * 2) + (ba.ChallengePoolIntegralValue / 2)
+				ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue * 2)
 			} else if i >= increasePriceCount && i < increasePriceCount+decreasePriceCount {
-				ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue)
-			} else {
-				ba.ChallengePoolIntegralValue += (ba.ChallengePoolIntegralValue / 2)
+				ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue / 2)
 			}
+
+			blobberNode, err := ssc.getBlobber(ba.BlobberID, balances)
+			require.NoError(t, err)
+
+			// Adjust size and write price for each blobber
+			oldSize := ba.Size
 			ba.Size += uar.Size / int64(afterAllocBase.DataShards)
-			// Correct the WritePrice for each blobber based on the logic applied earlier
-			for _, blobber := range blobbers {
-				blobberNode, err := ssc.getBlobber(blobber.id, balances)
-				require.NoError(t, err)
-				if ba.BlobberID == blobber.id {
-					ba.Terms.WritePrice = blobberNode.mustBase().Terms.WritePrice
-				}
-			}
+			assert.Greater(t, ba.Size, oldSize, "Blobber allocation size should increase")
+
+			// get the old write price of the blobber
+			oldWritePrice := ba.Terms.WritePrice
+			ba.Terms.WritePrice = blobberNode.mustBase().Terms.WritePrice
+			assert.NotEqual(t, oldWritePrice, ba.Terms.WritePrice, "Blobber write price should be updated")
 		}
+
+		// Finally, compare the expected allocation with the actual one
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
