@@ -695,6 +695,21 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 	return
 }
 
+// func SetupNodes(mb *block.MagicBlock) error {
+// 	for _, mn := range mb.Miners.CopyNodesMap() {
+// 		if err := node.Setup(mn); err != nil {
+// 			return err
+// 		}
+// 	}
+// 	for _, sh := range mb.Sharders.CopyNodesMap() {
+// 		if err := node.Setup(sh); err != nil {
+// 			return err
+// 		}
+// 	}
+
+// 	return nil
+// }
+
 // DKG save / load
 
 func StoreDKGKey(ctx context.Context, dkgKey *block.DKGKey) error {

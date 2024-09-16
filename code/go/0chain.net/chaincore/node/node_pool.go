@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
@@ -326,6 +327,10 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 				return err
 			}
 		}
+
+		n.TimersByURI = make(map[string]metrics.Timer, 10)
+		n.SizeByURI = make(map[string]metrics.Histogram, 10)
+		n.setupCommChannel()
 		np.Nodes = append(np.Nodes, n)
 	}
 
