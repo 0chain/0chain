@@ -416,6 +416,151 @@ func TestGetBlobbersFromParams(t *testing.T) {
 	cleanupBlobbers(t, edb, blobbers)
 }
 
+func TestAddBlobbers(t *testing.T) {
+	edb, clean := GetTestEventDB(t)
+	defer clean()
+	newBlobber := Blobber{
+		Provider: Provider{
+			ID: "B001",
+		},
+		BaseURL:    "https://blobber.new",
+		WritePrice: 100,
+		ReadPrice:  50,
+		// TotalStake:  currency.Coin(10000),
+		Capacity:    5000000000000,
+		Allocated:   0,
+		OffersTotal: currency.Coin(10),
+	}
+	newBlobber2 := Blobber{
+		Provider: Provider{
+			ID: "B002",
+		},
+		BaseURL:    "https://blobber.two",
+		WritePrice: 100,
+		ReadPrice:  50,
+		// TotalStake:  currency.Coin(10000),
+		Capacity:    5000000000000,
+		Allocated:   0,
+		OffersTotal: currency.Coin(10),
+	}
+	newBlobber3 := Blobber{
+		Provider: Provider{
+			ID: "B003",
+		},
+		BaseURL:    "https://blobber.three",
+		WritePrice: 100,
+		ReadPrice:  50,
+		// TotalStake:  currency.Coin(10000),
+		Capacity:    5000000000000,
+		Allocated:   0,
+		OffersTotal: currency.Coin(10),
+	}
+	emptyNewBlobber := Blobber{
+		Provider: Provider{
+			ID: "",
+		},
+		BaseURL:    "https://blobber.four",
+		WritePrice: 100,
+		ReadPrice:  50,
+		// TotalStake:  currency.Coin(10000),
+		Capacity:    5000000000000,
+		Allocated:   0,
+		OffersTotal: currency.Coin(10),
+	}
+	emptyBaseURLBlobber := Blobber{
+		Provider: Provider{
+			ID: "B005",
+		},
+		BaseURL:    "",
+		WritePrice: 100,
+		ReadPrice:  50,
+		// TotalStake:  currency.Coin(10000),
+		Capacity:    5000000000000,
+		Allocated:   0,
+		OffersTotal: currency.Coin(10),
+	}
+	nCapacityNewBlobber := Blobber{
+		Provider: Provider{
+			ID: "B006",
+		},
+		BaseURL:    "https://blobber.six",
+		WritePrice: 100,
+		ReadPrice:  50,
+		// TotalStake:  currency.Coin(10000),
+		Capacity:    -5000000000000,
+		Allocated:   0,
+		OffersTotal: currency.Coin(10),
+	}
+
+	// Test case 1: Add a single valid blobber
+	t.Run("SingleValidBlobber", func(t *testing.T) {
+		require.NoError(t, edb.addBlobbers([]Blobber{newBlobber}))
+		retrievedBlobber, err := edb.GetBlobber(newBlobber.Provider.ID)
+		require.NoError(t, err)
+		if !equal(t, []Blobber{*retrievedBlobber}, []Blobber{newBlobber}) {
+			t.Fail()
+		}
+	})
+
+	// Test case 2: Add multiple valid blobbers
+	t.Run("MultipleValidBlobbers", func(t *testing.T) {
+		require.NoError(t, edb.addBlobbers([]Blobber{newBlobber2, newBlobber3}))
+		retrievedBlobber2, err := edb.GetBlobber(newBlobber2.Provider.ID)
+		require.NoError(t, err)
+		retrievedBlobber3, err := edb.GetBlobber(newBlobber3.Provider.ID)
+		require.NoError(t, err)
+		if !equal(t, []Blobber{newBlobber2, newBlobber3}, []Blobber{*retrievedBlobber2, *retrievedBlobber3}) {
+			t.Fail()
+		}
+	})
+
+	// Test case 3: Add a duplicate blobber
+	t.Run("DuplicateBlobber", func(t *testing.T) {
+		// try adding same
+		require.Error(t, edb.addBlobbers([]Blobber{newBlobber}), "expected error since duplicate blobber being added")
+	})
+
+	// Test case 2: Add multiple duplicated blobbers
+	t.Run("MultipleDuplicatedBlobbers", func(t *testing.T) {
+		require.Error(t, edb.addBlobbers([]Blobber{newBlobber2, newBlobber3}), "Expected some error for multiple duplicated add blobbers")
+	})
+
+	// Test case 4: Add an empty blobber id
+	t.Run("EmptyBlobberID", func(t *testing.T) {
+		require.Error(t, edb.addBlobbers([]Blobber{emptyNewBlobber}), "Expected Error since new blobber id is empty")
+	})
+
+	// Test case 5: Add blobber with empty blobber base url
+	t.Run("EmptyBlobberBaseURL", func(t *testing.T) {
+		require.Error(t, edb.addBlobbers([]Blobber{emptyBaseURLBlobber}), "Expected Error since new blobber base url is empty")
+	})
+	// Test case 6: Add blobber with negative capacity
+	t.Run("EmptyBlobberNegativeCapacity", func(t *testing.T) {
+		require.Error(t, edb.addBlobbers([]Blobber{nCapacityNewBlobber}), "Expected Error since new blobber base url is empty")
+	})
+
+}
+
+// Helper function to compare two slices
+func equal(t *testing.T, newBlobbers, retrievedBlobbers []Blobber) bool {
+	if len(newBlobbers) != len(retrievedBlobbers) {
+		return false
+	}
+	for i, newBlobber := range newBlobbers {
+		// Compare the original Blobber with the retrieved one
+		require.Equal(t, newBlobber.Provider.ID, retrievedBlobbers[i].Provider.ID)
+		require.Equal(t, newBlobber.BaseURL, retrievedBlobbers[i].BaseURL)
+		require.Equal(t, newBlobber.WritePrice, retrievedBlobbers[i].WritePrice)
+		require.Equal(t, newBlobber.ReadPrice, retrievedBlobbers[i].ReadPrice)
+		require.Equal(t, newBlobber.TotalStake, retrievedBlobbers[i].TotalStake)
+		require.Equal(t, newBlobber.Capacity, retrievedBlobbers[i].Capacity)
+		require.Equal(t, newBlobber.Allocated, retrievedBlobbers[i].Allocated)
+		require.Equal(t, newBlobber.OffersTotal, retrievedBlobbers[i].OffersTotal)
+	}
+
+	return true
+}
+
 func cleanupBlobbers(t *testing.T, edb *EventDb, blobbers []Blobber) {
 	for _, blobber := range blobbers {
 		if err := edb.deleteBlobber(blobber.Provider.ID); err != nil {
