@@ -325,9 +325,16 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
+	// delete one miner each in VC
+	var toDeleteMinerID string
+	if len(deleteMinersIDs) > 0 {
+		toDeleteMinerID = deleteMinersIDs[0]
+		deleteMinersIDs = deleteMinersIDs[1:]
+	}
+
 	logging.Logger.Debug("[mvc] createDKGMinersForContribute remove deleted miners",
-		zap.Strings("miners", deleteMinersIDs),
-		zap.Int("all miners num", len(allMinersList.Nodes)))
+		zap.String("miner", toDeleteMinerID),
+		zap.Int("remaining miners to delete", len(deleteMinersIDs)))
 
 	allMinersList.RemoveNodes(deleteMinersIDs)
 
@@ -338,33 +345,39 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return common.NewErrorf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
 	}
 
-	var (
-		allMinersNum = len(allMinersList.Nodes)
-		lmb          = balances.GetChainCurrentMagicBlock()
-		mbMinersNum  int
-	)
+	lmb := balances.GetChainCurrentMagicBlock()
+	if lmb == nil {
+		return common.NewErrorf("failed to create dkg miners", "empty magic block")
+	}
 
-	if lmb != nil {
-		mbMinersNum = lmb.Miners.Size()
+	allMinersMap := make(map[string]*MinerNode, len(allMinersList.Nodes))
+	for i, n := range allMinersList.Nodes {
+		allMinersMap[n.GetKey()] = allMinersList.Nodes[i]
 	}
 
 	dkgMiners := NewDKGMinerNodes()
-	if mbMinersNum < allMinersNum && mbMinersNum >= gn.MinN {
-		logging.Logger.Debug("[mvc] createDKGMinersForContribute calculate TKN from lmb",
-			zap.Int64("starting round", lmb.StartingRound),
-			zap.Int("miners num", mbMinersNum))
-		dkgMiners.calculateTKN(gn, mbMinersNum)
-	} else {
-		logging.Logger.Debug("[mvc] createDKGMinersForContribute calculate TKN from all miner list",
-			zap.Int("all count", allMinersNum),
-			zap.Int64("gn.LastRound", gn.LastRound))
-		dkgMiners.calculateTKN(gn, allMinersNum)
+	for _, m := range lmb.Miners.CopyNodes() {
+		mid := m.GetKey()
+		if mid == toDeleteMinerID {
+			// do not add the to delete miner to new DKG miners list
+			continue
+		}
+
+		n, ok := allMinersMap[mid]
+		if !ok {
+			return common.NewErrorf("failed to create dkg miners",
+				"miner in prev MB is not in the all miners list: %s", mid)
+		}
+
+		dkgMiners.SimpleNodes[mid] = n.SimpleNode
 	}
 
-	for _, nd := range allMinersList.Nodes {
-		dkgMiners.SimpleNodes[nd.ID] = nd.SimpleNode
+	dkgMinersNum := len(dkgMiners.SimpleNodes)
+	if dkgMinersNum < gn.MinN {
+		return common.NewErrorf("failed to create dkg miners", "miners num: %d < gn.Min: %c", dkgMinersNum, gn.MinN)
 	}
 
+	dkgMiners.calculateTKN(gn, dkgMinersNum)
 	dkgMiners.StartRound = gn.LastRound
 	logging.Logger.Debug("[mvc] createDKGMinersForContribute, new dkg miners",
 		zap.Int("T", dkgMiners.T),
@@ -377,11 +390,15 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
+	// update deleteMinersIDs list
+	return updateDeleteNodeIDs(balances, dKey, deleteMinersIDs)
+
 	// TODO: do the below in auto VC
 	// sharders
 	// allSharderKeepList := new(MinerNodes)
 	// return updateShardersKeepList(balances, allSharderKeepList)
-	return nil
+	//
+	// return nil
 }
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(
