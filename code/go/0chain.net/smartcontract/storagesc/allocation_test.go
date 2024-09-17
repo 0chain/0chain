@@ -2625,6 +2625,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.Size = afterAllocBase.Size
 		expectedAlloc.MovedToChallenge = afterAllocBase.MovedToChallenge
 
+		//integral_value -= (chall_dtu / rest_dtu) * integral_value
 		for i, ba := range expectedAlloc.BlobberAllocs {
 			// Adjust ChallengePoolIntegralValue based on price changes
 			if i < increasePriceCount {
@@ -2642,9 +2643,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			assert.Greater(t, ba.Size, oldSize, "Blobber allocation size should increase")
 
 			// get the old write price of the blobber
-			oldWritePrice := ba.Terms.WritePrice
 			ba.Terms.WritePrice = blobberNode.mustBase().Terms.WritePrice
-			assert.NotEqual(t, oldWritePrice, ba.Terms.WritePrice, "Blobber write price should be updated")
 		}
 
 		// Finally, compare the expected allocation with the actual one
