@@ -919,7 +919,9 @@ func (msc *MinerSmartContract) createMagicBlock(
 
 func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 	balances cstate.StateContextI) error {
-	logging.Logger.Debug("RestartDKG", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+	logging.Logger.Debug("[mvc] restartDKG",
+		zap.Int64("round", pn.CurrentRound),
+		zap.String("phase", pn.Phase.String()))
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
 	mpks := block.NewMpks()
@@ -928,13 +930,12 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		return err
 	}
 
-	logging.Logger.Debug("create_mpks in RestartDKG", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
-
 	gsos := block.NewGroupSharesOrSigns()
 	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
 		logging.Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
+
 	dkgMinersList := NewDKGMinerNodes()
 	dkgMinersList.StartRound = pn.CurrentRound
 	if err := updateDKGMinersList(balances, dkgMinersList); err != nil {
