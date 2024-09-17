@@ -283,7 +283,9 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 			}
 		}
 
-		if fb.Round < c.GetCurrentRound() {
+		lfbtk := c.GetLatestLFBTicket(ctx)
+
+		if fb.Round < lfbtk.Round {
 			logging.Logger.Debug("lfb from sharder - round too old",
 				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 				zap.Int64("current_round", c.GetCurrentRound()),
