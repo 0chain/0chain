@@ -329,7 +329,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	var toDeleteMinerID string
 	if len(deleteMinersIDs) > 0 {
 		toDeleteMinerID = deleteMinersIDs[0]
-		deleteMinersIDs = deleteMinersIDs[1:]
+		// deleteMinersIDs = deleteMinersIDs[1:]
 	}
 
 	logging.Logger.Debug("[mvc] createDKGMinersForContribute remove deleted miners",
@@ -391,14 +391,14 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	// update deleteMinersIDs list
-	return updateDeleteNodeIDs(balances, dKey, deleteMinersIDs)
+	// return updateDeleteNodeIDs(balances, dKey, deleteMinersIDs)
 
 	// TODO: do the below in auto VC
 	// sharders
 	// allSharderKeepList := new(MinerNodes)
 	// return updateShardersKeepList(balances, allSharderKeepList)
 	//
-	// return nil
+	return nil
 }
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(
