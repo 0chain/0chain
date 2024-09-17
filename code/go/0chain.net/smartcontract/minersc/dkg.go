@@ -225,14 +225,6 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	pn *PhaseNode,
 	gn *GlobalNode,
 	t *transaction.Transaction) (err error) {
-	defer func() {
-		if err == nil {
-			// TODO: optimize this to check if there are any changes, avoid unnecessary MPT saving
-			_, err = balances.InsertTrieNode(pn.GetKey(), pn)
-			return
-		}
-	}()
-
 	// move phase condition
 	var movePhase = pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
 	if !movePhase {
@@ -290,12 +282,13 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 				zap.Error(err),
 				zap.String("phase", pn.Phase.String()))
 
-			if err = msc.RestartDKG(pn, balances); err != nil {
+			err := msc.RestartDKG(pn, balances)
+			if err != nil {
 				logging.Logger.Debug("setPhaseNode move phase failed",
 					zap.Error(err),
 					zap.String("phase", pn.Phase.String()))
-				return err
 			}
+			return err
 		}
 	}
 

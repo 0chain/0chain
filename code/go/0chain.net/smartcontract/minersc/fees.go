@@ -211,14 +211,14 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	mb, err := getMagicBlock(balances)
 	if err != nil {
-		logging.Logger.Error("adjust_view_change, failed to get magic block",
+		logging.Logger.Error("[mvc] adjust_view_change, failed to get magic block",
 			zap.Error(err), zap.Int64("round", balances.GetBlock().Round))
 		return common.NewErrorf("adjust_view_change failed to get magic block", "%v", err)
 	}
 
 	for _, n := range mb.Miners.Nodes {
 		if !dmn.Waited[n.GetKey()] {
-			logging.Logger.Error("adjust_view_change, miner not waited",
+			logging.Logger.Error("[mvc] adjust_view_change, miner not waited",
 				zap.String("miner", n.GetKey()))
 			// return
 			err = common.NewErrorf("adjust_view_change miner not waited", "%v", err)
@@ -231,12 +231,13 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		var prev = gn.prevMagicBlock(balances)
 		gn.ViewChange = prev.StartingRound
 
-		// reset DKG if any of the
-		logging.Logger.Warn("adjust_view_change no new magic block, restart DKG", zap.Error(err))
+		logging.Logger.Warn("[mvc] adjust_view_change no new magic block, restart DKG", zap.Error(err))
 		if err := msc.RestartDKG(pn, balances); err != nil {
 			logging.Logger.Error("adjust_view_change restart DKG failed", zap.Error(err))
 			return err
 		}
+
+		// save phase node
 		return nil
 	}
 
@@ -274,8 +275,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	// if isViewChange || b.Round == gn.ViewChange {
 	// if isViewChange || b.Round == gn.ViewChange {
 	// TODO: cache the phase node so if when there's no view change happens, we
-	// can avoid unnecessary MPT access
-	// logging.Logger.Debug("[mvc] payFees: view change, get phase node", zap.Int64("round", b.Round))
 	var pn *PhaseNode
 	if pn, err = GetPhaseNode(balances); err != nil {
 		return
@@ -287,6 +286,12 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	if err = msc.adjustViewChange(gn, pn, balances); err != nil {
 		return // adjusting view change error
+	}
+
+	// save phase node
+	if _, err = balances.InsertTrieNode(pn.GetKey(), pn); err != nil {
+		logging.Logger.Error("pay_fees failed to save phase node", zap.Error(err))
+		return "", common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
 	}
 
 	if t.ClientID != b.MinerID {
