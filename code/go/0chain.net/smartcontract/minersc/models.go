@@ -94,6 +94,8 @@ var (
 	PhaseKey             = globalKeyHash("phase")
 	DeleteMinersKey      = globalKeyHash("delete_miners")
 	DeleteShardersKey    = globalKeyHash("delete_sharders")
+	RegisterMinersKey    = globalKeyHash("register_miners")
+	RegisterShardersKey  = globalKeyHash("register_sharders")
 
 	lockAllMiners sync.Mutex
 )

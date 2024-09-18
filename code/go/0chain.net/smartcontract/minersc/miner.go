@@ -40,6 +40,98 @@ func doesMinerExist(pkey datastore.Key,
 	}
 }
 
+func getRegisterNodes(balances cstate.StateContextI, nodeType spenum.Provider) (NodeIDs, error) {
+	// get register nodes list
+	rKey, ok := registerNodeKeyMap[spenum.Miner]
+	if !ok {
+		return nil, fmt.Errorf("invalid node type: %s", spenum.Miner)
+	}
+
+	deleteMinersIDs, err := getNodeIDs(balances, rKey)
+	if err != nil {
+		return nil, err
+	}
+
+	return deleteMinersIDs, nil
+}
+
+func updateRegisterNodes(balances cstate.StateContextI, nodeType spenum.Provider, ids NodeIDs) error {
+	rKey, ok := registerNodeKeyMap[spenum.Miner]
+	if !ok {
+		return fmt.Errorf("invalid node type: %s", spenum.Miner)
+	}
+
+	_, err := balances.InsertTrieNode(rKey, &ids)
+	return err
+}
+
+type RegisterNodeSCRequest struct {
+	ID   string
+	Type spenum.Provider
+}
+
+func (rnr *RegisterNodeSCRequest) Decode(data []byte) error {
+	return json.Unmarshal(data, rnr)
+}
+
+// RegisterNode register a miner or a sharder.
+// NOTE: this can only be called by chain owner to do manual view change.
+// Register one miner and sharder each VC.
+// Only the registered node will be added to magic block
+func (msc *MinerSmartContract) RegisterNode(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI,
+) (resp string, err error) {
+	// TODO: only chain owner can register nodes
+
+	rnr := RegisterNodeSCRequest{}
+	if err := rnr.Decode(inputData); err != nil {
+		logging.Logger.Error("register node failed", zap.Error(err))
+		return "", common.NewError("register_node", "invalid register node SC data")
+	}
+
+	// check node existence
+	var exist *MinerNode
+	switch rnr.Type {
+	case spenum.Miner:
+		exist, err = getMinerNode(rnr.ID, balances)
+		if err != nil && err != util.ErrValueNotPresent {
+			return "", common.NewErrorf("register_node", "could not get miner: %v", err)
+		}
+
+	case spenum.Sharder:
+		exist, err = getSharderNode(rnr.ID, balances)
+		if err != nil && err != util.ErrValueNotPresent {
+			return "", common.NewErrorf("register_node", "could not get sharder: %v", err)
+		}
+	default:
+		return "", common.NewErrorf("register_node", "unknown register node type: %v", rnr.Type)
+	}
+
+	if exist != nil {
+		logging.Logger.Warn("register_node, node already exists",
+			zap.String("ID", rnr.ID),
+			zap.String("type", rnr.Type.String()))
+		return rnr.ID, common.NewError("register_node", "node already registered")
+	}
+
+	// add id to the register node list
+	rids, err := getRegisterNodes(balances, rnr.Type)
+	if err != nil {
+		return "", common.NewErrorf("register_node", "could not get register node list: %v", err)
+	}
+
+	if len(rids) > 0 {
+		return "", common.NewError("register_node", "there are pending register node")
+	}
+
+	rids = append(rids, rnr.ID)
+	if err := updateRegisterNodes(balances, rnr.Type, rids); err != nil {
+		return "", common.NewErrorf("register_node", "failed to update register node list: %v", err)
+	}
+
+	return rnr.ID, nil
+}
+
 // AddMiner Function to handle miner register
 func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
@@ -163,6 +255,8 @@ func (msc *MinerSmartContract) DeleteMiner(
 	// if actErr != nil {
 	// 	return "", actErr
 	// }
+
+	// TODO: only chain owner can delete miner
 
 	var err error
 	var deleteMiner = NewMinerNode()
