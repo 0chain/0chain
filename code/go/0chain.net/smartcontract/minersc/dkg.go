@@ -437,16 +437,16 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	//	TODO: update the deleteMinersIDs list on the VC finalization
-	// update deleteMinersIDs list
-	// return updateDeleteNodeIDs(balances, dKey, deleteMinersIDs)
+	// create sharder keep list from prev magic block, should only chainowner
+	// can remove a sharder from the list
+	prevMB := gn.prevMagicBlock(balances)
+	shardersKeep := make([]string, 0, len(prevMB.Sharders.Nodes))
+	for _, n := range prevMB.Sharders.Nodes {
+		shardersKeep = append(shardersKeep, n.GetKey())
+	}
 
-	// TODO: do the below in auto VC
-	// sharders
-	// allSharderKeepList := new(MinerNodes)
-	// return updateShardersKeepList(balances, allSharderKeepList)
-	//
-	return nil
+	// TODO: check the sharder remove list, and adjust the keep list
+	return updateShardersKeepList(balances, shardersKeep)
 }
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(
@@ -575,27 +575,30 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	switch err {
 	case nil:
 	case util.ErrValueNotPresent:
-		gsos = block.NewGroupSharesOrSigns()
+		// gsos = block.NewGroupSharesOrSigns()
+		return common.NewErrorf("created_magic_block_failed", "see no group shares or signs")
 	default:
 		return err
 	}
-
-	msc.mutexMinerMPK.Lock()
-	defer msc.mutexMinerMPK.Unlock()
 
 	mpks, err := getMinersMPKs(balances)
 	if err != nil {
 		return common.NewError("create_magic_block_failed", err.Error())
 	}
 
+	noGsos := make([]string, 0, len(mpks.Mpks))
 	for key := range mpks.Mpks {
 		if _, ok := gsos.Shares[key]; !ok {
-			logging.Logger.Debug("create magic block - delete miner because no share found", zap.String("key", key))
-			delete(dkgMinersList.SimpleNodes, key)
-			delete(gsos.Shares, key)
-			delete(mpks.Mpks, key)
+			noGsos = append(noGsos, key)
 		}
 	}
+
+	if len(noGsos) > 0 {
+		logging.Logger.Error("create magic block for wait failed, not all miners send shares or signs",
+			zap.Strings("missing miners", noGsos))
+		return common.NewErrorf("create_magic_block_failed", "see miners with no shares or signs, missing num: %d", len(noGsos))
+	}
+
 	// TODO: check the necessary of the commented code below
 	//for key, sharesRevealed := range dkgMinersList.RevealedShares {
 	//	if sharesRevealed >= dkgMinersList.T {
@@ -609,51 +612,50 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	//	}
 	//}
 
-	// sharders
 	sharders, err := getShardersKeepList(balances)
 	if err != nil {
 		return err
 	}
 	logging.Logger.Debug("[mvc] sharder keep list", zap.Int("num", len(sharders.Nodes)))
 
-	allSharderList, err := getAllShardersList(balances)
-	if err != nil {
-		return err
-	}
+	// allSharderList, err := getAllShardersList(balances)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// TODO: reduce sharders in auto VC
-	if sharders == nil || len(sharders.Nodes) == 0 {
-		logging.Logger.Debug("[mvc] sharder list is empty, use all sharder list")
-		sharders = allSharderList
-	} else {
-		sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
-		if err != nil {
-			return err
-		}
-	}
+	// if sharders == nil || len(sharders.Nodes) == 0 {
+	// 	logging.Logger.Debug("[mvc] sharder list is empty, use all sharder list")
+	// 	sharders = allSharderList
+	// } else {
+	// 	sharders.Nodes, err = msc.reduceShardersList(sharders, allSharderList, gn, balances)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 	// sharders = allSharderList
 
-	if err = dkgMinersList.reduceNodes(true, gn, balances); err != nil {
-		logging.Logger.Error("create magic block for wait - reduce nodes failed", zap.Error(err))
-		return err
-	}
+	// if err = dkgMinersList.reduceNodes(true, gn, balances); err != nil {
+	// 	logging.Logger.Error("create magic block for wait - reduce nodes failed", zap.Error(err))
+	// 	return err
+	// }
 
-	for id := range gsos.Shares {
-		if _, ok := dkgMinersList.SimpleNodes[id]; !ok {
-			delete(gsos.Shares, id)
-		}
-	}
+	// for id := range gsos.Shares {
+	// 	if _, ok := dkgMinersList.SimpleNodes[id]; !ok {
+	// 		delete(gsos.Shares, id)
+	// 	}
+	// }
 
-	for id := range mpks.Mpks {
-		if _, ok := dkgMinersList.SimpleNodes[id]; !ok {
-			delete(mpks.Mpks, id)
-		}
-	}
+	// for id := range mpks.Mpks {
+	// 	if _, ok := dkgMinersList.SimpleNodes[id]; !ok {
+	// 		delete(mpks.Mpks, id)
+	// 	}
+	// }
 
-	if len(dkgMinersList.SimpleNodes) < dkgMinersList.K {
-		return common.NewErrorf("create_magic_block_failed",
-			"len(dkgMinersList.SimpleNodes) [%d] < dkgMinersList.K [%d]", len(dkgMinersList.SimpleNodes), dkgMinersList.K)
-	}
+	// if len(dkgMinersList.SimpleNodes) < dkgMinersList.K {
+	// 	return common.NewErrorf("create_magic_block_failed",
+	// 		"len(dkgMinersList.SimpleNodes) [%d] < dkgMinersList.K [%d]", len(dkgMinersList.SimpleNodes), dkgMinersList.K)
+	// }
 
 	magicBlock, err := msc.createMagicBlock(balances, sharders, dkgMinersList, gsos, mpks, pn)
 	if err != nil {
@@ -678,12 +680,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		logging.Logger.Error("failed to insert magic block", zap.Error(err))
 		return err
 	}
-	// dkgMinersList = NewDKGMinerNodes()
-	// _, err = balances.InsertTrieNode(DKGMinersKey, dkgMinersList)
-	// if err != nil {
-	// 	return err
-	// }
-	// allSharderKeepList := new(MinerNodes)
+
 	return updateShardersKeepList(balances, NodeIDs{})
 }
 
