@@ -149,8 +149,8 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 			"failed to get miners DKG, phase: %v, err: %v", pn.Phase, err)
 	}
 
-	msc.mutexMinerMPK.Lock()
-	defer msc.mutexMinerMPK.Unlock()
+	// msc.mutexMinerMPK.Lock()
+	// defer msc.mutexMinerMPK.Unlock()
 
 	mpks, err := getMinersMPKs(balances)
 	if err != nil {
@@ -162,27 +162,48 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 		return common.NewError("move_to_share_or_publish_failed", "empty miners mpks keys")
 	}
 
+	// requires all dkg miners have contributed the mpks
+	noMpks := make([]string, 0, len(dkgMinersList.SimpleNodes))
+	for k := range dkgMinersList.SimpleNodes {
+		if _, ok := mpks.Mpks[k]; !ok {
+			noMpks = append(noMpks, k)
+		}
+	}
+
+	if len(noMpks) == 0 {
+		// all good, every one has contributed
+		logging.Logger.Debug("[mvc] move phase to share or publish",
+			zap.Int("mpks", len(mpks.Mpks)),
+			zap.Int("K", dkgMinersList.K))
+		return nil
+	}
+
+	logging.Logger.Error("[mvc] move to share or publish failed, not all miners contributed mpks",
+		zap.Strings("missing", noMpks))
+	return common.NewErrorf("move to share or publsh failed",
+		"not all miners contributed mpks, missing num: %d", len(noMpks))
+
 	// should have at least one miner from previous VC set
-	if !gn.hasPrevMinerInMPKs(mpks, balances) {
-		return common.NewErrorf("move_to_share_or_publish_failed",
-			"no miner from previous VC set in MPKS, l_mpks: %d, DB: %d, DB version: %d",
-			len(mpks.Mpks),
-			int(balances.GetState().GetVersion()),
-			int(balances.GetState().GetVersion()))
-	}
+	// if !gn.hasPrevMinerInMPKs(mpks, balances) {
+	// 	return common.NewErrorf("move_to_share_or_publish_failed",
+	// 		"no miner from previous VC set in MPKS, l_mpks: %d, DB: %d, DB version: %d",
+	// 		len(mpks.Mpks),
+	// 		int(balances.GetState().GetVersion()),
+	// 		int(balances.GetState().GetVersion()))
+	// }
 
-	if len(mpks.Mpks) < dkgMinersList.K {
-		return common.NewErrorf("move_to_share_or_publish_failed",
-			"len(mpks.Mpks) < dkgMinersList.K, l_mpks: %d, K: %d",
-			len(mpks.Mpks), dkgMinersList.K)
-	}
+	// if len(mpks.Mpks) < dkgMinersList.K {
+	// 	return common.NewErrorf("move_to_share_or_publish_failed",
+	// 		"len(mpks.Mpks) < dkgMinersList.K, l_mpks: %d, K: %d",
+	// 		len(mpks.Mpks), dkgMinersList.K)
+	// }
 
-	logging.Logger.Debug("[mvc] miner sc: move phase to share or publish",
-		zap.Int("mpks", len(mpks.Mpks)),
-		zap.Int("K", dkgMinersList.K),
-		zap.Int64("DB version", int64(balances.GetState().GetVersion())))
+	// logging.Logger.Debug("[mvc] miner sc: move phase to share or publish",
+	// 	zap.Int("mpks", len(mpks.Mpks)),
+	// 	zap.Int("K", dkgMinersList.K),
+	// 	zap.Int64("DB version", int64(balances.GetState().GetVersion())))
 
-	return nil
+	// return nil
 }
 
 func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
@@ -431,39 +452,42 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	balances cstate.StateContextI, gn *GlobalNode) error {
 
-	dkgMiners, err := getDKGMinersList(balances)
-	if err != nil {
-		logging.Logger.Error("widdle dkg miners -- failed to get dkgMiners",
-			zap.Error(err))
-		return err
-	}
+	// Note: we will not change the dkg miners, so do nothing here
+	return nil
 
-	msc.mutexMinerMPK.Lock()
-	defer msc.mutexMinerMPK.Unlock()
+	// dkgMiners, err := getDKGMinersList(balances)
+	// if err != nil {
+	// 	logging.Logger.Error("widdle dkg miners -- failed to get dkgMiners",
+	// 		zap.Error(err))
+	// 	return err
+	// }
 
-	mpks, err := getMinersMPKs(balances)
-	if err != nil {
-		logging.Logger.Error("widdle dkg miners -- failed to get miners mpks",
-			zap.Error(err))
-		return err
-	}
+	// msc.mutexMinerMPK.Lock()
+	// defer msc.mutexMinerMPK.Unlock()
 
-	// requires all dkg miners have contributed the mpks
-	noMpks := make([]string, 0, len(dkgMiners.SimpleNodes))
-	for k := range dkgMiners.SimpleNodes {
-		if _, ok := mpks.Mpks[k]; !ok {
-			noMpks = append(noMpks, k)
-		}
-	}
+	// mpks, err := getMinersMPKs(balances)
+	// if err != nil {
+	// 	logging.Logger.Error("widdle dkg miners -- failed to get miners mpks",
+	// 		zap.Error(err))
+	// 	return err
+	// }
 
-	if len(noMpks) == 0 {
-		// all good, every one has contributed
-		return nil
-	}
+	// // requires all dkg miners have contributed the mpks
+	// noMpks := make([]string, 0, len(dkgMiners.SimpleNodes))
+	// for k := range dkgMiners.SimpleNodes {
+	// 	if _, ok := mpks.Mpks[k]; !ok {
+	// 		noMpks = append(noMpks, k)
+	// 	}
+	// }
 
-	logging.Logger.Error("widdle dkg miners -- not all miners contributed mpks",
-		zap.Strings("missing", noMpks))
-	return common.NewErrorf("widdle dkg miners failed", "missing %d miners mpks", len(noMpks))
+	// if len(noMpks) == 0 {
+	// 	// all good, every one has contributed
+	// 	return nil
+	// }
+
+	// logging.Logger.Error("widdle dkg miners -- not all miners contributed mpks",
+	// 	zap.Strings("missing", noMpks))
+	// return common.NewErrorf("widdle dkg miners failed", "missing %d miners mpks", len(noMpks))
 
 	// if err = dkgMiners.reduceNodes(false, gn, balances); err != nil {
 	// 	logging.Logger.Error("widdle dkg miners", zap.Error(err))
