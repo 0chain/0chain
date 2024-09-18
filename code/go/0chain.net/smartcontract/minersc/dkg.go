@@ -448,23 +448,34 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 		return err
 	}
 
+	// requires all dkg miners have contributed the mpks
+	noMpks := make([]string, 0, len(dkgMiners.SimpleNodes))
 	for k := range dkgMiners.SimpleNodes {
 		if _, ok := mpks.Mpks[k]; !ok {
-			delete(dkgMiners.SimpleNodes, k)
+			noMpks = append(noMpks, k)
 		}
 	}
 
-	if err = dkgMiners.reduceNodes(false, gn, balances); err != nil {
-		logging.Logger.Error("widdle dkg miners", zap.Error(err))
-		return err
+	if len(noMpks) == 0 {
+		// all good, every one has contributed
+		return nil
 	}
 
-	if err := updateDKGMinersList(balances, dkgMiners); err != nil {
-		logging.Logger.Error("widdle dkg miners -- failed to insert dkg miners",
-			zap.Error(err))
-		return err
-	}
-	return nil
+	logging.Logger.Error("widdle dkg miners -- not all miners contributed mpks",
+		zap.Strings("missing", noMpks))
+	return common.NewErrorf("widdle dkg miners failed", "missing %d miners mpks", len(noMpks))
+
+	// if err = dkgMiners.reduceNodes(false, gn, balances); err != nil {
+	// 	logging.Logger.Error("widdle dkg miners", zap.Error(err))
+	// 	return err
+	// }
+
+	// if err := updateDKGMinersList(balances, dkgMiners); err != nil {
+	// 	logging.Logger.Error("widdle dkg miners -- failed to insert dkg miners",
+	// 		zap.Error(err))
+	// 	return err
+	// }
+	// return nil
 }
 
 func (msc *MinerSmartContract) reduceShardersList(
