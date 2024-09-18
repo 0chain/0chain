@@ -430,7 +430,8 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (
 	if gn.PrevMagicBlock != nil {
 		return gn.PrevMagicBlock
 	}
-	return balances.GetLastestFinalizedMagicBlock().MagicBlock
+	// return balances.GetLastestFinalizedMagicBlock().MagicBlock
+	return balances.GetChainCurrentMagicBlock()
 }
 
 // has previous miner in all miners list
