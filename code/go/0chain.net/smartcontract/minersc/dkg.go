@@ -439,9 +439,8 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 	// create sharder keep list from prev magic block, should only chainowner
 	// can remove a sharder from the list
-	prevMB := gn.prevMagicBlock(balances)
-	shardersKeep := make([]string, 0, len(prevMB.Sharders.Nodes))
-	for _, n := range prevMB.Sharders.Nodes {
+	shardersKeep := make([]string, 0, len(lmb.Sharders.Nodes))
+	for _, n := range lmb.Sharders.Nodes {
 		shardersKeep = append(shardersKeep, n.GetKey())
 	}
 
