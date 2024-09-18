@@ -352,6 +352,21 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	return nil
 }
 
+func getDeleteNodes(balances cstate.StateContextI, nodeType spenum.Provider) (NodeIDs, error) {
+	// get deleted miners list
+	dKey, ok := deleteNodeKeyMap[spenum.Miner]
+	if !ok {
+		return nil, fmt.Errorf("invalid node type: %s", spenum.Miner)
+	}
+
+	deleteMinersIDs, err := getDeleteNodeIDs(balances, dKey)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, err
+	}
+
+	return deleteMinersIDs, nil
+}
+
 func (msc *MinerSmartContract) createDKGMinersForContribute(
 	balances cstate.StateContextI, gn *GlobalNode) error {
 	logging.Logger.Debug("[mvc] createDKGMinersForContribute start")
@@ -363,15 +378,9 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	// get deleted miners list
-	dKey, ok := deleteNodeKeyMap[spenum.Miner]
-	if !ok {
-		return fmt.Errorf("get delete node key failed, invalid node type: %s", spenum.Miner)
-	}
-
-	deleteMinersIDs, err := getDeleteNodeIDs(balances, dKey)
-	if err != nil && err != util.ErrValueNotPresent {
-		logging.Logger.Error("[mvc] createDKGMinersForContribute failed to get delete miners IDs", zap.Error(err))
-		return err
+	deleteMinersIDs, err := getDeleteNodes(balances, spenum.Miner)
+	if err != nil {
+		return common.NewErrorf("createDKGMinersForContribute", "failed to get delete miners: %v", err)
 	}
 
 	// delete one miner each in VC
@@ -381,20 +390,13 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		// deleteMinersIDs = deleteMinersIDs[1:]
 	}
 
-	logging.Logger.Debug("[mvc] createDKGMinersForContribute remove deleted miners",
-		zap.String("miner", toDeleteMinerID),
-		zap.Int("remaining miners to delete", len(deleteMinersIDs)))
-
-	allMinersList.RemoveNodes(deleteMinersIDs)
-
-	if len(allMinersList.Nodes) < gn.MinN {
-		logging.Logger.Error("[mvc] createDKGMinersForContribute too few miners for dkg",
-			zap.Int("all miners num", len(allMinersList.Nodes)),
-			zap.Int("min miners num", gn.MinN))
-		return common.NewErrorf("failed to create dkg miners", "too few miners for dkg, l_all_miners: %d, N: %d", len(allMinersList.Nodes), gn.MinN)
+	if toDeleteMinerID != "" {
+		logging.Logger.Debug("[mvc] createDKGMinersForContribute remove miner",
+			zap.String("miner", toDeleteMinerID),
+			zap.Int("remaining miners to delete", len(deleteMinersIDs)))
 	}
 
-	lmb := balances.GetChainCurrentMagicBlock()
+	lmb := gn.prevMagicBlock(balances)
 	if lmb == nil {
 		return common.NewErrorf("failed to create dkg miners", "empty magic block")
 	}
@@ -441,9 +443,30 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 	// create sharder keep list from prev magic block, should only chainowner
 	// can remove a sharder from the list
+	// get sharder delete list
+	deleteShardersIDs, err := getDeleteNodes(balances, spenum.Sharder)
+	if err != nil {
+		return err
+	}
+
+	var toDeleteSharder string
+	if len(deleteShardersIDs) > 0 {
+		// get the first one to be deleted from the keep list
+		toDeleteSharder = deleteShardersIDs[0]
+	}
+
 	shardersKeep := make([]string, 0, len(lmb.Sharders.Nodes))
 	for _, n := range lmb.Sharders.Nodes {
-		shardersKeep = append(shardersKeep, n.GetKey())
+		id := n.GetKey()
+		if id == toDeleteSharder {
+			continue
+		}
+		shardersKeep = append(shardersKeep, id)
+	}
+
+	if len(shardersKeep) < gn.MinS {
+		return common.NewError("failed to create dkg miners",
+			"sharders number would be below gn.MinS after removing")
 	}
 
 	// TODO: check the sharder remove list, and adjust the keep list
