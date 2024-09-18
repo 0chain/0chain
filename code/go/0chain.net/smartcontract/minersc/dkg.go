@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"sort"
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
@@ -47,6 +48,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	if dkgMinersList, err = getDKGMinersList(balances); err != nil {
 		return common.NewError("move_to_contribute_failed", err.Error())
 	}
+
 	allShardersList, err = getAllShardersList(balances)
 	if err != nil {
 		return common.NewError("move_to_contribute_failed", err.Error())
@@ -74,11 +76,35 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		return common.NewError("move_to_contribute_failed", "allMinersList is nil")
 	}
 
-	if len(allMinersList.Nodes) < dkgMinersList.K {
-		return common.NewErrorf("move_to_contribute_failed",
-			"len(allMinersList.Nodes) < dkgMinersList.K, l_miners: %d, K: %d",
-			len(allMinersList.Nodes), dkgMinersList.K)
+	// make all DKG miners are in the all miners list
+	allMap := make(map[string]struct{})
+	for _, n := range allMinersList.Nodes {
+		allMap[n.GetKey()] = struct{}{}
 	}
+
+	dkgMinerKeys := make([]string, 0, len(dkgMinersList.SimpleNodes))
+	for key := range dkgMinersList.SimpleNodes {
+		dkgMinerKeys = append(dkgMinerKeys, key)
+	}
+
+	// sort the dkgMinersKeys
+	sort.Slice(dkgMinerKeys, func(i, j int) bool {
+		return dkgMinerKeys[i] < dkgMinerKeys[j]
+	})
+
+	for _, id := range dkgMinerKeys {
+		_, ok := allMap[id]
+		if !ok {
+			return common.NewErrorf("moved_to_contribute_failed", "dkg miner %s is not in all miners list", id)
+		}
+	}
+
+	// if len(allMinersList.Nodes) < dkgMinersList.K {
+	// if len(allMinersList.Nodes) < len(dkgMinersList.SimpleNodes) {
+	// 	return common.NewErrorf("move_to_contribute_failed",
+	// 		"len(allMinersList.Nodes) < dkgMinersList.K, l_miners: %d, K: %d",
+	// 		len(allMinersList.Nodes), dkgMinersList.K)
+	// }
 
 	if len(allShardersList.Nodes) < gn.MinS {
 		return common.NewErrorf("move_to_contribute_failed",
@@ -390,6 +416,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
+	//	TODO: update the deleteMinersIDs list on the VC finalization
 	// update deleteMinersIDs list
 	// return updateDeleteNodeIDs(balances, dKey, deleteMinersIDs)
 
