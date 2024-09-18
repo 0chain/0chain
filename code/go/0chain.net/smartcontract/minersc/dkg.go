@@ -209,37 +209,39 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 func (msc *MinerSmartContract) moveToWait(balances cstate.StateContextI,
 	pn *PhaseNode, gn *GlobalNode) error {
 
-	dkgMinersList, err := getDKGMinersList(balances)
-	if err != nil {
-		return common.NewErrorf("move_to_wait_failed",
-			"failed to get miners DKG, phase: %v, err: %v", pn.Phase, err)
-	}
+	// dkgMinersList, err := getDKGMinersList(balances)
+	// if err != nil {
+	// 	return common.NewErrorf("move_to_wait_failed",
+	// 		"failed to get miners DKG, phase: %v, err: %v", pn.Phase, err)
+	// }
 
-	gsos, err := getGroupShareOrSigns(balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		return common.NewError("move_to_wait_failed", "empty sharder or sign keys")
-	default:
-		return common.NewErrorf("move_to_wait_failed", "phase: %v, err: %v", pn.Phase, err)
-	}
+	// gsos, err := getGroupShareOrSigns(balances)
+	// switch err {
+	// case nil:
+	// case util.ErrValueNotPresent:
+	// 	return common.NewError("move_to_wait_failed", "empty sharder or sign keys")
+	// default:
+	// 	return common.NewErrorf("move_to_wait_failed", "phase: %v, err: %v", pn.Phase, err)
+	// }
 
-	if !gn.hasPrevMinerInGSoS(gsos, balances) {
-		return common.NewErrorf("move_to_wait_failed",
-			"no miner from previous VC set in GSoS, "+
-				"l_gsos: %d, K: %d, DB version: %d, gsos_shares: %v",
-			len(gsos.Shares), dkgMinersList.K, int(balances.GetState().GetVersion()), gsos.Shares)
-	}
+	// if !gn.hasPrevMinerInGSoS(gsos, balances) {
+	// 	return common.NewErrorf("move_to_wait_failed",
+	// 		"no miner from previous VC set in GSoS, "+
+	// 			"l_gsos: %d, K: %d, DB version: %d, gsos_shares: %v",
+	// 		len(gsos.Shares), dkgMinersList.K, int(balances.GetState().GetVersion()), gsos.Shares)
+	// }
 
-	if len(gsos.Shares) < dkgMinersList.K {
-		return common.NewErrorf("move_to_wait_failed",
-			"len(gsos.Shares) < dkgMinersList.K, l_gsos: %d, K: %d",
-			len(gsos.Shares), dkgMinersList.K)
-	}
+	// if len(gsos.Shares) < dkgMinersList.K {
+	// 	return common.NewErrorf("move_to_wait_failed",
+	// 		"len(gsos.Shares) < dkgMinersList.K, l_gsos: %d, K: %d",
+	// 		len(gsos.Shares), dkgMinersList.K)
+	// }
 
-	logging.Logger.Debug("miner sc: move phase to wait",
-		zap.Int("shares", len(gsos.Shares)),
-		zap.Int("K", dkgMinersList.K))
+	// Note: all the checks above should have been done when creating the magic block for wait,
+	// so do nothing
+	logging.Logger.Debug("miner sc: move phase to wait")
+	// zap.Int("shares", len(gsos.Shares)),
+	// zap.Int("K", dkgMinersList.K))
 
 	return nil
 }
