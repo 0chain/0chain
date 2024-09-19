@@ -79,7 +79,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 	// make all DKG miners are in the all miners list
 	allMap := make(map[string]struct{})
 	for _, n := range allMinersList.Nodes {
-		allMap[n.GetKey()] = struct{}{}
+		allMap[n.ID] = struct{}{}
 	}
 
 	dkgMinerKeys := make([]string, 0, len(dkgMinersList.SimpleNodes))
@@ -403,7 +403,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 	allMinersMap := make(map[string]*MinerNode, len(allMinersList.Nodes))
 	for i, n := range allMinersList.Nodes {
-		allMinersMap[n.GetKey()] = allMinersList.Nodes[i]
+		allMinersMap[n.ID] = allMinersList.Nodes[i]
 	}
 
 	logging.Logger.Debug("create dkg miners, all miners list",
