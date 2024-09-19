@@ -1150,7 +1150,7 @@ func (sab *storageAllocationBase) cancellationCharge(cancellationFraction float6
 	return currency.MultFloat64(cost, cancellationFraction)
 }
 
-func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(balances cstate.StateContextI, cpBalance currency.Coin, extend, isEnterprise bool, now common.Timestamp) (currency.Coin, error) {
+func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend, isEnterprise bool, now common.Timestamp) (currency.Coin, error) {
 	var (
 		costOfAllocAfterUpdate currency.Coin
 		tokensRequiredToLock   currency.Coin
@@ -1177,20 +1177,12 @@ func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(balances csta
 		tokensRequiredToLock = 0
 	}
 
-	actErr := cstate.WithActivation(balances, "hercules", func() (e error) {
-		return nil
-	}, func() error {
-		costOfUnusedAlloc, err := sa.unUsedAllocCost()
-		if err != nil {
-			return fmt.Errorf("failed to get unused allocation cost: %v", err)
-		}
-		if costOfUnusedAlloc-sa.WritePool > tokensRequiredToLock {
-			tokensRequiredToLock = costOfUnusedAlloc - sa.WritePool
-		}
-		return nil
-	})
-	if actErr != nil {
-		return 0, actErr
+	costOfUnusedAlloc, err := sa.unUsedAllocCost()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get unused allocation cost: %v", err)
+	}
+	if costOfUnusedAlloc-sa.WritePool > tokensRequiredToLock {
+		tokensRequiredToLock = costOfUnusedAlloc - sa.WritePool
 	}
 
 	logging.Logger.Info("requiredTokensForUpdateAllocation",
