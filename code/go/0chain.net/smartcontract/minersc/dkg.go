@@ -406,6 +406,9 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		allMinersMap[n.GetKey()] = allMinersList.Nodes[i]
 	}
 
+	logging.Logger.Debug("create dkg miners, all miners list",
+		zap.Any("miners", allMinersMap))
+
 	dkgMiners := NewDKGMinerNodes()
 	for _, m := range lmb.Miners.CopyNodes() {
 		mid := m.GetKey()
