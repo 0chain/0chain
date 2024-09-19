@@ -417,6 +417,21 @@ func (sab *storageAllocationBase) cost() (currency.Coin, error) {
 	return cost, nil
 }
 
+func (sab *storageAllocationBase) unUsedAllocCost() (currency.Coin, error) {
+	var cost currency.Coin
+	for _, ba := range sab.BlobberAllocs {
+		c, err := currency.MultFloat64(ba.Terms.WritePrice, sizeInGB(ba.Size-ba.Stats.UsedSize))
+		if err != nil {
+			return 0, err
+		}
+		cost, err = currency.AddCoin(cost, c)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return cost, nil
+}
+
 func (sab *storageAllocationBase) costForRDTU(now common.Timestamp) (currency.Coin, error) {
 	rdtu, err := sab.restDurationInTimeUnits(now, sab.TimeUnit)
 	if err != nil {
