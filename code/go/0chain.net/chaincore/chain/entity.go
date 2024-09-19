@@ -2418,6 +2418,11 @@ func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	if b == nil || b.MagicBlock == nil {
+		logging.Logger.Panic("set latest finalized magic block -- block or magic block is nil")
+		logging.Logger.Panic("set latest finalized magic block -- block or magic block is nil", zap.Any("block", b))
+		if b != nil {
+			logging.Logger.Panic("set latest finalized magic block -- block or magic block is nil", zap.Any("magic_block", b.MagicBlock))
+		}
 		return
 	}
 
