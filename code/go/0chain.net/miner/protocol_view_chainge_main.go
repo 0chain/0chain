@@ -334,6 +334,10 @@ func (mc *Chain) Wait(ctx context.Context,
 		if err = StoreMagicBlock(ctx, magicBlock); err != nil {
 			logging.Logger.Panic("failed to store magic block", zap.Error(err))
 		}
+		logging.Logger.Debug("[mvc] dkg wait, miner is synching, store magic block with no DKG summary",
+			zap.Int64("mb_rs", magicBlock.StartingRound),
+			zap.Int64("mb_rc", magicBlock.MagicBlockNumber),
+			zap.String("mb_hash", magicBlock.Hash))
 		return nil, nil
 	}
 
@@ -394,13 +398,25 @@ func (mc *Chain) Wait(ctx context.Context,
 	vcdkg.N = magicBlock.N
 
 	// save DKG and MB
-	if err = StoreDKGSummary(ctx, vcdkg.GetDKGSummary()); err != nil {
+	dkgSum := vcdkg.GetDKGSummary()
+	if err = StoreDKGSummary(ctx, dkgSum); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
+	logging.Logger.Debug("[mvc] dkg wait: store dkg summary",
+		zap.String("id", dkgSum.ID),
+		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+		zap.Int64("mb_sr", magicBlock.StartingRound),
+		zap.String("mb_hash", magicBlock.Hash),
+	)
 
 	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
 	}
+
+	logging.Logger.Debug("[mvc] dkg wait: store mb",
+		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+		zap.Int64("mb_sr", magicBlock.StartingRound),
+		zap.String("mb_hash", magicBlock.Hash))
 
 	// if err := SetDKG(ctx, mb); err != nil {
 	// 	logging.Logger.Debug("[mvc] dkg process set dkg failed",
