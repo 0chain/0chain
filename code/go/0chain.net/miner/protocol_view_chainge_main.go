@@ -323,8 +323,17 @@ func (mc *Chain) Wait(ctx context.Context,
 		return // error
 	}
 
+	if magicBlock.MagicBlockNumber != mb.MagicBlockNumber+1 {
+		logging.Logger.Error("[mvc] dkg wait failed, not new magic block",
+			zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+			zap.Int64("mb_sr", magicBlock.StartingRound),
+			zap.String("mb_hash", magicBlock.Hash),
+			zap.Int64("current_mb_num", mb.MagicBlockNumber))
+		return nil, common.NewError("vc_wait", "not new magic block")
+	}
+
 	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
-		logging.Logger.Error("chain wait failed, magic miners does not have self node")
+		logging.Logger.Error("[mvc] vc wait failed, magic miners does not have self node")
 		mc.viewChangeProcess.clearViewChange()
 		return // node leaves BC, don't do anything here
 	}
