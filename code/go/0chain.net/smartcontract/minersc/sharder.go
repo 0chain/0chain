@@ -291,9 +291,15 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 	}
 
 	// check if the sharder is in MB
-	mb := gn.prevMagicBlock(balances)
+	// use MB in MPT, which is the latest one, it may not being finalized yet,
+	// we should not add the sharder to keep list if the new MB will exclude it.
+	mb, err := getMagicBlock(balances)
+	if err != nil {
+		return "", common.NewErrorf("sharder_keep", "failed to get magic block: %v", err)
+	}
+
 	exist := mb.Sharders.GetNode(newSharder.ID)
-	if exist != nil {
+	if exist == nil {
 		// sharder not in the MB, check if the sharder is in the register nodes list, otherwise return error
 		regIDs, err := getRegisterNodes(balances, spenum.Sharder)
 		if err != nil {
