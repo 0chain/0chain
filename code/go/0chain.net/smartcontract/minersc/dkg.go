@@ -382,6 +382,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	if err != nil {
 		return common.NewErrorf("createDKGMinersForContribute", "failed to get delete miners: %v", err)
 	}
+	logging.Logger.Debug("[mvc] delete miners list", zap.Any("ids", deleteMinersIDs))
 
 	// delete one miner each in VC
 	var toDeleteMinerID string
