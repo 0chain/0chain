@@ -267,23 +267,18 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	var mn *MinerNode
 	mn, err = getMinerNode(deleteMiner.ID, balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		mn = NewMinerNode()
-		mn.ID = deleteMiner.ID
-	default:
-		return "", common.NewError("delete_miner", err.Error())
-	}
-
-	updatedMn, err := msc.deleteNode(gn, mn, balances)
 	if err != nil {
 		return "", common.NewError("delete_miner", err.Error())
 	}
 
-	if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
+	_, err = msc.deleteNode(gn, mn, balances)
+	if err != nil {
 		return "", common.NewError("delete_miner", err.Error())
 	}
+
+	// if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
+	// 	return "", common.NewError("delete_miner", err.Error())
+	// }
 
 	// lfmb := balances.GetLastestFinalizedMagicBlock()
 	// cloneMB := lfmb.MagicBlock.Clone()
@@ -317,9 +312,9 @@ func (msc *MinerSmartContract) DeleteMiner(
 
 	// gn.ViewChange = cloneMB.StartingRound
 	// gn.ViewChange = startingRound
-	if err := gn.save(balances); err != nil {
-		return "", common.NewError("delete_miner could not save global node", err.Error())
-	}
+	// if err := gn.save(balances); err != nil {
+	// 	return "", common.NewError("delete_miner could not save global node", err.Error())
+	// }
 
 	return "delete miner successfully", nil
 }
@@ -349,7 +344,7 @@ func (msc *MinerSmartContract) deleteNode(
 	balances cstate.StateContextI,
 ) (*MinerNode, error) {
 	var err error
-	deleteNode.Delete = true
+	// deleteNode.Delete = true
 	var nodeType spenum.Provider
 	switch deleteNode.NodeType {
 	case NodeTypeMiner:
@@ -369,35 +364,35 @@ func (msc *MinerSmartContract) deleteNode(
 		return nil, err
 	}
 
-	orderedPoolIds := deleteNode.OrderedPoolIds()
-	for _, key := range orderedPoolIds {
-		pool := deleteNode.Pools[key]
-		switch pool.Status {
-		case spenum.Active:
-			pool.Status = spenum.Deleted
-			_, err := deleteNode.UnlockPool(
-				pool.DelegateID, nodeType, pool.DelegateID, balances)
-			if err != nil {
-				return nil, fmt.Errorf("error emptying delegate pool: %v", err)
-			}
-		case spenum.Deleted:
-		default:
-			return nil, fmt.Errorf(
-				"unrecognised stakepool status: %v", pool.Status.String())
-		}
-	}
+	// orderedPoolIds := deleteNode.OrderedPoolIds()
+	// for _, key := range orderedPoolIds {
+	// 	pool := deleteNode.Pools[key]
+	// 	switch pool.Status {
+	// 	case spenum.Active:
+	// 		pool.Status = spenum.Deleted
+	// 		_, err := deleteNode.UnlockPool(
+	// 			pool.DelegateID, nodeType, pool.DelegateID, balances)
+	// 		if err != nil {
+	// 			return nil, fmt.Errorf("error emptying delegate pool: %v", err)
+	// 		}
+	// 	case spenum.Deleted:
+	// 	default:
+	// 		return nil, fmt.Errorf(
+	// 			"unrecognised stakepool status: %v", pool.Status.String())
+	// 	}
+	// }
 
-	if err = deleteNode.save(balances); err != nil {
-		return nil, fmt.Errorf("saving node %v", err.Error())
-	}
+	// if err = deleteNode.save(balances); err != nil {
+	// 	return nil, fmt.Errorf("saving node %v", err.Error())
+	// }
 
-	n2nKey := deleteNode.GetN2NHostKey(ADDRESS)
-	if _, err := balances.DeleteTrieNode(n2nKey); err != nil {
-		return nil, fmt.Errorf("deleting node n2n key failed: %v", err)
-	}
+	// n2nKey := deleteNode.GetN2NHostKey(ADDRESS)
+	// if _, err := balances.DeleteTrieNode(n2nKey); err != nil {
+	// 	return nil, fmt.Errorf("deleting node n2n key failed: %v", err)
+	// }
 
-	emitDeleteMiner(deleteNode.ID, balances)
-	// emitUpdateMiner(deleteNode, balances, false)
+	// emitDeleteMiner(deleteNode.ID, balances)
+	// // emitUpdateMiner(deleteNode, balances, false)
 
 	return deleteNode, nil
 }
