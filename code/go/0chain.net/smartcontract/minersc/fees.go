@@ -247,6 +247,40 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			b.Round, gn.ViewChange, err)
 	}
 
+	// update the delete nodes list
+	deleteMiners, err := getDeleteNodes(balances, spenum.Miner)
+	if err != nil {
+		return common.NewErrorf("pay_fees", "can't get delete miners: %v", err)
+	}
+
+	// remove the delete miner from the list if it's not in the new mb
+	if len(deleteMiners) > 0 {
+		mid := deleteMiners[0]
+		_, ok := mb.Miners.NodesMap[mid]
+		if !ok {
+			deleteMiners = deleteMiners[1:]
+			if err := updateDeleteNodeIDs(balances, spenum.Miner, deleteMiners); err != nil {
+				return common.NewErrorf("pay_fees", "can't update delete miners: %v", err)
+			}
+		}
+	}
+
+	deleteSharders, err := getDeleteNodes(balances, spenum.Sharder)
+	if err != nil {
+		return common.NewErrorf("pay_fees", "can't get delete sharders: %v", err)
+	}
+
+	if len(deleteSharders) > 0 {
+		sid := deleteSharders[0]
+		_, ok := mb.Sharders.NodesMap[sid]
+		if !ok {
+			deleteSharders = deleteSharders[1:]
+			if err := updateDeleteNodeIDs(balances, spenum.Sharder, deleteSharders); err != nil {
+				return common.NewErrorf("pay_fees", "can't update delete sharders: %v", err)
+			}
+		}
+	}
+
 	// clear DKG miners list
 	dmn = NewDKGMinerNodes()
 	logging.Logger.Debug("[mvc] adjust_view_change: clear dkg miners list", zap.Int64("round", b.Round))

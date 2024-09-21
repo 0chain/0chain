@@ -353,18 +353,23 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 }
 
 func getDeleteNodes(balances cstate.StateContextI, nodeType spenum.Provider) (NodeIDs, error) {
-	// get deleted miners list
-	dKey, ok := deleteNodeKeyMap[spenum.Miner]
+	dKey, ok := deleteNodeKeyMap[nodeType]
 	if !ok {
 		return nil, fmt.Errorf("invalid node type: %s", spenum.Miner)
 	}
 
-	deleteMinersIDs, err := getDeleteNodeIDs(balances, dKey)
+	nodeIDs, err := getDeleteNodeIDs(balances, dKey)
 	if err != nil && err != util.ErrValueNotPresent {
 		return nil, err
 	}
 
-	return deleteMinersIDs, nil
+	return nodeIDs, nil
+}
+
+func updateDeleteNodeIDs(balances cstate.StateContextI, pType spenum.Provider, ids NodeIDs) error {
+	key := deleteNodeKeyMap[pType]
+	_, err := balances.InsertTrieNode(key, &ids)
+	return err
 }
 
 func (msc *MinerSmartContract) createDKGMinersForContribute(

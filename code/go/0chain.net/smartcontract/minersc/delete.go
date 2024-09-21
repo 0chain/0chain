@@ -107,10 +107,10 @@ func getDeleteNodeIDs(state state.StateContextI, key string) (NodeIDs, error) {
 	return ids, nil
 }
 
-func updateDeleteNodeIDs(state state.StateContextI, key string, ids NodeIDs) error {
-	_, err := state.InsertTrieNode(key, &ids)
-	return err
-}
+// func updateDeleteNodeIDs(state state.StateContextI, key string, ids NodeIDs) error {
+// 	_, err := state.InsertTrieNode(key, &ids)
+// 	return err
+// }
 
 func resetDeleteNodeIDs(state state.StateContextI, key string) error {
 	_, err := state.InsertTrieNode(key, &NodeIDs{})
