@@ -2686,14 +2686,14 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.MovedToChallenge = afterAllocBase.MovedToChallenge
 
 		//integral_value -= (chall_dtu / rest_dtu) * integral_value
-		currentTime := balances.GetBlock().CreationDate
+		currentTime := common.Now()
 		startTime := beforeAlloc.StartTime
 
 		// Calculate the time passed during the challenge
 		timePassedDuringChallenge := currentTime - startTime
 
 		// Total duration before expiration (allocation expiration - start time)
-		totalDurationBeforeExpiration := afterAllocBase.Expiration - startTime
+		totalDurationBeforeExpiration := afterAllocBase.Expiration - currentTime
 
 		for _, ba := range expectedAlloc.BlobberAllocs {
 
