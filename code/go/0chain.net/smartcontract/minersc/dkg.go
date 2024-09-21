@@ -650,7 +650,32 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	if err != nil {
 		return err
 	}
-	logging.Logger.Debug("[mvc] sharder keep list", zap.Int("num", len(sharders.Nodes)))
+
+	// remove sharders in the delete list from keep list
+	deleteSharders, err := getDeleteNodes(balances, spenum.Sharder)
+	if err != nil {
+		return common.NewErrorf("create_magic_block_failed", "could not get delete sharders list: %v", err)
+	}
+
+	deleteShardersMap := make(map[string]struct{}, len(deleteSharders))
+	for _, id := range deleteSharders {
+		deleteShardersMap[id] = struct{}{}
+	}
+
+	keepSharders := &MinerNodes{
+		Nodes: make([]*MinerNode, 0, len(sharders.Nodes)),
+	}
+
+	for i, sh := range sharders.Nodes {
+		_, ok := deleteShardersMap[sh.ID]
+		if ok {
+			continue
+		}
+
+		keepSharders.Nodes = append(keepSharders.Nodes, sharders.Nodes[i])
+	}
+
+	logging.Logger.Debug("[mvc] sharder keep list", zap.Int("num", len(keepSharders.Nodes)))
 
 	// allSharderList, err := getAllShardersList(balances)
 	// if err != nil {
@@ -691,7 +716,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	// 		"len(dkgMinersList.SimpleNodes) [%d] < dkgMinersList.K [%d]", len(dkgMinersList.SimpleNodes), dkgMinersList.K)
 	// }
 
-	magicBlock, err := msc.createMagicBlock(balances, sharders, dkgMinersList, gsos, mpks, pn)
+	magicBlock, err := msc.createMagicBlock(balances, keepSharders, dkgMinersList, gsos, mpks, pn)
 	if err != nil {
 		return err
 	}

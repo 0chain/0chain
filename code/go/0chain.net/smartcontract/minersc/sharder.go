@@ -291,8 +291,10 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 	}
 
 	// check if the sharder is in MB
-	// use MB in MPT, which is the latest one, it may not being finalized yet,
 	// we should not add the sharder to keep list if the new MB will exclude it.
+	//
+	// once the sharder is removed from the MB, sharder_keep will ignore it unless
+	// it is in the register node list.
 	mb, err := getMagicBlock(balances)
 	if err != nil {
 		return "", common.NewErrorf("sharder_keep", "failed to get magic block: %v", err)
@@ -313,7 +315,8 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 			}
 		}
 		if !find {
-			return "", common.NewErrorf("sharder_keep", "sharder %s is not in the register node list", newSharder.ID)
+			logging.Logger.Error("[mvc] sharder_keep failed, node is neither in MB nor in the register node list", zap.String("ID", newSharder.ID))
+			return "", common.NewError("sharder_keep", "sharder is not in the register node list")
 		}
 	}
 
