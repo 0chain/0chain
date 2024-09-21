@@ -232,7 +232,7 @@ func getSharderNode(
 }
 
 func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
-	input []byte, _ *GlobalNode, balances cstate.StateContextI) (
+	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err2 error) {
 
 	pn, err := GetPhaseNode(balances)
@@ -288,6 +288,27 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		// do not return error for sharder already exist,
 		logging.Logger.Debug("Add sharder already exists", zap.String("ID", newSharder.ID))
 		return string(newSharder.Encode()), nil
+	}
+
+	// check if the sharder is in MB
+	mb := gn.prevMagicBlock(balances)
+	exist := mb.Sharders.GetNode(newSharder.ID)
+	if exist != nil {
+		// sharder not in the MB, check if the sharder is in the register nodes list, otherwise return error
+		regIDs, err := getRegisterNodes(balances, spenum.Sharder)
+		if err != nil {
+			return "", common.NewErrorf("sharder_keep", "failed to get register node list: %v", err)
+		}
+		var find bool
+		for _, regID := range regIDs {
+			if regID == newSharder.ID {
+				find = true
+				break
+			}
+		}
+		if !find {
+			return "", common.NewErrorf("sharder_keep", "sharder %s is not in the register node list", newSharder.ID)
+		}
 	}
 
 	keepNodeIDs = append(keepNodeIDs, newSharder.ID)
