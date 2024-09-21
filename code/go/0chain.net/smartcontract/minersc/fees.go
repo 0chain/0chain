@@ -423,9 +423,9 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		if lfmb != nil {
 			// TODO: use viewChangePoolsWork when view change is enabled
 			//err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
-			if err = msc.viewChangeDeleteNodes(balances); err != nil {
-				return "", err
-			}
+			// if err = msc.viewChangeDeleteNodes(balances); err != nil {
+			// 	return "", err
+			// }
 		} else {
 			return "", common.NewError("pay_fees", "cannot find latest magic bock")
 		}
