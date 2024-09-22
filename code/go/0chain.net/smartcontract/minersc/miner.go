@@ -78,7 +78,7 @@ func (rnr *RegisterNodeSCRequest) Decode(data []byte) error {
 // NOTE: this can only be called by chain owner to do manual view change.
 // Register one miner and sharder each VC.
 // Only the registered node will be added to magic block
-func (msc *MinerSmartContract) RegisterNode(t *transaction.Transaction,
+func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI,
 ) (resp string, err error) {
 	// TODO: only chain owner can register nodes
