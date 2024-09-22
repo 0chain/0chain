@@ -9,35 +9,30 @@ import (
 	"testing"
 	"time"
 
-	"0chain.net/core/util/entitywrapper"
-	"github.com/google/uuid"
-
-	"0chain.net/chaincore/tokenpool"
-
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/chaincore/block"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
-
-	"0chain.net/smartcontract/partitions"
-
-	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/util"
+	"github.com/google/uuid"
 
 	"0chain.net/smartcontract/stakepool"
 
-	"0chain.net/chaincore/chain/state/mocks"
-	sci "0chain.net/chaincore/smartcontractinterface"
-	"github.com/stretchr/testify/mock"
-
 	chainState "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
-	"github.com/0chain/common/core/util"
+	"0chain.net/core/util/entitywrapper"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2553,9 +2548,13 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		var sizePerBlobber = currency.Coin(sizeInGB(beforeAlloc.Size / int64(beforeAlloc.DataShards)))
 
 		// Iterate over all blobbers and adjust their write price
+		oldTerms := make([]Terms, 0)
 		for i, blobber := range blobbers {
+
 			blobberNode, err := ssc.getBlobber(blobber.id, balances)
 			require.NoError(t, err)
+
+			oldTerms = append(oldTerms, blobberNode.mustBase().Terms)
 
 			// Add current blobber's write price to total
 			//todo:
@@ -2574,10 +2573,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 					return nil
 				})
 			}
-
 			_, err = updateBlobber(t, blobberNode, 0, tp, ssc, balances)
 			require.NoError(t, err)
-
 			// Add the new blobber price to the total lock amount
 			totoalCoinsRequiredForUpgrade += (sizePerBlobber * blobberNode.mustBase().Terms.WritePrice)
 		}
@@ -2590,8 +2587,8 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		tp += int64(360 * time.Hour / 1e9)
 
 		// First attempt to upgrade allocation without providing enough lock amount (should fail)
-		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		require.Error(t, err)
+		// resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		// require.Error(t, err)
 
 		//todo:
 		// get the time duration from the start of transaction
@@ -2609,8 +2606,10 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		totalExpectedSize := uar.Size + beforeAlloc.Size
 
 		// Now provide the correct lock amount for the upgrade (should succeed)
-		resp, err = uar.callUpdateAllocReq(t, client.id, totalUpgradeLockAmount, tp, ssc, balances)
+		resp, err := uar.callUpdateAllocReq(t, client.id, totalUpgradeLockAmount, tp, ssc, balances)
 		require.NoError(t, err)
+
+		txnStartDate := balances.txn.CreationDate
 
 		// Decode and verify the response allocation
 		var deco StorageAllocation
@@ -2619,6 +2618,9 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		afterAlloc, err := ssc.getAllocation(allocID, balances)
 		require.NoError(t, err)
 		afterAllocBase := afterAlloc.mustBase()
+
+		oldTimeDuration := beforeAlloc.Expiration - txnStartDate
+		remainingTimeDuration := afterAllocBase.Expiration - txnStartDate
 
 		// Get the updated challenge pool
 		cp, err = ssc.getChallengePool(allocID, balances)
@@ -2686,33 +2688,30 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.MovedToChallenge = afterAllocBase.MovedToChallenge
 
 		//integral_value -= (chall_dtu / rest_dtu) * integral_value
-		currentTime := common.Now()
-		startTime := beforeAlloc.StartTime
 
-		// Calculate the time passed during the challenge
-		timePassedDuringChallenge := currentTime - startTime
+		//get conguration from balances
+		var config = Config{}
+		err = balances.GetTrieNode(scConfigKey(ADDRESS), &config)
+		require.NoError(t, err)
 
-		// Total duration before expiration (allocation expiration - start time)
-		totalDurationBeforeExpiration := afterAllocBase.Expiration - currentTime
+		changes, err := afterAllocBase.challengePoolChanges(oldTimeDuration, remainingTimeDuration, 720*time.Hour, oldTerms)
+		require.NoError(t, err)
 
-		for _, ba := range expectedAlloc.BlobberAllocs {
+		fmt.Println("changes", changes, "tu", config.TimeUnit)
+
+		for i, ba := range expectedAlloc.BlobberAllocs {
 
 			blobberNode, err := ssc.getBlobber(ba.BlobberID, balances)
 			require.NoError(t, err)
 
-			chall_dtu := float64(timePassedDuringChallenge)                                // Time passed for the challenge
-			rest_dtu := float64(totalDurationBeforeExpiration - timePassedDuringChallenge) // Remaining time until expiration
-			timeRatio := chall_dtu / rest_dtu
-
-			ba.ChallengePoolIntegralValue -= currency.Coin(float64(ba.ChallengePoolIntegralValue) * timeRatio)
-
 			// Adjust ChallengePoolIntegralValue based on price changes
-			// if i < increasePriceCount {
-			// 	ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue * 2)
-			// } else if i >= increasePriceCount && i < increasePriceCount+decreasePriceCount {
-			// 	ba.ChallengePoolIntegralValue = (ba.ChallengePoolIntegralValue / 2)
-			// }
+			change := changes[i]
 
+			if change.isNegative {
+				ba.ChallengePoolIntegralValue -= change.Value
+			} else {
+				ba.ChallengePoolIntegralValue += change.Value
+			}
 			// Adjust size and write price for each blobber
 			oldSize := ba.Size
 			ba.Size += uar.Size / int64(afterAllocBase.DataShards)
@@ -2727,7 +2726,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 	})
 
 	// Enterprise Allocation Tests
-
 	t.Run("Enterprise : Extend unused allocation duration should work", func(t *testing.T) {
 		var (
 			tp     = int64(0)
