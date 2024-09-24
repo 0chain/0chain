@@ -2734,7 +2734,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			beforeAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
 			allocID               = beforeAlloc.ID
 		)
-
 		// check worker pool should be 100 zcn
 		require.Equal(t, 100*x10, int(beforeAlloc.WritePool), "Write pool should be not be zero")
 
