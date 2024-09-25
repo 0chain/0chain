@@ -338,16 +338,33 @@ func (msc *MinerSmartContract) deleteNode(
 	deleteNode *MinerNode,
 	balances cstate.StateContextI,
 ) (*MinerNode, error) {
-	var err error
+	// check if the node is in MB
+	mb := gn.prevMagicBlock(balances)
+
+	var (
+		err  error
+		inMB bool
+	)
 	// deleteNode.Delete = true
 	var nodeType spenum.Provider
 	switch deleteNode.NodeType {
 	case NodeTypeMiner:
 		nodeType = spenum.Miner
+		inMB = mb.Miners.GetNode(deleteNode.ID) != nil
 	case NodeTypeSharder:
 		nodeType = spenum.Sharder
+		inMB = mb.Sharders.GetNode(deleteNode.ID) != nil
 	default:
 		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
+	}
+
+	if !inMB {
+		logging.Logger.Debug("delete node failed, node is not in MB",
+			zap.String("id", deleteNode.ID),
+			zap.Int64("mb_sr", mb.StartingRound),
+			zap.Int64("mb_num", mb.MagicBlockNumber),
+			zap.String("mb_hash", mb.Hash))
+		return nil, common.NewError("delete_node", "node is not in MB")
 	}
 
 	logging.Logger.Debug("delete node",
