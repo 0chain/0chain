@@ -496,6 +496,9 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return common.NewErrorf("failed to create dkg miners", "could not get sharder register list: %v", err)
 	}
 
+	logging.Logger.Debug("[mvc] create dkg miners, sharders to register",
+		zap.Strings("sharders", registerShardersIDs))
+
 	if len(registerShardersIDs) > 0 {
 		// check if the node exist
 		sid := registerShardersIDs[0]
@@ -684,6 +687,12 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	if err != nil {
 		return err
 	}
+	shKeepIDs := make([]string, 0, len(sharders.Nodes))
+	for _, sh := range sharders.Nodes {
+		shKeepIDs = append(shKeepIDs, sh.ID)
+	}
+	logging.Logger.Debug("[mvc] create magic block for wait, get sharder keep list",
+		zap.Any("sharders", shKeepIDs))
 
 	// remove sharders in the delete list from keep list
 	deleteSharders, err := getDeleteNodes(balances, spenum.Sharder)
@@ -703,6 +712,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	for i, sh := range sharders.Nodes {
 		_, ok := deleteShardersMap[sh.ID]
 		if ok {
+			logging.Logger.Debug("[mvc] create magic block for wait, see delete sharder", zap.String("id", sh.ID))
 			continue
 		}
 
