@@ -42,7 +42,7 @@ func doesMinerExist(pkey datastore.Key,
 
 func getRegisterNodes(balances cstate.StateContextI, nodeType spenum.Provider) (NodeIDs, error) {
 	// get register nodes list
-	rKey, ok := registerNodeKeyMap[spenum.Miner]
+	rKey, ok := registerNodeKeyMap[nodeType]
 	if !ok {
 		return nil, fmt.Errorf("invalid node type: %s", spenum.Miner)
 	}
