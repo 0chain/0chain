@@ -432,6 +432,22 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		dkgMiners.SimpleNodes[mid] = n.SimpleNode
 	}
 
+	// get register miner list
+	regIDs, err := getRegisterNodes(balances, spenum.Miner)
+	if err != nil {
+		return common.NewErrorf("failed to create dkg miners", "get register node error: %v", err)
+	}
+
+	var toAdd string
+	if len(regIDs) > 0 {
+		toAdd = regIDs[0]
+	}
+
+	if n, ok := allMinersMap[toAdd]; ok {
+		logging.Logger.Debug("[mvc] createDKGMinersForContribute, add register node to dkg miners", zap.String("node", toAdd))
+		dkgMiners.SimpleNodes[toAdd] = n.SimpleNode
+	}
+
 	dkgMinersNum := len(dkgMiners.SimpleNodes)
 	if dkgMinersNum < gn.MinN {
 		return common.NewErrorf("failed to create dkg miners", "miners num: %d < gn.Min: %c", dkgMinersNum, gn.MinN)
