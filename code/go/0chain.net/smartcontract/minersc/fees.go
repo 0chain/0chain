@@ -265,6 +265,21 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		}
 	}
 
+	regMinerIDs, err := getRegisterNodes(balances, spenum.Miner)
+	if err != nil {
+		return common.NewErrorf("pay_fees", "can't get register miners: %v", err)
+	}
+
+	if len(regMinerIDs) > 0 {
+		addMID := regMinerIDs[0]
+		// remove the id from the register list if it is in the mb
+		if mb.Miners.HasNode(addMID) {
+			if err := updateRegisterNodes(balances, spenum.Miner, regMinerIDs[1:]); err != nil {
+				return common.NewErrorf("pay_fees", "can't update register miners: %v", err)
+			}
+		}
+	}
+
 	deleteSharders, err := getDeleteNodes(balances, spenum.Sharder)
 	if err != nil {
 		return common.NewErrorf("pay_fees", "can't get delete sharders: %v", err)
@@ -277,6 +292,22 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			deleteSharders = deleteSharders[1:]
 			if err := updateDeleteNodeIDs(balances, spenum.Sharder, deleteSharders); err != nil {
 				return common.NewErrorf("pay_fees", "can't update delete sharders: %v", err)
+			}
+		}
+	}
+
+	// get register sharders list
+	regSharderIDs, err := getRegisterNodes(balances, spenum.Sharder)
+	if err != nil {
+		return common.NewErrorf("pay_fees", "can't get register sharders: %v", err)
+	}
+
+	if len(regSharderIDs) > 0 {
+		addSID := regSharderIDs[0]
+		// remove the id from the register list if it is in the mb
+		if mb.Sharders.HasNode(addSID) {
+			if err := updateRegisterNodes(balances, spenum.Sharder, regSharderIDs[1:]); err != nil {
+				return common.NewErrorf("pay_fees", "can't update register sharders: %v", err)
 			}
 		}
 	}
