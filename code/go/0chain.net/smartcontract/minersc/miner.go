@@ -85,44 +85,39 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 
 	rnr := RegisterNodeSCRequest{}
 	if err := rnr.Decode(inputData); err != nil {
-		logging.Logger.Error("register node failed", zap.Error(err))
+		logging.Logger.Error("vc add node failed", zap.Error(err))
 		return "", common.NewError("register_node", "invalid register node SC data")
-	}
-
-	// check node existence
-	var exist *MinerNode
-	switch rnr.Type {
-	case spenum.Miner:
-		exist, err = getMinerNode(rnr.ID, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return "", common.NewErrorf("register_node", "could not get miner: %v", err)
-		}
-
-	case spenum.Sharder:
-		exist, err = getSharderNode(rnr.ID, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return "", common.NewErrorf("register_node", "could not get sharder: %v", err)
-		}
-	default:
-		return "", common.NewErrorf("register_node", "unknown register node type: %v", rnr.Type)
-	}
-
-	if exist != nil {
-		logging.Logger.Warn("register_node, node already exists",
-			zap.String("ID", rnr.ID),
-			zap.String("type", rnr.Type.String()))
-		return rnr.ID, common.NewError("register_node", "node already registered")
 	}
 
 	// add id to the register node list
 	rids, err := getRegisterNodes(balances, rnr.Type)
 	if err != nil {
-		return "", common.NewErrorf("register_node", "could not get register node list: %v", err)
+		return "", common.NewErrorf("vc_add", "could not get register node list: %v", err)
 	}
 
 	if len(rids) > 0 {
-		return "", common.NewError("register_node", "there are pending register node")
+		return "", common.NewError("vc_add", "there are pending register node")
 	}
+
+	for _, rid := range rids {
+		if rid == rnr.ID {
+			return "", common.NewError("vc_add", "node already registered")
+		}
+	}
+
+	// return if the node is in remove list
+	deleteIDs, err := getDeleteNodes(balances, rnr.Type)
+	if err != nil {
+		return "", common.NewErrorf("vc_add", "could not get delete nodes list: %v", err)
+	}
+
+	for _, did := range deleteIDs {
+		if did == rnr.ID {
+			return "", common.NewError("vc_add", "node is in remove list")
+		}
+	}
+
+	logging.Logger.Debug("[mvc] vc_add", zap.String("node type", rnr.Type.String()), zap.String("id", rnr.ID))
 
 	rids = append(rids, rnr.ID)
 	if err := updateRegisterNodes(balances, rnr.Type, rids); err != nil {
