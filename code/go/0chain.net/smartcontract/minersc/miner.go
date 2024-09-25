@@ -367,10 +367,10 @@ func (msc *MinerSmartContract) deleteNode(
 	switch deleteNode.NodeType {
 	case NodeTypeMiner:
 		nodeType = spenum.Miner
-		inMB = mb.Miners.GetNode(deleteNode.ID) != nil
+		inMB = mb.Miners.HasNode(deleteNode.ID)
 	case NodeTypeSharder:
 		nodeType = spenum.Sharder
-		inMB = mb.Sharders.GetNode(deleteNode.ID) != nil
+		inMB = mb.Sharders.HasNode(deleteNode.ID)
 	default:
 		return nil, fmt.Errorf("unrecognised node type: %v", deleteNode.NodeType.String())
 	}
