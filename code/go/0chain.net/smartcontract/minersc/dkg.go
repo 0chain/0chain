@@ -490,6 +490,24 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		shardersKeep = append(shardersKeep, id)
 	}
 
+	// get register sharder list
+	registerShardersIDs, err := getRegisterNodes(balances, spenum.Sharder)
+	if err != nil {
+		return common.NewErrorf("failed to create dkg miners", "could not get sharder register list: %v", err)
+	}
+
+	if len(registerShardersIDs) > 0 {
+		// check if the node exist
+		sid := registerShardersIDs[0]
+		sn, err := getSharderNode(sid, balances)
+		if err != nil && err != util.ErrValueNotPresent {
+			return common.NewErrorf("failed to create dkg miners", "could not get sharder: %v", err)
+		}
+		if sn != nil {
+			shardersKeep = append(shardersKeep, sid)
+		}
+	}
+
 	if len(shardersKeep) < gn.MinS {
 		return common.NewError("failed to create dkg miners",
 			"sharders number would be below gn.MinS after removing")
