@@ -89,6 +89,23 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 		return "", common.NewError("register_node", "invalid register node SC data")
 	}
 
+	var (
+		mb   = gn.prevMagicBlock(balances)
+		inMB bool
+	)
+	switch rnr.Type {
+	case spenum.Miner:
+		inMB = mb.Miners.HasNode(rnr.ID)
+	case spenum.Sharder:
+		inMB = mb.Sharders.HasNode(rnr.ID)
+	default:
+		return "", common.NewErrorf("vc_add", "unknown node type to add: %d", rnr.Type)
+	}
+
+	if inMB {
+		return "", common.NewError("vc_add", "node to add is already in MB")
+	}
+
 	// add id to the register node list
 	rids, err := getRegisterNodes(balances, rnr.Type)
 	if err != nil {
