@@ -2557,9 +2557,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			oldTerms = append(oldTerms, blobberNode.mustBase().Terms)
 
 			// Add current blobber's write price to total
-			//todo:
-			// formula := writePrice * sizePerBlobber
-			totalWritePriceBeforeAlloc += (blobberNode.mustBase().Terms.WritePrice)
+			totalWritePriceBeforeAlloc += (sizePerBlobber * blobberNode.mustBase().Terms.WritePrice)
 
 			// Adjust price: first `increasePriceCount` blobbers increase price by 2x, next `decreasePriceCount` blobbers decrease price by 0.5x
 			if i < increasePriceCount {
@@ -2801,7 +2799,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		// Finally, compare the expected allocation with the actual one
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
-
 	// Enterprise Allocation Tests
 	t.Run("Enterprise : Extend unused allocation duration should work", func(t *testing.T) {
 		var (
