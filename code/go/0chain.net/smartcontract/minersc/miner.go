@@ -44,7 +44,7 @@ func getRegisterNodes(balances cstate.StateContextI, nodeType spenum.Provider) (
 	// get register nodes list
 	rKey, ok := registerNodeKeyMap[nodeType]
 	if !ok {
-		return nil, fmt.Errorf("invalid node type: %s", spenum.Miner)
+		return nil, fmt.Errorf("invalid node type: %s", nodeType)
 	}
 
 	deleteMinersIDs, err := getNodeIDs(balances, rKey)
@@ -56,9 +56,9 @@ func getRegisterNodes(balances cstate.StateContextI, nodeType spenum.Provider) (
 }
 
 func updateRegisterNodes(balances cstate.StateContextI, nodeType spenum.Provider, ids NodeIDs) error {
-	rKey, ok := registerNodeKeyMap[spenum.Miner]
+	rKey, ok := registerNodeKeyMap[nodeType]
 	if !ok {
-		return fmt.Errorf("invalid node type: %s", spenum.Miner)
+		return fmt.Errorf("invalid node type: %s", nodeType)
 	}
 
 	_, err := balances.InsertTrieNode(rKey, &ids)
