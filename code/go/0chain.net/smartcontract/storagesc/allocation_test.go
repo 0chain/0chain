@@ -2434,6 +2434,57 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
+	t.Run("Add blobber to used allocation should work", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			// Allocation
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
+			allocID        = beforeAlloc.ID
+		)
+		require.Equal(t, 0, int(beforeAlloc.WritePool), "Write pool should be zero")
+
+		// add blobber
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
+
+		// add blobber
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.AddBlobberId = nb3.id
+		uar.AddBlobberAuthTicket = ""
+		//tp += int64(360 * time.Hour / 1e9)
+
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+		assert.Equal(t, 21, len(afterAllocBase.BlobberAllocs), "Blobber should be added to the allocation")
+		require.Equal(t, 5*x10, int(afterAllocBase.WritePool), "Write pool should be updated")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.ParityShards = 11
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		// todo: why this line needs to be like this
+		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, afterAllocBase.BlobberAllocs[len(afterAllocBase.BlobberAllocs)-1])
+		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
+
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
+	})
+
 	t.Run("Upgrade size in unused allocation with price variations should work", func(t *testing.T) {
 		fmt.Println("upgrade size in unused allocation with price variations should work")
 		var (
