@@ -2850,6 +2850,63 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		// Finally, compare the expected allocation with the actual one
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
+	
+	t.Run("Replace blobber in unused allocation should work", func(t *testing.T) {
+		var (
+			tp     = int64(0)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
+			allocID               = beforeAlloc.ID
+		)
+
+		// Add a new blobber
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
+
+		fmt.Println("blobber details :", len(beforeAlloc.BlobberAllocs), len(blobbers))
+		// Replace blobber
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.RemoveBlobberId = beforeAlloc.BlobberAllocs[0].BlobberID
+		uar.AddBlobberId = nb3.id
+		uar.AddBlobberAuthTicket = ""
+
+		// why we need 1 zcn here ?
+		// during removing of blobber, we may need to pay cancellation charges and someother penalty
+		// which will be deducted from the write pool. so to maintainthe cosst of the write pool
+		// we need to provide some tokens to the write pool.
+		resp, err := uar.callUpdateAllocReq(t, client.id, 1*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+		assert.Equal(t, 20, len(afterAllocBase.BlobberAllocs), "Blobber should be added to the allocation")
+
+		foundRemovedBlobber := false
+		for _, ba := range afterAllocBase.BlobberAllocs {
+			if ba.BlobberID == uar.RemoveBlobberId {
+				foundRemovedBlobber = true
+			}
+		}
+		assert.False(t, foundRemovedBlobber, "Removed blobber should not exist in allocation")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		expectedAlloc.BlobberAllocs[0].BlobberID = nb3.id
+
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
+	})
+
 	// Enterprise Allocation Tests
 	t.Run("Enterprise : Extend unused allocation duration should work", func(t *testing.T) {
 		var (

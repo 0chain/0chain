@@ -1,0 +1,3 @@
+Building general test image
+Running unit tests from 0chain.net/smartcontract/storagesc:
+ok  	0chain.net/smartcontract/storagesc	105.283s
