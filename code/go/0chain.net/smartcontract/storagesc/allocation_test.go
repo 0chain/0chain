@@ -2486,7 +2486,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 	})
 
 	t.Run("Upgrade size in unused allocation with price variations should work", func(t *testing.T) {
-		fmt.Println("upgrade size in unused allocation with price variations should work")
 		var (
 			tp     = int64(0)
 			client = newClient(2000*x10, balances)
@@ -2746,8 +2745,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		changes, err := afterAllocBase.challengePoolChanges(oldTimeDuration, remainingTimeDuration, 720*time.Hour, oldTerms)
 		require.NoError(t, err)
 
-		fmt.Println("changes", changes, "tu", config.TimeUnit)
-
 		for i, ba := range expectedAlloc.BlobberAllocs {
 
 			blobberNode, err := ssc.getBlobber(ba.BlobberID, balances)
@@ -2850,21 +2847,20 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		// Finally, compare the expected allocation with the actual one
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
-	
+
 	t.Run("Replace blobber in unused allocation should work", func(t *testing.T) {
 		var (
 			tp     = int64(0)
 			client = newClient(2000*x10, balances)
 
 			// Allocation
-			beforeAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
-			allocID               = beforeAlloc.ID
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, true, false, false)
+			allocID        = beforeAlloc.ID
 		)
 
 		// Add a new blobber
 		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
 
-		fmt.Println("blobber details :", len(beforeAlloc.BlobberAllocs), len(blobbers))
 		// Replace blobber
 		var uar updateAllocationRequest
 		uar.ID = allocID
