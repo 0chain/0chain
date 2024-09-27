@@ -2598,10 +2598,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		var totalWritePriceBeforeAlloc currency.Coin
 		var sizePerBlobber = currency.Coin(sizeInGB(beforeAlloc.Size / int64(beforeAlloc.DataShards)))
 
-		// First attempt to upgrade allocation without providing enough lock amount (should fail)
-		// resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
-		// require.Error(t, err)
-
 		cp, err := ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
@@ -2643,6 +2639,9 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, "challenge passed by blobber", resp)
+
+		allocAfterChallenge, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
 
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
@@ -2689,6 +2688,10 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		totalExpectedLockAmount := currency.Coin(float64(totoalCoinsRequiredForUpgrade) * sizeMultiplier)
 		totalExpectedSize := uar.Size + beforeAlloc.Size
 
+		// First attempt to upgrade allocation without providing enough lock amount (should fail)
+		resp, err = uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
+		require.Error(t, err)
+
 		// Now provide the correct lock amount for the upgrade (should succeed)
 		resp, err = uar.callUpdateAllocReq(t, client.id, totalExpectedLockAmount, tp, ssc, balances)
 		require.NoError(t, err)
@@ -2727,12 +2730,12 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.Expiration = afterAllocBase.Expiration
 		expectedAlloc.WritePool = afterAllocBase.WritePool
 		expectedAlloc.Size = afterAllocBase.Size
-		expectedAlloc.BlobberAllocs[0] = afterAllocBase.BlobberAllocs[0]
+		expectedAlloc.BlobberAllocs[0] = allocAfterChallenge.mustBase().BlobberAllocs[0]
 		expectedAlloc.Stats.TotalChallenges++
 		expectedAlloc.Stats.SuccessChallenges++
-		expectedAlloc.MovedToValidators = afterAllocBase.MovedToValidators
+		expectedAlloc.MovedToValidators = allocAfterChallenge.mustBase().MovedToValidators
 		expectedAlloc.Stats.LastestClosedChallengeTxn = chall.ID
-		expectedAlloc.MovedToChallenge = afterAllocBase.MovedToChallenge
+		expectedAlloc.MovedToChallenge = allocAfterChallenge.mustBase().MovedToChallenge
 
 		changes, err := afterAllocBase.challengePoolChanges(oldTimeDuration, remainingTimeDuration, 2*time.Minute, oldTerms)
 		require.NoError(t, err)
@@ -2907,10 +2910,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 			allocID        = beforeAlloc.ID
 		)
 
-		fmt.Println("before alloc used size ", beforeAlloc.Stats.UsedSize)
-		for _, ba := range beforeAlloc.BlobberAllocs {
-			fmt.Println("before alloc blobber size ", ba.Stats.UsedSize)
-		}
 		// Add a new blobber
 		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
 
@@ -2959,7 +2958,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.Stats.UsedSize = beforeAlloc.Stats.UsedSize - (int64(sizeInGB(beforeAlloc.Size)/float64(beforeAlloc.DataShards)) * GB)
 		expectedAlloc.BlobberAllocs[0] = afterAllocBase.BlobberAllocs[0]
 		expectedAlloc.BlobberAllocs[0].BlobberID = nb3.id
-		fmt.Println("after ", afterAllocBase.Stats.UsedSize, "before ", beforeAlloc.Stats.UsedSize, "expected ", expectedAlloc.Stats.UsedSize)
 
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
