@@ -2640,9 +2640,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		require.Equal(t, "challenge passed by blobber", resp)
 
-		allocAfterChallenge, err := ssc.getAllocation(allocID, balances)
-		require.NoError(t, err)
-
 		cp, err = ssc.getChallengePool(allocID, balances)
 		require.NoError(t, err)
 
@@ -2730,12 +2727,12 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		expectedAlloc.Expiration = afterAllocBase.Expiration
 		expectedAlloc.WritePool = afterAllocBase.WritePool
 		expectedAlloc.Size = afterAllocBase.Size
-		expectedAlloc.BlobberAllocs[0] = allocAfterChallenge.mustBase().BlobberAllocs[0]
+		expectedAlloc.BlobberAllocs[0] = afterAllocBase.BlobberAllocs[0]
 		expectedAlloc.Stats.TotalChallenges++
 		expectedAlloc.Stats.SuccessChallenges++
-		expectedAlloc.MovedToValidators = allocAfterChallenge.mustBase().MovedToValidators
+		expectedAlloc.MovedToValidators = afterAllocBase.MovedToValidators
 		expectedAlloc.Stats.LastestClosedChallengeTxn = chall.ID
-		expectedAlloc.MovedToChallenge = allocAfterChallenge.mustBase().MovedToChallenge
+		expectedAlloc.MovedToChallenge = afterAllocBase.MovedToChallenge
 
 		changes, err := afterAllocBase.challengePoolChanges(oldTimeDuration, remainingTimeDuration, 2*time.Minute, oldTerms)
 		require.NoError(t, err)
