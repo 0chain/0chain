@@ -15,6 +15,7 @@ import (
 	"0chain.net/chaincore/state"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/util"
 
 	"github.com/rcrowley/go-metrics"
@@ -332,31 +333,33 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	resp string, err error) {
 
 	var (
-		// configuration = config.Configuration()
-		// isViewChange  = configuration.ChainConfig.IsViewChangeEnabled()
-		b = balances.GetBlock()
+		configuration = config.Configuration()
+		isViewChange  = configuration.ChainConfig.IsViewChangeEnabled()
+		b             = balances.GetBlock()
 	)
 
 	// if isViewChange || b.Round == gn.ViewChange {
 	// if isViewChange || b.Round == gn.ViewChange {
 	// TODO: cache the phase node so if when there's no view change happens, we
-	var pn *PhaseNode
-	if pn, err = GetPhaseNode(balances); err != nil {
-		return
-	}
+	if isViewChange {
+		var pn *PhaseNode
+		if pn, err = GetPhaseNode(balances); err != nil {
+			return
+		}
 
-	if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
-		return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
-	}
+		if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
+			return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
+		}
 
-	if err = msc.adjustViewChange(gn, pn, balances); err != nil {
-		return // adjusting view change error
-	}
+		if err = msc.adjustViewChange(gn, pn, balances); err != nil {
+			return // adjusting view change error
+		}
 
-	// save phase node
-	if _, err = balances.InsertTrieNode(pn.GetKey(), pn); err != nil {
-		logging.Logger.Error("pay_fees failed to save phase node", zap.Error(err))
-		return "", common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
+		// save phase node
+		if _, err = balances.InsertTrieNode(pn.GetKey(), pn); err != nil {
+			logging.Logger.Error("pay_fees failed to save phase node", zap.Error(err))
+			return "", common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
+		}
 	}
 
 	if t.ClientID != b.MinerID {
@@ -487,7 +490,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 		if lfmb != nil {
 			// TODO: use viewChangePoolsWork when view change is enabled
-			//err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
+			// err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
 			// if err = msc.viewChangeDeleteNodes(balances); err != nil {
 			// 	return "", err
 			// }

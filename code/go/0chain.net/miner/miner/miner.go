@@ -365,11 +365,13 @@ func main() {
 			mc.SetupSC(ctx)
 			setupSCDoneC <- struct{}{}
 		}()
-		if mc.ChainConfig.IsViewChangeEnabled() {
-			go mc.DKGProcess(ctx)
-		} else {
-			go mc.ManualViewChangeProcess(ctx)
-		}
+		// if mc.IsViewChangeEnabled() {
+		// go mc.DKGProcess2(ctx)
+
+		// start the dkg process worker so that when view change is on, it can start to
+		// process the phase events immediately.
+		go mc.DKGProcess(ctx)
+		// }
 	}
 
 	shutdown := common.HandleShutdown(server, []func(){

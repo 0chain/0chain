@@ -41,6 +41,11 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 		fr.Finalize(b)
 	}
 
+	// return if view change is not off
+	if !mc.IsViewChangeEnabled() {
+		return nil
+	}
+
 	pn, err := mc.GetPhaseOfBlock(b)
 	if err != nil {
 		logging.Logger.Error("update finalized block - get phase of block failed", zap.Error(err))
