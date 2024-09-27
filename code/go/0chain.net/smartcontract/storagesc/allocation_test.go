@@ -2903,6 +2903,73 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
+	t.Run("Replace blobber in used allocation should work", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(2000*x10, balances)
+
+			// Allocation
+			beforeAlloc, _ = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
+			allocID        = beforeAlloc.ID
+		)
+
+		fmt.Println("before alloc used size ", beforeAlloc.Stats.UsedSize)
+		for _, ba := range beforeAlloc.BlobberAllocs {
+			fmt.Println("before alloc blobber size ", ba.Stats.UsedSize)
+		}
+		// Add a new blobber
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
+
+		// Replace blobber
+		var uar updateAllocationRequest
+		uar.ID = allocID
+		uar.RemoveBlobberId = beforeAlloc.BlobberAllocs[0].BlobberID
+		uar.AddBlobberId = nb3.id
+		uar.AddBlobberAuthTicket = ""
+
+		// why we need 0 zcn here ?
+		// during removing of blobber, we need to pay cancellation charges only if there is some unused allocation
+		// we also have to pay some cost to move dataa from challenge pool to write pool
+		// in this case we moved the data from challenge pool (from blobber which is removed = size of blobber * intrinsic value = 5 ZCN)to write pool
+		// so write pool has 5 ZCN now.
+		// cost of alloc after update = 100 zcn, our cp has 95 ZCN, wp has 5 zcn, total pool = 100 zcn. since cost of alloc == no of tokens required for alloc
+		// also cost of unused alloc = 5 zcn (the new blobber added)
+		// so we need not to lock any amount of token.
+		resp, err := uar.callUpdateAllocReq(t, client.id, 0*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+		assert.Equal(t, 20, len(afterAllocBase.BlobberAllocs), "Blobber should be added to the allocation")
+
+		foundRemovedBlobber := false
+		for _, ba := range afterAllocBase.BlobberAllocs {
+			if ba.BlobberID == uar.RemoveBlobberId {
+				foundRemovedBlobber = true
+			}
+		}
+		assert.False(t, foundRemovedBlobber, "Removed blobber should not exist in allocation")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+		expectedAlloc.MovedBack = afterAllocBase.MovedBack
+		expectedAlloc.Stats.UsedSize = beforeAlloc.Stats.UsedSize - (int64(sizeInGB(beforeAlloc.Size)/float64(beforeAlloc.DataShards))*GB)
+		expectedAlloc.BlobberAllocs[0] = afterAllocBase.BlobberAllocs[0]
+		expectedAlloc.BlobberAllocs[0].BlobberID = nb3.id
+		fmt.Println("after ", afterAllocBase.Stats.UsedSize, "before ", beforeAlloc.Stats.UsedSize, "expected ", expectedAlloc.Stats.UsedSize)
+
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
+	})
+
 	// Enterprise Allocation Tests
 	t.Run("Enterprise : Extend unused allocation duration should work", func(t *testing.T) {
 		var (
