@@ -803,7 +803,6 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	if selfNodeType == node.NodeTypeMiner {
-		// ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
 	fmt.Fprintf(w, "</td>")
@@ -1542,7 +1541,6 @@ func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 		fmt.Fprintf(w, "<h3>Round: %v</h3>", rn)
 		fmt.Fprintf(w, "<div>&nbsp;</div>")
 		if node.Self.Underlying().Type != node.NodeTypeMiner {
-			// ToDo: Add Sharder related round info
 			return
 		}
 

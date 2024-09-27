@@ -491,8 +491,6 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.
-// TODO: move to the place where getNotarizedBlockFromMiners() is implemented, this is kind of
-// duplicate actions here
 func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 
 	rn := r.GetRoundNumber()
@@ -514,8 +512,6 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 	// This is a notarized block. So, use this method to sync round info with the notarized block.
 	c.AddNotarizedBlockToRound(r, nb)
 
-	// TODO: this may not be the best round block or the best chain weight
-	// block. Do we do that extra work?
 	return r.GetHeaviestNotarizedBlock()
 }
 

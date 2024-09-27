@@ -958,7 +958,6 @@ func (b *Block) ComputeState(ctx context.Context, c Chainer, waitC ...chan struc
 			b.Events = nil
 			return err
 		case context.DeadlineExceeded:
-			// TODO: keeping the same block state (Canceled) as creating a new state may cause unexpected issues
 			b.SetStateStatus(StateCancelled)
 			logging.Logger.Error("compute state - deadline exceeded",
 				zap.Int64("round", b.Round),
@@ -1069,7 +1068,6 @@ func (b *Block) ApplyBlockStateChange(bsc *StateChange, c Chainer) error {
 		return nil
 	}
 
-	// TODO: debug logs, remove when this does not happen anymore
 	ts := time.Now()
 	defer func() {
 		du := time.Since(ts)

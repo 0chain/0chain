@@ -614,7 +614,6 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 		return fmt.Errorf("verify block notarization failed, err: %v", err)
 	}
 
-	//TODO remove it since verify block adds this block to round
 	b, _ = c.AddNotarizedBlockToRound(er, b)
 	c.SetRoundRank(er, b)
 	logging.Logger.Info("received notarized block", zap.Int64("round", b.Round),
@@ -1583,7 +1582,6 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		}
 	}
 
-	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
 	r.AddNotarizedBlock(b)
 
@@ -2473,7 +2471,6 @@ func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
 }
 
 // SetLatestFinalizedMagicBlock - set the latest finalized block.
-// TODO: this should be called when UpdateMagicBlock is called successfully
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	if b == nil || b.MagicBlock == nil {

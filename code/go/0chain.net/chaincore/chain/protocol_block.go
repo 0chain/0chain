@@ -611,7 +611,6 @@ func hasBlockFinalizeEvent(events []event.Event) bool {
 
 // IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
-	//TODO: The threshold count should happen w.r.t the view of the block
 	mb := c.GetMagicBlock(b.Round)
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false

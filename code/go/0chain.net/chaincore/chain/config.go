@@ -51,7 +51,6 @@ func (c *ConfigImpl) ConfDataForTest() *ConfigData {
 	return c.conf
 }
 
-// TODO: for test usage only, extend with more fields
 func UpdateConfigImpl(conf *ConfigImpl, data *ConfigData) {
 	if data.BlockSize != 0 {
 		conf.conf.BlockSize = data.BlockSize
