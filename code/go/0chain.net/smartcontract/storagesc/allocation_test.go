@@ -534,7 +534,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
-	t.Run("Add blobber to used allocation should work", func(t *testing.T) {
+	t.Run("Add blobber to used allocation should work without challenge", func(t *testing.T) {
 		var (
 			tp     = int64(10)
 			client = newClient(200000*x10, balances)
