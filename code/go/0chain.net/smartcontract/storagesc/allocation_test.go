@@ -766,6 +766,142 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
 	})
 
+	t.Run("Add blobber to used allocation with price variations with challenge should work", func(t *testing.T) {
+		var (
+			tp     = int64(10)
+			client = newClient(200000*x10, balances)
+
+			// Allocation
+			beforeAlloc, blobbers = setupAllocationWithMockStats(t, ssc, client, tp, balances, false, false, false)
+			allocID               = beforeAlloc.ID
+		)
+		// since it is used allication and we are using whole allocation
+		// all zcn from write pool will be move to challenge pool, so wp will be 0
+		require.Equal(t, 0, int(beforeAlloc.WritePool), "Write pool should be not be zero")
+
+		// generate a challan and verify the same
+		bk := &block.Block{}
+		bk.Round = 500
+		balances.setBlock(t, bk)
+		blobber := blobbers[0]
+		blobberNode, err := ssc.getBlobber(blobber.id, balances)
+		require.NoError(t, err)
+		challID := "chall-0"
+
+		currentRound := balances.GetBlock().Round
+
+		tp += int64(360 * time.Hour / 1e9)
+
+		validators, err := getValidatorsList(balances)
+		require.NoError(t, err)
+
+		genChall(t, ssc, tp, currentRound-100, challID, 0, validators, beforeAlloc.ID, blobberNode, balances)
+
+		// Create challenge response and validate it
+		chall := &ChallengeResponse{
+			ID: challID,
+		}
+		for i := 0; i < 10; i++ {
+			chall.ValidationTickets = append(chall.ValidationTickets,
+				valids[i].validTicket(t, chall.ID, blobber.id, true, tp))
+		}
+
+		tx := newTransaction(blobber.id, ssc.ID, 0, tp)
+		balances.setTransaction(t, tx)
+		resp, err := ssc.verifyChallenge(tx, mustEncode(t, chall), balances)
+		require.NoError(t, err)
+
+		require.Equal(t, "challenge passed by blobber", resp)
+
+		// get allocation
+		afterChallengeAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		//base
+		afterChallengeAllocBase := afterChallengeAlloc.mustBase()
+
+		// Define the number of blobbers that will increase or decrease their price
+		increasePriceCount := 5 // Number of blobbers to increase the price for
+		decreasePriceCount := 2 // Number of blobbers to decrease the price for
+
+		// Iterate over all blobbers and adjust their write price
+		for i, blobber := range blobbers {
+
+			blobberNode, err := ssc.getBlobber(blobber.id, balances)
+			require.NoError(t, err)
+
+			// Adjust price: first `increasePriceCount` blobbers increase price by 2x,
+			// next `decreasePriceCount` blobbers decrease price by 0.5x
+			if i < increasePriceCount {
+				blobberNode.mustUpdateBase(func(b *storageNodeBase) error {
+					b.Terms.WritePrice = b.Terms.WritePrice * 2
+					return nil
+				})
+			} else if i >= increasePriceCount && i < increasePriceCount+decreasePriceCount {
+				blobberNode.mustUpdateBase(func(b *storageNodeBase) error {
+					b.Terms.WritePrice = b.Terms.WritePrice / 2
+					return nil
+				})
+			}
+			_, err = updateBlobber(t, blobberNode, 0, tp, ssc, balances)
+			require.NoError(t, err)
+		}
+
+		// crdate a update allocation request
+		var uar updateAllocationRequest
+		uar.ID = allocID
+
+		// add a blobber with 3GB size
+		nb3 := addBlobber(t, ssc, 3*GB, tp, avgTerms, 50*x10, balances, false, false)
+		uar.AddBlobberId = nb3.id
+		uar.AddBlobberAuthTicket = ""
+
+		// make note here, we are not increasing the time. means update will be done in same time after allocation is made.
+
+		// why 5x10 - bcz while adding the blobber the alloc, we are keeping blobber size = 1 gb
+		// so tokens need to be locked to add blobber would be blobber size * write price
+		// 1 gb * 5 zcn = 5 zcn
+		resp, err = uar.callUpdateAllocReq(t, client.id, 5*x10, tp, ssc, balances)
+		require.NoError(t, err)
+
+		var deco StorageAllocation
+		require.NoError(t, deco.Decode([]byte(resp)))
+
+		afterAlloc, err := ssc.getAllocation(allocID, balances)
+		require.NoError(t, err)
+
+		afterAllocBase := afterAlloc.mustBase()
+
+		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
+		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
+		assert.Equal(t, 21, len(afterAllocBase.BlobberAllocs), "Blobber should be added to the allocation")
+
+		expectedAlloc := beforeAlloc
+		expectedAlloc.Tx = afterAllocBase.Tx
+		expectedAlloc.ParityShards = 11
+		expectedAlloc.WritePool = afterAllocBase.WritePool
+
+		// increase challenges
+		expectedAlloc.Stats.TotalChallenges++
+		expectedAlloc.Stats.SuccessChallenges++
+		expectedAlloc.Stats.LastestClosedChallengeTxn = challID
+
+		// set move to validator
+		expectedAlloc.MovedToValidators = afterChallengeAllocBase.MovedToValidators
+
+		// set move back
+		expectedAlloc.MovedBack = afterChallengeAllocBase.MovedBack
+
+		// blobber 0 details should be set separately bcz of challenge
+		expectedAlloc.BlobberAllocs[0] = afterChallengeAllocBase.BlobberAllocs[0]
+
+		expectedAlloc.BlobberAllocs = append(expectedAlloc.BlobberAllocs, afterAllocBase.BlobberAllocs[len(afterAllocBase.BlobberAllocs)-1])
+		expectedAlloc.BlobberAllocs[len(expectedAlloc.BlobberAllocs)-1].BlobberID = nb3.id
+
+		// Finally, compare the expected allocation with the actual one
+		compareAllocationData(t, *expectedAlloc, *afterAllocBase)
+	})
+
 	// ================== REPLCAE BLOBBER =================
 	t.Run("Replace blobber in unused allocation should work", func(t *testing.T) {
 		var (
