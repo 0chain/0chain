@@ -2611,14 +2611,15 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) ( //nolint
 	}
 
 	// extract and send DKG phase first
-	var pn minersc.PhaseNode
-	if pn, err = c.GetPhaseOfBlock(lfb); err != nil {
+	var pn *minersc.PhaseNode
+	pn, err = c.GetPhaseOfBlock(lfb)
+	if err != nil {
 		return common.NewErrorf("view_change", "getting phase node: %v", err)
 	}
 
 	// even if it executed on a shader we don't treat this phase as obtained
 	// from sharders
-	c.SendPhaseNode(context.TODO(), PhaseEvent{Phase: pn, Sharders: false}) // optimistic, never block here
+	c.SendPhaseNode(context.TODO(), PhaseEvent{Phase: *pn, Sharders: false}) // optimistic, never block here
 
 	// this work is different for miners and sharders
 	return c.viewChanger.ViewChange(ctx, lfb)
