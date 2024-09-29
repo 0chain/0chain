@@ -4,26 +4,35 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"testing"
 	"time"
 
+	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/partitions"
 	"0chain.net/smartcontract/provider"
 
 	"0chain.net/chaincore/block"
+	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/tokenpool"
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/util"
+	"github.com/google/uuid"
 
 	"0chain.net/smartcontract/stakepool"
 
 	chainState "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state/mocks"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 	"0chain.net/core/util/entitywrapper"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2329,7 +2338,6 @@ func TestUpdateAllocationRequest(t *testing.T) {
 	})
 }
 
-/*
 func TestSelectBlobbers(t *testing.T) {
 	const (
 		randomSeed       = 1
@@ -4927,4 +4935,3 @@ func TestBlobberVerifyAuthTicket(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, ok)
 }
-*/
