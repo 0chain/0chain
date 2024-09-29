@@ -2358,7 +2358,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		resp, err := uar.callUpdateAllocReq(t, client.id, 0, tp, ssc, balances)
 		require.Error(t, err)
-		resp, err = uar.callUpdateAllocReq(t, client.id, 100*x10, tp, ssc, balances)
+		resp, err = uar.callUpdateAllocReq(t, client.id, 150*x10, tp, ssc, balances)
 		require.NoError(t, err)
 
 		var deco StorageAllocation
