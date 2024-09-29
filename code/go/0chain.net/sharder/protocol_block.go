@@ -22,6 +22,7 @@ import (
 	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
 	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -156,16 +157,20 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 	}
 
 	pn, err := sc.GetPhaseOfBlock(b)
-	if err != nil {
+	if err != nil && err != util.ErrValueNotPresent {
 		logging.Logger.Error("[mvc] update finalized block - get phase of block failed", zap.Error(err))
 		return err
+	}
+
+	if pn == nil {
+		return nil
 	}
 
 	logging.Logger.Debug("[mvc] update finalized block - send phase node",
 		zap.Int64("round", b.Round),
 		zap.Int64("start_round", pn.StartRound),
 		zap.String("phase", pn.Phase.String()))
-	go sc.SendPhaseNode(context.Background(), chain.PhaseEvent{Phase: pn})
+	go sc.SendPhaseNode(context.Background(), chain.PhaseEvent{Phase: *pn})
 
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
