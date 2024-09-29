@@ -338,8 +338,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		b             = balances.GetBlock()
 	)
 
-	// if isViewChange || b.Round == gn.ViewChange {
-	// if isViewChange || b.Round == gn.ViewChange {
 	// TODO: cache the phase node so if when there's no view change happens, we
 	if isViewChange {
 		var pn *PhaseNode
