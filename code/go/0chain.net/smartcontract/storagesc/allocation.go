@@ -1179,15 +1179,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		cpBalance = cp.Balance
 	}
 
-	herculesEnabled := false
-	actErr = chainstate.WithActivation(balances, "hercules", func() error {
-		return nil
-	}, func() error {
-		herculesEnabled = true
-		return nil
-	})
-
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(herculesEnabled, cpBalance, request.Extend, isEnterprise, t.CreationDate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(balances, cpBalance, request.Extend, isEnterprise, t.CreationDate)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
