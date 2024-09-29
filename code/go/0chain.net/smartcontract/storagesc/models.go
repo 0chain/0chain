@@ -1287,7 +1287,7 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				return common.NewError("remove_blobber_failed",
 					"can't get stake pool of "+d.BlobberID+": "+err.Error())
 			}
-			if err := sp.reduceOffer(d.Offer()); err != nil {
+			if err := sp.reduceOffer(balances, d.Offer()); err != nil {
 				return common.NewError("remove_blobber_failed",
 					"error removing offer: "+err.Error())
 			}
