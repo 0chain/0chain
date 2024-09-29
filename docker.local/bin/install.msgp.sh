@@ -2,6 +2,6 @@
 set -e
 
 # Install msgp
-GO111MODULE=auto go get -u github.com/0chain/msgp
+go install github.com/0chain/msgp@latest
 cd $(go env GOPATH)/src/github.com/0chain/msgp
 make install
