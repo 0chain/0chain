@@ -1947,7 +1947,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLockZCN, err := allocBase.requiredTokensForUpdateAllocation(true, currency.Coin(cpBalance), req.Extend, isEnterprise, common.Timestamp(time.Now().Unix()))
+	tokensRequiredToLockZCN, err := requiredTokensForUpdateAllocation(allocBase, currency.Coin(cpBalance), req.Extend, isEnterprise, common.Timestamp(time.Now().Unix()))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1959,6 +1959,58 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	common.Respond(w, r, AllocationUpdateMinLockResponse{
 		MinLockDemand: tokensRequiredToLock,
 	}, nil)
+}
+
+func requiredTokensForUpdateAllocation(sa *storageAllocationBase, cpBalance currency.Coin, extend, isEnterprise bool, now common.Timestamp) (currency.Coin, error) {
+	var (
+		costOfAllocAfterUpdate currency.Coin
+		tokensRequiredToLock   currency.Coin
+		err                    error
+	)
+
+	if isEnterprise || extend {
+		costOfAllocAfterUpdate, err = sa.cost()
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+		}
+	} else {
+		costOfAllocAfterUpdate, err = sa.costForRDTU(now)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+		}
+	}
+
+	totalWritePool := sa.WritePool + cpBalance
+
+	if totalWritePool < costOfAllocAfterUpdate {
+		tokensRequiredToLock = costOfAllocAfterUpdate - totalWritePool
+	} else {
+		tokensRequiredToLock = 0
+	}
+
+	var costOfUnusedAlloc currency.Coin
+
+	costOfUnusedAlloc, err = sa.unUsedAllocCost()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get unused allocation cost: %v", err)
+	}
+	if costOfUnusedAlloc > sa.WritePool && costOfUnusedAlloc-sa.WritePool > tokensRequiredToLock {
+		tokensRequiredToLock = costOfUnusedAlloc - sa.WritePool
+	}
+
+	logging.Logger.Info("requiredTokensForUpdateAllocation",
+		zap.Any("costOfAllocAfterUpdate", costOfAllocAfterUpdate),
+		zap.Any("totalWritePool", totalWritePool),
+		zap.Any("tokensRequiredToLock", tokensRequiredToLock),
+		zap.Any("extend", extend),
+		zap.Any("isEnterprise", isEnterprise),
+		zap.Any("sa", sa),
+		zap.Any("cpBalance", cpBalance),
+		zap.Any("now", now),
+		zap.Any("costOfUnusedAlloc", costOfUnusedAlloc),
+	)
+
+	return tokensRequiredToLock, nil
 }
 
 func changeBlobbersEventDB(
