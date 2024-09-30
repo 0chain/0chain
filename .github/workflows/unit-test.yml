@@ -20,7 +20,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
-          export GO111MODULE=on  # Enables Go modules
+          sed -i "s/off/on/g" ./docker.local/bin/install.msgp.sh
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
@@ -49,7 +49,7 @@ jobs:
         run: |
           sudo apt update -y
           sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
-          export GO111MODULE=on  # Enables Go modules
+          sed -i "s/off/on/g" ./docker.local/bin/install.msgp.sh
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
