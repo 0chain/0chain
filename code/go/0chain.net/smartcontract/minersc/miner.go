@@ -10,6 +10,7 @@ import (
 
 	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -82,6 +83,11 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI,
 ) (resp string, err error) {
 	// TODO: only chain owner can register nodes
+	if err := smartcontractinterface.AuthorizeWithOwner("vc_add", func() bool {
+		return gn.OwnerId == t.ClientID
+	}); err != nil {
+		return "", err
+	}
 
 	rnr := RegisterNodeSCRequest{}
 	if err := rnr.Decode(inputData); err != nil {
@@ -254,7 +260,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 // DeleteMiner Function to handle removing a miner from the chain
 func (msc *MinerSmartContract) DeleteMiner(
-	_ *transaction.Transaction,
+	txn *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
@@ -268,7 +274,11 @@ func (msc *MinerSmartContract) DeleteMiner(
 	// 	return "", actErr
 	// }
 
-	// TODO: only chain owner can delete miner
+	if err := smartcontractinterface.AuthorizeWithOwner("delete_miner", func() bool {
+		return gn.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
+	}
 
 	var err error
 	var deleteMiner = NewMinerNode()

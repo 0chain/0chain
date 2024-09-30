@@ -10,6 +10,7 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/util"
@@ -161,12 +162,18 @@ func (msc *MinerSmartContract) AddSharder(
 
 // DeleteSharder Function to handle removing a sharder from the chain
 func (msc *MinerSmartContract) DeleteSharder(
-	_ *transaction.Transaction,
+	txn *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
 	// return "", errors.New("delete sharder is disabled")
+
+	if err := smartcontractinterface.AuthorizeWithOwner("delete_sharder", func() bool {
+		return gn.OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
+	}
 
 	var err error
 	var deleteSharder = NewMinerNode()
