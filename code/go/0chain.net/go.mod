@@ -26,7 +26,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.9.0
 	github.com/subosito/gotenv v1.4.2 // indirect
-	github.com/tinylib/msgp v1.1.6
+	github.com/tinylib/msgp v1.2.1
 	github.com/valyala/gozstd v1.20.1
 	github.com/vmihailenco/msgpack/v5 v5.4.0
 	go.uber.org/atomic v1.11.0
@@ -157,4 +157,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/tinylib/msgp => github.com/0chain/msgp v1.1.62
