@@ -14,6 +14,7 @@ import (
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"0chain.net/core/datastore"
 	commonsc "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
@@ -87,6 +88,10 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 		return gn.OwnerId == t.ClientID
 	}); err != nil {
 		return "", err
+	}
+
+	if !config.Configuration().IsViewChangeEnabled() {
+		return "", common.NewError("vc_add", "view change is disabled")
 	}
 
 	rnr := RegisterNodeSCRequest{}
@@ -278,6 +283,10 @@ func (msc *MinerSmartContract) DeleteMiner(
 		return gn.OwnerId == txn.ClientID
 	}); err != nil {
 		return "", err
+	}
+
+	if !config.Configuration().IsViewChangeEnabled() {
+		return "", common.NewError("delete_miner", "view change is disabled")
 	}
 
 	var err error

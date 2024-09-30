@@ -13,6 +13,7 @@ import (
 	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/util"
 
 	commonsc "0chain.net/smartcontract/common"
@@ -173,6 +174,10 @@ func (msc *MinerSmartContract) DeleteSharder(
 		return gn.OwnerId == txn.ClientID
 	}); err != nil {
 		return "", err
+	}
+
+	if !config.Configuration().IsViewChangeEnabled() {
+		return "", common.NewError("delete_sharder", "view change is disabled")
 	}
 
 	var err error
