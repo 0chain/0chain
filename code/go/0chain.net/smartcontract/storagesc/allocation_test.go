@@ -902,6 +902,11 @@ func enableHardForks(t *testing.T, tb chainState.StateContextI) {
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
+
+	h = chainState.NewHardFork("hercules", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestStorageSmartContract_getAllocation(t *testing.T) {

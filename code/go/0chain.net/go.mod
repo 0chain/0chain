@@ -158,4 +158,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/tinylib/msgp => github.com/0chain/msgp v1.2.0
+replace github.com/tinylib/msgp => github.com/0chain/msgp v1.2.2
