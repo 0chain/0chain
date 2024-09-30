@@ -136,7 +136,7 @@ require (
 	github.com/opencontainers/runc v1.1.7 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.8 // indirect
-	github.com/philhofer/fwd v1.1.3-0.20240612014219-fbbf4953d986 // indirect
+	github.com/philhofer/fwd v1.1.3-0.20240916144458-20a13a1f6b7c // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -157,3 +157,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/tinylib/msgp => github.com/0chain/msgp v1.2.0

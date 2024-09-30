@@ -13,14 +13,20 @@ func (z *GroupSharesOrSigns) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "Shares"
 	o = append(o, 0x81, 0xa6, 0x53, 0x68, 0x61, 0x72, 0x65, 0x73)
 	o = msgp.AppendMapHeader(o, uint32(len(z.Shares)))
-	for za0001, za0002 := range z.Shares {
-		o = msgp.AppendString(o, za0001)
+	keys_za0001 := make([]string, 0, len(z.Shares))
+	for k := range z.Shares {
+		keys_za0001 = append(keys_za0001, k)
+	}
+	msgp.Sort(keys_za0001)
+	for _, k := range keys_za0001 {
+		za0002 := z.Shares[k]
+		o = msgp.AppendString(o, k)
 		if za0002 == nil {
 			o = msgp.AppendNil(o)
 		} else {
 			o, err = za0002.MarshalMsg(o)
 			if err != nil {
-				err = msgp.WrapError(err, "Shares", za0001)
+				err = msgp.WrapError(err, "Shares", k)
 				return
 			}
 		}
