@@ -23,6 +23,7 @@ func init() {
 			entitywrapper.DefaultOriginVersion: &storageNodeV1{},
 			"v2":                               &storageNodeV2{},
 			"v3":                               &storageNodeV3{},
+			"v4":                               &storageNodeV4{},
 		})
 }
 
