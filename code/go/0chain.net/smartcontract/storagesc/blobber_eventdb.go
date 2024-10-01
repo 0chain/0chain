@@ -49,6 +49,16 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 					data.IsEnterprise = *v3.IsEnterprise
 				}
 			}
+		} else if sn.Entity().GetVersion() == "v4" {
+			v4, ok := sn.Entity().(*storageNodeV4)
+			if ok {
+				if v4.IsRestricted != nil {
+					data.IsRestricted = *v4.IsRestricted
+				}
+				if v4.IsEnterprise != nil {
+					data.IsEnterprise = *v4.IsEnterprise
+				}
+			}
 		}
 		return nil
 	}); err != nil {
@@ -111,6 +121,17 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 
 				if v3.IsEnterprise != nil {
 					data.IsEnterprise = *v3.IsEnterprise
+				}
+			}
+		} else if sn.Entity().GetVersion() == "v4" {
+			v4, ok := sn.Entity().(*storageNodeV4)
+			if ok {
+				if v4.IsRestricted != nil {
+					data.IsRestricted = *v4.IsRestricted
+				}
+
+				if v4.IsEnterprise != nil {
+					data.IsEnterprise = *v4.IsEnterprise
 				}
 			}
 		}

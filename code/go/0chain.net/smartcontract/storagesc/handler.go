@@ -2697,6 +2697,16 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 					sr.IsEnterprise = *v3.IsEnterprise
 				}
 			}
+		} else if sn.Entity().GetVersion() == "v4" {
+			v4, ok := sn.Entity().(*storageNodeV4)
+			if ok {
+				if v4.IsRestricted != nil {
+					sr.IsRestricted = *v4.IsRestricted
+				}
+				if v4.IsEnterprise != nil {
+					sr.IsEnterprise = *v4.IsEnterprise
+				}
+			}
 		} else {
 			sv2, ok := sn.Entity().(*storageNodeV2)
 			if ok && sv2.IsRestricted != nil {
@@ -2748,6 +2758,32 @@ func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 
 			HasBeenShutDown: snr.IsShutdown,
 		},
 		Version:                 "v3",
+		BaseURL:                 snr.BaseURL,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            &snr.IsRestricted,
+		IsEnterprise:            &snr.IsEnterprise,
+	}
+}
+
+func storageNodeResponseToStorageNodeV4(snr storageNodeResponse) *storageNodeV4 {
+	return &storageNodeV4{
+		Provider: provider.Provider{
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
+		},
+		Version:                 "v4",
 		BaseURL:                 snr.BaseURL,
 		Terms:                   snr.Terms,
 		Capacity:                snr.Capacity,
