@@ -155,7 +155,7 @@ func (wm1 *writeMarkerV1) GetBase() entitywrapper.EntityBaseI {
 	return &b
 }
 
-func (wm1 *writeMarkerV1) MigrateFrom(e entitywrapper.EntityI) error {
+func (wm1 *writeMarkerV1) MigrateFrom(e entitywrapper.EntityI, balances cstate.StateContextI) error {
 	// nothing to migrate as this is original version of the write marker
 	return nil
 }
@@ -212,7 +212,7 @@ func (wm2 *writeMarkerV2) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (wm2 *writeMarkerV2) MigrateFrom(e entitywrapper.EntityI) error {
+func (wm2 *writeMarkerV2) MigrateFrom(e entitywrapper.EntityI, balances cstate.StateContextI) error {
 	v1, ok := e.(*writeMarkerV1)
 	if !ok {
 		return errors.New("struct migrate fail, wrong writemarker type")

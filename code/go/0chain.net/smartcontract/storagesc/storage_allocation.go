@@ -193,7 +193,7 @@ func (sa1 *storageAllocationV1) GetBase() entitywrapper.EntityBaseI {
 	return &sa
 }
 
-func (sa1 *storageAllocationV1) MigrateFrom(e entitywrapper.EntityI) error {
+func (sa1 *storageAllocationV1) MigrateFrom(e entitywrapper.EntityI, i cstate.StateContextI) error {
 	// nothing to migrate as this is original version of the storage allocation
 	return nil
 }
@@ -319,7 +319,7 @@ func (sa2 *storageAllocationV2) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (sa2 *storageAllocationV2) MigrateFrom(e entitywrapper.EntityI) error {
+func (sa2 *storageAllocationV2) MigrateFrom(e entitywrapper.EntityI, balances cstate.StateContextI) error {
 	v1, ok := e.(*storageAllocationV1)
 	if !ok {
 		return errors.New("struct migrate fail, wrong storageAllocation type")

@@ -1,8 +1,10 @@
 package storagesc
 
 import (
+	"0chain.net/chaincore/chain/state"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"0chain.net/core/common"
@@ -176,7 +178,7 @@ func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
 	return &b
 }
 
-func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI) error {
+func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
 	// nothing to migrate as this is original version of the storage node
 	return nil
 }
@@ -243,7 +245,7 @@ func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI) error {
+func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
 	v1, ok := e.(*storageNodeV1)
 	if !ok {
 		return errors.New("struct migrate fail, wrong storageNode type")
@@ -314,10 +316,22 @@ func (sn3 *storageNodeV3) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (sn3 *storageNodeV3) MigrateFrom(e entitywrapper.EntityI) error {
+func (sn3 *storageNodeV3) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
 	v2, ok := e.(*storageNodeV2)
+
 	if !ok {
-		return errors.New("struct migrate fail, wrong storageNode type")
+		return state.WithActivation(balances, "hercules", func() error {
+			return errors.New("struct migrate fail, wrong storageNode type")
+		}, func() error {
+			v1, ok := e.(*storageNodeV1)
+			if !ok {
+				return errors.New("struct migrate fail, wrong storageNode type")
+			}
+			base := v1.GetBase().(*storageNodeBase)
+			sn3.ApplyBaseChanges(*base)
+			sn3.Version = "v3"
+			return nil
+		})
 	}
 
 	base := v2.GetBase().(*storageNodeBase)
@@ -390,17 +404,27 @@ func (sn4 *storageNodeV4) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (sn4 *storageNodeV4) MigrateFrom(e entitywrapper.EntityI) error {
-	v3, ok := e.(*storageNodeV3)
-	if !ok {
-		return errors.New("struct migrate fail, wrong storageNode type")
+func (sn4 *storageNodeV4) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
+
+	if v3, ok := e.(*storageNodeV3); ok {
+		base := v3.GetBase().(*storageNodeBase)
+		sn4.ApplyBaseChanges(*base)
+		sn4.Version = "v4"
+		sn4.IsRestricted = v3.IsRestricted
+		sn4.IsEnterprise = v3.IsEnterprise
+	} else if v2, ok := e.(*storageNodeV2); ok {
+		base := v2.GetBase().(*storageNodeBase)
+		sn4.ApplyBaseChanges(*base)
+		sn4.Version = "v4"
+		sn4.IsRestricted = v2.IsRestricted
+	} else if v1, ok := e.(*storageNodeV1); ok {
+		base := v1.GetBase().(*storageNodeBase)
+		sn4.ApplyBaseChanges(*base)
+		sn4.Version = "v4"
+	} else {
+		return fmt.Errorf("struct migrate fail, wrong storageNode type")
 	}
 
-	base := v3.GetBase().(*storageNodeBase)
-	sn4.ApplyBaseChanges(*base)
-	sn4.Version = "v4"
-	sn4.IsRestricted = v3.IsRestricted
-	sn4.IsEnterprise = v3.IsEnterprise
 	return nil
 }
 

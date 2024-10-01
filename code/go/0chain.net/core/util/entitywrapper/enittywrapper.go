@@ -1,6 +1,7 @@
 package entitywrapper
 
 import (
+	"0chain.net/chaincore/chain/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,7 +39,7 @@ type EntityI interface {
 	InitVersion()
 	GetVersion() string
 	GetBase() EntityBaseI
-	MigrateFrom(prior EntityI) error
+	MigrateFrom(prior EntityI, balances state.StateContextI) error
 }
 
 // Wrapper is a wrapper for entity.
@@ -95,12 +96,12 @@ func (w *Wrapper) UpdateBase(f func(EntityBaseI) error) error {
 // Update will migrate the wrapper.v entity to the given entity type of `e` if it is
 // one version prior to `e`. Otherwise use the wrapper.v entity direct and pass it to the callback function.
 // The wrapper.v will be updated after the callback function is executed.
-func (w *Wrapper) Update(e EntityI, f func(EntityI) error) error {
+func (w *Wrapper) Update(e EntityI, balances state.StateContextI, f func(EntityI) error) error {
 	v := w.Entity()
 	if v.GetVersion() != e.GetVersion() {
 		// migrate the entity when see version not match
 		// TODO: do version check, and migrate only if the v.GetVersion() is one version behind e.GetVersion()
-		if err := e.MigrateFrom(v); err != nil {
+		if err := e.MigrateFrom(v, balances); err != nil {
 			return err
 		}
 
@@ -273,7 +274,7 @@ func (f *foo) GetBase() EntityBaseI {
 	return &b
 }
 
-func (f *foo) MigrateFrom(e EntityI) error {
+func (f *foo) MigrateFrom(e EntityI, balances state.StateContextI) error {
 	return nil
 }
 
@@ -312,7 +313,7 @@ func (f *fooV2) GetBase() EntityBaseI {
 	return &fooBase{ID: f.ID}
 }
 
-func (f *fooV2) MigrateFrom(e EntityI) error {
+func (f *fooV2) MigrateFrom(e EntityI, balances state.StateContextI) error {
 	v1, ok := e.(*foo)
 	if !ok {
 		return errors.New("must migrate from prior version")
@@ -345,7 +346,7 @@ func (f *fooV3) GetBase() EntityBaseI {
 	return &fooBase{ID: f.ID}
 }
 
-func (f *fooV3) MigrateFrom(e EntityI) error {
+func (f *fooV3) MigrateFrom(e EntityI, balances state.StateContextI) error {
 	v2, ok := e.(*fooV2)
 	if !ok {
 		return errors.New("must migrate from prior version")

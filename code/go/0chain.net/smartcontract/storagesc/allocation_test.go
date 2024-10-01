@@ -1695,7 +1695,7 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
 		requireErrMsg(t, err, "allocation_creation_failed: Not enough blobbers to honor the allocation: blobber b2 is not enterprise")
 
-		_ = b1.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+		_ = b1.Update(&storageNodeV4{}, balances, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV4)
 			b.IsEnterprise = new(bool)
 			*b.IsEnterprise = true
@@ -2544,7 +2544,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		// change price
 		b1, err := getBlobber(beforeAlloc.BlobberAllocs[0].BlobberID, balances)
 		require.NoError(t, err)
-		b1.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+		b1.Update(&storageNodeV4{}, balances, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV4)
 			b.Terms.WritePrice *= 2
 			return nil
@@ -2747,7 +2747,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		// change price
 		b1, err := getBlobber(beforeAlloc.BlobberAllocs[0].BlobberID, balances)
 		require.NoError(t, err)
-		b1.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+		b1.Update(&storageNodeV4{}, balances, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV4)
 			b.Terms.WritePrice *= 2
 			return nil
@@ -2890,7 +2890,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		blobber3, err := ssc.getBlobber(nb3.id, balances)
 		require.NoError(t, err)
-		blobber3.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+		blobber3.Update(&storageNodeV4{}, balances, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV4)
 			b.IsEnterprise = new(bool)
 			*b.IsEnterprise = true
@@ -2991,7 +2991,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		blobber3, err := ssc.getBlobber(nb3.id, balances)
 		require.NoError(t, err)
-		blobber3.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+		blobber3.Update(&storageNodeV4{}, balances, func(e entitywrapper.EntityI) error {
 			b := e.(*storageNodeV4)
 			b.IsEnterprise = new(bool)
 			*b.IsEnterprise = true
