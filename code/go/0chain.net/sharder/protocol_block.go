@@ -149,7 +149,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 	//nolint:errcheck
 	notifyConductor(b)
 
-	// return if view change is not off
+	// return if view change is off
 	if !sc.IsViewChangeEnabled() {
 		Logger.Debug("update finalized blocks storage success",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash))

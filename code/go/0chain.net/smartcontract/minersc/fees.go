@@ -356,41 +356,43 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	)
 
 	// TODO: cache the phase node so if when there's no view change happens, we
-	if isViewChange {
+	err = cstate.WithActivation(balances, "electra", func() error {
+		if b.Round != gn.ViewChange {
+			return nil
+		}
+
+		if err := msc.SetMagicBlock(gn, balances); err != nil {
+			return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v", b.Round, gn.ViewChange, err)
+		}
+
+		return nil
+	}, func() error {
+		if !isViewChange {
+			return nil
+		}
+
 		var pn *PhaseNode
 		if pn, err = GetPhaseNode(balances); err != nil {
-			return
+			return err
 		}
 
 		if err = msc.setPhaseNode(balances, pn, gn, t); err != nil {
-			return "", common.NewErrorf("pay_fees", "error setting phase node: %v", err)
+			return common.NewErrorf("pay_fees", "error setting phase node: %v", err)
 		}
 
 		if err = msc.adjustViewChange(gn, pn, balances); err != nil {
-			return // adjusting view change error
+			return err // adjusting view change error
 		}
 
 		// save phase node
 		if _, err = balances.InsertTrieNode(pn.GetKey(), pn); err != nil {
 			logging.Logger.Error("pay_fees failed to save phase node", zap.Error(err))
-			return "", common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
+			return common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
 		}
-	}
+		return nil
+	})
 
-	if err := cstate.WithActivation(balances, "electra",
-		func() error {
-			if b.Round != gn.ViewChange {
-				return nil
-			}
-
-			if err := msc.SetMagicBlock(gn, balances); err != nil {
-				return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v", b.Round, gn.ViewChange, err)
-			}
-			return nil
-		},
-		func() error {
-			return nil
-		}); err != nil {
+	if err != nil {
 		return "", err
 	}
 
@@ -538,19 +540,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		beforeFork,
 		func() error { return nil }); err != nil {
 		return "", err
-	}
-
-	if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
-		var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
-		if lfmb != nil {
-			// TODO: use viewChangePoolsWork when view change is enabled
-			// err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
-			// if err = msc.viewChangeDeleteNodes(balances); err != nil {
-			// 	return "", err
-			// }
-		} else {
-			return "", common.NewError("pay_fees", "cannot find latest magic bock")
-		}
 	}
 
 	gn.setLastRound(b.Round)
