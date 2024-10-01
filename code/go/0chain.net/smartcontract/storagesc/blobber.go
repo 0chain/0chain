@@ -240,7 +240,7 @@ func (sc *StorageSmartContract) updateBlobber(
 
 	if actErr := cstate.WithActivation(balances, "electra",
 		func() error {
-			return existingBlobber.Update(&storageNodeV2{}, balances, func(e entitywrapper.EntityI) error {
+			return existingBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
 				b.IsRestricted = updateBlobber.IsRestricted
 				return nil
@@ -248,13 +248,13 @@ func (sc *StorageSmartContract) updateBlobber(
 		}, func() error {
 			if actErr := cstate.WithActivation(balances, "electra",
 				func() error {
-					return existingBlobber.Update(&storageNodeV3{}, balances, func(e entitywrapper.EntityI) error {
+					return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 						b := e.(*storageNodeV3)
 						b.IsRestricted = updateBlobber.IsRestricted
 						return nil
 					})
 				}, func() error {
-					return existingBlobber.Update(&storageNodeV4{}, balances, func(e entitywrapper.EntityI) error {
+					return existingBlobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
 						b := e.(*storageNodeV4)
 						b.IsRestricted = updateBlobber.IsRestricted
 						return nil

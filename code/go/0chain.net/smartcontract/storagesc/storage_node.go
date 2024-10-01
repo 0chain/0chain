@@ -1,7 +1,6 @@
 package storagesc
 
 import (
-	"0chain.net/chaincore/chain/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -178,7 +177,7 @@ func (sn1 *storageNodeV1) GetBase() entitywrapper.EntityBaseI {
 	return &b
 }
 
-func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
+func (sn1 *storageNodeV1) MigrateFrom(e entitywrapper.EntityI) error {
 	// nothing to migrate as this is original version of the storage node
 	return nil
 }
@@ -245,7 +244,7 @@ func (sn2 *storageNodeV2) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
+func (sn2 *storageNodeV2) MigrateFrom(e entitywrapper.EntityI) error {
 	v1, ok := e.(*storageNodeV1)
 	if !ok {
 		return errors.New("struct migrate fail, wrong storageNode type")
@@ -316,22 +315,10 @@ func (sn3 *storageNodeV3) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (sn3 *storageNodeV3) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
+func (sn3 *storageNodeV3) MigrateFrom(e entitywrapper.EntityI) error {
 	v2, ok := e.(*storageNodeV2)
-
 	if !ok {
-		return state.WithActivation(balances, "hercules", func() error {
-			return errors.New("struct migrate fail, wrong storageNode type")
-		}, func() error {
-			v1, ok := e.(*storageNodeV1)
-			if !ok {
-				return errors.New("struct migrate fail, wrong storageNode type")
-			}
-			base := v1.GetBase().(*storageNodeBase)
-			sn3.ApplyBaseChanges(*base)
-			sn3.Version = "v3"
-			return nil
-		})
+		return errors.New("struct migrate fail, wrong storageNode type")
 	}
 
 	base := v2.GetBase().(*storageNodeBase)
@@ -404,7 +391,7 @@ func (sn4 *storageNodeV4) GetBase() entitywrapper.EntityBaseI {
 	}
 }
 
-func (sn4 *storageNodeV4) MigrateFrom(e entitywrapper.EntityI, balances state.StateContextI) error {
+func (sn4 *storageNodeV4) MigrateFrom(e entitywrapper.EntityI) error {
 
 	if v3, ok := e.(*storageNodeV3); ok {
 		base := v3.GetBase().(*storageNodeBase)

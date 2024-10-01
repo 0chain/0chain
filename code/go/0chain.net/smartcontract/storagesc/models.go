@@ -1429,7 +1429,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 
 	if actErr := cstate.WithActivation(balances, "electra",
 		func() error {
-			return addedBlobber.Update(&storageNodeV2{}, balances, func(e entitywrapper.EntityI) error {
+			return addedBlobber.Update(&storageNodeV2{}, func(e entitywrapper.EntityI) error {
 				b := e.(*storageNodeV2)
 
 				if b.IsRestricted != nil && *b.IsRestricted {
@@ -1446,7 +1446,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 		}, func() error {
 			return cstate.WithActivation(balances, "hercules",
 				func() error {
-					return addedBlobber.Update(&storageNodeV3{}, balances, func(e entitywrapper.EntityI) error {
+					return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 						b := e.(*storageNodeV3)
 
 						if isEnterpriseBlobber {
@@ -1467,7 +1467,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 						return nil
 					})
 				}, func() error {
-					return addedBlobber.Update(&storageNodeV4{}, balances, func(e entitywrapper.EntityI) error {
+					return addedBlobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
 						b := e.(*storageNodeV4)
 
 						if isEnterpriseBlobber {

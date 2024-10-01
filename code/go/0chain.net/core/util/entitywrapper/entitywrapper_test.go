@@ -205,7 +205,7 @@ func TestWrapperUpdateMigrate(t *testing.T) {
 	fooWp := &Foo{}
 	fooWp.SetEntity(&fv1)
 
-	err := fooWp.Update(&fooV2{}, nil, func(e EntityI) error {
+	err := fooWp.Update(&fooV2{}, func(e EntityI) error {
 		fv2 := e.(*fooV2)
 		fv2.ID = "foo_id_v2"
 		fv2.Name = "foo_new_name"

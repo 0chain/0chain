@@ -257,7 +257,7 @@ func TestCancelAllocationRequest(t *testing.T) {
 
 	t.Run("Cancel Enterprise allocation", func(t *testing.T) {
 		var enterpriseAllocation = sa
-		enterpriseAllocation.Update(&storageAllocationV2{}, ctx, func(e entitywrapper.EntityI) error {
+		enterpriseAllocation.Update(&storageAllocationV2{}, func(e entitywrapper.EntityI) error {
 			b := e.(*storageAllocationV2)
 			b.IsEnterprise = new(bool)
 			*b.IsEnterprise = true
@@ -627,7 +627,7 @@ func TestFinalizeAllocation(t *testing.T) {
 
 	t.Run("finalize enterprise allocation", func(t *testing.T) {
 		var enterpriseAllocation = sa
-		enterpriseAllocation.Update(&storageAllocationV2{}, ctx, func(e entitywrapper.EntityI) error {
+		enterpriseAllocation.Update(&storageAllocationV2{}, func(e entitywrapper.EntityI) error {
 			b := e.(*storageAllocationV2)
 			b.IsEnterprise = new(bool)
 			*b.IsEnterprise = true
