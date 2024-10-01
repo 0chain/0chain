@@ -1444,7 +1444,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 				return nil
 			})
 		}, func() error {
-			if actErr := cstate.WithActivation(balances, "hercules",
+			return cstate.WithActivation(balances, "hercules",
 				func() error {
 					return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 						b := e.(*storageNodeV3)
@@ -1487,10 +1487,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 
 						return nil
 					})
-				}); actErr != nil {
-
-			}
-			return nil
+				})
 		}); actErr != nil {
 		return nil, actErr
 	}
