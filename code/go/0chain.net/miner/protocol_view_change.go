@@ -820,3 +820,32 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 
 	return afterSignShareRequestHandler(message, nodeID)
 }
+
+func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
+		return lfb.LatestFinalizedMagicBlockRound, nil
+	}
+
+	// miner SC global node is not created yet, but firs block creates it
+	if lfb.Round < 1 {
+		return 0, nil
+	}
+
+	var gn minersc.GlobalNode
+	err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
+	if err != nil {
+		logging.Logger.Error("block_next_vc -- can't get miner SC global node",
+			zap.Error(err), zap.Int64("lfb", lfb.Round),
+			zap.Bool("is_state", lfb.IsStateComputed()),
+			zap.Bool("is_init", lfb.ClientState != nil),
+			zap.Any("state", lfb.ClientStateHash))
+		return 0, common.NewErrorf("block_next_vc",
+			"can't get miner SC global node, lfb: %d, error: %v (%s)",
+			lfb.Round, err, lfb.Hash)
+	}
+
+	logging.Logger.Debug("block_next_vc -- ok", zap.Int64("lfb", lfb.Round),
+		zap.Int64("nvc", gn.ViewChange))
+
+	return gn.ViewChange, nil // got it
+}
