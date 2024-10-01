@@ -84,6 +84,15 @@ func (rnr *RegisterNodeSCRequest) Decode(data []byte) error {
 func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI,
 ) (resp string, err error) {
+	if err = cstate.WithActivation(balances, "electra",
+		func() error {
+			return errors.New("vc_add SC is not active")
+		}, func() error {
+			return nil
+		}); err != nil {
+		return "", err
+	}
+
 	// TODO: only chain owner can register nodes
 	if err := smartcontractinterface.AuthorizeWithOwner("vc_add", func() bool {
 		return gn.OwnerId == t.ClientID
