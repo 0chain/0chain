@@ -457,7 +457,6 @@ func SetupEntity(store datastore.Store) {
 		NumChunkStorers:  16,
 	}
 	TransactionEntityChannel = memorystore.SetupWorkers(common.GetRootContext(), &chunkingOptions)
-	logging.Logger.Debug("Transaction entity metadata is setup")
 }
 
 /*Sign - given a client and client's private key, sign this transaction */

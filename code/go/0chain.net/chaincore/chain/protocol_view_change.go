@@ -209,8 +209,6 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 			node.Self.SetNonce(-1)
 			return false
 		}
-
-		// time.Sleep(time.Second)
 	}
 
 	return found
@@ -562,12 +560,6 @@ func (c *Chain) PhaseEvents() *orderbuffer.OrderBuffer {
 // It never blocks. Skipping event if no one can accept it at this time.
 func (c *Chain) SendPhaseNode(ctx context.Context, pe PhaseEvent) {
 	c.phaseEvents.Add(pe.Phase.StartRound, pe)
-	// select {
-	// // case c.phaseEvents <- PhaseEvent{Phase: pn, Sharders: sharders}:
-	// case c.phaseEvents <- pe:
-	// case <-ctx.Done():
-	// 	logging.Logger.Error("push phase node to channel failed", zap.Error(ctx.Err()))
-	// }
 }
 
 // The GetPhaseFromSharders obtains minersc.PhaseNode from sharders and sends

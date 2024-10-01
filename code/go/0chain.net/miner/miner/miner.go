@@ -343,14 +343,6 @@ func main() {
 	// to subscribe to its events
 	go mc.RestartRoundEventWorker(ctx)
 
-	// var activeMiner = mb.Miners.HasNode(node.Self.Underlying().GetKey())
-	// if activeMiner {
-	// 	// mb = mc.GetLatestMagicBlock()
-	// 	// if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
-	// 	// 	logging.Logger.Error("failed to set DKG", zap.Error(err))
-	// 	// } else {
-	// 	// }
-	// }
 	miner.StartProtocol(ctx, gb)
 	mc.SetStarted()
 	miner.SetupWorkers(ctx)
@@ -365,13 +357,10 @@ func main() {
 			mc.SetupSC(ctx)
 			setupSCDoneC <- struct{}{}
 		}()
-		// if mc.IsViewChangeEnabled() {
-		// go mc.DKGProcess2(ctx)
 
 		// start the dkg process worker so that when view change is on, it can start to
 		// process the phase events immediately.
 		go mc.DKGProcess(ctx)
-		// }
 	}
 
 	shutdown := common.HandleShutdown(server, []func(){
@@ -536,7 +525,6 @@ func initN2NHandlers(c *miner.Chain) {
 	miner.SetupM2MReceivers(c)
 	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
-	// miner.SetupM2SRequestors()
 	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()

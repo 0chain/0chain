@@ -129,7 +129,6 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	}
 	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
 		logging.Logger.Error("[mvc] publishShareOrSigns, miner not part of mpks", zap.String("miner", selfNodeKey))
-		// return nil, common.NewError("publish_sos", "miner not part of mpks")
 		return nil, nil
 	}
 
@@ -426,32 +425,6 @@ func (mc *Chain) Wait(ctx context.Context,
 		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
 		zap.Int64("mb_sr", magicBlock.StartingRound),
 		zap.String("mb_hash", magicBlock.Hash))
-
-	// if err := SetDKG(ctx, mb); err != nil {
-	// 	logging.Logger.Debug("[mvc] dkg process set dkg failed",
-	// 		zap.Int64("mb number", magicBlock.MagicBlockNumber),
-	// 		zap.Int64("mb sr", magicBlock.StartingRound),
-	// 		zap.Error(err))
-	// }
-
-	// if err := mc.SetDKG(vcdkg); err != nil {
-	// 	logging.Logger.Error("[mvc] dkg process set dkg failed", zap.Error(err))
-	// } else {
-	// 	logging.Logger.Debug("[mvc] dkg process set dkg success",
-	// 		zap.Int("dkg T", vcdkg.T),
-	// 		zap.Int("dkg N", vcdkg.N),
-	// 		zap.Int("gmpk len", len(vcdkg.GetMPKs())),
-	// 		zap.Int64("mb number", magicBlock.MagicBlockNumber),
-	// 		zap.Int64("mb sr", magicBlock.StartingRound),
-	// 	)
-	// }
-
-	// don't set DKG until MB finalized
-	// mc.viewChangeProcess.clearViewChange()
-	//
-	// start new magic block will clear the view change anyway. before that, we should not clear it as the
-	// transaction could fail due to invalid nonce, we need to re-do the wait transaction.
-	//
 
 	// create 'wait' transaction
 	if tx, err = mc.waitTransaction(mb); err != nil {

@@ -19,15 +19,10 @@ func (c *Chain) SetupSC(ctx context.Context) {
 		tm          = time.NewTicker(1)
 		timeout     = 1 * time.Minute
 		checkPeriod = 3 * time.Minute
-
-		// doneC = make(chan struct{})
 	)
 
 	for {
 		select {
-		// case <-doneC:
-		// 	logging.Logger.Debug("SetupSC is done - registered")
-		// 	return
 		case <-ctx.Done():
 			logging.Logger.Debug("SetupSC - context is done")
 			return

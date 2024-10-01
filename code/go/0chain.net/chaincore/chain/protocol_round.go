@@ -321,14 +321,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				zap.Int64("to", fb.Round-1))
 		}
 
-		// perform view change (or not perform)
-		// if err := c.viewChanger.ViewChange(ctx, lfb); err != nil {
-		// 	logging.Logger.Error("view_changing_lfb",
-		// 		zap.Int64("round", roundNumber),
-		// 		zap.Int64("lfb_round", lfb.Round),
-		// 		zap.Error(err))
-		// 	return
-		// }
 		FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 
 		logging.Logger.Info("finalize round - latest finalized round",
@@ -456,13 +448,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				zap.Int64("round", cfb.Round),
 				zap.String("block", cfb.Hash))
 		}
-		// perform view change or not perform
-		// if err := c.viewChanger.ViewChange(ctx, b); err != nil {
-		// 	logging.Logger.Error("view_changing_lfb",
-		// 		zap.Int64("lfb_round", b.Round),
-		// 		zap.Error(err))
-		// 	return
-		// }
 		c.SetLatestOwnFinalizedBlockRound(b.Round)
 		c.SetLatestFinalizedBlock(b)
 		return

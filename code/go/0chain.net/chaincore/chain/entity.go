@@ -189,8 +189,7 @@ type Chain struct {
 
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 	viewChanger                  ViewChanger
-	// afterFetcher                 AfterFetcher
-	magicBlockSaver MagicBlockSaver
+	magicBlockSaver              MagicBlockSaver
 
 	pruneStats *util.PruneStats
 
@@ -214,7 +213,6 @@ type Chain struct {
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	syncMissingNodesC     chan syncPathNodes
 	// precise DKG phases tracking
-	// phaseEvents       chan PhaseEvent
 	phaseEvents *orderbuffer.OrderBuffer
 
 	vldTxnsMtx               *sync.Mutex
@@ -1114,7 +1112,6 @@ func Provider() datastore.Entity {
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncMissingNodesC = make(chan syncPathNodes, 1)
 
-	// c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
 	c.phaseEvents = orderbuffer.New(100)
 
 	c.vldTxnsMtx = &sync.Mutex{}
@@ -2178,10 +2175,6 @@ func (c *Chain) SetFetchedNotarizedBlockHandler(fnbh FetchedNotarizedBlockHandle
 func (c *Chain) SetViewChanger(vcr ViewChanger) {
 	c.viewChanger = vcr
 }
-
-// func (c *Chain) SetAfterFetcher(afr AfterFetcher) {
-// 	c.afterFetcher = afr
-// }
 
 func (c *Chain) SetMagicBlockSaver(mbs MagicBlockSaver) {
 	c.magicBlockSaver = mbs

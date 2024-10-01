@@ -187,15 +187,14 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 }
 
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
-	pn *PhaseNode, balances cstate.StateContextI) (err error) {
+	pn *PhaseNode, balances cstate.StateContextI) error {
 	var b = balances.GetBlock()
 	if b.Round != gn.ViewChange {
-		// logging.Logger.Debug("[mvc] adjust view change: not a view change round")
-		return // don't do anything, not a view change
+		return nil // don't do anything, not a view change
 	}
 
-	var dmn *DKGMinerNodes
-	if dmn, err = getDKGMinersList(balances); err != nil {
+	dmn, err := getDKGMinersList(balances)
+	if err != nil {
 		logging.Logger.Error("[mvc] adjust view change: can't get DKG miners", zap.Error(err))
 		return common.NewErrorf("adjust_view_change",
 			"can't get DKG miners: %v", err)
@@ -210,107 +209,125 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		waited++
 	}
 
-	mb, err := getMagicBlock(balances)
-	if err != nil {
-		logging.Logger.Error("[mvc] adjust_view_change, failed to get magic block",
-			zap.Error(err), zap.Int64("round", balances.GetBlock().Round))
-		return common.NewErrorf("adjust_view_change failed to get magic block", "%v", err)
-	}
-
-	for _, n := range mb.Miners.Nodes {
-		if !dmn.Waited[n.GetKey()] {
-			logging.Logger.Error("[mvc] adjust_view_change, miner not waited",
-				zap.String("miner", n.GetKey()))
-			// return
-			err = common.NewErrorf("adjust_view_change miner not waited", "%v", err)
-			break
-		}
-	}
-
-	// restart DKG if any of the miner in new MB is not waited
-	if err != nil {
-		var prev = gn.prevMagicBlock(balances)
-		gn.ViewChange = prev.StartingRound
-
-		logging.Logger.Warn("[mvc] adjust_view_change no new magic block, restart DKG", zap.Error(err))
-		if err := msc.RestartDKG(pn, balances); err != nil {
-			logging.Logger.Error("adjust_view_change restart DKG failed", zap.Error(err))
+	if err := cstate.WithActivation(balances, "electra",
+		func() error {
+			err = dmn.reduceNodes(true, gn, balances)
+			if err == nil && waited < dmn.K {
+				err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
+					waited, dmn.K)
+			}
+			if err != nil {
+				var prev = gn.prevMagicBlock(balances)
+				gn.ViewChange = prev.StartingRound
+				err = nil
+			}
 			return err
-		}
-
-		// save phase node
-		return nil
-	}
-
-	// set magic block when all good
-	if err := msc.SetMagicBlock(gn, balances); err != nil {
-		return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v",
-			b.Round, gn.ViewChange, err)
-	}
-
-	// update the delete nodes list
-	deleteMiners, err := getDeleteNodes(balances, spenum.Miner)
-	if err != nil {
-		return common.NewErrorf("pay_fees", "can't get delete miners: %v", err)
-	}
-
-	// remove the delete miner from the list if it's not in the new mb
-	if len(deleteMiners) > 0 {
-		mid := deleteMiners[0]
-		_, ok := mb.Miners.NodesMap[mid]
-		if !ok {
-			deleteMiners = deleteMiners[1:]
-			if err := updateDeleteNodeIDs(balances, spenum.Miner, deleteMiners); err != nil {
-				return common.NewErrorf("pay_fees", "can't update delete miners: %v", err)
+		}, func() error {
+			mb, err := getMagicBlock(balances)
+			if err != nil {
+				logging.Logger.Error("[mvc] adjust_view_change, failed to get magic block",
+					zap.Error(err), zap.Int64("round", balances.GetBlock().Round))
+				return common.NewErrorf("adjust_view_change failed to get magic block", "%v", err)
 			}
-		}
-	}
 
-	regMinerIDs, err := getRegisterNodes(balances, spenum.Miner)
-	if err != nil {
-		return common.NewErrorf("pay_fees", "can't get register miners: %v", err)
-	}
-
-	if len(regMinerIDs) > 0 {
-		addMID := regMinerIDs[0]
-		// remove the id from the register list if it is in the mb
-		if mb.Miners.HasNode(addMID) {
-			if err := updateRegisterNodes(balances, spenum.Miner, regMinerIDs[1:]); err != nil {
-				return common.NewErrorf("pay_fees", "can't update register miners: %v", err)
+			for _, n := range mb.Miners.Nodes {
+				if !dmn.Waited[n.GetKey()] {
+					logging.Logger.Error("[mvc] adjust_view_change, miner not waited",
+						zap.String("miner", n.GetKey()))
+					// return
+					err = common.NewErrorf("adjust_view_change miner not waited", "%v", err)
+					break
+				}
 			}
-		}
-	}
 
-	deleteSharders, err := getDeleteNodes(balances, spenum.Sharder)
-	if err != nil {
-		return common.NewErrorf("pay_fees", "can't get delete sharders: %v", err)
-	}
+			// restart DKG if any of the miner in new MB is not waited
+			if err != nil {
+				var prev = gn.prevMagicBlock(balances)
+				gn.ViewChange = prev.StartingRound
 
-	if len(deleteSharders) > 0 {
-		sid := deleteSharders[0]
-		_, ok := mb.Sharders.NodesMap[sid]
-		if !ok {
-			deleteSharders = deleteSharders[1:]
-			if err := updateDeleteNodeIDs(balances, spenum.Sharder, deleteSharders); err != nil {
-				return common.NewErrorf("pay_fees", "can't update delete sharders: %v", err)
+				logging.Logger.Warn("[mvc] adjust_view_change no new magic block, restart DKG", zap.Error(err))
+				if err := msc.RestartDKG(pn, balances); err != nil {
+					logging.Logger.Error("adjust_view_change restart DKG failed", zap.Error(err))
+					return err
+				}
+
+				// save phase node
+				return nil
 			}
-		}
-	}
 
-	// get register sharders list
-	regSharderIDs, err := getRegisterNodes(balances, spenum.Sharder)
-	if err != nil {
-		return common.NewErrorf("pay_fees", "can't get register sharders: %v", err)
-	}
-
-	if len(regSharderIDs) > 0 {
-		addSID := regSharderIDs[0]
-		// remove the id from the register list if it is in the mb
-		if mb.Sharders.HasNode(addSID) {
-			if err := updateRegisterNodes(balances, spenum.Sharder, regSharderIDs[1:]); err != nil {
-				return common.NewErrorf("pay_fees", "can't update register sharders: %v", err)
+			// set magic block when all good
+			if err := msc.SetMagicBlock(gn, balances); err != nil {
+				return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v",
+					b.Round, gn.ViewChange, err)
 			}
-		}
+
+			// update the delete nodes list
+			deleteMiners, err := getDeleteNodes(balances, spenum.Miner)
+			if err != nil {
+				return common.NewErrorf("pay_fees", "can't get delete miners: %v", err)
+			}
+
+			// remove the delete miner from the list if it's not in the new mb
+			if len(deleteMiners) > 0 {
+				mid := deleteMiners[0]
+				_, ok := mb.Miners.NodesMap[mid]
+				if !ok {
+					deleteMiners = deleteMiners[1:]
+					if err := updateDeleteNodeIDs(balances, spenum.Miner, deleteMiners); err != nil {
+						return common.NewErrorf("pay_fees", "can't update delete miners: %v", err)
+					}
+				}
+			}
+
+			regMinerIDs, err := getRegisterNodes(balances, spenum.Miner)
+			if err != nil {
+				return common.NewErrorf("pay_fees", "can't get register miners: %v", err)
+			}
+
+			if len(regMinerIDs) > 0 {
+				addMID := regMinerIDs[0]
+				// remove the id from the register list if it is in the mb
+				if mb.Miners.HasNode(addMID) {
+					if err := updateRegisterNodes(balances, spenum.Miner, regMinerIDs[1:]); err != nil {
+						return common.NewErrorf("pay_fees", "can't update register miners: %v", err)
+					}
+				}
+			}
+
+			deleteSharders, err := getDeleteNodes(balances, spenum.Sharder)
+			if err != nil {
+				return common.NewErrorf("pay_fees", "can't get delete sharders: %v", err)
+			}
+
+			if len(deleteSharders) > 0 {
+				sid := deleteSharders[0]
+				_, ok := mb.Sharders.NodesMap[sid]
+				if !ok {
+					deleteSharders = deleteSharders[1:]
+					if err := updateDeleteNodeIDs(balances, spenum.Sharder, deleteSharders); err != nil {
+						return common.NewErrorf("pay_fees", "can't update delete sharders: %v", err)
+					}
+				}
+			}
+
+			// get register sharders list
+			regSharderIDs, err := getRegisterNodes(balances, spenum.Sharder)
+			if err != nil {
+				return common.NewErrorf("pay_fees", "can't get register sharders: %v", err)
+			}
+
+			if len(regSharderIDs) > 0 {
+				addSID := regSharderIDs[0]
+				// remove the id from the register list if it is in the mb
+				if mb.Sharders.HasNode(addSID) {
+					if err := updateRegisterNodes(balances, spenum.Sharder, regSharderIDs[1:]); err != nil {
+						return common.NewErrorf("pay_fees", "can't update register sharders: %v", err)
+					}
+				}
+			}
+			return nil
+		}); err != nil {
+		return err
 	}
 
 	// clear DKG miners list
@@ -321,7 +338,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			"can't cleanup DKG miners: %v", err)
 	}
 
-	return
+	return nil
 }
 
 type PayFeesInput struct {
@@ -358,6 +375,23 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			logging.Logger.Error("pay_fees failed to save phase node", zap.Error(err))
 			return "", common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
 		}
+	}
+
+	if err := cstate.WithActivation(balances, "electra",
+		func() error {
+			if b.Round != gn.ViewChange {
+				return nil
+			}
+
+			if err := msc.SetMagicBlock(gn, balances); err != nil {
+				return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v", b.Round, gn.ViewChange, err)
+			}
+			return nil
+		},
+		func() error {
+			return nil
+		}); err != nil {
+		return "", err
 	}
 
 	if t.ClientID != b.MinerID {
@@ -482,6 +516,28 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			return "", common.NewErrorf("pay_fees",
 				"saving generator node: %v", err)
 		}
+	}
+
+	beforeFork := func() error {
+		if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
+			var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
+			if lfmb != nil {
+				// TODO: use viewChangePoolsWork when view change is enabled
+				//err = msc.viewChangePoolsWork(lfmb, b.Round, sharders, balances)
+				if err = msc.viewChangeDeleteNodes(balances); err != nil {
+					return err
+				}
+			} else {
+				return common.NewError("pay_fees", "cannot find latest magic bock")
+			}
+		}
+		return nil
+	}
+
+	if err := cstate.WithActivation(balances, "electra",
+		beforeFork,
+		func() error { return nil }); err != nil {
+		return "", err
 	}
 
 	if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
