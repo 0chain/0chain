@@ -346,7 +346,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	logging.Logger.Debug("create dkg miners, all miners list",
 		zap.Any("miners", allMinersMap))
 
-	if len(allMinersList.Nodes) > gn.MinN {
+	if lmb.N > gn.MinN {
 		// get deleted miners list
 		deleteMinersIDs, err := getDeleteNodes(balances, spenum.Miner)
 		if err != nil {
