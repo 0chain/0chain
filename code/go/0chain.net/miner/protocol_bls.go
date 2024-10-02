@@ -39,7 +39,7 @@ func init() {
 func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	mc := GetMinerChain()
 	if !mc.ChainConfig.IsDkgEnabled() {
-		Logger.Info("DKG is not enabled. So, starting protocol")
+		Logger.Info("DKG is disabled. So, starting protocol")
 		return nil
 	}
 
@@ -533,8 +533,6 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 		Logger.Info("Starting round with vrf", zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("roundtimeout", r.GetTimeoutCount()),
 			zap.Int64("rseed", seed), zap.Int64("prev_round", pr.GetRoundNumber()),
-			//zap.Int("Prev_roundtimeout", pr.GetTimeoutCount()),
-			// zap.Int64("Prev_rseed", pr.GetRandomSeed()))
 			zap.Int64("Prev_rseed", prSeed))
 	}
 	vrfStartTime := r.GetVrfStartTime()

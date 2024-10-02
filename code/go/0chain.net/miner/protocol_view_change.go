@@ -215,157 +215,6 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 	}
 }
 
-// DKGProcess2 starts DKG process and works on it. It blocks.
-// func (mc *Chain) DKGProcess2(ctx context.Context) {
-// 	// DKG process constants
-// 	const (
-// 		repeat = 5 * time.Second // repeat phase from sharders
-// 	)
-
-// 	var (
-// 		phaseEventsChan = mc.PhaseEvents()
-// 		newPhaseEvent   chain.PhaseEvent
-
-// 		// last time a phase event is received from miner in
-// 		// phaseEventChan
-// 		lastPhaseEventTime time.Time
-
-// 		// if a phase event isn't given after the 'repeat' period,
-// 		// then request it from sharders; for an inactive node we
-// 		// will request from sharders every 'repeat x 2' = 10s
-// 		ticker = time.NewTicker(repeat)
-
-// 		// start round of the accepted phase
-// 		phaseStartRound int64
-
-// 		// flag indicating whether previous share phase failed
-// 		// and should be retried with the already generated shares
-// 		retrySharePhase bool
-// 	)
-
-// 	defer ticker.Stop()
-
-// 	// initPhaseTimer fetches the phase from sharders immediately so that the phase could start
-// 	// immediately instead of waiting for the 5 seconds ticker.
-// 	initPhaseTimer := time.NewTimer(0)
-
-// 	for {
-// 		select {
-// 		case <-ctx.Done():
-// 			return
-// 		case <-initPhaseTimer.C:
-// 			go mc.GetPhaseFromSharders(ctx)
-// 		case tp := <-ticker.C:
-// 			if tp.Sub(lastPhaseEventTime) <= repeat || phaseEventsChan.Size() > 0 {
-// 				continue // already have a fresh phase
-// 			}
-// 			// otherwise, request phase from sharders; since we aren't using
-// 			// goroutine here, and phases events sending is non-blocking (can
-// 			// skip, reject the event); then the pahsesEvent channel should be
-// 			// buffered (at least 1 element in the buffer)
-// 			go mc.GetPhaseFromSharders(ctx)
-// 			continue
-// 		default:
-// 			pe, ok := phaseEventsChan.Pop()
-// 			if !ok {
-// 				time.Sleep(200 * time.Millisecond)
-// 				continue
-// 			}
-// 			newPhaseEvent = pe.Data.(chain.PhaseEvent)
-// 			if !newPhaseEvent.Sharders {
-// 				// keep last time the phase given by the miner
-// 				lastPhaseEventTime = time.Now()
-// 			}
-// 		}
-
-// 		pn := newPhaseEvent.Phase
-
-// 		// only retry if new phase is share phase
-// 		retrySharePhase = pn.Phase == minersc.Share && retrySharePhase
-
-// 		if pn.StartRound == phaseStartRound {
-// 			if !retrySharePhase {
-// 				continue // phase already accepted
-// 			}
-// 		}
-
-// 		var (
-// 			lfb    = mc.GetLatestFinalizedBlock()
-// 			active = mc.IsActiveInChain()
-// 		)
-
-// 		if active && newPhaseEvent.Sharders {
-// 			active = false // obviously, miner is not active, or is stuck
-// 		}
-
-// 		logging.Logger.Debug("dkg process: trying",
-// 			zap.String("current_phase", mc.CurrentPhase().String()),
-// 			zap.String("next_phase", pn.Phase.String()),
-// 			zap.Bool("active", active),
-// 			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
-
-// 		// only go through if pn.Phase is expected
-// 		if !(pn.Phase == minersc.Start ||
-// 			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
-// 			logging.Logger.Debug(
-// 				"dkg process: jumping over a phase; skip and wait for restart",
-// 				zap.String("current_phase", mc.CurrentPhase().String()),
-// 				zap.String("next_phase", pn.Phase.String()))
-// 			mc.SetCurrentPhase(minersc.Unknown)
-// 			continue
-// 		}
-
-// 		logging.Logger.Info("dkg process: start",
-// 			zap.String("current_phase", mc.CurrentPhase().String()),
-// 			zap.String("next_phase", pn.Phase.String()),
-// 			zap.String("phase funcs", getFunctionName(mc.viewChangeProcess.phaseFuncs[pn.Phase])))
-
-// 		var phaseFunc, ok = mc.viewChangeProcess.phaseFuncs[pn.Phase]
-// 		if !ok {
-// 			logging.Logger.Debug("dkg process: no such phase func",
-// 				zap.String("phase", pn.Phase.String()))
-// 			continue
-// 		}
-
-// 		logging.Logger.Debug("dkg process: run phase function",
-// 			zap.String("name", getFunctionName(phaseFunc)))
-
-// 		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
-// 		if lfmb == nil {
-// 			logging.Logger.Error("can't get lfmb")
-// 			return
-// 		}
-// 		txn, err := phaseFunc(ctx, lfb, lfmb.MagicBlock)
-// 		if err != nil {
-// 			logging.Logger.Error("dkg process: phase func failed",
-// 				zap.String("current_phase", mc.CurrentPhase().String()),
-// 				zap.String("next_phase", pn.Phase.String()),
-// 				zap.Error(err),
-// 			)
-// 			if pn.Phase != minersc.Share {
-// 				continue
-// 			}
-// 			retrySharePhase = true
-// 		}
-
-// 		logging.Logger.Debug("dkg process: move phase",
-// 			zap.String("current_phase", mc.CurrentPhase().String()),
-// 			zap.Any("next_phase", pn),
-// 			zap.Any("txn", txn))
-
-// 		if txn == nil || (txn != nil && mc.ConfirmTransaction(ctx, txn, 0)) {
-// 			prevPhase := mc.CurrentPhase()
-// 			mc.SetCurrentPhase(pn.Phase)
-// 			phaseStartRound = pn.StartRound
-// 			logging.Logger.Debug("dkg process: moved phase",
-// 				zap.String("prev_phase", prevPhase.String()),
-// 				zap.String("current_phase", mc.CurrentPhase().String()),
-// 			)
-// 		}
-// 	}
-
-// }
-
 func getFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
 }
@@ -605,36 +454,6 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 	return
 }
 
-// NextViewChangeOfBlock returns next view change value based on given block.
-func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
-	// if !mc.ChainConfig.IsViewChangeEnabled() {
-	// 	return lfb.LatestFinalizedMagicBlockRound, nil
-	// }
-
-	// miner SC global node is not created yet, but firs block creates it
-	if lfb.Round < 1 {
-		return 0, nil
-	}
-
-	var gn minersc.GlobalNode
-	err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
-	if err != nil {
-		logging.Logger.Error("block_next_vc -- can't get miner SC global node",
-			zap.Error(err), zap.Int64("lfb", lfb.Round),
-			zap.Bool("is_state", lfb.IsStateComputed()),
-			zap.Bool("is_init", lfb.ClientState != nil),
-			zap.Any("state", lfb.ClientStateHash))
-		return 0, common.NewErrorf("block_next_vc",
-			"can't get miner SC global node, lfb: %d, error: %v (%s)",
-			lfb.Round, err, lfb.Hash)
-	}
-
-	logging.Logger.Debug("block_next_vc -- ok", zap.Int64("lfb", lfb.Round),
-		zap.Int64("nvc", gn.ViewChange))
-
-	return gn.ViewChange, nil // got it
-}
-
 // NextViewChange round stored in view change protocol (RAM).
 func (vcp *viewChangeProcess) NextViewChange() (round int64) {
 	vcp.nvcmx.Lock()
@@ -694,21 +513,6 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 	mb = mbd.MagicBlock
 	return
 }
-
-// func SetupNodes(mb *block.MagicBlock) error {
-// 	for _, mn := range mb.Miners.CopyNodesMap() {
-// 		if err := node.Setup(mn); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	for _, sh := range mb.Sharders.CopyNodesMap() {
-// 		if err := node.Setup(sh); err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	return nil
-// }
 
 // DKG save / load
 
@@ -1015,4 +819,33 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		zap.Int("shares num", mc.viewChangeProcess.viewChangeDKG.GetSecretSharesSize()))
 
 	return afterSignShareRequestHandler(message, nodeID)
+}
+
+func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {
+	if !mc.ChainConfig.IsViewChangeEnabled() {
+		return lfb.LatestFinalizedMagicBlockRound, nil
+	}
+
+	// miner SC global node is not created yet, but firs block creates it
+	if lfb.Round < 1 {
+		return 0, nil
+	}
+
+	var gn minersc.GlobalNode
+	err = mc.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
+	if err != nil {
+		logging.Logger.Error("block_next_vc -- can't get miner SC global node",
+			zap.Error(err), zap.Int64("lfb", lfb.Round),
+			zap.Bool("is_state", lfb.IsStateComputed()),
+			zap.Bool("is_init", lfb.ClientState != nil),
+			zap.Any("state", lfb.ClientStateHash))
+		return 0, common.NewErrorf("block_next_vc",
+			"can't get miner SC global node, lfb: %d, error: %v (%s)",
+			lfb.Round, err, lfb.Hash)
+	}
+
+	logging.Logger.Debug("block_next_vc -- ok", zap.Int64("lfb", lfb.Round),
+		zap.Int64("nvc", gn.ViewChange))
+
+	return gn.ViewChange, nil // got it
 }

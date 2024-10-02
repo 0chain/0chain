@@ -1584,40 +1584,6 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	mc.ProgressOnNotarization(r)
 }
 
-// ensureState makes sure block state is computed and initialized, it can't
-// be sure the block stat will not be changed later (or will not become invalid)
-// so, it's optimistic, let's track logs to find out how it's critical
-// in reality
-func (mc *Chain) ensureState(ctx context.Context, b *block.Block) (ok bool) {
-
-	var err error
-	if !b.IsStateComputed() {
-		if err = mc.ComputeOrSyncState(ctx, b); err != nil {
-			logging.Logger.Error("ensure_state -- compute or sync",
-				zap.Error(err), zap.Int64("round", b.Round))
-		}
-	}
-	if b.ClientState == nil {
-		if err = mc.InitBlockState(b); err != nil {
-			logging.Logger.Error("ensure_state -- initialize block state",
-				zap.Error(err), zap.Int64("round", b.Round))
-		}
-	}
-
-	// ensure next view change (from sharders)
-	if ok = b.IsStateComputed() && b.ClientState != nil; ok {
-		var nvc int64
-		if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
-			logging.Logger.Error("ensure_state -- next view change",
-				zap.Error(err), zap.Int64("round", b.Round))
-			return // but return result
-		}
-		mc.SetNextViewChange(nvc)
-	}
-
-	return
-}
-
 func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	mr *Round) {
 
@@ -1691,7 +1657,6 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 	var (
 		current *block.MagicBlock
 		err     error
-		// lfb    = mc.GetLatestFinalizedBlock()
 	)
 
 	lfbr, err := mc.LoadLFBRound()

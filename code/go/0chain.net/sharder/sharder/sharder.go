@@ -228,10 +228,6 @@ func main() {
 
 	startBlocksInfoLogs(sc)
 
-	// if err := sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
-	// 	Logger.Fatal("update LFMB from sharders", zap.Error(err))
-	// }
-
 	if serverChain.GetCurrentMagicBlock().MagicBlockNumber <
 		serverChain.GetLatestMagicBlock().MagicBlockNumber {
 

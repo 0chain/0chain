@@ -288,26 +288,6 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 			mb.StartingRound, nvc)
 	}
 
-	// TODO: store the MB in DB when in manual view change mode
-	//
-	// check out the MB if this miner is member of it
-	// var (
-	// 	id  = strconv.FormatInt(mb.MagicBlockNumber, 10)
-	// 	lmb *block.MagicBlock
-	// )
-
-	// get stored MB
-	// if lmb, err = LoadMagicBlock(ctx, id); err != nil {
-	// 	return common.NewErrorf("verify_block_mb",
-	// 		"can't load related MB from store: %v", err)
-	// }
-
-	// // compare given MB and the stored one (should be equal)
-	// if !bytes.Equal(mb.Encode(), lmb.Encode()) {
-	// 	return common.NewError("verify_block_mb",
-	// 		"MB given doesn't match the stored one")
-	// }
-
 	return
 }
 

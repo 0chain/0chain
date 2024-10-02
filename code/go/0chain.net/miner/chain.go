@@ -133,10 +133,8 @@ func (mrf MinerRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 type Chain struct {
 	*chain.Chain
 	blockMessageChannel chan *BlockMessage
-	// muDKG               *sync.RWMutex
-	// roundDkg            round.RoundStorage
-	discoverClients bool
-	started         uint32
+	discoverClients     bool
+	started             uint32
 
 	// view change process control
 	viewChangeProcess
@@ -267,14 +265,15 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.String("block", lfbr.Hash))
 
 	// fetch from sharders
-	retry := 3 // retry 3 times, each time wait for about 5 seconds
+	// retry 3 times, each time wait for about 5 seconds.
+	// the main reason for retry is that sharders APIs may not ready yet after all miners/sharders restarted
+	retry := 3
 	var b *block.Block
 	for i := 0; i < retry; i++ {
 		b, err = mc.GetNotarizedBlockFromSharders(ctx, lfbr.Hash, lfbr.Round)
 		if err != nil {
-			logging.Logger.Error("load_lfb - could not fetch block from sharders, wait for retry...",
+			logging.Logger.Error("load_lfb - could not fetch block from sharders, waiting for retry...",
 				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
-			// try fetch from miners
 			time.Sleep(5 * time.Second)
 			continue
 		}
@@ -410,9 +409,9 @@ func (mc *Chain) SaveClients(clients []*client.Client) error {
 // ViewChange on finalized (!) block. Miners check magic blocks during
 // generation and notarization. A finalized block should be trusted.
 func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
-	// if !mc.ChainConfig.IsViewChangeEnabled() {
-	// 	return
-	// }
+	if !mc.ChainConfig.IsViewChangeEnabled() {
+		return nil
+	}
 
 	if b.MagicBlock == nil {
 		return nil

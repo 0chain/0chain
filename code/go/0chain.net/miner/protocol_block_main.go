@@ -42,7 +42,7 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 		fr.Finalize(b)
 	}
 
-	// return if view change is not off
+	// return if view change is off
 	if !mc.IsViewChangeEnabled() {
 		return nil
 	}

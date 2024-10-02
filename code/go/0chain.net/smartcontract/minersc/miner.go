@@ -2,6 +2,7 @@ package minersc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"0chain.net/smartcontract/dto"
@@ -83,6 +84,15 @@ func (rnr *RegisterNodeSCRequest) Decode(data []byte) error {
 func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI,
 ) (resp string, err error) {
+	if err = cstate.WithActivation(balances, "electra",
+		func() error {
+			return errors.New("vc_add SC is not active")
+		}, func() error {
+			return nil
+		}); err != nil {
+		return "", err
+	}
+
 	// TODO: only chain owner can register nodes
 	if err := smartcontractinterface.AuthorizeWithOwner("vc_add", func() bool {
 		return gn.OwnerId == t.ClientID
@@ -175,19 +185,22 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	newMiner.Settings.MinStake = gn.MinStakePerDelegate
 
-	// TODO: do following code removing with activation
-	// magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
+	if err := cstate.WithActivation(balances, "electra", func() error {
+		magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
+		if magicBlockMiners == nil {
+			return common.NewError("add_miner", "magic block miners nil")
+		}
 
-	// if magicBlockMiners == nil {
-	// 	return "", common.NewError("add_miner", "magic block miners nil")
-	// }
-
-	// if !magicBlockMiners.HasNode(newMiner.ID) {
-
-	// 	logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
-	// 	return "", common.NewErrorf("add_miner",
-	// 		"failed to add new miner: Not in magic block")
-	// }
+		if !magicBlockMiners.HasNode(newMiner.ID) {
+			logging.Logger.Error("add_miner: Error in Adding a new miner: Not in magic block")
+			return common.NewErrorf("add_miner", "failed to add new miner: Not in magic block")
+		}
+		return nil
+	}, func() error {
+		return nil
+	}); err != nil {
+		return "", err
+	}
 
 	newMiner.LastHealthCheck = t.CreationDate
 
@@ -251,15 +264,6 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	logging.Logger.Debug("add_miner: miner added", zap.String("miner", newMiner.ID))
 
 	emitAddMiner(newMiner, balances)
-
-	// TODO: remove debug code
-	allMs, err := getMinersList(balances)
-	if err != nil {
-		logging.Logger.Error("[mvc] add_miner: failed to get all miners list", zap.Error(err))
-	} else {
-		logging.Logger.Info("[mvc] add_miner: all miners list", zap.Int("num", len(allMs.Nodes)))
-	}
-
 	return string(newMiner.Encode()), nil
 }
 
@@ -270,14 +274,15 @@ func (msc *MinerSmartContract) DeleteMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	// actErr := cstate.WithActivation(balances, "ares", func() error {
-	// 	return nil
-	// }, func() error {
-	// 	return errors.New("delete miner is disabled")
-	// })
-	// if actErr != nil {
-	// 	return "", actErr
-	// }
+	err := cstate.WithActivation(balances, "electra", func() error {
+		return errors.New("delete miner is disabled")
+	}, func() error {
+		return nil
+	})
+
+	if err != nil {
+		return "", err
+	}
 
 	if err := smartcontractinterface.AuthorizeWithOwner("delete_miner", func() bool {
 		return gn.OwnerId == txn.ClientID
@@ -289,11 +294,9 @@ func (msc *MinerSmartContract) DeleteMiner(
 		return "", common.NewError("delete_miner", "view change is disabled")
 	}
 
-	var err error
 	var deleteMiner = NewMinerNode()
 	if err = deleteMiner.Decode(inputData); err != nil {
-		return "", common.NewErrorf("delete_miner",
-			"decoding request: %v", err)
+		return "", common.NewErrorf("delete_miner", "decoding request: %v", err)
 	}
 
 	var mn *MinerNode
@@ -306,46 +309,6 @@ func (msc *MinerSmartContract) DeleteMiner(
 	if err != nil {
 		return "", common.NewError("delete_miner", err.Error())
 	}
-
-	// if err = msc.deleteMinerFromViewChange(updatedMn, balances); err != nil {
-	// 	return "", common.NewError("delete_miner", err.Error())
-	// }
-
-	// lfmb := balances.GetLastestFinalizedMagicBlock()
-	// cloneMB := lfmb.MagicBlock.Clone()
-	// cloneMB.Miners.Delete(mn.ID)
-	// cloneMB.Mpks.Delete(mn.ID)
-	// cloneMB.ShareOrSigns.Delete(mn.ID)
-
-	// cloneMB.PreviousMagicBlockHash = lfmb.MagicBlock.Hash
-	// cloneMB.MagicBlockNumber = lfmb.MagicBlockNumber + 1
-	// nvcPeriod := PhaseRounds[Wait]
-	// cloneMB.StartingRound =
-	// startingRound := ((balances.GetBlock().Round)/nvcPeriod + 1) * nvcPeriod
-
-	// dkgMiners := NewDKGMinerNodes()
-	// dkgMiners.calculateTKN(gn, cloneMB.Miners.Size())
-	// cloneMB.T = dkgMiners.T
-	// cloneMB.K = dkgMiners.K
-	// cloneMB.N = dkgMiners.N
-	// cloneMB.Hash = cloneMB.GetHash()
-	// logging.Logger.Debug("delete miner, new TKN:",
-	// 	zap.Int("T", cloneMB.T),
-	// 	zap.Int("K", cloneMB.K),
-	// 	zap.Int("N", cloneMB.N),
-	// 	zap.Int64("next vc", cloneMB.StartingRound),
-	// 	zap.Int("MB miner size", cloneMB.Miners.Size()))
-
-	// // msc.createMagicBlock()
-	// if err := updateMagicBlock(balances, cloneMB); err != nil {
-	// 	return "", common.NewError("delete_miner could not update magic block", err.Error())
-	// }
-
-	// gn.ViewChange = cloneMB.StartingRound
-	// gn.ViewChange = startingRound
-	// if err := gn.save(balances); err != nil {
-	// 	return "", common.NewError("delete_miner could not save global node", err.Error())
-	// }
 
 	return "delete miner successfully", nil
 }
@@ -426,36 +389,6 @@ func (msc *MinerSmartContract) deleteNode(
 	if err != nil {
 		return nil, err
 	}
-
-	// orderedPoolIds := deleteNode.OrderedPoolIds()
-	// for _, key := range orderedPoolIds {
-	// 	pool := deleteNode.Pools[key]
-	// 	switch pool.Status {
-	// 	case spenum.Active:
-	// 		pool.Status = spenum.Deleted
-	// 		_, err := deleteNode.UnlockPool(
-	// 			pool.DelegateID, nodeType, pool.DelegateID, balances)
-	// 		if err != nil {
-	// 			return nil, fmt.Errorf("error emptying delegate pool: %v", err)
-	// 		}
-	// 	case spenum.Deleted:
-	// 	default:
-	// 		return nil, fmt.Errorf(
-	// 			"unrecognised stakepool status: %v", pool.Status.String())
-	// 	}
-	// }
-
-	// if err = deleteNode.save(balances); err != nil {
-	// 	return nil, fmt.Errorf("saving node %v", err.Error())
-	// }
-
-	// n2nKey := deleteNode.GetN2NHostKey(ADDRESS)
-	// if _, err := balances.DeleteTrieNode(n2nKey); err != nil {
-	// 	return nil, fmt.Errorf("deleting node n2n key failed: %v", err)
-	// }
-
-	// emitDeleteMiner(deleteNode.ID, balances)
-	// // emitUpdateMiner(deleteNode, balances, false)
 
 	return deleteNode, nil
 }

@@ -29,7 +29,6 @@ func SetupWorkers(ctx context.Context) {
 	go mc.SyncLFBStateWorker(ctx)
 
 	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.GetRoundDkg())
-	// go mc.UpdateMagicBlockWorker(ctx)
 	//TODO uncomment it, atm it breaks executing faucet pour somehow
 	go mc.MinerHealthCheck(ctx)
 	go mc.NotarizationProcessWorker(ctx)

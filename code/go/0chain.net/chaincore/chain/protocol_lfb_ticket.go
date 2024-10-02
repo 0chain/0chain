@@ -521,12 +521,6 @@ func (c *Chain) updateLatestFinalizedMagicBlock(ctx context.Context, lfmb *block
 		clone: lfmb.Clone(),
 		reply: make(chan struct{}, 1),
 	}
-	logging.Logger.Debug("in update LFMB with clone",
-		zap.Int64("clone magic block number", v.clone.MagicBlockNumber),
-		zap.Int("clone miners", v.clone.Miners.Size()),
-		zap.Int("clone sharders", v.clone.Sharders.Size()),
-		zap.Int("miners", lfmb.Miners.Size()),
-		zap.Int("sharders", lfmb.Sharders.Size()))
 	select {
 	case c.updateLFMB <- v:
 		<-v.reply

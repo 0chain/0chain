@@ -36,7 +36,6 @@ func SetupWorkers(ctx context.Context) {
 
 	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(),
 		sc.MagicBlockStorage)
-	// go sc.UpdateMagicBlockWorker(ctx)
 	go sc.RegisterSharderKeepWorker(ctx)
 	go sc.SharderHealthCheck(ctx)
 
@@ -84,10 +83,6 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
-	// if !sc.ChainConfig.IsViewChangeEnabled() {
-	// 	return // don't send sharder_keep if view_change is false
-	// }
-
 	var (
 		phaseq = sc.PhaseEvents()
 		pe     chain.PhaseEvent //
@@ -99,6 +94,12 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 		default:
+			if !sc.ChainConfig.IsViewChangeEnabled() {
+				// don't send sharder_keep if view_change is false
+				time.Sleep(time.Second)
+				continue
+			}
+
 			pei, ok := phaseq.Pop()
 			if !ok {
 				time.Sleep(200 * time.Millisecond)

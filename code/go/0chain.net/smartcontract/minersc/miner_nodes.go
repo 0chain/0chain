@@ -48,7 +48,6 @@ func (mn *MinerNodes) RemoveNodes(ids []string) {
 	for _, id := range ids {
 		for i, minerNode := range mn.Nodes {
 			if minerNode.ID == id {
-				// mn.Nodes = append(mn.Nodes[:i], mn.Nodes[i+1:]...)
 				mn.Nodes[i] = mn.Nodes[len(mn.Nodes)-1]
 				mn.Nodes = mn.Nodes[:len(mn.Nodes)-1]
 			}
