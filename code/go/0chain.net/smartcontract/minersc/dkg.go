@@ -328,39 +328,17 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	// get deleted miners list
-	deleteMinersIDs, err := getDeleteNodes(balances, spenum.Miner)
-	if err != nil {
-		return common.NewErrorf("createDKGMinersForContribute", "failed to get delete miners: %v", err)
-	}
-	logging.Logger.Debug("[mvc] delete miners list", zap.Any("ids", deleteMinersIDs))
-
-	// delete one miner each in VC
-	var (
-		toDeleteMinerIDs  = make(map[string]struct{}, len(deleteMinersIDs))
-		toDeleteMinersNum = len(deleteMinersIDs)
-		lmb               = gn.prevMagicBlock(balances)
-	)
-
+	lmb := gn.prevMagicBlock(balances)
 	if lmb == nil {
 		return common.NewErrorf("failed to create dkg miners", "empty magic block")
 	}
 
-	if toDeleteMinersNum > 0 {
-		if lmb.N-toDeleteMinersNum < lmb.T {
-			toDeleteMinersNum = lmb.N - lmb.T
-		}
-		for _, did := range deleteMinersIDs[:toDeleteMinersNum] {
-			toDeleteMinerIDs[did] = struct{}{}
-		}
-	}
+	var (
+		allMinersMap     = make(map[string]*MinerNode, len(allMinersList.Nodes))
+		dkgMiners        = NewDKGMinerNodes()
+		toDeleteMinerIDs = make(map[string]struct{}, len(allMinersMap))
+	)
 
-	if len(toDeleteMinerIDs) > 0 {
-		logging.Logger.Debug("[mvc] createDKGMinersForContribute remove miner",
-			zap.Strings("miners", deleteMinersIDs[:toDeleteMinersNum]))
-	}
-
-	allMinersMap := make(map[string]*MinerNode, len(allMinersList.Nodes))
 	for i, n := range allMinersList.Nodes {
 		allMinersMap[n.ID] = allMinersList.Nodes[i]
 	}
@@ -368,7 +346,27 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	logging.Logger.Debug("create dkg miners, all miners list",
 		zap.Any("miners", allMinersMap))
 
-	dkgMiners := NewDKGMinerNodes()
+	if len(allMinersList.Nodes) > gn.MinN {
+		// get deleted miners list
+		deleteMinersIDs, err := getDeleteNodes(balances, spenum.Miner)
+		if err != nil {
+			return common.NewErrorf("createDKGMinersForContribute", "failed to get delete miners: %v", err)
+		}
+		logging.Logger.Debug("[mvc] delete miners list", zap.Any("ids", deleteMinersIDs))
+		toDeleteMinersNum := len(deleteMinersIDs)
+		if toDeleteMinersNum > 0 {
+			if lmb.N-toDeleteMinersNum < lmb.T {
+				toDeleteMinersNum = lmb.N - lmb.T
+			}
+			for _, did := range deleteMinersIDs[:toDeleteMinersNum] {
+				toDeleteMinerIDs[did] = struct{}{}
+			}
+		}
+
+		logging.Logger.Debug("[mvc] createDKGMinersForContribute remove miner",
+			zap.Strings("miners", deleteMinersIDs[:toDeleteMinersNum]))
+	}
+
 	for _, m := range lmb.Miners.CopyNodes() {
 		mid := m.GetKey()
 		if _, ok := toDeleteMinerIDs[mid]; ok {
