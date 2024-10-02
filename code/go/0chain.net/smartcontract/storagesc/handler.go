@@ -1988,6 +1988,16 @@ func requiredTokensForUpdateAllocation(sa *storageAllocationBase, cpBalance curr
 		tokensRequiredToLock = 0
 	}
 
+	var costOfUnusedAlloc currency.Coin
+
+	costOfUnusedAlloc, err = sa.unUsedAllocCost()
+	if err != nil {
+		return 0, fmt.Errorf("failed to get unused allocation cost: %v", err)
+	}
+	if costOfUnusedAlloc > sa.WritePool && costOfUnusedAlloc-sa.WritePool > tokensRequiredToLock {
+		tokensRequiredToLock = costOfUnusedAlloc - sa.WritePool
+	}
+
 	logging.Logger.Info("requiredTokensForUpdateAllocation",
 		zap.Any("costOfAllocAfterUpdate", costOfAllocAfterUpdate),
 		zap.Any("totalWritePool", totalWritePool),
@@ -1997,6 +2007,7 @@ func requiredTokensForUpdateAllocation(sa *storageAllocationBase, cpBalance curr
 		zap.Any("sa", sa),
 		zap.Any("cpBalance", cpBalance),
 		zap.Any("now", now),
+		zap.Any("costOfUnusedAlloc", costOfUnusedAlloc),
 	)
 
 	return tokensRequiredToLock, nil
