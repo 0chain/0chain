@@ -168,7 +168,7 @@ func (msc *MinerSmartContract) DeleteSharder(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	if err := cstate.WithActivation(balances, "electra",
+	if err := cstate.WithActivation(balances, "hercules",
 		func() error {
 			return errors.New("delete sharder is disabled")
 		}, func() error {
@@ -307,7 +307,7 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		return string(newSharder.Encode()), nil
 	}
 
-	if err := cstate.WithActivation(balances, "electra", func() error {
+	if err := cstate.WithActivation(balances, "hercules", func() error {
 		return nil
 	}, func() error {
 		// check if the sharder is in MB

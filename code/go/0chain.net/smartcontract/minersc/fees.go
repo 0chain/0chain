@@ -209,7 +209,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		waited++
 	}
 
-	if err := cstate.WithActivation(balances, "electra",
+	if err := cstate.WithActivation(balances, "hercules",
 		func() error {
 			err = dmn.reduceNodes(true, gn, balances)
 			if err == nil && waited < dmn.K {
@@ -356,7 +356,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	)
 
 	// TODO: cache the phase node so if when there's no view change happens, we
-	err = cstate.WithActivation(balances, "electra", func() error {
+	err = cstate.WithActivation(balances, "hercules", func() error {
 		if b.Round != gn.ViewChange {
 			return nil
 		}
@@ -536,7 +536,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		return nil
 	}
 
-	if err := cstate.WithActivation(balances, "electra",
+	if err := cstate.WithActivation(balances, "hercules",
 		beforeFork,
 		func() error { return nil }); err != nil {
 		return "", err

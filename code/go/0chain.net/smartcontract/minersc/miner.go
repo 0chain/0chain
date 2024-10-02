@@ -84,7 +84,7 @@ func (rnr *RegisterNodeSCRequest) Decode(data []byte) error {
 func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err = cstate.WithActivation(balances, "electra",
+	if err = cstate.WithActivation(balances, "hercules",
 		func() error {
 			return errors.New("vc_add SC is not active")
 		}, func() error {
@@ -185,7 +185,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 
 	newMiner.Settings.MinStake = gn.MinStakePerDelegate
 
-	if err := cstate.WithActivation(balances, "electra", func() error {
+	if err := cstate.WithActivation(balances, "hercules", func() error {
 		magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
 		if magicBlockMiners == nil {
 			return common.NewError("add_miner", "magic block miners nil")
@@ -274,7 +274,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	err := cstate.WithActivation(balances, "electra", func() error {
+	err := cstate.WithActivation(balances, "hercules", func() error {
 		return errors.New("delete miner is disabled")
 	}, func() error {
 		return nil
