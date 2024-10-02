@@ -424,7 +424,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	if err != nil {
 		return err
 	}
-	logging.Logger.Debug("[mvc] sharder delete list", zap.Strings("ids", deleteMinersIDs))
+	logging.Logger.Debug("[mvc] sharder delete list", zap.Strings("ids", deleteShardersIDs))
 
 	var toDeleteSharder string
 	if len(deleteShardersIDs) > 0 {
