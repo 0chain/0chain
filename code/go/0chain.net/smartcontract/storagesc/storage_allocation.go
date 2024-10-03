@@ -794,6 +794,24 @@ func (sa *StorageAllocation) buildDbUpdates(balances cstate.StateContextI) event
 		return nil
 	})
 
+	_ = cstate.WithActivation(balances, "hercules", func() error {
+		return nil
+	}, func() error {
+		if sa.Entity().GetVersion() == "v3" {
+			v3, ok := sa.Entity().(*storageAllocationV3)
+			if !ok || v3 == nil {
+				return nil
+			}
+			if v3.IsEnterprise != nil {
+				eAlloc.IsEnterprise = *v3.IsEnterprise
+			}
+			if v3.StorageVersion != nil {
+				eAlloc.StorageVersion = *v3.StorageVersion
+			}
+		}
+		return nil
+	})
+
 	if sab.Stats != nil {
 		eAlloc.NumWrites = sab.Stats.NumWrites
 		eAlloc.NumReads = sab.Stats.NumReads
