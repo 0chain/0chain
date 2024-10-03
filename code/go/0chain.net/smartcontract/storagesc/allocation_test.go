@@ -2203,7 +2203,6 @@ func checkStakesRewardsAre0ForBlobber(blobberID string, ssc *StorageSmartContrac
 }
 
 func TestUpdateAllocationRequest(t *testing.T) {
-	t.Skip()
 
 	// Tests :
 	// 1. Update single operation and check the stats and tag events
