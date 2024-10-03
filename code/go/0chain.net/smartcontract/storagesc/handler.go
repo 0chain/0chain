@@ -2656,8 +2656,9 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
 
-	IsRestricted bool `json:"is_restricted"`
-	IsEnterprise bool `json:"is_enterprise"`
+	IsRestricted   bool   `json:"is_restricted"`
+	IsEnterprise   bool   `json:"is_enterprise"`
+	StorageVersion string `json:"storage_version"`
 }
 
 func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {
@@ -2797,6 +2798,7 @@ func storageNodeResponseToStorageNodeV4(snr storageNodeResponse) *storageNodeV4 
 		NotAvailable:            snr.NotAvailable,
 		IsRestricted:            &snr.IsRestricted,
 		IsEnterprise:            &snr.IsEnterprise,
+		StorageVersion:          &snr.StorageVersion,
 	}
 }
 

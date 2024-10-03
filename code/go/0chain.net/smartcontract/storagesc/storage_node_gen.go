@@ -616,9 +616,9 @@ func (z *storageNodeV3) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *storageNodeV4) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 16
+	// map header, size 17
 	// string "Provider"
-	o = append(o, 0xde, 0x0, 0x10, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
+	o = append(o, 0xde, 0x0, 0x11, 0xa8, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72)
 	o, err = z.Provider.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "Provider")
@@ -692,6 +692,13 @@ func (z *storageNodeV4) MarshalMsg(b []byte) (o []byte, err error) {
 		o = msgp.AppendNil(o)
 	} else {
 		o = msgp.AppendString(o, *z.ManagingWallet)
+	}
+	// string "StorageVersion"
+	o = append(o, 0xae, 0x53, 0x74, 0x6f, 0x72, 0x61, 0x67, 0x65, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e)
+	if z.StorageVersion == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o = msgp.AppendString(o, *z.StorageVersion)
 	}
 	return
 }
@@ -843,6 +850,23 @@ func (z *storageNodeV4) UnmarshalMsg(bts []byte) (o []byte, err error) {
 					return
 				}
 			}
+		case "StorageVersion":
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.StorageVersion = nil
+			} else {
+				if z.StorageVersion == nil {
+					z.StorageVersion = new(string)
+				}
+				*z.StorageVersion, bts, err = msgp.ReadStringBytes(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "StorageVersion")
+					return
+				}
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -874,6 +898,12 @@ func (z *storageNodeV4) Msgsize() (s int) {
 		s += msgp.NilSize
 	} else {
 		s += msgp.StringPrefixSize + len(*z.ManagingWallet)
+	}
+	s += 15
+	if z.StorageVersion == nil {
+		s += msgp.NilSize
+	} else {
+		s += msgp.StringPrefixSize + len(*z.StorageVersion)
 	}
 	return
 }

@@ -25,7 +25,8 @@ func init() {
 	entitywrapper.RegisterWrapper(&StorageAllocation{},
 		map[string]entitywrapper.EntityI{
 			entitywrapper.DefaultOriginVersion: &storageAllocationV1{},
-			"v2":                               &storageAllocationV2{},
+			storageAllocationV2Version:         &storageAllocationV2{},
+			storageAllocationV3Version:         &storageAllocationV3{},
 		})
 }
 
@@ -207,6 +208,8 @@ func (sab *storageAllocationBase) CommitChangesTo(e entitywrapper.EntityI) {
 		*v = storageAllocationV1(*sab)
 	case *storageAllocationV2:
 		v.ApplyBaseChanges(*sab)
+	case *storageAllocationV3:
+		v.ApplyBaseChanges(*sab)
 	}
 }
 
@@ -356,6 +359,167 @@ func (sa2 *storageAllocationV2) ApplyBaseChanges(sab storageAllocationBase) {
 	sa2.MovedToValidators = sab.MovedToValidators
 	sa2.TimeUnit = sab.TimeUnit
 }
+
+// StorageAllocation request and entity.
+// swagger:model StorageAllocation
+type storageAllocationV3 struct {
+	// ID is unique allocation ID that is equal to hash of transaction with
+	// which the allocation has created.
+	ID string `json:"id"`
+	// Tx keeps hash with which the allocation has created or updated. todo do we need this field?
+	Tx string `json:"tx"`
+
+	DataShards        int                     `json:"data_shards"`
+	ParityShards      int                     `json:"parity_shards"`
+	Size              int64                   `json:"size"`
+	Expiration        common.Timestamp        `json:"expiration_date"`
+	Owner             string                  `json:"owner_id"`
+	OwnerPublicKey    string                  `json:"owner_public_key"`
+	Stats             *StorageAllocationStats `json:"stats"`
+	DiverseBlobbers   bool                    `json:"diverse_blobbers"`
+	PreferredBlobbers []string                `json:"preferred_blobbers"`
+	// Blobbers not to be used anywhere except /allocation and /allocations table
+	// if Blobbers are getting used in any smart-contract, we should avoid.
+	BlobberAllocs    []*BlobberAllocation          `json:"blobber_details"`
+	BlobberAllocsMap map[string]*BlobberAllocation `json:"-" msg:"-"`
+
+	// Flag to determine if anyone can extend this allocation
+	ThirdPartyExtendable bool `json:"third_party_extendable"`
+
+	// FileOptions to define file restrictions on an allocation for third-parties
+	// default 00000000 for all crud operations suggesting only owner has the below listed abilities.
+	// enabling option/s allows any third party to perform certain ops
+	// 00000001 - 1  - upload
+	// 00000010 - 2  - delete
+	// 00000100 - 4  - update
+	// 00001000 - 8  - move
+	// 00010000 - 16 - copy
+	// 00100000 - 32 - rename
+	FileOptions uint16 `json:"file_options"`
+
+	WritePool currency.Coin `json:"write_pool"`
+
+	// Requested ranges.
+	ReadPriceRange  PriceRange `json:"read_price_range"`
+	WritePriceRange PriceRange `json:"write_price_range"`
+
+	// StartTime is time when the allocation has been created. We will
+	// use it to check blobber's MaxOfferTime extending the allocation.
+	StartTime common.Timestamp `json:"start_time"`
+	// Finalized is true where allocation has been finalized.
+	Finalized bool `json:"finalized,omitempty"`
+	// Canceled set to true where allocation finalized by cancel_allocation
+	// transaction.
+	Canceled bool `json:"canceled,omitempty"`
+
+	// MovedToChallenge is number of tokens moved to challenge pool.
+	MovedToChallenge currency.Coin `json:"moved_to_challenge,omitempty"`
+	// MovedBack is number of tokens moved from challenge pool to
+	// related write pool (the Back) if a data has deleted.
+	MovedBack currency.Coin `json:"moved_back,omitempty"`
+	// MovedToValidators is total number of tokens moved to validators
+	// of the allocation.
+	MovedToValidators currency.Coin `json:"moved_to_validators,omitempty"`
+
+	// TimeUnit configured in Storage SC when the allocation created. It can't
+	// be changed for this allocation anymore. Even using expire allocation.
+	TimeUnit time.Duration `json:"time_unit"`
+
+	Version      string `json:"version" msg:"version"`
+	IsEnterprise *bool  `json:"is_enterprise"`
+
+	StorageVersion *string `json:"storage_version"`
+}
+
+const storageAllocationV3Version = "v3"
+
+func (sa3 *storageAllocationV3) GetVersion() string {
+	return storageAllocationV3Version
+}
+
+func (sa3 *storageAllocationV3) InitVersion() {
+	sa3.Version = storageAllocationV3Version
+}
+
+func (sa3 *storageAllocationV3) GetBase() entitywrapper.EntityBaseI {
+	return &storageAllocationBase{
+		ID:                   sa3.ID,
+		Tx:                   sa3.Tx,
+		DataShards:           sa3.DataShards,
+		ParityShards:         sa3.ParityShards,
+		Size:                 sa3.Size,
+		Expiration:           sa3.Expiration,
+		Owner:                sa3.Owner,
+		OwnerPublicKey:       sa3.OwnerPublicKey,
+		Stats:                sa3.Stats,
+		DiverseBlobbers:      sa3.DiverseBlobbers,
+		PreferredBlobbers:    sa3.PreferredBlobbers,
+		BlobberAllocs:        sa3.BlobberAllocs,
+		BlobberAllocsMap:     sa3.BlobberAllocsMap,
+		ThirdPartyExtendable: sa3.ThirdPartyExtendable,
+		FileOptions:          sa3.FileOptions,
+		WritePool:            sa3.WritePool,
+		ReadPriceRange:       sa3.ReadPriceRange,
+		WritePriceRange:      sa3.WritePriceRange,
+		StartTime:            sa3.StartTime,
+		Finalized:            sa3.Finalized,
+		Canceled:             sa3.Canceled,
+		MovedToChallenge:     sa3.MovedToChallenge,
+		MovedBack:            sa3.MovedBack,
+		MovedToValidators:    sa3.MovedToValidators,
+		TimeUnit:             sa3.TimeUnit,
+	}
+}
+
+func (sa3 *storageAllocationV3) MigrateFrom(e entitywrapper.EntityI) error {
+	v2, ok := e.(*storageAllocationV2)
+	if !ok {
+		v1, ok := e.(*storageAllocationV1)
+		if !ok {
+			return errors.New("struct migrate fail, wrong storageAllocation type")
+		}
+		base := storageAllocationBase(*v1)
+		sa3.ApplyBaseChanges(base)
+		sa3.Version = storageAllocationV3Version
+		return nil
+	}
+
+	base := v2.GetBase().(*storageAllocationBase)
+	sa3.ApplyBaseChanges(*base)
+	sa3.Version = storageNodeV3Version
+	sa3.IsEnterprise = v2.IsEnterprise
+	return nil
+}
+
+func (sa3 *storageAllocationV3) ApplyBaseChanges(sab storageAllocationBase) {
+	sa3.ID = sab.ID
+	sa3.Tx = sab.Tx
+	sa3.DataShards = sab.DataShards
+	sa3.ParityShards = sab.ParityShards
+	sa3.Size = sab.Size
+	sa3.Expiration = sab.Expiration
+	sa3.Owner = sab.Owner
+	sa3.OwnerPublicKey = sab.OwnerPublicKey
+	sa3.Stats = sab.Stats
+	sa3.DiverseBlobbers = sab.DiverseBlobbers
+	sa3.PreferredBlobbers = sab.PreferredBlobbers
+	sa3.BlobberAllocs = sab.BlobberAllocs
+	sa3.BlobberAllocsMap = sab.BlobberAllocsMap
+	sa3.ThirdPartyExtendable = sab.ThirdPartyExtendable
+	sa3.FileOptions = sab.FileOptions
+	sa3.WritePool = sab.WritePool
+	sa3.ReadPriceRange = sab.ReadPriceRange
+	sa3.WritePriceRange = sab.WritePriceRange
+	sa3.StartTime = sab.StartTime
+	sa3.Finalized = sab.Finalized
+	sa3.Canceled = sab.Canceled
+	sa3.MovedToChallenge = sab.MovedToChallenge
+	sa3.MovedBack = sab.MovedBack
+	sa3.MovedToValidators = sab.MovedToValidators
+	sa3.TimeUnit = sab.TimeUnit
+}
+
+// Storage Alloc Base functions
 
 func (sab *storageAllocationBase) checkFunding() error {
 	allocCost, err := sab.cost()
