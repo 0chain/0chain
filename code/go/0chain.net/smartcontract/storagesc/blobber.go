@@ -246,7 +246,7 @@ func (sc *StorageSmartContract) updateBlobber(
 				return nil
 			})
 		}, func() error {
-			if actErr := cstate.WithActivation(balances, "electra",
+			if actErr := cstate.WithActivation(balances, "hercules",
 				func() error {
 					return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
 						b := e.(*storageNodeV3)

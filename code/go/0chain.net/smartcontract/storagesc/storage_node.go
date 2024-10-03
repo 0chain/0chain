@@ -409,7 +409,7 @@ func (sn4 *storageNodeV4) MigrateFrom(e entitywrapper.EntityI) error {
 		sn4.ApplyBaseChanges(*base)
 		sn4.Version = "v4"
 	} else {
-		return fmt.Errorf("struct migrate fail, wrong storageNode type")
+		return fmt.Errorf("struct migrate to storageNodeV4 fail, wrong storageNode type")
 	}
 
 	return nil
