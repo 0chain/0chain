@@ -1073,11 +1073,12 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 				ReadPrice:  20,
 				WritePrice: 200,
 			},
-			Capacity:     50 * GB, // 50 GB
-			Allocated:    5 * GB,  //  5 GB
-			NotAvailable: notAvailable,
-			IsRestricted: &isRestricted,
-			IsEnterprise: isEnterprise,
+			Capacity:       50 * GB, // 50 GB
+			Allocated:      5 * GB,  //  5 GB
+			NotAvailable:   notAvailable,
+			IsRestricted:   &isRestricted,
+			IsEnterprise:   isEnterprise,
+			StorageVersion: new(string),
 		})
 		all.Nodes = append(all.Nodes, sn)
 	}
@@ -2507,7 +2508,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV3).IsEnterprise, "enterprise should be true")
 		assert.Equal(t, int64(10*GB), afterAllocBase.Size, "Allocation size should be increased")
 		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
@@ -2631,7 +2632,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV3).IsEnterprise, "enterprise should be true")
 		assert.Equal(t, int64(10*GB), afterAllocBase.Size, "Allocation size should be increased")
 		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
@@ -2710,7 +2711,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV3).IsEnterprise, "enterprise should be true")
 		assert.Equal(t, int64(20*GB), afterAllocBase.Size, "Allocation size should be increased")
 		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
@@ -2837,7 +2838,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV3).IsEnterprise, "enterprise should be true")
 		assert.Equal(t, int64(30*GB), afterAllocBase.Size, "Allocation size should be increased")
 		require.Equal(t, allocWpBalance, int64(afterAllocBase.WritePool), "Write pool should be updated")
 		assert.Equal(t, common.Timestamp(tp+int64(720*time.Hour/1e9)), afterAllocBase.Expiration, "Allocation expiration should be increased")
@@ -2946,7 +2947,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		afterAllocBase := afterAlloc.mustBase()
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV3).IsEnterprise, "enterprise should be true")
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 		assert.Equal(t, 21, len(afterAllocBase.BlobberAllocs), "Blobber should be added to the allocation")
@@ -3061,7 +3062,7 @@ func TestUpdateAllocationRequest(t *testing.T) {
 
 		afterAllocBase := afterAlloc.mustBase()
 
-		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV2).IsEnterprise, "enterprise should be true")
+		assert.Equal(t, true, *afterAlloc.Entity().(*storageAllocationV3).IsEnterprise, "enterprise should be true")
 		require.EqualValues(t, afterAlloc, &deco, "Response and allocation in MPT should be same")
 		assert.NotEqual(t, beforeAlloc.Tx, afterAllocBase.Tx, "Transaction should be updated")
 		assert.Equal(t, 20, len(afterAllocBase.BlobberAllocs), "Blobber should be added to the allocation")

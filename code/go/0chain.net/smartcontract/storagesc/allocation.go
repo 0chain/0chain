@@ -1124,6 +1124,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 				isEnterprise = true
 			}
+		} else if sa.Entity().GetVersion() == "v3" {
+			if v3 := sa.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
+				isEnterprise = true
+			}
 		}
 		return nil
 	}); actErr != nil {
