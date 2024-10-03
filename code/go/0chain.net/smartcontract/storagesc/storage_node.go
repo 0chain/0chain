@@ -362,6 +362,7 @@ type storageNodeV4 struct {
 	IsEnterprise      *bool              `json:"is_enterprise"`
 
 	ManagingWallet *string `json:"managing_wallet"`
+	StorageVersion *string `json:"storage_version"`
 }
 
 const storageNodeV4Version = "v4"

@@ -257,6 +257,7 @@ func (sc *StorageSmartContract) updateBlobber(
 					return existingBlobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
 						b := e.(*storageNodeV4)
 						b.IsRestricted = updateBlobber.IsRestricted
+						b.StorageVersion = updateBlobber.StorageVersion
 						return nil
 					})
 				}); actErr != nil {
