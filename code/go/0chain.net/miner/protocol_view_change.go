@@ -844,8 +844,9 @@ func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error
 			lfb.Round, err, lfb.Hash)
 	}
 
+	gnb := gn.MustBase()
 	logging.Logger.Debug("block_next_vc -- ok", zap.Int64("lfb", lfb.Round),
-		zap.Int64("nvc", gn.ViewChange))
+		zap.Int64("nvc", gnb.ViewChange))
 
-	return gn.ViewChange, nil // got it
+	return gnb.ViewChange, nil // got it
 }

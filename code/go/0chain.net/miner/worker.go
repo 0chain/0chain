@@ -248,8 +248,9 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 		return
 	}
 
-	logging.Logger.Debug("miner health check - start", zap.Any("period", gn.HealthCheckPeriod))
-	HEALTH_CHECK_TIMER := gn.HealthCheckPeriod
+	gnb := gn.MustBase()
+	logging.Logger.Debug("miner health check - start", zap.Any("period", gnb.HealthCheckPeriod))
+	HEALTH_CHECK_TIMER := gnb.HealthCheckPeriod
 
 	for {
 		select {

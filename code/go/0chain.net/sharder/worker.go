@@ -164,8 +164,9 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 		return
 	}
 
-	logging.Logger.Debug("sharder health check - start", zap.Any("period", gn.HealthCheckPeriod))
-	HEALTH_CHECK_TIMER := gn.HealthCheckPeriod
+	gnb := gn.MustBase()
+	logging.Logger.Debug("sharder health check - start", zap.Any("period", gnb.HealthCheckPeriod))
+	HEALTH_CHECK_TIMER := gnb.HealthCheckPeriod
 
 	for {
 		select {
