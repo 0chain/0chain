@@ -523,7 +523,7 @@ type errorIndex struct {
 	index int
 }
 
-type GetItemFunc[T any] func(id string, balance CommonStateContextI) (T, error)
+type GetItemFunc[T any] func(id string, balance StateContextI) (T, error)
 
 type rspIndex struct {
 	index int
@@ -533,7 +533,7 @@ type rspIndex struct {
 // GetItemsByIDs read items by ids from MPT concurrently and safely with consistent values
 // Note: the GetItemFunc should not return custom error that wraps the error returned from
 // StateContextI
-func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[*T], balances CommonStateContextI) ([]*T, error) {
+func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[*T], balances StateContextI) ([]*T, error) {
 	var (
 		itemC     = make(chan rspIndex, len(ids))
 		stateErrC = make(chan error, len(ids))

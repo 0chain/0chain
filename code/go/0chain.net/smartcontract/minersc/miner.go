@@ -508,7 +508,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 
 // ------------- local functions ---------------------
 
-func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI) (
+func (msc *MinerSmartContract) getMinersList(balances cstate.StateContextI) (
 	all *MinerNodes, err error) {
 
 	lockAllMiners.Lock()
@@ -516,17 +516,23 @@ func (msc *MinerSmartContract) getMinersList(balances cstate.QueryStateContextI)
 	return getMinersList(balances)
 }
 
-func getMinerNode(id string, state cstate.CommonStateContextI) (*MinerNode, error) {
+func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 	mn := NewMinerNode()
 	mn.ID = id
 	err := state.GetTrieNode(mn.GetKey(), mn)
 	if err != nil {
 		return nil, err
 	}
-	if mn.ProviderType != spenum.Miner {
-		return nil, fmt.Errorf("provider is %s should be %s", mn.ProviderType, spenum.Miner)
+
+	if mn.ProviderType == spenum.Miner {
+		return mn, nil
 	}
-	return mn, nil
+
+	return nil, cstate.WithActivation(state, "hercules", func() error {
+		return fmt.Errorf("provider is %s should be %s", mn.ProviderType, spenum.Miner)
+	}, func() error {
+		return common.NewErrorf(ErrWrongProviderTypeCode, "provider is %s should be %s", mn.ProviderType, spenum.Miner)
+	})
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {

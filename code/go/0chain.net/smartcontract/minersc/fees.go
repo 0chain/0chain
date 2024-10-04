@@ -565,7 +565,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 // getRewardedMiner
 // if there is a valid un-killed block miner use that
 // otherwise select a random un-killed miner.
-func getRewardedMiner(bk *block.Block, balances cstate.CommonStateContextI) (*MinerNode, error) {
+func getRewardedMiner(bk *block.Block, balances cstate.StateContextI) (*MinerNode, error) {
 	mn, err := getMinerNode(bk.MinerID, balances)
 	if err != nil {
 		logging.Logger.Error("error getting block miner",

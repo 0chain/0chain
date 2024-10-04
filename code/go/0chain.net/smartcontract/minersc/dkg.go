@@ -392,14 +392,23 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return common.NewErrorf("failed to create dkg miners", "get register node error: %v", err)
 	}
 
-	var toAdd string
-	if len(regIDs) > 0 {
-		toAdd = regIDs[0]
+	var toAddIdx int
+	for i, mid := range regIDs {
+		// see if to add is in the all miners map, if not remove it from the register list and try next one
+		if n, ok := allMinersMap[mid]; ok {
+			logging.Logger.Debug("[mvc] createDKGMinersForContribute, add register node to dkg miners", zap.String("node", mid))
+			dkgMiners.SimpleNodes[mid] = n.SimpleNode
+			toAddIdx = i
+			break
+		}
 	}
 
-	if n, ok := allMinersMap[toAdd]; ok {
-		logging.Logger.Debug("[mvc] createDKGMinersForContribute, add register node to dkg miners", zap.String("node", toAdd))
-		dkgMiners.SimpleNodes[toAdd] = n.SimpleNode
+	if toAddIdx > 0 {
+		regIDs = regIDs[toAddIdx-1:]
+		// update miner register list
+		if err := updateRegisterNodes(balances, spenum.Miner, regIDs); err != nil {
+			return common.NewErrorf("failed to update register nodes: %s", err.Error())
+		}
 	}
 
 	dkgMinersNum := len(dkgMiners.SimpleNodes)
@@ -453,15 +462,30 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	logging.Logger.Debug("[mvc] create dkg miners, sharders to register",
 		zap.Strings("sharders", registerShardersIDs))
 
-	if len(registerShardersIDs) > 0 {
-		// check if the node exist
-		sid := registerShardersIDs[0]
+	var addSharderIdx int
+	for i, sid := range registerShardersIDs {
 		sn, err := getSharderNode(sid, balances)
-		if err != nil && err != util.ErrValueNotPresent {
-			return common.NewErrorf("failed to create dkg miners", "could not get sharder: %v", err)
+		if err != nil {
+			logging.Logger.Error("[mvc] create dkg miners, get sharder node failed", zap.Error(err))
+			if err != util.ErrValueNotPresent && !ErrProviderType(err) {
+				return common.NewErrorf("failed to create dkg miners", "could not get sharder: %v", err)
+			}
 		}
+
 		if sn != nil {
 			shardersKeep = append(shardersKeep, sid)
+			// break when find one to add
+			addSharderIdx = i
+			break
+		}
+	}
+
+	// find sharder from register list
+	if addSharderIdx > 0 {
+		// remove all ids before this id. They are invalid ids, such as id with wrong provider type.
+		registerShardersIDs = registerShardersIDs[addSharderIdx-1:]
+		if err := updateRegisterNodes(balances, spenum.Sharder, registerShardersIDs); err != nil {
+			return common.NewErrorf("failed to create dkg miners", "could not update register nodes: %v", err)
 		}
 	}
 
@@ -472,6 +496,16 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 	// TODO: check the sharder remove list, and adjust the keep list
 	return updateShardersKeepList(balances, shardersKeep)
+}
+
+// ErrProviderType checks if the error is a provider type error
+func ErrProviderType(err error) bool {
+	ce, ok := err.(*common.Error)
+	if !ok {
+		return false
+	}
+
+	return ce.Code == ErrWrongProviderTypeCode
 }
 
 func (msc *MinerSmartContract) widdleDKGMinersForShare(

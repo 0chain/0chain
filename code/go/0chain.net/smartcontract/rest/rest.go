@@ -25,6 +25,7 @@ type Int64Map map[string]int64
 type InterfaceMap map[string]interface{}
 
 type QueryChainer interface {
+	GetStateContext() state.StateContextI
 	GetQueryStateContext() state.TimedQueryStateContextI
 	SetQueryStateContext(state.TimedQueryStateContextI)
 }

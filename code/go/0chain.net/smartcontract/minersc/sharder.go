@@ -21,6 +21,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const ErrWrongProviderTypeCode = "wrong_provider_type"
+
 func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
@@ -234,7 +236,7 @@ func (_ *MinerSmartContract) getSharderNode(
 
 func getSharderNode(
 	sid string,
-	balances cstate.CommonStateContextI,
+	balances cstate.StateContextI,
 ) (*MinerNode, error) {
 	sn := NewMinerNode()
 	sn.ID = sid
@@ -243,7 +245,14 @@ func getSharderNode(
 		return nil, err
 	}
 	if sn.ProviderType != spenum.Sharder {
-		return nil, fmt.Errorf("provider is %s should be %s", sn.ProviderType, spenum.Blobber)
+		err := cstate.WithActivation(balances, "hercules", func() error {
+			return fmt.Errorf("provider is %s should be %s", sn.ProviderType, spenum.Blobber)
+		}, func() error {
+			return common.NewErrorf(ErrWrongProviderTypeCode, "provider is %s should be %s", sn.ProviderType, spenum.Sharder)
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return sn, nil
 }

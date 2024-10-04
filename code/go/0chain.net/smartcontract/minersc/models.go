@@ -502,7 +502,7 @@ func (dmn *DKGMinerNodes) GetHashBytes() []byte {
 }
 
 // getMinersList returns miners list
-func getMinersList(state cstate.CommonStateContextI) (*MinerNodes, error) {
+func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
 	minerNodes, err := getNodesList(getMinerNode, state, AllMinersKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -599,7 +599,7 @@ func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupShares
 }
 
 // getShardersKeepList returns the sharder list
-func getShardersKeepList(balances cstate.CommonStateContextI) (*MinerNodes, error) {
+func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
 	sharders, err := getNodesList(getSharderNode, balances, ShardersKeepKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -672,8 +672,8 @@ func (n *NodeIDs) find(id string) bool {
 }
 
 func getNodesList(
-	getNode func(id string, state cstate.CommonStateContextI) (*MinerNode, error),
-	balances cstate.CommonStateContextI,
+	getNode func(id string, state cstate.StateContextI) (*MinerNode, error),
+	balances cstate.StateContextI,
 	key datastore.Key,
 ) (*MinerNodes, error) {
 	nIDs, err := getNodeIDs(balances, key)

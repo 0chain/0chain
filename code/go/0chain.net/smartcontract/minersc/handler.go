@@ -595,7 +595,7 @@ func (mrh *MinerRestHandler) getPhase(w http.ResponseWriter, r *http.Request) {
 //	200: MinerNodes
 //	500:
 func (mrh *MinerRestHandler) getSharderKeepList(w http.ResponseWriter, r *http.Request) {
-	allShardersList, err := getShardersKeepList(mrh.GetQueryStateContext())
+	allShardersList, err := getShardersKeepList(mrh.GetStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal("cannot get sharder list", err.Error()))
 		return
