@@ -95,8 +95,8 @@ type newAllocationRequest struct {
 	FileOptionsChanged   bool       `json:"file_options_changed"`
 	FileOptions          uint16     `json:"file_options"`
 
-	IsEnterprise   bool   `json:"is_enterprise"`
-	StorageVersion string `json:"storage_version"`
+	IsEnterprise   bool `json:"is_enterprise"`
+	StorageVersion int  `json:"storage_version"`
 }
 
 // storageAllocation from the request

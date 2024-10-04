@@ -280,6 +280,7 @@ type allocationBlobbersRequest struct {
 	WritePriceRange PriceRange `json:"write_price_range"`
 	Size            int64      `json:"size"`
 	IsRestricted    int        `json:"is_restricted"`
+	StorageVersion  int        `json:"storage_version"`
 }
 
 func (nar *allocationBlobbersRequest) decode(b []byte) error {
@@ -411,6 +412,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		AllocationSizeInGB: sizeInGB(allocationSize),
 		NumberOfDataShards: request.DataShards,
 		IsRestricted:       request.IsRestricted,
+		StorageVersion:     request.StorageVersion,
 	}
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
@@ -2645,9 +2647,9 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
 
-	IsRestricted   bool   `json:"is_restricted"`
-	IsEnterprise   bool   `json:"is_enterprise"`
-	StorageVersion string `json:"storage_version"`
+	IsRestricted   bool `json:"is_restricted"`
+	IsEnterprise   bool `json:"is_enterprise"`
+	StorageVersion int  `json:"storage_version"`
 }
 
 func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {

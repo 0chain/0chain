@@ -698,7 +698,7 @@ func (z *storageNodeV4) MarshalMsg(b []byte) (o []byte, err error) {
 	if z.StorageVersion == nil {
 		o = msgp.AppendNil(o)
 	} else {
-		o = msgp.AppendString(o, *z.StorageVersion)
+		o = msgp.AppendInt(o, *z.StorageVersion)
 	}
 	return
 }
@@ -859,9 +859,9 @@ func (z *storageNodeV4) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				z.StorageVersion = nil
 			} else {
 				if z.StorageVersion == nil {
-					z.StorageVersion = new(string)
+					z.StorageVersion = new(int)
 				}
-				*z.StorageVersion, bts, err = msgp.ReadStringBytes(bts)
+				*z.StorageVersion, bts, err = msgp.ReadIntBytes(bts)
 				if err != nil {
 					err = msgp.WrapError(err, "StorageVersion")
 					return
@@ -903,7 +903,7 @@ func (z *storageNodeV4) Msgsize() (s int) {
 	if z.StorageVersion == nil {
 		s += msgp.NilSize
 	} else {
-		s += msgp.StringPrefixSize + len(*z.StorageVersion)
+		s += msgp.IntSize
 	}
 	return
 }

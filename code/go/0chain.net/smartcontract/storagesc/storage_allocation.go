@@ -428,7 +428,7 @@ type storageAllocationV3 struct {
 	Version      string `json:"version" msg:"version"`
 	IsEnterprise *bool  `json:"is_enterprise"`
 
-	StorageVersion *string `json:"storage_version"`
+	StorageVersion *int `json:"storage_version"`
 }
 
 const storageAllocationV3Version = "v3"

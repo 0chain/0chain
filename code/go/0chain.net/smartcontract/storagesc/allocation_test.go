@@ -1078,7 +1078,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 			NotAvailable:   notAvailable,
 			IsRestricted:   &isRestricted,
 			IsEnterprise:   isEnterprise,
-			StorageVersion: new(string),
+			StorageVersion: new(int),
 		})
 		all.Nodes = append(all.Nodes, sn)
 	}

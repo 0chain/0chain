@@ -258,7 +258,7 @@ func (sc *StorageSmartContract) updateBlobber(
 						b := e.(*storageNodeV4)
 						b.IsRestricted = updateBlobber.IsRestricted
 
-						if b.StorageVersion == nil || *b.StorageVersion == "v1" {
+						if b.StorageVersion == nil || *b.StorageVersion == 0 {
 							b.StorageVersion = updateBlobber.StorageVersion
 						}
 						return nil
