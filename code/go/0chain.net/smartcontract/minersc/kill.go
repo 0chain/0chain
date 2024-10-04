@@ -45,7 +45,7 @@ func (_ *MinerSmartContract) killSharder(
 func kill(
 	input []byte,
 	clientId, ownerId string,
-	getNode func(string, cstate.CommonStateContextI) (*MinerNode, error),
+	getNode func(string, cstate.StateContextI) (*MinerNode, error),
 	balances cstate.StateContextI,
 ) error {
 	var req provider.ProviderRequest
