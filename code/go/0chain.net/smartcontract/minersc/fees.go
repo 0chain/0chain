@@ -293,10 +293,16 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			}
 
 			if len(regMinerIDs) > 0 {
-				addMID := regMinerIDs[0]
-				// remove the id from the register list if it is in the mb
-				if mb.Miners.HasNode(addMID) {
-					if err := updateRegisterNodes(balances, spenum.Miner, regMinerIDs[1:]); err != nil {
+				newMinerIDs := make([]string, 0, len(regMinerIDs))
+				for _, mid := range regMinerIDs {
+					// get IDs that are still not in new magic block
+					if !mb.Miners.HasNode(mid) {
+						newMinerIDs = append(newMinerIDs, mid)
+					}
+				}
+
+				if len(newMinerIDs) != len(regMinerIDs) {
+					if err := updateRegisterNodes(balances, spenum.Miner, newMinerIDs); err != nil {
 						return common.NewErrorf("pay_fees", "can't update register miners: %v", err)
 					}
 				}
@@ -325,10 +331,15 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			}
 
 			if len(regSharderIDs) > 0 {
-				addSID := regSharderIDs[0]
-				// remove the id from the register list if it is in the mb
-				if mb.Sharders.HasNode(addSID) {
-					if err := updateRegisterNodes(balances, spenum.Sharder, regSharderIDs[1:]); err != nil {
+				newSharderIDs := make([]string, 0, len(regSharderIDs))
+				for _, sid := range regSharderIDs {
+					if !mb.Sharders.HasNode(sid) {
+						newSharderIDs = append(newSharderIDs, sid)
+					}
+				}
+
+				if len(newSharderIDs) != len(regSharderIDs) {
+					if err := updateRegisterNodes(balances, spenum.Sharder, newSharderIDs); err != nil {
 						return common.NewErrorf("pay_fees", "can't update register sharders: %v", err)
 					}
 				}
