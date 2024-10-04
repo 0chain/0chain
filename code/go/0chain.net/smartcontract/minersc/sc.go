@@ -139,13 +139,13 @@ func getGlobalNode(
 	return gn, nil
 }
 
-func InitConfig(balances cstate.CommonStateContextI) error {
+func InitConfig(balances cstate.StateContextI) error {
 	gn := new(GlobalNode)
 	if err := balances.GetTrieNode(GlobalNodeKey, gn); err != nil {
 		if err != util.ErrValueNotPresent {
 			return fmt.Errorf("failed to get global node: %w", err)
 		}
-		if err := gn.readConfig(); err != nil {
+		if err := gn.readConfig(balances); err != nil {
 			return fmt.Errorf("failed to read config: %w", err)
 		}
 		if err := gn.validate(); err != nil {
