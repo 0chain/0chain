@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
-ALTER TABLE allocations ADD COLUMN storage_version text default '';
-ALTER TABLE blobbers ADD COLUMN storage_version text default '';
+ALTER TABLE allocations ADD COLUMN storage_version int default '';
+ALTER TABLE blobbers ADD COLUMN storage_version int default '';
 -- +goose StatementEnd
 
 -- +goose Down
