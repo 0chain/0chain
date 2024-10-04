@@ -47,6 +47,10 @@ func (qc *TestQueryChainer) SetQueryStateContext(sctx state.TimedQueryStateConte
 	qc.sctx = sctx
 }
 
+func (qc *TestQueryChainer) GetStateContext() state.StateContextI {
+	return nil
+}
+
 type RestHandler struct {
 	QueryChainer
 }
