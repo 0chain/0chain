@@ -82,10 +82,11 @@ func (msc *MinerSmartContract) GetCostTable(balances cstate.StateContextI) (map[
 	if err != nil {
 		return map[string]int{}, err
 	}
-	if node.Cost == nil {
+	nb := node.MustBase()
+	if nb.Cost == nil {
 		return map[string]int{}, err
 	}
-	return node.Cost, nil
+	return nb.Cost, nil
 }
 
 // setSC setting up smartcontract. implementing the interface

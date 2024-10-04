@@ -189,7 +189,7 @@ func (msc *MinerSmartContract) viewChangePoolsWork(
 func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	pn *PhaseNode, balances cstate.StateContextI) error {
 	var b = balances.GetBlock()
-	if b.Round != gn.ViewChange {
+	if b.Round != gn.MustBase().ViewChange {
 		return nil // don't do anything, not a view change
 	}
 
@@ -218,7 +218,10 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			}
 			if err != nil {
 				var prev = gn.prevMagicBlock(balances)
-				gn.ViewChange = prev.StartingRound
+				gn.MustUpdateBase(func(gnb *globalNodeBase) error {
+					gnb.ViewChange = prev.StartingRound
+					return nil
+				})
 				err = nil
 			}
 			return err
@@ -243,7 +246,10 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			// restart DKG if any of the miner in new MB is not waited
 			if err != nil {
 				var prev = gn.prevMagicBlock(balances)
-				gn.ViewChange = prev.StartingRound
+				gn.MustUpdateBase(func(gnb *globalNodeBase) error {
+					gnb.ViewChange = prev.StartingRound
+					return nil
+				})
 
 				logging.Logger.Warn("[mvc] adjust_view_change no new magic block, restart DKG", zap.Error(err))
 				if err := msc.RestartDKG(pn, balances); err != nil {
@@ -258,7 +264,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 			// set magic block when all good
 			if err := msc.SetMagicBlock(gn, balances); err != nil {
 				return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v",
-					b.Round, gn.ViewChange, err)
+					b.Round, gn.MustBase().ViewChange, err)
 			}
 
 			// update the delete nodes list
@@ -359,12 +365,13 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 
 	// TODO: cache the phase node so if when there's no view change happens, we
 	err = cstate.WithActivation(balances, "hercules", func() error {
-		if b.Round != gn.ViewChange {
+		gnb := gn.MustBase()
+		if b.Round != gnb.ViewChange {
 			return nil
 		}
 
 		if err := msc.SetMagicBlock(gn, balances); err != nil {
-			return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v", b.Round, gn.ViewChange, err)
+			return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v", b.Round, gnb.ViewChange, err)
 		}
 
 		return nil
@@ -415,7 +422,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if err != nil {
 		return "", err
 	}
-	blockReward, err := currency.MultFloat64(gn.BlockReward, gn.RewardRate)
+	gnb := gn.MustBase()
+	blockReward, err := currency.MultFloat64(gnb.BlockReward, gnb.RewardRate)
 	if err != nil {
 		return "", err
 	}
@@ -445,7 +453,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			mn.ID,
 			spenum.Miner,
 			b.GetRoundRandomSeed(),
-			gn.NumMinerDelegatesRewarded,
+			gnb.NumMinerDelegatesRewarded,
 			spenum.BlockRewardMiner,
 			balances,
 		); err != nil {
@@ -457,7 +465,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			mn.ID,
 			spenum.Miner,
 			b.GetRoundRandomSeed(),
-			gn.NumMinerDelegatesRewarded,
+			gnb.NumMinerDelegatesRewarded,
 			spenum.FeeRewardMiner,
 			balances,
 		); err != nil {
@@ -481,7 +489,8 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			mbShardersIDs[i], mbShardersIDs[j] = mbShardersIDs[j], mbShardersIDs[i]
 		})
 
-		shardersPaid := gn.NumShardersRewarded
+		gnb := gn.MustBase()
+		shardersPaid := gnb.NumShardersRewarded
 		if shardersPaid > len(mbShardersIDs) {
 			shardersPaid = len(mbShardersIDs)
 		}
@@ -523,7 +532,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	beforeFork := func() error {
-		if gn.RewardRoundFrequency != 0 && b.Round%gn.RewardRoundFrequency == 0 {
+		if gnb.RewardRoundFrequency != 0 && b.Round%gnb.RewardRoundFrequency == 0 {
 			var lfmb = balances.GetLastestFinalizedMagicBlock().MagicBlock
 			if lfmb != nil {
 				// TODO: use viewChangePoolsWork when view change is enabled
@@ -707,7 +716,7 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 			return err
 		}
 		if err = sh.StakePool.DistributeRewardsRandN(
-			moveValue, sh.ID, spenum.Sharder, seed, gn.NumSharderDelegatesRewarded, rewardType, balances,
+			moveValue, sh.ID, spenum.Sharder, seed, gn.MustBase().NumSharderDelegatesRewarded, rewardType, balances,
 		); err != nil {
 			return common.NewErrorf("pay_fees/pay_sharders",
 				"distributing rewards: %v", err)

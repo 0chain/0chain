@@ -189,95 +189,108 @@ func initSettings() {
 }
 
 func (gn *GlobalNode) setInt(key string, change int) error {
-	switch Settings[key].Setting {
-	case MaxN:
-		gn.MaxN = change
-	case MinN:
-		gn.MinN = change
-	case MaxS:
-		gn.MaxS = change
-	case MinS:
-		gn.MinS = change
-	case MaxDelegates:
-		gn.MaxDelegates = change
-	case NumMinerDelegatesRewarded:
-		gn.NumMinerDelegatesRewarded = change
-	case NumShardersRewarded:
-		gn.NumShardersRewarded = change
-	case NumSharderDelegatesRewarded:
-		gn.NumSharderDelegatesRewarded = change
-	default:
-		return fmt.Errorf("key: %v not implemented as int", key)
-	}
-	return nil
+	return gn.MustUpdateBase(func(base *globalNodeBase) error {
+		switch Settings[key].Setting {
+		case MaxN:
+			base.MaxN = change
+		case MinN:
+			base.MinN = change
+		case MaxS:
+			base.MaxS = change
+		case MinS:
+			base.MinS = change
+		case MaxDelegates:
+			base.MaxDelegates = change
+		case NumMinerDelegatesRewarded:
+			base.NumMinerDelegatesRewarded = change
+		case NumShardersRewarded:
+			base.NumShardersRewarded = change
+		case NumSharderDelegatesRewarded:
+			base.NumSharderDelegatesRewarded = change
+		default:
+			return fmt.Errorf("key: %v not implemented as int", key)
+		}
+		return nil
+	})
 }
 
 func (gn *GlobalNode) setDuration(key string, change time.Duration) error {
-	switch Settings[key].Setting {
-	case HealthCheckPeriod:
-		gn.HealthCheckPeriod = change
-	default:
-		return fmt.Errorf("key: %v not implemented as int", key)
-	}
-	return nil
+	return gn.MustUpdateBase(func(base *globalNodeBase) error {
+		switch Settings[key].Setting {
+		case HealthCheckPeriod:
+			base.HealthCheckPeriod = change
+		default:
+			return fmt.Errorf("key: %v not implemented as int", key)
+		}
+		return nil
+	})
 }
 
 func (gn *GlobalNode) setBalance(key string, change currency.Coin) error {
-	switch Settings[key].Setting {
-	case MinStake:
-		gn.MinStake = change
-	case MinStakePerDelegate:
-		gn.MinStakePerDelegate = change
-	case MaxStake:
-		gn.MaxStake = change
-	case BlockReward:
-		gn.BlockReward = change
-	default:
-		return fmt.Errorf("key: %v not implemented as balance", key)
-	}
-	return nil
+	return gn.MustUpdateBase(func(base *globalNodeBase) error {
+		switch Settings[key].Setting {
+		case MinStake:
+			base.MinStake = change
+		case MinStakePerDelegate:
+			base.MinStakePerDelegate = change
+		case MaxStake:
+			base.MaxStake = change
+		case BlockReward:
+			base.BlockReward = change
+		default:
+			return fmt.Errorf("key: %v not implemented as balance", key)
+		}
+		return nil
+	})
 }
 
 func (gn *GlobalNode) setInt64(key string, change int64) error {
-	switch Settings[key].Setting {
-	case RewardRoundFrequency:
-		gn.RewardRoundFrequency = change
-	case Epoch:
-		gn.Epoch = change
-	case CooldownPeriod:
-		gn.CooldownPeriod = change
-	default:
-		return fmt.Errorf("key: %v not implemented as int64", key)
-	}
-	return nil
+	return gn.MustUpdateBase(func(base *globalNodeBase) error {
+		switch Settings[key].Setting {
+		case RewardRoundFrequency:
+			base.RewardRoundFrequency = change
+		case Epoch:
+			base.Epoch = change
+		case CooldownPeriod:
+			base.CooldownPeriod = change
+		default:
+			return fmt.Errorf("key: %v not implemented as int64", key)
+		}
+		return nil
+	})
 }
 
 func (gn *GlobalNode) setFloat64(key string, change float64) error {
-	switch Settings[key].Setting {
-	case TPercent:
-		gn.TPercent = change
-	case KPercent:
-		gn.KPercent = change
-	case XPercent:
-		gn.XPercent = change
-	case RewardRate:
-		gn.RewardRate = change
-	case ShareRatio:
-		gn.ShareRatio = change
-	case MaxCharge:
-		gn.MaxCharge = change
-	case RewardDeclineRate:
-		gn.RewardDeclineRate = change
-	default:
-		return fmt.Errorf("key: %v not implemented as float64", key)
-	}
-	return nil
+	return gn.MustUpdateBase(func(base *globalNodeBase) error {
+		switch Settings[key].Setting {
+		case TPercent:
+			base.TPercent = change
+		case KPercent:
+			base.KPercent = change
+		case XPercent:
+			base.XPercent = change
+		case RewardRate:
+			base.RewardRate = change
+		case ShareRatio:
+			base.ShareRatio = change
+		case MaxCharge:
+			base.MaxCharge = change
+		case RewardDeclineRate:
+			base.RewardDeclineRate = change
+		default:
+			return fmt.Errorf("key: %v not implemented as float64", key)
+		}
+		return nil
+	})
 }
 
 func (gn *GlobalNode) setKey(key string, change string) {
 	switch Settings[key].Setting {
 	case OwnerId:
-		gn.OwnerId = change
+		gn.MustUpdateBase(func(base *globalNodeBase) error {
+			base.OwnerId = change
+			return nil
+		})
 	default:
 		panic("key: " + key + "not implemented as key")
 	}
@@ -289,21 +302,24 @@ func (gn *GlobalNode) setCost(key string, change int) error {
 	if !isCost(key) {
 		return fmt.Errorf("key: %v is not a cost", key)
 	}
-	if gn.Cost == nil {
-		gn.Cost = make(map[string]int)
-	}
-	gn.Cost[strings.TrimPrefix(key, costPrefix)] = change
-	return nil
+	return gn.MustUpdateBase(func(base *globalNodeBase) error {
+		if base.Cost == nil {
+			base.Cost = make(map[string]int)
+		}
+		base.Cost[strings.TrimPrefix(key, costPrefix)] = change
+		return nil
+	})
 }
 
 func (gn *GlobalNode) getCost(key string) (int, error) {
 	if !isCost(key) {
 		return 0, fmt.Errorf("key: %v is not a cost", key)
 	}
-	if gn.Cost == nil {
+	gnb := gn.MustBase()
+	if gnb.Cost == nil {
 		return 0, errors.New("cost object is nil")
 	}
-	value, ok := gn.Cost[strings.TrimPrefix(key, costPrefix)]
+	value, ok := gnb.Cost[strings.TrimPrefix(key, costPrefix)]
 	if !ok {
 		return 0, fmt.Errorf("cost %s not set", key)
 	}

@@ -54,22 +54,24 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		return common.NewError("move_to_contribute_failed", err.Error())
 	}
 
-	if len(allShardersList.Nodes) < gn.MinS {
+	gnb := gn.MustBase()
+
+	if len(allShardersList.Nodes) < gnb.MinS {
 		return common.NewErrorf("move_to_contribute_failed",
 			"not enough sharders in all sharders list to move phase, all: %d, min_s: %d",
-			len(allShardersList.Nodes), gn.MinS)
+			len(allShardersList.Nodes), gnb.MinS)
 	}
 
 	if !gn.hasPrevShader(allShardersList, balances) {
 		return common.NewErrorf("move_to_contribute_failed",
 			"invalid state: all sharders list hasn't a sharder from previous VC set, "+
-				"all: %d, min_s: %d", len(allShardersList.Nodes), gn.MinS)
+				"all: %d, min_s: %d", len(allShardersList.Nodes), gnb.MinS)
 	}
 
 	if !gn.hasPrevMiner(allMinersList, balances) {
 		return common.NewErrorf("move_to_contribute_failed",
 			"invalid state: all miners list hasn't a miner from previous VC set, "+
-				"all: %d, min_n: %d", len(allMinersList.Nodes), gn.MinN)
+				"all: %d, min_n: %d", len(allMinersList.Nodes), gnb.MinN)
 	}
 
 	if allMinersList == nil {
@@ -99,17 +101,17 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		}
 	}
 
-	if len(allShardersList.Nodes) < gn.MinS {
+	if len(allShardersList.Nodes) < gnb.MinS {
 		return common.NewErrorf("move_to_contribute_failed",
 			"len(allShardersList.Nodes) < gn.MinS, l_shards: %d, min_s: %d",
-			len(allShardersList.Nodes), gn.MinS)
+			len(allShardersList.Nodes), gnb.MinS)
 	}
 
 	logging.Logger.Debug("miner sc: move phase to contribute",
 		zap.Int("miners", len(allMinersList.Nodes)),
 		zap.Int("K", dkgMinersList.K),
 		zap.Int("sharders", len(allShardersList.Nodes)),
-		zap.Int("min_s", gn.MinS))
+		zap.Int("min_s", gnb.MinS))
 	return nil
 }
 
@@ -337,6 +339,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		allMinersMap     = make(map[string]*MinerNode, len(allMinersList.Nodes))
 		dkgMiners        = NewDKGMinerNodes()
 		toDeleteMinerIDs = make(map[string]struct{}, len(allMinersMap))
+		gnb              = gn.MustBase()
 	)
 
 	for i, n := range allMinersList.Nodes {
@@ -346,7 +349,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	logging.Logger.Debug("create dkg miners, all miners list",
 		zap.Any("miners", allMinersMap))
 
-	if lmb.N > gn.MinN {
+	if lmb.N > gnb.MinN {
 		// get deleted miners list
 		deleteMinersIDs, err := getDeleteNodes(balances, spenum.Miner)
 		if err != nil {
@@ -400,12 +403,12 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	dkgMinersNum := len(dkgMiners.SimpleNodes)
-	if dkgMinersNum < gn.MinN {
-		return common.NewErrorf("failed to create dkg miners", "miners num: %d < gn.Min: %c", dkgMinersNum, gn.MinN)
+	if dkgMinersNum < gnb.MinN {
+		return common.NewErrorf("failed to create dkg miners", "miners num: %d < gn.Min: %c", dkgMinersNum, gnb.MinN)
 	}
 
 	dkgMiners.calculateTKN(gn, dkgMinersNum)
-	dkgMiners.StartRound = gn.LastRound
+	dkgMiners.StartRound = gnb.LastRound
 	logging.Logger.Debug("[mvc] createDKGMinersForContribute, new dkg miners",
 		zap.Int("T", dkgMiners.T),
 		zap.Int("K", dkgMiners.K),
@@ -462,7 +465,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		}
 	}
 
-	if len(shardersKeep) < gn.MinS {
+	if len(shardersKeep) < gnb.MinS {
 		return common.NewError("failed to create dkg miners",
 			"sharders number would be below gn.MinS after removing")
 	}
@@ -544,8 +547,10 @@ func (msc *MinerSmartContract) reduceShardersList(
 		simpleNodes[found.ID] = found.SimpleNode
 	}
 
-	if len(simpleNodes) < gn.MinS {
-		return nil, fmt.Errorf("too few sharders: %d, want at least: %d", len(simpleNodes), gn.MinS)
+	gnb := gn.MustBase()
+
+	if len(simpleNodes) < gnb.MinS {
+		return nil, fmt.Errorf("too few sharders: %d, want at least: %d", len(simpleNodes), gnb.MinS)
 	}
 
 	var pmbrss int64
@@ -558,7 +563,7 @@ func (msc *MinerSmartContract) reduceShardersList(
 		}
 	}
 	logging.Logger.Debug("sharder keep before", zap.Int("num", len(simpleNodes)))
-	simpleNodes.reduce(gn.MaxS, gn.XPercent, pmbrss, pmbnp)
+	simpleNodes.reduce(gnb.MaxS, gnb.XPercent, pmbrss, pmbnp)
 	logging.Logger.Debug("sharder keep after", zap.Int("num", len(simpleNodes)))
 
 	nodes = make([]*MinerNode, 0, len(simpleNodes))
@@ -677,7 +682,10 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
-	gn.ViewChange = magicBlock.StartingRound
+	gn.MustUpdateBase(func(gnb *globalNodeBase) error {
+		gnb.ViewChange = magicBlock.StartingRound
+		return nil
+	})
 	mpks = block.NewMpks()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		return err
@@ -885,7 +893,7 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	logging.Logger.Debug("[mvc] miner sc: shareSignsOrShares, update gsos",
 		zap.String("miner", t.ClientID),
 		zap.Int("gsos shares len", len(gsos.Shares)),
-		zap.Int64("gn.LastRound", gn.LastRound))
+		zap.Int64("gn.LastRound", gn.MustBase().LastRound))
 
 	return string(sos.Encode()), nil
 }
@@ -1054,7 +1062,10 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 
 	// keep the magic block to track previous nodes list next view change
 	// (deny VC leaving for at least 1 miner and 1 sharder of previous set)
-	gn.PrevMagicBlock = magicBlock
+	gn.MustUpdateBase(func(gnb *globalNodeBase) error {
+		gnb.PrevMagicBlock = magicBlock
+		return nil
+	})
 
 	logging.Logger.Debug("SetMagicBlock",
 		zap.String("hash", magicBlock.Hash),

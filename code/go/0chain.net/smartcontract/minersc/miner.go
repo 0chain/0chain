@@ -95,7 +95,8 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 
 	// TODO: only chain owner can register nodes
 	if err := smartcontractinterface.AuthorizeWithOwner("vc_add", func() bool {
-		return gn.OwnerId == t.ClientID
+		gnb := gn.MustBase()
+		return gnb.OwnerId == t.ClientID
 	}); err != nil {
 		return "", err
 	}
@@ -183,7 +184,7 @@ func (msc *MinerSmartContract) AddMiner(t *transaction.Transaction,
 	lockAllMiners.Lock()
 	defer lockAllMiners.Unlock()
 
-	newMiner.Settings.MinStake = gn.MinStakePerDelegate
+	newMiner.Settings.MinStake = gn.MustBase().MinStakePerDelegate
 
 	if err := cstate.WithActivation(balances, "hercules", func() error {
 		magicBlockMiners := balances.GetChainCurrentMagicBlock().Miners
@@ -285,7 +286,7 @@ func (msc *MinerSmartContract) DeleteMiner(
 	}
 
 	if err := smartcontractinterface.AuthorizeWithOwner("delete_miner", func() bool {
-		return gn.OwnerId == txn.ClientID
+		return gn.MustBase().OwnerId == txn.ClientID
 	}); err != nil {
 		return "", err
 	}
@@ -472,7 +473,7 @@ func (msc *MinerSmartContract) UpdateMinerSettings(t *transaction.Transaction,
 		return "", common.NewError("update_miner_settings", err.Error())
 	}
 
-	if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.CooldownPeriod {
+	if mn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-mn.LastSettingUpdateRound < gn.MustBase().CooldownPeriod {
 		return "", common.NewError("update_miner_settings", "block round is in cooldown period")
 	}
 
@@ -534,10 +535,11 @@ func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error 
 			"invalid negative service charge: %v", node.Settings.ServiceChargeRatio)
 	}
 
-	if node.Settings.ServiceChargeRatio > gn.MaxCharge {
+	gnb := gn.MustBase()
+	if node.Settings.ServiceChargeRatio > gnb.MaxCharge {
 		return common.NewErrorf(opcode,
 			"max_charge is greater than allowed by SC: %v > %v",
-			node.Settings.ServiceChargeRatio, gn.MaxCharge)
+			node.Settings.ServiceChargeRatio, gnb.MaxCharge)
 	}
 
 	if node.Settings.MaxNumDelegates <= 0 {
@@ -545,16 +547,17 @@ func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error 
 			"invalid non-positive number_of_delegates: %v", node.Settings.MaxNumDelegates)
 	}
 
-	if node.Settings.MaxNumDelegates > gn.MaxDelegates {
+	if node.Settings.MaxNumDelegates > gnb.MaxDelegates {
 		return common.NewErrorf(opcode,
 			"number_of_delegates greater than max_delegates of SC: %v > %v",
-			node.Settings.MaxNumDelegates, gn.MaxDelegates)
+			node.Settings.MaxNumDelegates, gnb.MaxDelegates)
 	}
 
 	return nil
 }
 
 func validateNodeUpdateSettings(update *dto.MinerDtoNode, gn *GlobalNode, opcode string) error {
+	gnb := gn.MustBase()
 	if update.StakePoolSettings.ServiceChargeRatio != nil {
 		serviceChargeValue := *update.StakePoolSettings.ServiceChargeRatio
 		if serviceChargeValue < 0 {
@@ -562,10 +565,10 @@ func validateNodeUpdateSettings(update *dto.MinerDtoNode, gn *GlobalNode, opcode
 				"invalid negative service charge: %v", serviceChargeValue)
 		}
 
-		if serviceChargeValue > gn.MaxCharge {
+		if serviceChargeValue > gnb.MaxCharge {
 			return common.NewErrorf(opcode,
 				"max_charge is greater than allowed by SC: %v > %v",
-				serviceChargeValue, gn.MaxCharge)
+				serviceChargeValue, gnb.MaxCharge)
 		}
 	}
 
@@ -576,10 +579,10 @@ func validateNodeUpdateSettings(update *dto.MinerDtoNode, gn *GlobalNode, opcode
 				"invalid non-positive number_of_delegates: %v", maxDelegateValue)
 		}
 
-		if maxDelegateValue > gn.MaxDelegates {
+		if maxDelegateValue > gnb.MaxDelegates {
 			return common.NewErrorf(opcode,
 				"number_of_delegates greater than max_delegates of SC: %v > %v",
-				maxDelegateValue, gn.MaxDelegates)
+				maxDelegateValue, gnb.MaxDelegates)
 		}
 	}
 

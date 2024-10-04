@@ -42,7 +42,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", common.NewError("update_sharder_settings", err.Error())
 	}
 
-	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
+	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.MustBase().CooldownPeriod {
 		return "", common.NewError("update_sharder_settings", "block round is in cooldown period")
 	}
 
@@ -127,7 +127,7 @@ func (msc *MinerSmartContract) AddSharder(
 
 	newSharder.NodeType = NodeTypeSharder // set node type
 	newSharder.ProviderType = spenum.Sharder
-	newSharder.Settings.MinStake = gn.MinStakePerDelegate
+	newSharder.Settings.MinStake = gn.MustBase().MinStakePerDelegate
 
 	exist, err := msc.getSharderNode(newSharder.ID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -178,7 +178,7 @@ func (msc *MinerSmartContract) DeleteSharder(
 	}
 
 	if err := smartcontractinterface.AuthorizeWithOwner("delete_sharder", func() bool {
-		return gn.OwnerId == txn.ClientID
+		return gn.MustBase().OwnerId == txn.ClientID
 	}); err != nil {
 		return "", err
 	}
