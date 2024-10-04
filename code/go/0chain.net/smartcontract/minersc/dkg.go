@@ -487,7 +487,6 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 			}
 
 			// invalid provider type, skip it
-			toSharderIDs = append(toSharderIDs, sid)
 		}
 
 		if sn != nil {
