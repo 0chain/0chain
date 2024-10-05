@@ -207,7 +207,7 @@ func initSettings() {
 }
 
 func initGlobalNodeVCRounds(g2 *globalNodeV2) {
-	g2.VCPhaseRounds = make(map[int]int)
+	g2.VCPhaseRounds = make([]int, len(PhaseRounds))
 
 	g2.VCPhaseRounds[int(Start)] = int(PhaseRounds[Start])
 	g2.VCPhaseRounds[int(Contribute)] = int(PhaseRounds[Contribute])
