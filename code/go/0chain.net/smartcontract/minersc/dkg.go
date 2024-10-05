@@ -223,18 +223,8 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	gn *GlobalNode,
 	t *transaction.Transaction) (err error) {
 
-	var movePhase bool
-	if err := cstate.WithActivation(balances, "hercules", func() error {
-		movePhase = pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
-		return nil
-	}, func() error {
-		pr := gn.GetVCPhaseRounds()
-		movePhase = pn.CurrentRound-pn.StartRound >= pr[pn.Phase]
-		return nil
-	}); err != nil {
-		return err
-	}
-
+	phaseRounds := gn.GetVCPhaseRounds()
+	movePhase := pn.CurrentRound-pn.StartRound >= phaseRounds[pn.Phase]
 	if !movePhase {
 		return nil
 	}
@@ -300,7 +290,7 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 		}
 	}
 
-	if pn.Phase >= Phase(len(PhaseRounds)-1) {
+	if pn.Phase >= Phase(len(phaseRounds)-1) {
 		pn.Phase = 0
 		pn.Restarts = 0
 	} else {
@@ -798,7 +788,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	logging.Logger.Debug("[mvc] sharder keep list", zap.Int("num", len(keepSharders.Nodes)))
 
-	magicBlock, err := msc.createMagicBlock(balances, keepSharders, dkgMinersList, gsos, mpks, pn)
+	magicBlock, err := msc.createMagicBlock(balances, keepSharders, dkgMinersList, gsos, mpks, pn, gn)
 	if err != nil {
 		return err
 	}
@@ -1064,6 +1054,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 	gsos *block.GroupSharesOrSigns,
 	mpks *block.Mpks,
 	pn *PhaseNode,
+	gn *GlobalNode,
 ) (*block.MagicBlock, error) {
 
 	pmb := balances.GetChainCurrentMagicBlock()
@@ -1079,7 +1070,8 @@ func (msc *MinerSmartContract) createMagicBlock(
 	magicBlock.N = dkgMinersList.N
 	magicBlock.MagicBlockNumber = pmb.MagicBlockNumber + 1
 	magicBlock.PreviousMagicBlockHash = pmb.Hash
-	magicBlock.StartingRound = pn.CurrentRound + PhaseRounds[Wait]
+	phaseRounds := gn.GetVCPhaseRounds()
+	magicBlock.StartingRound = pn.CurrentRound + phaseRounds[Wait]
 
 	logging.Logger.Debug("create magic block",
 		zap.Int64("view change", magicBlock.StartingRound),
