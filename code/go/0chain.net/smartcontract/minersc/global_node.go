@@ -80,6 +80,7 @@ func (gn *GlobalNode) MustUpdateBase(f func(base *globalNodeBase) error) error {
 func (gn *GlobalNode) GetVCPhaseRounds() map[Phase]int64 {
 	switch gn.GetVersion() {
 	case entitywrapper.DefaultOriginVersion:
+		logging.Logger.Debug("[mvc] get vc phase rounds v1:")
 		return PhaseRounds
 	case "v2":
 		g2 := gn.Entity().(*globalNodeV2)
@@ -87,6 +88,7 @@ func (gn *GlobalNode) GetVCPhaseRounds() map[Phase]int64 {
 		for k, v := range g2.VCPhaseRounds {
 			pr[Phase(k)] = int64(v)
 		}
+		logging.Logger.Debug("[mvc] get vc phase rounds v2:", zap.Any("phase rounds", pr))
 		return pr
 	default:
 		panic("unknown global node version")
