@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"0chain.net/core/config"
+	"0chain.net/core/util/entitywrapper"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -66,6 +69,11 @@ const (
 	CostKillMiner
 	CostKillSharder
 	HealthCheckPeriod
+	VCStartRounds
+	VCContributeRounds
+	VCShareRounds
+	VCPublishRounds
+	VCWaitRounds
 	NumberOfSettings
 )
 
@@ -134,6 +142,11 @@ func initSettingName() {
 	SettingName[CostSharderKeep] = "cost.sharder_keep"
 	SettingName[CostKillMiner] = "cost.kill_miner"
 	SettingName[CostKillSharder] = "cost.kill_sharder"
+	SettingName[VCStartRounds] = "vc_rounds.start"
+	SettingName[VCContributeRounds] = "vc_rounds.contribute"
+	SettingName[VCShareRounds] = "vc_rounds.share"
+	SettingName[VCPublishRounds] = "vc_rounds.publish"
+	SettingName[VCWaitRounds] = "vc_rounds.wait"
 }
 
 func initSettings() {
@@ -185,10 +198,54 @@ func initSettings() {
 		CostSharderKeep.String():             {CostSharderKeep, config.Cost},
 		CostKillMiner.String():               {CostKillMiner, config.Cost},
 		CostKillSharder.String():             {CostKillSharder, config.Cost},
+		VCStartRounds.String():               {VCStartRounds, config.Int},
+		VCContributeRounds.String():          {VCContributeRounds, config.Int},
+		VCShareRounds.String():               {VCShareRounds, config.Int},
+		VCPublishRounds.String():             {VCPublishRounds, config.Int},
+		VCWaitRounds.String():                {VCWaitRounds, config.Int},
 	}
 }
 
-func (gn *GlobalNode) setInt(key string, change int) error {
+func initGlobalNodeVCRounds(g2 *globalNodeV2) {
+	g2.VCPhaseRounds = make(map[int]int)
+
+	g2.VCPhaseRounds[int(Start)] = int(PhaseRounds[Start])
+	g2.VCPhaseRounds[int(Contribute)] = int(PhaseRounds[Contribute])
+	g2.VCPhaseRounds[int(Share)] = int(PhaseRounds[Share])
+	g2.VCPhaseRounds[int(Publish)] = int(PhaseRounds[Publish])
+	g2.VCPhaseRounds[int(Wait)] = int(PhaseRounds[Wait])
+}
+
+func (gn *GlobalNode) setInt(balances cstate.StateContextI, key string, change int) error {
+	return cstate.WithActivation(balances, "hercules", func() error {
+		return gn.setIntBase(key, change)
+	}, func() error {
+		switch gn.GetVersion() {
+		case entitywrapper.DefaultOriginVersion:
+			return gn.Update(&globalNodeV2{}, func(e entitywrapper.EntityI) error {
+				g2 := e.(*globalNodeV2)
+				initGlobalNodeVCRounds(g2)
+
+				// apply changes
+				vcPrefixLen := len(vcRoundsPrefix)
+				phase := StringToPhase(key[vcPrefixLen:])
+				if phase == Unknown {
+					return fmt.Errorf("unknown phase: %s", key)
+				}
+
+				g2.VCPhaseRounds[int(phase)] = int(change)
+				logging.Logger.Debug("[mvc] migrate VC phase rounds", zap.Any("vc phase rounds", g2.VCPhaseRounds))
+				return nil
+			})
+		case "v2":
+			logging.Logger.Debug("[mvc] update VC phase round", zap.String("phase", key), zap.Int("rounds", change))
+			return gn.setIntV2(key, change)
+		}
+		return nil
+	})
+}
+
+func (gn *GlobalNode) setIntBase(key string, change int) error {
 	return gn.MustUpdateBase(func(base *globalNodeBase) error {
 		switch Settings[key].Setting {
 		case MaxN:
@@ -212,6 +269,39 @@ func (gn *GlobalNode) setInt(key string, change int) error {
 		}
 		return nil
 	})
+}
+
+func (gn *GlobalNode) setIntV2(key string, change int) error {
+	g2 := gn.Entity().(*globalNodeV2)
+	switch Settings[key].Setting {
+	case MaxN:
+		g2.MaxN = change
+	case MinN:
+		g2.MinN = change
+	case MaxS:
+		g2.MaxS = change
+	case MinS:
+		g2.MinS = change
+	case MaxDelegates:
+		g2.MaxDelegates = change
+	case NumMinerDelegatesRewarded:
+		g2.NumMinerDelegatesRewarded = change
+	case NumShardersRewarded:
+		g2.NumShardersRewarded = change
+	case NumSharderDelegatesRewarded:
+		g2.NumSharderDelegatesRewarded = change
+	case VCStartRounds, VCContributeRounds, VCShareRounds, VCPublishRounds, VCWaitRounds:
+		vcPrefixLen := len(vcRoundsPrefix)
+		phase := StringToPhase(key[vcPrefixLen:])
+		if phase == Unknown {
+			return fmt.Errorf("unknown phase: %s", key)
+		}
+		g2.VCPhaseRounds[int(phase)] = int(change)
+	default:
+		return fmt.Errorf("key: %v not implemented as int", key)
+	}
+	gn.SetEntity(g2)
+	return nil
 }
 
 func (gn *GlobalNode) setDuration(key string, change time.Duration) error {
@@ -297,6 +387,7 @@ func (gn *GlobalNode) setKey(key string, change string) {
 }
 
 const costPrefix = "cost."
+const vcRoundsPrefix = "vc_rounds."
 
 func (gn *GlobalNode) setCost(key string, change int) error {
 	if !isCost(key) {
@@ -333,7 +424,14 @@ func isCost(key string) bool {
 	return key[:len(costPrefix)] == costPrefix
 }
 
-func (gn *GlobalNode) set(key string, change string) error {
+func isVCPRounds(key string) bool {
+	if len(key) <= len(vcRoundsPrefix) {
+		return false
+	}
+	return key[:len(vcRoundsPrefix)] == vcRoundsPrefix
+}
+
+func (gn *GlobalNode) set(balances cstate.StateContextI, key string, change string) error {
 	if isCost(key) {
 		value, err := strconv.Atoi(change)
 		if err != nil {
@@ -344,6 +442,16 @@ func (gn *GlobalNode) set(key string, change string) error {
 		}
 
 		return nil
+	}
+
+	if isVCPRounds(key) {
+		if err := cstate.WithActivation(balances, "hercules", func() error {
+			return fmt.Errorf("unsupported key %v", key)
+		}, func() error {
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 
 	settings, ok := Settings[key]
@@ -357,7 +465,7 @@ func (gn *GlobalNode) set(key string, change string) error {
 		if err != nil {
 			return fmt.Errorf("cannot convert key %s value %v to int: %v", key, change, err)
 		}
-		if err := gn.setInt(key, value); err != nil {
+		if err := gn.setInt(balances, key, value); err != nil {
 			return err
 		}
 	case config.CurrencyCoin:
@@ -408,9 +516,9 @@ func (gn *GlobalNode) set(key string, change string) error {
 	return nil
 }
 
-func (gn *GlobalNode) update(changes config.StringMap) error {
+func (gn *GlobalNode) update(balances cstate.StateContextI, changes config.StringMap) error {
 	for key, value := range changes.Fields {
-		if err := gn.set(key, value); err != nil {
+		if err := gn.set(balances, key, value); err != nil {
 			return err
 		}
 	}
@@ -435,7 +543,7 @@ func (msc *MinerSmartContract) updateSettings(
 		return "", common.NewError("update_settings", err.Error())
 	}
 
-	if err := gn.update(changes); err != nil {
+	if err := gn.update(balances, changes); err != nil {
 		return "", common.NewError("update_settings", err.Error())
 	}
 

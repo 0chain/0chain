@@ -9,9 +9,9 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z *globalNodeV2) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 4
+	// map header, size 3
 	// string "globalNodeV1"
-	o = append(o, 0x84, 0xac, 0x67, 0x6c, 0x6f, 0x62, 0x61, 0x6c, 0x4e, 0x6f, 0x64, 0x65, 0x56, 0x31)
+	o = append(o, 0x83, 0xac, 0x67, 0x6c, 0x6f, 0x62, 0x61, 0x6c, 0x4e, 0x6f, 0x64, 0x65, 0x56, 0x31)
 	o, err = z.globalNodeV1.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "globalNodeV1")
@@ -23,19 +23,6 @@ func (z *globalNodeV2) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "name"
 	o = append(o, 0xa4, 0x6e, 0x61, 0x6d, 0x65)
 	o = msgp.AppendString(o, z.Name)
-	// string "vc_phase_rounds"
-	o = append(o, 0xaf, 0x76, 0x63, 0x5f, 0x70, 0x68, 0x61, 0x73, 0x65, 0x5f, 0x72, 0x6f, 0x75, 0x6e, 0x64, 0x73)
-	o = msgp.AppendMapHeader(o, uint32(len(z.VCPhaseRounds)))
-	keys_za0001 := make([]string, 0, len(z.VCPhaseRounds))
-	for k := range z.VCPhaseRounds {
-		keys_za0001 = append(keys_za0001, k)
-	}
-	msgp.Sort(keys_za0001)
-	for _, k := range keys_za0001 {
-		za0002 := z.VCPhaseRounds[k]
-		o = msgp.AppendString(o, k)
-		o = msgp.AppendInt(o, za0002)
-	}
 	return
 }
 
@@ -75,36 +62,6 @@ func (z *globalNodeV2) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Name")
 				return
 			}
-		case "vc_phase_rounds":
-			var zb0002 uint32
-			zb0002, bts, err = msgp.ReadMapHeaderBytes(bts)
-			if err != nil {
-				err = msgp.WrapError(err, "VCPhaseRounds")
-				return
-			}
-			if z.VCPhaseRounds == nil {
-				z.VCPhaseRounds = make(map[string]int, zb0002)
-			} else if len(z.VCPhaseRounds) > 0 {
-				for key := range z.VCPhaseRounds {
-					delete(z.VCPhaseRounds, key)
-				}
-			}
-			for zb0002 > 0 {
-				var za0001 string
-				var za0002 int
-				zb0002--
-				za0001, bts, err = msgp.ReadStringBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "VCPhaseRounds")
-					return
-				}
-				za0002, bts, err = msgp.ReadIntBytes(bts)
-				if err != nil {
-					err = msgp.WrapError(err, "VCPhaseRounds", za0001)
-					return
-				}
-				z.VCPhaseRounds[za0001] = za0002
-			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -119,12 +76,6 @@ func (z *globalNodeV2) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *globalNodeV2) Msgsize() (s int) {
-	s = 1 + 13 + z.globalNodeV1.Msgsize() + 8 + msgp.StringPrefixSize + len(z.Version) + 5 + msgp.StringPrefixSize + len(z.Name) + 16 + msgp.MapHeaderSize
-	if z.VCPhaseRounds != nil {
-		for za0001, za0002 := range z.VCPhaseRounds {
-			_ = za0002
-			s += msgp.StringPrefixSize + len(za0001) + msgp.IntSize
-		}
-	}
+	s = 1 + 13 + z.globalNodeV1.Msgsize() + 8 + msgp.StringPrefixSize + len(z.Version) + 5 + msgp.StringPrefixSize + len(z.Name)
 	return
 }

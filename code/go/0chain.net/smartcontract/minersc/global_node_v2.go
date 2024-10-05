@@ -21,9 +21,9 @@ func init() {
 
 type globalNodeV2 struct {
 	globalNodeV1
-	Version       string         `msg:"version"`
-	Name          string         `msg:"name"`
-	VCPhaseRounds map[string]int `msg:"vc_phase_rounds"`
+	Version       string      `msg:"version"`
+	Name          string      `msg:"name"`
+	VCPhaseRounds map[int]int `msg:"vc_phase_rounds"`
 }
 
 func (gn2 *globalNodeV2) GetVersion() string {

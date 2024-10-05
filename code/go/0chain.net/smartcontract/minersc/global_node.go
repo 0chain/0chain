@@ -77,6 +77,22 @@ func (gn *GlobalNode) MustUpdateBase(f func(base *globalNodeBase) error) error {
 	})
 }
 
+func (gn *GlobalNode) GetVCPhaseRounds() map[Phase]int64 {
+	switch gn.GetVersion() {
+	case entitywrapper.DefaultOriginVersion:
+		return PhaseRounds
+	case "v2":
+		g2 := gn.Entity().(*globalNodeV2)
+		pr := make(map[Phase]int64, len(g2.VCPhaseRounds))
+		for k, v := range g2.VCPhaseRounds {
+			pr[Phase(k)] = int64(v)
+		}
+		return pr
+	default:
+		panic("unknown global node version")
+	}
+}
+
 type globalNodeV1 struct {
 	ViewChange   int64   `json:"view_change"`
 	MaxN         int     `json:"max_n"`         // } miners limits
@@ -123,7 +139,6 @@ type globalNodeV1 struct {
 	OwnerId              string         `json:"owner_id"`
 	CooldownPeriod       int64          `json:"cooldown_period"`
 	Cost                 map[string]int `json:"cost"`
-	// VCPhaseRounds        map[string]int `json:"vc_phase_rounds"`
 }
 
 func (gn *globalNodeV1) GetVersion() string {

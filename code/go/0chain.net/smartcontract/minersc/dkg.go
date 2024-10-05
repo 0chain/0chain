@@ -222,8 +222,19 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	pn *PhaseNode,
 	gn *GlobalNode,
 	t *transaction.Transaction) (err error) {
-	// move phase condition
-	var movePhase = pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
+
+	var movePhase bool
+	if err := cstate.WithActivation(balances, "hercules", func() error {
+		movePhase = pn.CurrentRound-pn.StartRound >= PhaseRounds[pn.Phase]
+		return nil
+	}, func() error {
+		pr := gn.GetVCPhaseRounds()
+		movePhase = pn.CurrentRound-pn.StartRound >= pr[pn.Phase]
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	if !movePhase {
 		return nil
 	}

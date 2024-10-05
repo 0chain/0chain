@@ -70,6 +70,23 @@ func (p Phase) String() string {
 	return fmt.Sprintf("Phase<%d>", int(p))
 }
 
+func StringToPhase(s string) Phase {
+	switch s {
+	case "start":
+		return Start
+	case "contribute":
+		return Contribute
+	case "share":
+		return Share
+	case "publish":
+		return Publish
+	case "wait":
+		return Wait
+	default:
+		return Unknown
+	}
+}
+
 // Pool status
 const (
 	ACTIVE    = "ACTIVE"
