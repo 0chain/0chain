@@ -320,42 +320,17 @@ func updateDeleteNodeIDs(balances cstate.StateContextI, pType spenum.Provider, i
 	return err
 }
 
-func (msc *MinerSmartContract) createDKGMinersForContribute(
-	balances cstate.StateContextI, gn *GlobalNode) error {
-	logging.Logger.Debug("[mvc] createDKGMinersForContribute start")
-	allMinersList, err := msc.getMinersList(balances)
-	if err != nil {
-		logging.Logger.Error("createDKGMinersForContribute -- failed to get miner list",
-			zap.Error(err))
-		return err
-	}
-
-	lmb := gn.prevMagicBlock(balances)
-	if lmb == nil {
-		return common.NewErrorf("failed to create dkg miners", "empty magic block")
-	}
-
-	var (
-		allMinersMap     = make(map[string]*MinerNode, len(allMinersList.Nodes))
-		dkgMiners        = NewDKGMinerNodes()
-		toDeleteMinerIDs = make(map[string]struct{}, len(allMinersMap))
-		gnb              = gn.MustBase()
-	)
-
-	for i, n := range allMinersList.Nodes {
-		allMinersMap[n.ID] = allMinersList.Nodes[i]
-	}
-
-	logging.Logger.Debug("create dkg miners, all miners list",
-		zap.Any("miners", allMinersMap))
-
+func getToDeleteMinerIDs(balances cstate.StateContextI,
+	lmb *block.MagicBlock, gnb *globalNodeBase) (map[string]struct{}, error) {
 	if lmb.N > gnb.MinN {
 		// get deleted miners list
 		deleteMinersIDs, err := getDeleteNodes(balances, spenum.Miner)
 		if err != nil {
-			return common.NewErrorf("createDKGMinersForContribute", "failed to get delete miners: %v", err)
+			return nil, common.NewErrorf("createDKGMinersForContribute", "failed to get delete miners: %v", err)
 		}
+
 		logging.Logger.Debug("[mvc] delete miners list", zap.Any("ids", deleteMinersIDs))
+		toDeleteMinerIDs := make(map[string]struct{}, len(deleteMinersIDs))
 		toDeleteMinersNum := len(deleteMinersIDs)
 		if toDeleteMinersNum > 0 {
 			if lmb.N-toDeleteMinersNum < lmb.T {
@@ -368,30 +343,16 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 		logging.Logger.Debug("[mvc] createDKGMinersForContribute remove miner",
 			zap.Strings("miners", deleteMinersIDs[:toDeleteMinersNum]))
+		return toDeleteMinerIDs, nil
 	}
 
-	for _, m := range lmb.Miners.CopyNodes() {
-		mid := m.GetKey()
-		if _, ok := toDeleteMinerIDs[mid]; ok {
-			// do not add the to delete miner to new DKG miners list
-			continue
-		}
+	return nil, nil
+}
 
-		n, ok := allMinersMap[mid]
-		if !ok {
-			return common.NewErrorf("failed to create dkg miners",
-				"miner in prev MB is not in the all miners list: %s", mid)
-		}
-
-		dkgMiners.SimpleNodes[mid] = n.SimpleNode
-	}
-
-	// get register miner list
-	regIDs, err := getRegisterNodes(balances, spenum.Miner)
-	if err != nil {
-		return common.NewErrorf("failed to create dkg miners", "get register node error: %v", err)
-	}
-
+func filterOutInvalidRegisterMiners(balances cstate.StateContextI,
+	dkgMiners *DKGMinerNodes,
+	regIDs []string,
+	allMinersMap map[string]*MinerNode) error {
 	// filter out invalid provider type node in register miner ids list
 	toAddMinerIDs := make([]string, 0, len(regIDs))
 	for _, mid := range regIDs {
@@ -420,6 +381,150 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 			return common.NewErrorf("failed to create dkg miners", "could not update miner register nodes: %v", err)
 		}
 	}
+	return nil
+}
+
+func getDeleteSharders(balances cstate.StateContextI, lmb *block.MagicBlock) (map[string]struct{}, error) {
+	// create sharder keep list from prev magic block, should only chainowner
+	// can remove a sharder from the list
+	// get sharder delete list
+	deleteShardersIDs, err := getDeleteNodes(balances, spenum.Sharder)
+	if err != nil {
+		return nil, err
+	}
+	logging.Logger.Debug("[mvc] sharder delete list", zap.Strings("ids", deleteShardersIDs))
+
+	// var toDeleteSharder string
+	// if len(deleteShardersIDs) > 0 {
+	// 	// get the first one to be deleted from the keep list
+	// 	toDeleteSharder = deleteShardersIDs[0]
+	// }
+	delNum := len(deleteShardersIDs)
+	if delNum == 0 {
+		return nil, nil
+	}
+
+	if lmb.N-delNum < lmb.T {
+		delNum = lmb.N - lmb.T
+	}
+
+	delMap := make(map[string]struct{}, delNum)
+	for _, did := range deleteShardersIDs[:delNum] {
+		delMap[did] = struct{}{}
+	}
+
+	return delMap, nil
+}
+
+func getToKeepShardersIDs(balances cstate.StateContextI) ([]string, error) {
+	// get register sharder list
+	registerShardersIDs, err := getRegisterNodes(balances, spenum.Sharder)
+	if err != nil {
+		return nil, common.NewErrorf("failed to create dkg miners", "could not get sharder register list: %v", err)
+	}
+
+	logging.Logger.Debug("[mvc] create dkg miners, sharders to register",
+		zap.Strings("sharders", registerShardersIDs))
+
+	// filter out all invalid register sharders ids
+	toSharderIDs := make([]string, 0, len(registerShardersIDs))
+	toAddSharderIDsMap := make(map[string]struct{}, len(registerShardersIDs))
+	for _, sid := range registerShardersIDs {
+		sn, err := getSharderNode(sid, balances)
+		switch err {
+		case nil, util.ErrValueNotPresent:
+			// value not present could happen if chain owner added the node id before the node is added to all nodes list
+			toSharderIDs = append(toSharderIDs, sid)
+		default:
+			if !ErrProviderType(err) {
+				return nil, common.NewErrorf("failed to create dkg miners", "could not get sharder: %v", err)
+			}
+
+			// invalid provider type, skip it
+		}
+
+		if sn != nil {
+			toAddSharderIDsMap[sid] = struct{}{}
+		}
+	}
+
+	if len(registerShardersIDs) != len(toSharderIDs) {
+		if err := updateRegisterNodes(balances, spenum.Sharder, toSharderIDs); err != nil {
+			return nil, common.NewErrorf("failed to create dkg miners", "could not update register nodes: %v", err)
+		}
+	}
+	shardersKeep := make([]string, 0, len(toSharderIDs))
+	for _, sid := range toSharderIDs {
+		_, ok := toAddSharderIDsMap[sid]
+		if ok {
+			// find the first availbe one to add
+			shardersKeep = append(shardersKeep, sid)
+			break
+		}
+	}
+
+	return shardersKeep, nil
+}
+
+func (msc *MinerSmartContract) createDKGMinersForContribute(
+	balances cstate.StateContextI, gn *GlobalNode) error {
+	logging.Logger.Debug("[mvc] createDKGMinersForContribute start")
+	allMinersList, err := msc.getMinersList(balances)
+	if err != nil {
+		logging.Logger.Error("createDKGMinersForContribute -- failed to get miner list",
+			zap.Error(err))
+		return err
+	}
+
+	lmb := gn.prevMagicBlock(balances)
+	if lmb == nil {
+		return common.NewErrorf("failed to create dkg miners", "empty magic block")
+	}
+
+	var (
+		allMinersMap = make(map[string]*MinerNode, len(allMinersList.Nodes))
+		dkgMiners    = NewDKGMinerNodes()
+		gnb          = gn.MustBase()
+	)
+
+	for i, n := range allMinersList.Nodes {
+		allMinersMap[n.ID] = allMinersList.Nodes[i]
+	}
+
+	logging.Logger.Debug("create dkg miners, all miners list",
+		zap.Any("miners", allMinersMap))
+
+	toDeleteMinerIDs, err := getToDeleteMinerIDs(balances, lmb, gnb)
+	if err != nil {
+		return err
+	}
+
+	for _, m := range lmb.Miners.CopyNodes() {
+		mid := m.GetKey()
+		if _, ok := toDeleteMinerIDs[mid]; ok {
+			// do not add the to delete miner to new DKG miners list
+			continue
+		}
+
+		n, ok := allMinersMap[mid]
+		if !ok {
+			return common.NewErrorf("failed to create dkg miners",
+				"miner in prev MB is not in the all miners list: %s", mid)
+		}
+
+		dkgMiners.SimpleNodes[mid] = n.SimpleNode
+	}
+
+	// get register miner list
+	regIDs, err := getRegisterNodes(balances, spenum.Miner)
+	if err != nil {
+		return common.NewErrorf("failed to create dkg miners", "get register node error: %v", err)
+	}
+
+	logging.Logger.Debug("[mvc] miners register list", zap.Strings("miners", regIDs))
+	if err := filterOutInvalidRegisterMiners(balances, dkgMiners, regIDs, allMinersMap); err != nil {
+		return err
+	}
 
 	dkgMinersNum := len(dkgMiners.SimpleNodes)
 	if dkgMinersNum < gnb.MinN {
@@ -439,74 +544,26 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	// create sharder keep list from prev magic block, should only chainowner
-	// can remove a sharder from the list
-	// get sharder delete list
-	deleteShardersIDs, err := getDeleteNodes(balances, spenum.Sharder)
+	toDeleteShardersMap, err := getDeleteSharders(balances, lmb)
 	if err != nil {
 		return err
-	}
-	logging.Logger.Debug("[mvc] sharder delete list", zap.Strings("ids", deleteShardersIDs))
-
-	var toDeleteSharder string
-	if len(deleteShardersIDs) > 0 {
-		// get the first one to be deleted from the keep list
-		toDeleteSharder = deleteShardersIDs[0]
 	}
 
 	shardersKeep := make([]string, 0, len(lmb.Sharders.Nodes))
 	for _, n := range lmb.Sharders.Nodes {
 		id := n.GetKey()
-		if id == toDeleteSharder {
+		if _, ok := toDeleteShardersMap[id]; ok {
 			continue
 		}
 		shardersKeep = append(shardersKeep, id)
 	}
 
-	// get register sharder list
-	registerShardersIDs, err := getRegisterNodes(balances, spenum.Sharder)
+	addKeeps, err := getToKeepShardersIDs(balances)
 	if err != nil {
-		return common.NewErrorf("failed to create dkg miners", "could not get sharder register list: %v", err)
+		return err
 	}
 
-	logging.Logger.Debug("[mvc] create dkg miners, sharders to register",
-		zap.Strings("sharders", registerShardersIDs))
-
-	// filter out all invalid register sharders ids
-	toSharderIDs := make([]string, 0, len(registerShardersIDs))
-	toAddSharderIDsMap := make(map[string]struct{}, len(registerShardersIDs))
-	for _, sid := range registerShardersIDs {
-		sn, err := getSharderNode(sid, balances)
-		switch err {
-		case nil, util.ErrValueNotPresent:
-			// value not present could happen if chain owner added the node id first, and register it later
-			toSharderIDs = append(toSharderIDs, sid)
-		default:
-			if !ErrProviderType(err) {
-				return common.NewErrorf("failed to create dkg miners", "could not get sharder: %v", err)
-			}
-
-			// invalid provider type, skip it
-		}
-
-		if sn != nil {
-			toAddSharderIDsMap[sid] = struct{}{}
-		}
-	}
-
-	if len(registerShardersIDs) != len(toSharderIDs) {
-		if err := updateRegisterNodes(balances, spenum.Sharder, toSharderIDs); err != nil {
-			return common.NewErrorf("failed to create dkg miners", "could not update register nodes: %v", err)
-		}
-	}
-
-	for _, sid := range toSharderIDs {
-		_, ok := toAddSharderIDsMap[sid]
-		if ok {
-			shardersKeep = append(shardersKeep, sid)
-			break
-		}
-	}
+	shardersKeep = append(shardersKeep, addKeeps...)
 
 	if len(shardersKeep) < gnb.MinS {
 		return common.NewError("failed to create dkg miners",
