@@ -2698,6 +2698,9 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 				if v4.IsEnterprise != nil {
 					sr.IsEnterprise = *v4.IsEnterprise
 				}
+				if v4.StorageVersion != nil {
+					sr.StorageVersion = *v4.StorageVersion
+				}
 			}
 		} else {
 			sv2, ok := sn.Entity().(*storageNodeV2)
