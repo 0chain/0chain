@@ -1019,6 +1019,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 	isRestricted := false
 	publicKeys := []string{}
 	var isEnterprisees = []bool{}
+	var storageVersions = []int{}
 
 	if len(options) > 0 {
 		option := options[0]
@@ -1042,6 +1043,10 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 		if v, ok := option["is_enterprise"]; ok {
 			isEnterprisees = v.([]bool)
 		}
+
+		if v, ok := option["storage_versions"]; ok {
+			storageVersions = v.([]int)
+		}
 	}
 
 	if len(publicKeys) == 0 {
@@ -1057,6 +1062,12 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 		*isEnterprise = false
 		if len(isEnterprisees) > 0 {
 			*isEnterprise = isEnterprisees[i-1]
+		}
+
+		storageVersion := new(int)
+		*storageVersion = 0
+		if len(storageVersions) > 0 {
+			*storageVersion = storageVersions[i-1]
 		}
 
 		sn := &StorageNode{}
@@ -1078,7 +1089,7 @@ func newTestAllBlobbers(options ...map[string]interface{}) (all *StorageNodes) {
 			NotAvailable:   notAvailable,
 			IsRestricted:   &isRestricted,
 			IsEnterprise:   isEnterprise,
-			StorageVersion: new(int),
+			StorageVersion: storageVersion,
 		})
 		all.Nodes = append(all.Nodes, sn)
 	}
@@ -1707,6 +1718,96 @@ func TestStorageSmartContract_newAllocationRequest(t *testing.T) {
 
 		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
 		require.NoError(t, err)
+	})
+
+	t.Run("StorageVersion : All blobbers should be storagev2", func(t *testing.T) {
+
+		wallet := newClient(1000*x10, balances)
+		b0Wallet := newClient(1000*x10, balances)
+		b1Wallet := newClient(1000*x10, balances)
+
+		var nar newAllocationRequest
+		nar.ReadPriceRange = PriceRange{20, 10}
+		nar.Owner = clientID
+		nar.ReadPriceRange = PriceRange{Min: 10, Max: 40}
+		nar.WritePriceRange = PriceRange{Min: 100, Max: 400}
+		nar.Size = 20 * GB
+		nar.DataShards = 1
+		nar.ParityShards = 1
+		nar.Blobbers = nil // not set
+		nar.Owner = wallet.id
+		nar.OwnerPublicKey = wallet.pk
+		nar.StorageVersion = 1
+
+		nar.IsEnterprise = true
+
+		var tempTxn transaction.Transaction
+		tempTxn.Hash = uuid.New().String()
+		tempTxn.Value = 10000
+		tempTxn.ClientID = wallet.id
+		tempTxn.CreationDate = toSeconds(2 * time.Hour)
+
+		balances.setTransaction(t, &tempTxn)
+
+		var conditions map[string]interface{}
+		conditions = make(map[string]interface{})
+		conditions["is_restricted"] = true
+		conditions["is_enterprise"] = []bool{true, true}
+		conditions["public_keys"] = []string{b0Wallet.pk, b1Wallet.pk}
+		conditions["storage_versions"] = []int{1, 1}
+		var allBlobbers = newTestAllBlobbers(conditions)
+
+		b0 := allBlobbers.Nodes[0]
+		b0.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 5 * GB
+			return nil
+		})
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
+		require.NoError(t, err)
+
+		b1 := allBlobbers.Nodes[1]
+		b1.mustUpdateBase(func(b *storageNodeBase) error {
+			b.LastHealthCheck = tx.CreationDate
+			b.Allocated = 10 * GB
+			return nil
+		})
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
+		require.NoError(t, err)
+
+		var (
+			sp1, sp2 = newStakePool(), newStakePool()
+			dp1, dp2 = new(stakepool.DelegatePool), new(stakepool.DelegatePool)
+		)
+		dp1.Balance, dp2.Balance = 20e10, 20e10
+		sp1.Pools["hash1"], sp2.Pools["hash2"] = dp1, dp2
+		require.NoError(t, sp1.Save(spenum.Blobber, "b1", balances))
+		require.NoError(t, sp2.Save(spenum.Blobber, "b2", balances))
+
+		nar.Blobbers = append(nar.Blobbers, b0.Id())
+		_, err = balances.InsertTrieNode(b0.GetKey(), b0)
+		nar.Blobbers = append(nar.Blobbers, b1.Id())
+		_, err = balances.InsertTrieNode(b1.GetKey(), b1)
+		require.NoError(t, err)
+
+		nar.BlobberAuthTickets = []string{"", ""}
+		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
+		requireErrMsg(t, err, "allocation_creation_failed: Not enough blobbers to honor the allocation: blobber b1 auth ticket verification failed: invalid_auth_ticket: empty auth ticket, blobber b2 auth ticket verification failed: invalid_auth_ticket: empty auth ticket")
+
+		blobber0AuthTicket, err := b0Wallet.scheme.Sign(wallet.id)
+		require.NoError(t, err)
+		blobber1AuthTicket, err := b1Wallet.scheme.Sign(wallet.id)
+		require.NoError(t, err)
+
+		nar.BlobberAuthTickets = []string{blobber0AuthTicket, blobber1AuthTicket}
+		_, err = ssc.newAllocationRequest(&tempTxn, mustEncode(t, &nar), balances, nil)
+		require.NoError(t, err)
+
+		alloc, err := ssc.getAllocation(tempTxn.Hash, balances)
+		require.NoError(t, err)
+
+		allocV3 := alloc.Entity().(*storageAllocationV3)
+		assert.Equal(t, 1, *allocV3.StorageVersion)
 	})
 }
 
