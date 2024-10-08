@@ -516,7 +516,7 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 	actErr := cstate.WithActivation(balances, "hercules", func() error {
 		return nil
 	}, func() error {
-		if blobber.Entity().GetVersion() == "v4" && updatedBlobber.StakePoolSettings.DelegateWallet != nil && *updatedBlobber.StakePoolSettings.DelegateWallet != "" {
+		if blobber.Entity().GetVersion() == "v4" && updatedBlobber.StakePoolSettings != nil && updatedBlobber.StakePoolSettings.DelegateWallet != nil && *updatedBlobber.StakePoolSettings.DelegateWallet != "" {
 			v4 := blobber.Entity().(*storageNodeV4)
 			if v4.ManagingWallet != nil && *v4.ManagingWallet == txn.ClientID {
 				isManagingWallet = true
