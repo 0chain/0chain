@@ -2830,6 +2830,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		CreatedAt:                blobber.CreatedAt,
 		IsRestricted:             blobber.IsRestricted,
 		IsEnterprise:             blobber.IsEnterprise,
+		StorageVersion:           blobber.StorageVersion,
 	}
 }
 
