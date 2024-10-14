@@ -4,6 +4,8 @@ import (
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContextI) error {
@@ -57,6 +59,9 @@ func emitUpdateBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateCont
 				}
 				if v4.IsEnterprise != nil {
 					data.IsEnterprise = *v4.IsEnterprise
+				}
+				if v4.StorageVersion != nil {
+					data.StorageVersion = *v4.StorageVersion
 				}
 			}
 		}
@@ -112,7 +117,8 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 		}
 		return nil
 	}, func() error {
-		if sn.Entity().GetVersion() == "v3" {
+		if sn.Entity().GetVersion() == storageNodeV3Version {
+			logging.Logger.Info("emitAddBlobber storageV3", zap.Any("sn", sn))
 			v3, ok := sn.Entity().(*storageNodeV3)
 			if ok {
 				if v3.IsRestricted != nil {
@@ -123,7 +129,8 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 					data.IsEnterprise = *v3.IsEnterprise
 				}
 			}
-		} else if sn.Entity().GetVersion() == "v4" {
+		} else if sn.Entity().GetVersion() == storageNodeV4Version {
+			logging.Logger.Info("emitAddBlobber storageV4", zap.Any("sn", sn))
 			v4, ok := sn.Entity().(*storageNodeV4)
 			if ok {
 				if v4.IsRestricted != nil {
@@ -133,12 +140,18 @@ func emitAddBlobber(sn *StorageNode, sp *stakePool, balances cstate.StateContext
 				if v4.IsEnterprise != nil {
 					data.IsEnterprise = *v4.IsEnterprise
 				}
+
+				if v4.StorageVersion != nil {
+					data.StorageVersion = *v4.StorageVersion
+				}
 			}
 		}
 		return nil
 	}); err != nil {
 		return err
 	}
+
+	logging.Logger.Info("emitAddBlobber", zap.Any("data", data))
 
 	balances.EmitEvent(event.TypeStats, event.TagAddBlobber, b.ID, data)
 	return nil

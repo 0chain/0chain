@@ -280,6 +280,7 @@ type allocationBlobbersRequest struct {
 	WritePriceRange PriceRange `json:"write_price_range"`
 	Size            int64      `json:"size"`
 	IsRestricted    int        `json:"is_restricted"`
+	StorageVersion  int        `json:"storage_version"`
 }
 
 func (nar *allocationBlobbersRequest) decode(b []byte) error {
@@ -411,6 +412,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		AllocationSizeInGB: sizeInGB(allocationSize),
 		NumberOfDataShards: request.DataShards,
 		IsRestricted:       request.IsRestricted,
+		StorageVersion:     request.StorageVersion,
 	}
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
@@ -2645,8 +2647,9 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
 
-	IsRestricted bool `json:"is_restricted"`
-	IsEnterprise bool `json:"is_enterprise"`
+	IsRestricted   bool `json:"is_restricted"`
+	IsEnterprise   bool `json:"is_enterprise"`
+	StorageVersion int  `json:"storage_version"`
 }
 
 func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {
@@ -2694,6 +2697,9 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 				}
 				if v4.IsEnterprise != nil {
 					sr.IsEnterprise = *v4.IsEnterprise
+				}
+				if v4.StorageVersion != nil {
+					sr.StorageVersion = *v4.StorageVersion
 				}
 			}
 		} else {
@@ -2786,6 +2792,7 @@ func storageNodeResponseToStorageNodeV4(snr storageNodeResponse) *storageNodeV4 
 		NotAvailable:            snr.NotAvailable,
 		IsRestricted:            &snr.IsRestricted,
 		IsEnterprise:            &snr.IsEnterprise,
+		StorageVersion:          &snr.StorageVersion,
 	}
 }
 
@@ -2823,6 +2830,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		CreatedAt:                blobber.CreatedAt,
 		IsRestricted:             blobber.IsRestricted,
 		IsEnterprise:             blobber.IsEnterprise,
+		StorageVersion:           blobber.StorageVersion,
 	}
 }
 

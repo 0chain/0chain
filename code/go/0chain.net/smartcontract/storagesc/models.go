@@ -1621,6 +1621,10 @@ func (sab *storageAllocationBase) validateEachBlobber(
 				return fmt.Errorf("blobber %s is enterprise", b.ID)
 			}
 
+			if request.StorageVersion == 1 && b.StorageVersion != 1 {
+				return fmt.Errorf("blobber version %s is not compatible with v2 allocation", b.ID)
+			}
+
 			snr := storageNodeResponseToStorageNodeV4(*b)
 			sn.SetEntity(snr)
 			return nil
