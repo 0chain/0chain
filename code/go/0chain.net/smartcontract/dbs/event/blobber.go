@@ -27,13 +27,14 @@ type Blobber struct {
 	ReadPrice  currency.Coin `json:"read_price"`
 	WritePrice currency.Coin `json:"write_price"`
 
-	Capacity     int64 `json:"capacity"`   // total blobber capacity
-	Allocated    int64 `json:"allocated"`  // allocated capacity
-	SavedData    int64 `json:"saved_data"` // total of files saved on blobber
-	ReadData     int64 `json:"read_data"`
-	NotAvailable bool  `json:"not_available"`
-	IsRestricted bool  `json:"is_restricted"`
-	IsEnterprise bool  `json:"is_enterprise"`
+	Capacity       int64 `json:"capacity"`   // total blobber capacity
+	Allocated      int64 `json:"allocated"`  // allocated capacity
+	SavedData      int64 `json:"saved_data"` // total of files saved on blobber
+	ReadData       int64 `json:"read_data"`
+	NotAvailable   bool  `json:"not_available"`
+	IsRestricted   bool  `json:"is_restricted"`
+	IsEnterprise   bool  `json:"is_enterprise"`
+	StorageVersion int   `json:"storage_version"`
 
 	OffersTotal currency.Coin `json:"offers_total"`
 	// todo update
@@ -233,6 +234,7 @@ type AllocationQuery struct {
 	AllocationSizeInGB float64
 	NumberOfDataShards int
 	IsRestricted       int
+	StorageVersion     int
 }
 
 func (edb *EventDb) GetBlobberIdsFromUrls(urls []string, data common2.Pagination) ([]string, error) {
@@ -263,6 +265,9 @@ func (edb *EventDb) GetBlobbersFromParams(allocation AllocationQuery, limit comm
 	dbStore = dbStore.Where("is_killed = false")
 	dbStore = dbStore.Where("is_shutdown = false")
 	dbStore = dbStore.Where("not_available = false")
+	if allocation.StorageVersion == 1 {
+		dbStore = dbStore.Where("storage_version = 1")
+	}
 	dbStore = dbStore.Limit(limit.Limit).
 		Offset(limit.Offset).
 		Order(clause.OrderByColumn{
@@ -310,6 +315,7 @@ func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
 		"saved_data",
 		"not_available",
 		"is_restricted",
+		"storage_version",
 		"offers_total",
 		"delegate_wallet",
 		"num_delegates",

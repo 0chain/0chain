@@ -211,8 +211,9 @@ func TestAddBlobber(t *testing.T) {
 			require.Equal(t, false, *v2.IsRestricted)
 		}
 
-		blobberV3 := blobber.Entity().(*storageNodeV3)
-		require.Equal(t, true, *blobberV3.IsEnterprise)
+		blobberV4 := blobber.Entity().(*storageNodeV4)
+		require.Equal(t, true, *blobberV4.IsEnterprise)
+		require.Equal(t, false, *blobberV4.IsRestricted)
 	})
 }
 

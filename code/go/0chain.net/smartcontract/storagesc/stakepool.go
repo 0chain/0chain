@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 
 	"0chain.net/chaincore/state"
 	"0chain.net/core/maths"
@@ -54,7 +56,7 @@ type stakePool struct {
 	// TotalOffers represents tokens required by currently
 	// open offers of the blobber. It's allocation_id -> {lock, expire}
 	TotalOffers    currency.Coin `json:"total_offers"`
-	isOfferChanged bool          `json:"-" msg:"-"`
+	IsOfferChanged bool          `json:"-" msg:"-"`
 }
 
 func newStakePool() *stakePool {
@@ -91,12 +93,12 @@ func (sp *stakePool) Save(providerType spenum.Provider, providerID string,
 		return err
 	}
 
-	if sp.isOfferChanged {
+	if sp.IsOfferChanged {
 		switch providerType {
 		case spenum.Blobber:
 			tag, data := event.NewUpdateBlobberTotalOffersEvent(providerID, sp.TotalOffers)
 			balances.EmitEvent(event.TypeStats, tag, providerID, data)
-			sp.isOfferChanged = false
+			sp.IsOfferChanged = false
 		case spenum.Validator:
 			// TODO: perhaps implement validator stake update events
 		}
@@ -167,18 +169,35 @@ func (sp *stakePool) addOffer(amount currency.Coin) error {
 		return err
 	}
 	sp.TotalOffers = newTotalOffers
-	sp.isOfferChanged = true
+	sp.IsOfferChanged = true
 	return nil
 }
 
 // add offer of an allocation related to blobber owns this stake pool
-func (sp *stakePool) reduceOffer(amount currency.Coin) error {
+func (sp *stakePool) reduceOffer(balances cstate.StateContextI, amount currency.Coin) error {
+	returnNil := false
+	if actErr := cstate.WithActivation(balances, "hercules", func() error {
+		return nil
+	}, func() error {
+		if sp.TotalOffers == 0 { // If total offers is already 0 which is the case for killed and shutdowned blobber we return nil
+			logging.Logger.Debug("reduceOffer: no offers to reduce", zap.Any("sp", sp))
+			returnNil = true
+		}
+		return nil
+	}); actErr != nil {
+		return actErr
+	}
+
+	if returnNil {
+		return nil
+	}
+
 	newTotalOffers, err := currency.MinusCoin(sp.TotalOffers, amount)
 	if err != nil {
 		return err
 	}
 	sp.TotalOffers = newTotalOffers
-	sp.isOfferChanged = true
+	sp.IsOfferChanged = true
 	return nil
 }
 

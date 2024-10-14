@@ -1079,6 +1079,8 @@ func (z *SimpleNodes) UnmarshalMsg(bts []byte) (o []byte, err error) {
 			delete((*z), key)
 		}
 	}
+	var field []byte
+	_ = field
 	for zb0003 > 0 {
 		var zb0001 string
 		var zb0002 *SimpleNode

@@ -118,6 +118,26 @@ func (_ *StorageSmartContract) shutdownValidator(
 		return "", common.NewErrorf("shutdown_validator_failed", "can't get config: %v", err)
 	}
 
+	var refreshProviderFunc func(req provider.ProviderRequest) error
+	if actErr := cstate.WithActivation(balances, "hercules", func() error {
+		refreshProviderFunc = func(req provider.ProviderRequest) error {
+			stakePoolObject, err := getStakePool(spenum.Blobber, req.ID, balances)
+			if err != nil {
+				return err
+			}
+
+			stakePoolObject.TotalOffers = 0
+
+			return stakePoolObject.Save(spenum.Blobber, req.ID, balances)
+		}
+		return nil
+	}, func() error {
+		refreshProviderFunc = nil
+		return nil
+	}); actErr != nil {
+		return "", common.NewError("shutdown_validator_failed", actErr.Error())
+	}
+
 	err = provider.ShutDown(
 		input,
 		tx.ClientID,
@@ -158,16 +178,7 @@ func (_ *StorageSmartContract) shutdownValidator(
 			}
 			return validator, sp, nil
 		},
-		func(req provider.ProviderRequest) error {
-			stakePool, err := getStakePool(spenum.Blobber, req.ID, balances)
-			if err != nil {
-				return err
-			}
-
-			stakePool.TotalOffers = 0
-
-			return stakePool.Save(spenum.Blobber, req.ID, balances)
-		},
+		refreshProviderFunc,
 		balances,
 	)
 

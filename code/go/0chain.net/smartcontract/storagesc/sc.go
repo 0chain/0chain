@@ -280,7 +280,27 @@ func (sc *StorageSmartContract) Execute(t *transaction.Transaction,
 	default:
 		logging.Logger.Info("Storage function name", zap.String("function", funcName))
 
-		actErr := chainstate.WithActivation(balances, "demeter", func() error {
+		updateBlobberVersionSuccess := false
+		actErr := chainstate.WithActivation(balances, "hercules", func() error {
+			return nil
+		}, func() error {
+			if funcName == "update_blobber_version" {
+				resp, err = sc.updateBlobberVersion(t, input, balances)
+				if err == nil {
+					updateBlobberVersionSuccess = true
+				}
+				return err
+			}
+			return nil
+		})
+		if actErr != nil || resp != "" {
+			return resp, actErr
+		}
+		if updateBlobberVersionSuccess {
+			return resp, nil
+		}
+
+		actErr = chainstate.WithActivation(balances, "demeter", func() error {
 			return nil
 		}, func() error {
 			var conf *Config

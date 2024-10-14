@@ -254,7 +254,7 @@ func (edb *EventDb) rewardProviderDelegates(dps map[string]map[string]currency.C
 	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
 		AddCompositeId("provider_id", providerIds).
 		AddUpdate("reward", reward, "delegate_pools.reward + t.reward").
-		AddUpdate("total_reward", reward, "delegate_pools.total_reward + t.reward").
+		AddUpdate("total_reward", reward, "delegate_pools.total_reward + t.total_reward").
 		AddUpdate("round_pool_last_updated", lastUpdated).
 		Exec(edb)
 	return ret.Error
