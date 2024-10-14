@@ -3,6 +3,7 @@ package storagesc
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"0chain.net/core/common"
@@ -23,6 +24,7 @@ func init() {
 			entitywrapper.DefaultOriginVersion: &storageNodeV1{},
 			"v2":                               &storageNodeV2{},
 			"v3":                               &storageNodeV3{},
+			"v4":                               &storageNodeV4{},
 		})
 }
 
@@ -191,6 +193,8 @@ func (sb *storageNodeBase) CommitChangesTo(e entitywrapper.EntityI) {
 		v.ApplyBaseChanges(*sb)
 	case *storageNodeV3:
 		v.ApplyBaseChanges(*sb)
+	case *storageNodeV4:
+		v.ApplyBaseChanges(*sb)
 	}
 }
 
@@ -358,6 +362,7 @@ type storageNodeV4 struct {
 	IsEnterprise      *bool              `json:"is_enterprise"`
 
 	ManagingWallet *string `json:"managing_wallet"`
+	StorageVersion *int    `json:"storage_version"`
 }
 
 const storageNodeV4Version = "v4"
@@ -388,16 +393,26 @@ func (sn4 *storageNodeV4) GetBase() entitywrapper.EntityBaseI {
 }
 
 func (sn4 *storageNodeV4) MigrateFrom(e entitywrapper.EntityI) error {
-	v3, ok := e.(*storageNodeV3)
-	if !ok {
-		return errors.New("struct migrate fail, wrong storageNode type")
+
+	if v3, ok := e.(*storageNodeV3); ok {
+		base := v3.GetBase().(*storageNodeBase)
+		sn4.ApplyBaseChanges(*base)
+		sn4.Version = "v4"
+		sn4.IsRestricted = v3.IsRestricted
+		sn4.IsEnterprise = v3.IsEnterprise
+	} else if v2, ok := e.(*storageNodeV2); ok {
+		base := v2.GetBase().(*storageNodeBase)
+		sn4.ApplyBaseChanges(*base)
+		sn4.Version = "v4"
+		sn4.IsRestricted = v2.IsRestricted
+	} else if v1, ok := e.(*storageNodeV1); ok {
+		base := v1.GetBase().(*storageNodeBase)
+		sn4.ApplyBaseChanges(*base)
+		sn4.Version = "v4"
+	} else {
+		return fmt.Errorf("struct migrate to storageNodeV4 fail, wrong storageNode type")
 	}
 
-	base := v3.GetBase().(*storageNodeBase)
-	sn4.ApplyBaseChanges(*base)
-	sn4.Version = "v4"
-	sn4.IsRestricted = v3.IsRestricted
-	sn4.IsEnterprise = v3.IsEnterprise
 	return nil
 }
 

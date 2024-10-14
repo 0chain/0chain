@@ -1150,7 +1150,7 @@ func (sab *storageAllocationBase) cancellationCharge(cancellationFraction float6
 	return currency.MultFloat64(cost, cancellationFraction)
 }
 
-func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance currency.Coin, extend, isEnterprise bool, now common.Timestamp) (currency.Coin, error) {
+func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(balances cstate.StateContextI, cpBalance currency.Coin, extend, isEnterprise bool, now common.Timestamp) (currency.Coin, error) {
 	var (
 		costOfAllocAfterUpdate currency.Coin
 		tokensRequiredToLock   currency.Coin
@@ -1177,6 +1177,24 @@ func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance cur
 		tokensRequiredToLock = 0
 	}
 
+	var costOfUnusedAlloc currency.Coin
+
+	actErr := chainstate.WithActivation(balances, "hercules", func() error {
+		return nil
+	}, func() error {
+		costOfUnusedAlloc, err = sa.unUsedAllocCost()
+		if err != nil {
+			return fmt.Errorf("failed to get unused allocation cost: %v", err)
+		}
+		if costOfUnusedAlloc > sa.WritePool && costOfUnusedAlloc-sa.WritePool > tokensRequiredToLock {
+			tokensRequiredToLock = costOfUnusedAlloc - sa.WritePool
+		}
+		return nil
+	})
+	if actErr != nil {
+		return 0, actErr
+	}
+
 	logging.Logger.Info("requiredTokensForUpdateAllocation",
 		zap.Any("costOfAllocAfterUpdate", costOfAllocAfterUpdate),
 		zap.Any("totalWritePool", totalWritePool),
@@ -1186,6 +1204,7 @@ func (sa *storageAllocationBase) requiredTokensForUpdateAllocation(cpBalance cur
 		zap.Any("sa", sa),
 		zap.Any("cpBalance", cpBalance),
 		zap.Any("now", now),
+		zap.Any("costOfUnusedAlloc", costOfUnusedAlloc),
 	)
 
 	return tokensRequiredToLock, nil
@@ -1425,26 +1444,50 @@ func (sab *storageAllocationBase) changeBlobbers(
 				return nil
 			})
 		}, func() error {
-			return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
-				b := e.(*storageNodeV3)
+			return cstate.WithActivation(balances, "hercules",
+				func() error {
+					return addedBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+						b := e.(*storageNodeV3)
 
-				if isEnterpriseBlobber {
-					if b.IsEnterprise == nil || !*b.IsEnterprise {
-						return fmt.Errorf("blobber %s is not enterprise", b.ID)
-					}
-				}
+						if isEnterpriseBlobber {
+							if b.IsEnterprise == nil || !*b.IsEnterprise {
+								return fmt.Errorf("blobber %s is not enterprise", b.ID)
+							}
+						}
 
-				if (b.IsEnterprise != nil && *b.IsEnterprise) || (b.IsRestricted != nil && *b.IsRestricted) {
-					success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
-					if err != nil {
-						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
-					} else if !success {
-						return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
-					}
-				}
+						if (b.IsEnterprise != nil && *b.IsEnterprise) || (b.IsRestricted != nil && *b.IsRestricted) {
+							success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
+							if err != nil {
+								return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+							} else if !success {
+								return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+							}
+						}
 
-				return nil
-			})
+						return nil
+					})
+				}, func() error {
+					return addedBlobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+						b := e.(*storageNodeV4)
+
+						if isEnterpriseBlobber {
+							if b.IsEnterprise == nil || !*b.IsEnterprise {
+								return fmt.Errorf("blobber %s is not enterprise", b.ID)
+							}
+						}
+
+						if (b.IsEnterprise != nil && *b.IsEnterprise) || (b.IsRestricted != nil && *b.IsRestricted) {
+							success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
+							if err != nil {
+								return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
+							} else if !success {
+								return fmt.Errorf("blobber %s auth ticket verification failed", b.ID)
+							}
+						}
+
+						return nil
+					})
+				})
 		}); actErr != nil {
 		return nil, actErr
 	}
@@ -1554,24 +1597,40 @@ func (sab *storageAllocationBase) validateEachBlobber(
 		sn := StorageNode{}
 
 		beforeHardfork := func() error {
-			snr := storageNodeResponseToStorageNodeV2(*b)
-			sn.SetEntity(snr)
-			return nil
+			return cstate.WithActivation(balances, "electra", func() error {
+				snr := storageNodeResponseToStorageNodeV2(*b)
+				sn.SetEntity(snr)
+				return nil
+			}, func() error {
+				if request.IsEnterprise && !b.IsEnterprise {
+					return fmt.Errorf("blobber %s is not enterprise", b.ID)
+				} else if !request.IsEnterprise && b.IsEnterprise {
+					return fmt.Errorf("blobber %s is enterprise", b.ID)
+				}
+
+				snr := storageNodeResponseToStorageNodeV3(*b)
+				sn.SetEntity(snr)
+				return nil
+			})
 		}
 
-		electraHardfork := func() error {
+		herculesHardfork := func() error {
 			if request.IsEnterprise && !b.IsEnterprise {
 				return fmt.Errorf("blobber %s is not enterprise", b.ID)
 			} else if !request.IsEnterprise && b.IsEnterprise {
 				return fmt.Errorf("blobber %s is enterprise", b.ID)
 			}
 
-			snr := storageNodeResponseToStorageNodeV3(*b)
+			if request.StorageVersion == 1 && b.StorageVersion != 1 {
+				return fmt.Errorf("blobber version %s is not compatible with v2 allocation", b.ID)
+			}
+
+			snr := storageNodeResponseToStorageNodeV4(*b)
 			sn.SetEntity(snr)
 			return nil
 		}
 
-		actErr := cstate.WithActivation(balances, "electra", beforeHardfork, electraHardfork)
+		actErr := cstate.WithActivation(balances, "hercules", beforeHardfork, herculesHardfork)
 		if actErr != nil {
 			errs = append(errs, actErr.Error())
 			continue

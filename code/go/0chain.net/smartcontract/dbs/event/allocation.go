@@ -47,7 +47,8 @@ type Allocation struct {
 	ThirdPartyExtendable     bool          `json:"third_party_extendable"`
 	FileOptions              uint16        `json:"file_options"`
 
-	IsEnterprise bool `json:"is_enterprise"`
+	IsEnterprise   bool `json:"is_enterprise"`
+	StorageVersion int  `json:"storage_version"`
 
 	//ref
 	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`

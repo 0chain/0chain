@@ -246,11 +246,27 @@ func (sc *StorageSmartContract) updateBlobber(
 				return nil
 			})
 		}, func() error {
-			return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
-				b := e.(*storageNodeV3)
-				b.IsRestricted = updateBlobber.IsRestricted
-				return nil
-			})
+			if actErr := cstate.WithActivation(balances, "hercules",
+				func() error {
+					return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+						b := e.(*storageNodeV3)
+						b.IsRestricted = updateBlobber.IsRestricted
+						return nil
+					})
+				}, func() error {
+					return existingBlobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+						b := e.(*storageNodeV4)
+						b.IsRestricted = updateBlobber.IsRestricted
+
+						if b.StorageVersion == nil || *b.StorageVersion == 0 {
+							b.StorageVersion = updateBlobber.StorageVersion
+						}
+						return nil
+					})
+				}); actErr != nil {
+				return fmt.Errorf("error updating blobber: %v", actErr)
+			}
+			return nil
 		}); actErr != nil {
 		return fmt.Errorf("error with activation: %v", actErr)
 	}
@@ -381,7 +397,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 	blobber := &StorageNode{}
 
 	err = state.WithActivation(balances, "hercules", func() error {
-		beforeElectra := func() error {
+		return state.WithActivation(balances, "electra", func() error {
 			b := storageNodeV2{}
 			if err := json.Unmarshal(input, &b); err != nil {
 				return common.NewError("add_or_update_blobber_failed",
@@ -389,9 +405,7 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			}
 			blobber.SetEntity(&b)
 			return nil
-		}
-
-		afterElectra := func() error {
+		}, func() error {
 			b := storageNodeV3{}
 			if err := json.Unmarshal(input, &b); err != nil {
 				return common.NewError("add_or_update_blobber_failed",
@@ -399,19 +413,16 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 			}
 			blobber.SetEntity(&b)
 			return nil
-		}
-
-		err = state.WithActivation(balances, "electra", beforeElectra, afterElectra)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		})
 	}, func() error {
 		b := storageNodeV4{}
 		if err := json.Unmarshal(input, &b); err != nil {
 			return common.NewError("add_or_update_blobber_failed",
 				"malformed request: "+err.Error())
+		}
+		if b.ManagingWallet == nil || *b.ManagingWallet == "" {
+			b.ManagingWallet = new(string)
+			*b.ManagingWallet = b.StakePoolSettings.DelegateWallet
 		}
 		blobber.SetEntity(&b)
 		return nil
@@ -505,11 +516,11 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 	actErr := cstate.WithActivation(balances, "hercules", func() error {
 		return nil
 	}, func() error {
-		if blobber.Entity().GetVersion() == "v4" {
+		if blobber.Entity().GetVersion() == "v4" && updatedBlobber.StakePoolSettings != nil && updatedBlobber.StakePoolSettings.DelegateWallet != nil && *updatedBlobber.StakePoolSettings.DelegateWallet != "" {
 			v4 := blobber.Entity().(*storageNodeV4)
 			if v4.ManagingWallet != nil && *v4.ManagingWallet == txn.ClientID {
 				isManagingWallet = true
-				existingSp.Settings.DelegateWallet = *updatedBlobber.DelegateWallet
+				existingSp.Settings.DelegateWallet = *updatedBlobber.StakePoolSettings.DelegateWallet
 				err = existingSp.Save(spenum.Blobber, updatedBlobber.ID, balances)
 				if err != nil {
 					return common.NewError("update_blobber_settings_failed",

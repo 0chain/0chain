@@ -95,7 +95,8 @@ type newAllocationRequest struct {
 	FileOptionsChanged   bool       `json:"file_options_changed"`
 	FileOptions          uint16     `json:"file_options"`
 
-	IsEnterprise bool `json:"is_enterprise"`
+	IsEnterprise   bool `json:"is_enterprise"`
+	StorageVersion int  `json:"storage_version"`
 }
 
 // storageAllocation from the request
@@ -119,23 +120,44 @@ func (nar *newAllocationRequest) storageAllocation(balances chainstate.StateCont
 		sa.SetEntity(alloc)
 		return nil
 	}, func() error {
-		allocV2 := &storageAllocationV2{
-			Version:              storageAllocationV2Version,
-			DataShards:           nar.DataShards,
-			ParityShards:         nar.ParityShards,
-			Size:                 nar.Size,
-			Expiration:           common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()),
-			Owner:                nar.Owner,
-			OwnerPublicKey:       nar.OwnerPublicKey,
-			PreferredBlobbers:    nar.Blobbers,
-			ReadPriceRange:       nar.ReadPriceRange,
-			WritePriceRange:      nar.WritePriceRange,
-			ThirdPartyExtendable: nar.ThirdPartyExtendable,
-			FileOptions:          nar.FileOptions,
-			IsEnterprise:         &nar.IsEnterprise,
-		}
-		sa.SetEntity(allocV2)
-		return nil
+		return chainstate.WithActivation(balances, "hercules", func() error {
+			allocV2 := &storageAllocationV2{
+				Version:              storageAllocationV2Version,
+				DataShards:           nar.DataShards,
+				ParityShards:         nar.ParityShards,
+				Size:                 nar.Size,
+				Expiration:           common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()),
+				Owner:                nar.Owner,
+				OwnerPublicKey:       nar.OwnerPublicKey,
+				PreferredBlobbers:    nar.Blobbers,
+				ReadPriceRange:       nar.ReadPriceRange,
+				WritePriceRange:      nar.WritePriceRange,
+				ThirdPartyExtendable: nar.ThirdPartyExtendable,
+				FileOptions:          nar.FileOptions,
+				IsEnterprise:         &nar.IsEnterprise,
+			}
+			sa.SetEntity(allocV2)
+			return nil
+		}, func() error {
+			allocV3 := &storageAllocationV3{
+				Version:              storageAllocationV2Version,
+				DataShards:           nar.DataShards,
+				ParityShards:         nar.ParityShards,
+				Size:                 nar.Size,
+				Expiration:           common.Timestamp(common.ToTime(now).Add(conf.TimeUnit).Unix()),
+				Owner:                nar.Owner,
+				OwnerPublicKey:       nar.OwnerPublicKey,
+				PreferredBlobbers:    nar.Blobbers,
+				ReadPriceRange:       nar.ReadPriceRange,
+				WritePriceRange:      nar.WritePriceRange,
+				ThirdPartyExtendable: nar.ThirdPartyExtendable,
+				FileOptions:          nar.FileOptions,
+				IsEnterprise:         &nar.IsEnterprise,
+				StorageVersion:       &nar.StorageVersion,
+			}
+			sa.SetEntity(allocV3)
+			return nil
+		})
 	}); actErr != nil {
 		logging.Logger.Error("new_allocation_request_failed: error setting storage allocation", zap.Error(actErr))
 		return nil, actErr
@@ -1102,6 +1124,10 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 				isEnterprise = true
 			}
+		} else if sa.Entity().GetVersion() == "v3" {
+			if v3 := sa.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
+				isEnterprise = true
+			}
 		}
 		return nil
 	}); actErr != nil {
@@ -1179,7 +1205,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(cpBalance, request.Extend, isEnterprise, t.CreationDate)
+	tokensRequiredToLock, err := alloc.requiredTokensForUpdateAllocation(balances, cpBalance, request.Extend, isEnterprise, t.CreationDate)
 	if err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}

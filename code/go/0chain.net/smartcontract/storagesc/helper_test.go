@@ -116,10 +116,12 @@ func getValidatorURL(id string) string {
 
 func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sn := &StorageNode{}
-	sne := &storageNodeV3{
-		IsRestricted: new(bool),
-		IsEnterprise: new(bool),
+	sne := &storageNodeV4{
+		IsRestricted:   new(bool),
+		IsEnterprise:   new(bool),
+		ManagingWallet: new(string),
 	}
+	sne.Provider.ProviderType = spenum.Blobber
 	sne.ID = c.id
 	sne.PublicKey = c.pk
 	sne.BaseURL = getBlobberURL(c.id)
@@ -132,6 +134,7 @@ func (c *Client) addBlobRequest(t testing.TB) []byte {
 	sne.StakePoolSettings.DelegateWallet = "rand_delegate_wallet"
 	*sne.IsRestricted = c.isRestricted
 	*sne.IsEnterprise = c.isEnterprise
+	*sne.ManagingWallet = "rand_delegate_wallet"
 	sn.SetEntity(sne)
 
 	return mustEncode(t, &sn)
