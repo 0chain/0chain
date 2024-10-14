@@ -327,6 +327,7 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 	case CooldownPeriod:
 		return gnb.CooldownPeriod, nil
 	default:
+		logging.Logger.Debug("Setting not implemented", zap.String("key", key.String()))
 		return nil, errors.New("Setting not implemented")
 	}
 }
