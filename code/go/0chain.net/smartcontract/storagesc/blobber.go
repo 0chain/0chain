@@ -1328,3 +1328,46 @@ func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI
 func isRollback(commitConnection BlobberCloseConnection, commitWM, lastWM *writeMarkerBase) bool {
 	return commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitWM.Size == 0 && lastWM != nil && commitWM.Timestamp == lastWM.Timestamp && commitConnection.AllocationRoot == lastWM.PreviousAllocationRoot
 }
+
+func (sc *StorageSmartContract) updateBlobberVersion(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"can't get the config: "+err.Error())
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("update_blobber_version", func() bool {
+		return t.ClientID == conf.OwnerId
+	}); err != nil {
+		return "", common.NewError("update_blobber_version_failed", err.Error())
+	}
+
+	storageNodeDto := &dto.StorageNodeVersion{}
+	if err := json.Unmarshal(input, storageNodeDto); err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"malformed request: "+err.Error())
+	}
+
+	var (
+		blobber *StorageNode
+	)
+	if blobber, err = sc.getBlobber(storageNodeDto.Id, balances); err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"can't get the blobber "+t.ClientID+": "+err.Error())
+	}
+
+	err = blobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+		return nil
+	})
+	if err != nil {
+		return "", common.NewError("update_blobber_version_failed", "can't update blobber version: "+err.Error())
+	}
+
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"can't Save blobber: "+err.Error())
+	}
+
+	return string(blobber.Encode()), nil
+}

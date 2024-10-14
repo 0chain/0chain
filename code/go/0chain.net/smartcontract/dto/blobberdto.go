@@ -41,3 +41,7 @@ type ResetBlobberStatsDto struct {
 	PrevTotalOffers currency.Coin `json:"prev_total_offers"`
 	NewTotalOffers  currency.Coin `json:"new_total_offers"`
 }
+
+type StorageNodeVersion struct {
+	Id string `json:"id"`
+}
