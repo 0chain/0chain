@@ -10,16 +10,17 @@ jobs:
   build:
     runs-on: [self-hosted, arc-runner1]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22'
 
       - name: Check msgp changes
         run: |
           sudo apt update
           sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+          sed -i "s/off/on/g" ./docker.local/bin/install.msgp.sh
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
@@ -39,15 +40,16 @@ jobs:
   lint:
     runs-on: [self-hosted, arc-runner]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-go@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22'
 
       - name: Check msgp changes
         run: |
           sudo apt update -y
           sudo apt install build-essential nghttp2 libnghttp2-dev libssl-dev wget -y
+          sed -i "s/off/on/g" ./docker.local/bin/install.msgp.sh
           ./docker.local/bin/check.msgp.sh
 
       - name: Build Base
