@@ -275,6 +275,11 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 		return value, nil
 	}
 
+	if isVCPRounds(key.String()) {
+		value, err := gn.getVCRounds(key.String())
+		return value, err
+	}
+
 	gnb := gn.MustBase()
 
 	switch key {

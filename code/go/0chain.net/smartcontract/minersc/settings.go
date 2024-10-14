@@ -434,6 +434,22 @@ func isVCPRounds(key string) bool {
 	return key[:len(vcRoundsPrefix)] == vcRoundsPrefix
 }
 
+func (gn *GlobalNode) getVCRounds(key string) (int64, error) {
+	if !isVCPRounds(key) {
+		return 0, fmt.Errorf("key: %v is not a vc_rounds", key)
+	}
+
+	k := strings.TrimPrefix(key, vcRoundsPrefix)
+	p := StringToPhase(k)
+	phaseRounds := gn.GetVCPhaseRounds()
+	r, ok := phaseRounds[p]
+	if !ok {
+		return 0, fmt.Errorf("phase rounds not found, key: %s", key)
+	}
+
+	return r, nil
+}
+
 func (gn *GlobalNode) set(balances cstate.StateContextI, key string, change string) error {
 	if isCost(key) {
 		value, err := strconv.Atoi(change)
