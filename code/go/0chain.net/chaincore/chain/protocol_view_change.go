@@ -146,6 +146,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		} else {
 			httpclientutil.TxnFailedCountReset()
 		}
+		httpclientutil.ReleaseTxnLock()
 	}()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
@@ -294,6 +295,12 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	scData *httpclientutil.SmartContractTxnData,
 	minerUrls []string,
 	sharderUrls []string) error {
+
+	if !httpclientutil.AcquireTxnLock(time.Second) {
+		logging.Logger.Debug("[mvc] acquire txn lock")
+		return httpclientutil.ErrTxnSendBusy
+	}
+
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	if txn.Fee == 0 {
 		scBytes, err := json.Marshal(scData)

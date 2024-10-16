@@ -180,9 +180,14 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			if err := sc.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
-				logging.Logger.Warn("sharder health check failed, try again")
-			}
+			go func() {
+				if err := sc.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
+					logging.Logger.Warn("sharder health check failed, try again")
+					return
+				}
+
+				sc.ConfirmTransaction(ctx, txn, 30)
+			}()
 
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)

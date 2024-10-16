@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -47,6 +48,27 @@ const scRestAPIURL = "v1/screst/"
 const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
 const syncTxnNonceThreshold = 1
+
+var gSendTxnBufferC = make(chan struct{}, 1)
+var ErrTxnSendBusy = errors.New("send transaction channel busy")
+
+func AcquireTxnLock(timeout time.Duration) bool {
+	tmr := time.NewTimer(timeout)
+	select {
+	case <-tmr.C:
+		return false
+	case gSendTxnBufferC <- struct{}{}:
+		return true
+	}
+}
+
+func ReleaseTxnLock() {
+	select {
+	case <-gSendTxnBufferC:
+		logging.Logger.Debug("[mvc] release txn lock")
+	default:
+	}
+}
 
 var gTxnFailedCount int64
 

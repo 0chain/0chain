@@ -269,7 +269,10 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 					logging.Logger.Warn("miner health check -  send smart contract failed",
 						zap.Int("urls len", len(minerUrls)),
 						zap.Error(err))
+					return
 				}
+
+				mc.ConfirmTransaction(ctx, txn, 30)
 			}()
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)
