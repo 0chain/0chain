@@ -224,6 +224,12 @@ func (msc *MinerSmartContract) setPhaseNode(balances cstate.StateContextI,
 	t *transaction.Transaction) (err error) {
 
 	phaseRounds := gn.GetVCPhaseRounds()
+	logging.Logger.Debug("[mvc] setPhaseNode get phase round",
+		zap.String("phase", pn.Phase.String()),
+		zap.Int64("phase current round", pn.CurrentRound),
+		zap.Int64("phase round", phaseRounds[pn.Phase]),
+		zap.Any("phase rounds", phaseRounds))
+
 	movePhase := pn.CurrentRound-pn.StartRound >= phaseRounds[pn.Phase]
 	if !movePhase {
 		return nil
