@@ -139,7 +139,14 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		cctx, cancel                   = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
-	defer cancel()
+	defer func() {
+		cancel()
+		if !found {
+			httpclientutil.TxnFailedCountInc()
+		} else {
+			httpclientutil.TxnFailedCountReset()
+		}
+	}()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {

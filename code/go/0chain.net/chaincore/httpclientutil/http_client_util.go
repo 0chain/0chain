@@ -46,6 +46,26 @@ const specificMagicBlockURL = "v1/block/magic/get?magic_block_number="
 const scRestAPIURL = "v1/screst/"
 const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
+const syncTxnNonceThreshold = 1
+
+var gTxnFailedCount int64
+
+func TxnFailedCountReset() {
+	atomic.StoreInt64(&gTxnFailedCount, 0)
+}
+
+func TxnFailedCountInc() {
+	atomic.AddInt64(&gTxnFailedCount, 1)
+}
+
+func getTxnFailedCount() int64 {
+	return atomic.LoadInt64(&gTxnFailedCount)
+}
+
+// needSyncNonce checks whether it's time to sync nonce
+func needSyncNonce() bool {
+	return getTxnFailedCount() >= syncTxnNonceThreshold
+}
 
 var httpClient *http.Client
 
@@ -821,7 +841,7 @@ func syncClientNonce(sharders []string) (int64, error) {
 
 func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []string) error {
 	nextNonce := node.Self.GetNextNonce()
-	if nextNonce == 0 {
+	if nextNonce == 0 || needSyncNonce() {
 		nonce, err := syncClientNonce(sharderUrls)
 		if err != nil {
 			logging.Logger.Error("can't get nonce from remote", zap.Error(err))
