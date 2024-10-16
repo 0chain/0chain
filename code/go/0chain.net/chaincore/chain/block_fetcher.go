@@ -361,6 +361,7 @@ type Chainer interface {
 	GetLatestFinalizedMagicBlockRound(rn int64) *block.Block
 	GetRound(roundNumber int64) round.RoundI
 	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
+	GetLatestFinalizedBlock() *block.Block
 }
 
 //
@@ -847,80 +848,6 @@ func (c *Chain) GetNotarizedBlockFromSharders(ctx context.Context, hash string, 
 }
 
 type AfterBlockFetchFunc func(b *block.Block)
-
-func (c *Chain) AsyncFetchFinalizedBlockFromSharders(ctx context.Context,
-	ticket *LFBTicket, afterFetcher AfterFetcher) {
-
-	var bfr = new(blockFetchRequest)
-	bfr.hash = ticket.LFBHash        //
-	bfr.round = ticket.Round         //
-	bfr.sharders = true              // force to fetch from sharders
-	bfr.sharderID = ticket.SharderID // request from this sharder, if given
-
-	var reply = make(chan BlockFetchReply, 1)
-	bfr.replies = append(bfr.replies, reply)
-
-	cctx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
-	defer cancel()
-	if err := c.blockFetcher.fetch(cctx, bfr); err != nil {
-		logging.Logger.Error("async fetch fb from sharders - push to block fetcher failed",
-			zap.Int64("round", bfr.round),
-			zap.Error(err))
-		return
-	}
-
-	var rpl BlockFetchReply
-
-	select {
-	case <-ctx.Done():
-		return //
-	case rpl = <-reply:
-	}
-
-	if rpl.Err != nil {
-		logging.Logger.Error("async fetch fb from sharders - error",
-			zap.Int64("round", bfr.round), zap.String("block", bfr.hash),
-			zap.Error(rpl.Err))
-		return // nil
-	}
-
-	// the block validated and its notarization verified
-	var fb = rpl.Block
-
-	// after fetch hook (if any)
-	if afterFetcher != nil {
-		var err error
-		if err = afterFetcher.AfterFetch(ctx, fb); err != nil {
-			logging.Logger.Error("async fetch fb from sharders - rejected by "+
-				"the 'after fetch' hook", zap.Int64("round", bfr.round),
-				zap.String("block", bfr.hash), zap.Error(err))
-			return // nil
-		}
-	}
-
-	// After the AfterFetch the following process can be terminated by an error
-	// thus, we can set LFB inside the AfterFetch.
-
-	var r = c.GetRound(fb.Round)
-	if r == nil {
-		logging.Logger.Info("async fetch fb from sharders - no round, creating...",
-			zap.Int64("round", fb.Round), zap.String("block", fb.Hash))
-
-		r = c.RoundF.CreateRoundF(fb.Round)
-	}
-
-	logging.Logger.Info("async fetch fb from sharders", zap.String("block", fb.Hash),
-		zap.Int64("round", fb.Round))
-
-	// This is a notarized block. So, use this method to sync round info
-	// with the notarized block.
-	_, r = c.AddNotarizedBlockToRound(r, fb)
-
-	//  Add the round to chain if does not in the chain yet
-	if c.GetRound(fb.Round) == nil {
-		c.AddRound(r)
-	}
-}
 
 // FetchStat returns numbers of current block
 // fetch requests to miners and to sharders.

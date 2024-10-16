@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"reflect"
 	"sort"
@@ -21,6 +20,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/util/orderbuffer"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
@@ -133,12 +133,21 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		active = c.IsActiveInChain()
 		mb     = c.GetCurrentMagicBlock()
 
-		found, pastTime bool
-		urls            []string
-		cctx, cancel    = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
+		found, pastTime, notPendingTxn bool
+		urls                           []string
+		minerUrls                      = make([]string, 0, mb.Miners.Size())
+		cctx, cancel                   = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
-	defer cancel()
+	defer func() {
+		cancel()
+		if !found {
+			httpclientutil.TxnFailedCountInc()
+		} else {
+			httpclientutil.TxnFailedCountReset()
+		}
+		httpclientutil.ReleaseTxnLock()
+	}()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
@@ -146,11 +155,41 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 	}
 
+	for _, m := range mb.Miners.CopyNodesMap() {
+		if !active || m.GetStatus() == node.NodeStatusActive {
+			minerUrls = append(minerUrls, m.GetN2NURLBase())
+		}
+	}
+
+	txnPoolCheckingTime := time.NewTicker(3 * time.Second)
 	for !found && !pastTime {
 		select {
 		case <-cctx.Done():
 			return false
-		default:
+		case <-txnPoolCheckingTime.C:
+			if !node.Self.IsSharder() {
+				txn, err := transaction.GetTransactionByHash(ctx, t.Hash)
+				if err != nil {
+					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+					notPendingTxn = true
+				} else {
+					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+				}
+			} else {
+				txn, err := httpclientutil.GetTransactionPendingStatus(t.Hash, minerUrls)
+				if err != nil {
+					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+					notPendingTxn = true
+				} else {
+					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+				}
+			}
+			// default:
+		}
+
+		if !notPendingTxn {
+			// in the txn pool, pending
+			continue
 		}
 
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
@@ -168,10 +207,18 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 
 		found = err == nil && txn != nil
-		if !found {
-			time.Sleep(time.Second)
+		if found {
+			return true
+		}
+
+		if notPendingTxn {
+			logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
+			// reset the local nonce, set to -1 so that next will be 0 and hence cause nonce sync
+			node.Self.SetNonce(-1)
+			return false
 		}
 	}
+
 	return found
 }
 
@@ -248,6 +295,12 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	scData *httpclientutil.SmartContractTxnData,
 	minerUrls []string,
 	sharderUrls []string) error {
+
+	if !httpclientutil.AcquireTxnLock(time.Second) {
+		logging.Logger.Debug("[mvc] acquire txn lock")
+		return httpclientutil.ErrTxnSendBusy
+	}
+
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	if txn.Fee == 0 {
 		scBytes, err := json.Marshal(scData)
@@ -513,18 +566,14 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 }
 
 // PhaseEvents notifications channel.
-func (c *Chain) PhaseEvents() (pe chan PhaseEvent) {
+func (c *Chain) PhaseEvents() *orderbuffer.OrderBuffer {
 	return c.phaseEvents
 }
 
-// The sendPhase optimistically sends given phase to phase trackers.
+// The SendPhaseNode optimistically sends given phase to phase trackers.
 // It never blocks. Skipping event if no one can accept it at this time.
-func (c *Chain) sendPhase(pn minersc.PhaseNode, sharders bool) {
-	select {
-	case c.phaseEvents <- PhaseEvent{Phase: pn, Sharders: sharders}:
-	default:
-		// never block here, be optimistic
-	}
+func (c *Chain) SendPhaseNode(ctx context.Context, pe PhaseEvent) {
+	c.phaseEvents.Add(pe.Phase.StartRound, pe)
 }
 
 // The GetPhaseFromSharders obtains minersc.PhaseNode from sharders and sends
@@ -576,24 +625,18 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 		zap.Int64("restarts", phase.Restarts))
 
 	const isGivenFromSharders = true // it is given from sharders 100%
-	c.sendPhase(*phase, isGivenFromSharders)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	c.SendPhaseNode(ctx, PhaseEvent{Phase: *phase, Sharders: isGivenFromSharders})
 }
 
 // The GetPhaseOfBlock extracts and returns Miner SC phase node for given block.
-func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
-	err error) {
-
-	err = c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
-	if err != nil && err != util.ErrValueNotPresent {
-		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
-			err, b.Round)
-		return
+func (c *Chain) GetPhaseOfBlock(b *block.Block) (*minersc.PhaseNode, error) {
+	var pn minersc.PhaseNode
+	err := c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
+	if err != nil {
+		return nil, err
 	}
 
-	if err == util.ErrValueNotPresent {
-		err = nil // not a real error, Miner SC just is not started (yet)
-		return
-	}
-
-	return // ok
+	return &pn, nil
 }

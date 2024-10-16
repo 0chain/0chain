@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/core/common"
 	"github.com/0chain/common/core/logging"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/vmihailenco/msgpack/v5"
 	"go.uber.org/zap"
 )
@@ -66,6 +67,9 @@ func (np *Pool) Size() int {
 // AddNode - add a node to the pool
 func (np *Pool) AddNode(node *Node) error {
 	if np.Type != node.Type {
+		logging.Logger.Error("incorrect node type",
+			zap.String("node_type", node.Type.String()),
+			zap.String("pool_type", np.Type.String()))
 		return errors.New("incorrect node type")
 	}
 
@@ -94,6 +98,24 @@ func (np *Pool) AddNode(node *Node) error {
 	np.mmx.Unlock()
 
 	return nil
+}
+
+func (np *Pool) Delete(key string) {
+	np.mmx.Lock()
+	defer np.mmx.Unlock()
+	delete(np.NodesMap, key)
+	var idx int
+	for i, n := range np.Nodes {
+		if n.GetKey() == key {
+			idx = i
+			break
+		}
+	}
+
+	np.Nodes[idx] = np.Nodes[len(np.Nodes)-1]
+	np.Nodes = np.Nodes[:len(np.Nodes)-1]
+	np.computeNodePositions()
+	// TODO: remove from global nodes map
 }
 
 /*GetNode - given node id, get the node object or nil */
@@ -305,6 +327,10 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 				return err
 			}
 		}
+
+		n.TimersByURI = make(map[string]metrics.Timer, 10)
+		n.SizeByURI = make(map[string]metrics.Histogram, 10)
+		n.setupCommChannel()
 		np.Nodes = append(np.Nodes, n)
 	}
 
@@ -357,6 +383,8 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 	}
 
 	np.Nodes = make([]*Node, 0, len(d.NodesMap))
+	np.NodesMap = make(map[string]*Node, len(d.NodesMap))
+	np.Type = d.Type
 	for k := range d.NodesMap {
 		n := d.NodesMap[k]
 		if n.SigScheme == nil {
@@ -365,6 +393,7 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 			}
 		}
 		np.Nodes = append(np.Nodes, n)
+		np.NodesMap[k] = n
 	}
 
 	np.computeNodePositions()

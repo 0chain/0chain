@@ -14,7 +14,9 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/ememorystore"
+	"github.com/0chain/common/core/logging"
 	"github.com/herumi/bls-go-binary/bls"
+	"go.uber.org/zap"
 )
 
 /*DKG - to manage DKG process */
@@ -47,6 +49,7 @@ type DKGSummary struct {
 	datastore.IDField
 	StartingRound int64             `json:"starting_round"`
 	SecretShares  map[string]string `json:"secret_shares"`
+	IsFinalized   bool              `json:"is_finalized"`
 }
 
 // LatestMagicBlockID keeps ID of latest MB accepted and stored.
@@ -136,6 +139,7 @@ func ComputeIDdkg(minerID string) PartyID {
 	var forID PartyID
 	if err := forID.SetHexString("1" + minerID[:31]); err != nil {
 		fmt.Printf("Error while computing ID %s\n", forID.GetHexString())
+		panic(fmt.Sprintf("Error while computing ID %s, err: %v", forID.GetHexString(), err))
 	}
 	return forID
 }
@@ -256,12 +260,20 @@ func (dkg *DKG) HasSecretShare(key string) bool {
 	return ok
 }
 
-//Sign - sign using the group secret key share
+func (dkg *DKG) GetSecretShare(key string) (Key, bool) {
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
+	share, ok := dkg.receivedSecretShares[ComputeIDdkg(key)]
+	return share, ok
+}
+
+// Sign - sign using the group secret key share
 func (dkg *DKG) Sign(msg string) *Sign {
+	logging.Logger.Debug("dkg sign", zap.String("key", dkg.Si.GetHexString()))
 	return dkg.Si.Sign(msg)
 }
 
-//VerifySignature - verify the signature using the group public key share
+// VerifySignature - verify the signature using the group public key share
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 	dkg.gmpkMutex.RLock()
 	defer dkg.gmpkMutex.RUnlock()
@@ -281,6 +293,10 @@ func (dkg *DKG) RecoverGroupSig(from []PartyID, shares []Sign) (Sign, error) {
 
 // CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
 func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
+	logging.Logger.Debug("dkg recover",
+		zap.Strings("recSig", recSig),
+		zap.Strings("recIDs", recIDs))
+
 	signVec := make([]Sign, 0)
 	var signShare Sign
 	for i := 0; i < len(recSig); i++ {
@@ -303,11 +319,10 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 	if len(idVec) == 0 || len(signVec) == 0 {
 		return Sign{}, errors.New("empty id or share")
 	}
-
 	return dkg.RecoverGroupSig(idVec, signVec)
 }
 
-//AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
+// AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
 func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
 	dkg.gmpkMutex.Lock()
 	defer dkg.gmpkMutex.Unlock()
@@ -343,12 +358,12 @@ func (dkg *DKG) DeleteFromSet(nodes []string) {
 	}
 }
 
-//ValidateShare - validate Sij using Pj coefficients
+// ValidateShare - validate Sij using Pj coefficients
 func (dkg *DKG) ValidateShare(jpk []PublicKey, sij bls.SecretKey) bool {
 	return ValidateShare(jpk, sij, dkg.ID)
 }
 
-//ValidateShare - validate Sij using Pj coefficients
+// ValidateShare - validate Sij using Pj coefficients
 func ValidateShare(jpk []PublicKey, sij bls.SecretKey, id PartyID) bool {
 	var expectedSijPK PublicKey
 	if err := expectedSijPK.Set(jpk, &id); err != nil {
@@ -416,7 +431,7 @@ func (dkgSummary *DKGSummary) Delete(ctx context.Context) error {
 	return dkgSummary.GetEntityMetadata().GetStore().Delete(ctx, dkgSummary)
 }
 
-//Verify is used to verify a dkg summary with the mpks
+// Verify is used to verify a dkg summary with the mpks
 func (dkgSummary *DKGSummary) Verify(id PartyID, mpks map[PartyID][]PublicKey) error {
 	for k, v := range mpks {
 		var sij Key

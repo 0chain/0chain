@@ -305,7 +305,7 @@ func (msc *MinerSmartContract) updateGlobals(
 	balances cstate.StateContextI,
 ) (resp string, err error) {
 	if err := smartcontractinterface.AuthorizeWithOwner("update_globals", func() bool {
-		return gn.OwnerId == txn.ClientID
+		return gn.MustBase().OwnerId == txn.ClientID
 	}); err != nil {
 		return "", err
 	}
