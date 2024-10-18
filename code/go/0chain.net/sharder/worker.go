@@ -186,7 +186,7 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 					return
 				}
 
-				sc.ConfirmTransaction(ctx, txn, 60)
+				sc.ConfirmTransaction(ctx, txn, 0)
 			}()
 
 		}
