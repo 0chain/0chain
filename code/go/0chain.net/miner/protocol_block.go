@@ -1096,7 +1096,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
 			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
-				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
+				logging.Logger.Warn("generate block - delete invalid txns failed", zap.Error(err))
 			}
 		}()
 	}
@@ -1106,6 +1106,11 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			keys = append(keys, txn.GetKey())
 		}
 		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Int64("round", b.Round), zap.Int("txn num", len(keys)))
+		go func() {
+			if err := mc.deleteTxns(iterInfo.pastTxns); err != nil {
+				logging.Logger.Warn("generate block - delete past txns failed", zap.Error(err))
+			}
+		}()
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
