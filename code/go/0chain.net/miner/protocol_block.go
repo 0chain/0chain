@@ -1,13 +1,11 @@
 package miner
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 
@@ -290,24 +288,6 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 			mb.StartingRound, nvc)
 	}
 
-	// check out the MB if this miner is member of it
-	var (
-		id  = strconv.FormatInt(mb.MagicBlockNumber, 10)
-		lmb *block.MagicBlock
-	)
-
-	// get stored MB
-	if lmb, err = LoadMagicBlock(ctx, id); err != nil {
-		return common.NewErrorf("verify_block_mb",
-			"can't load related MB from store: %v", err)
-	}
-
-	// compare given MB and the stored one (should be equal)
-	if !bytes.Equal(mb.Encode(), lmb.Encode()) {
-		return common.NewError("verify_block_mb",
-			"MB given doesn't match the stored one")
-	}
-
 	return
 }
 
@@ -398,6 +378,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	logging.Logger.Debug("verifySmartContracts finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
 	cur = time.Now()
+	// TODO: verify magic block in MPT
 	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
 		return
 	}
@@ -664,10 +645,6 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 	}
 
 	go mc.SendFinalizedBlock(context.Background(), b)
-	fr := mc.GetRound(b.Round)
-	if fr != nil {
-		fr.Finalize(b)
-	}
 	mc.DeleteRoundsBelow(b.Round)
 
 	var txns []datastore.Entity
@@ -1119,7 +1096,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
 			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
-				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
+				logging.Logger.Warn("generate block - delete invalid txns failed", zap.Error(err))
 			}
 		}()
 	}
@@ -1129,6 +1106,11 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			keys = append(keys, txn.GetKey())
 		}
 		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Int64("round", b.Round), zap.Int("txn num", len(keys)))
+		go func() {
+			if err := mc.deleteTxns(iterInfo.pastTxns); err != nil {
+				logging.Logger.Warn("generate block - delete past txns failed", zap.Error(err))
+			}
+		}()
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))

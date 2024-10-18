@@ -20,7 +20,7 @@ func (_ *MinerSmartContract) killMiner(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err := kill(input, txn.ClientID, gn.OwnerId, getMinerNode, balances); err != nil {
+	if err := kill(input, txn.ClientID, gn.MustBase().OwnerId, getMinerNode, balances); err != nil {
 		return "", common.NewError("kill_miner_failed", err.Error())
 	}
 	return "", nil
@@ -34,7 +34,7 @@ func (_ *MinerSmartContract) killSharder(
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (resp string, err error) {
-	if err := kill(input, txn.ClientID, gn.OwnerId, getSharderNode, balances); err != nil {
+	if err := kill(input, txn.ClientID, gn.MustBase().OwnerId, getSharderNode, balances); err != nil {
 		return "", common.NewError("kill_sharder_failed", err.Error())
 	}
 	return "", nil
@@ -45,7 +45,7 @@ func (_ *MinerSmartContract) killSharder(
 func kill(
 	input []byte,
 	clientId, ownerId string,
-	getNode func(string, cstate.CommonStateContextI) (*MinerNode, error),
+	getNode func(string, cstate.StateContextI) (*MinerNode, error),
 	balances cstate.StateContextI,
 ) error {
 	var req provider.ProviderRequest

@@ -122,6 +122,7 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	}
 
 	var past []datastore.Entity
+	var pastTxnHash []string
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName,
 		func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 			current, ok := qe.(*Transaction)
@@ -133,6 +134,7 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 			maxNonce := clientMaxNonce[current.ClientID]
 			if current.Nonce <= maxNonce {
 				past = append(past, current)
+				pastTxnHash = append(pastTxnHash, current.Hash)
 			}
 			return true, nil
 		})
@@ -148,7 +150,8 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	logging.Logger.Info("cleaning transactions",
 		zap.String("collection", collectionName),
 		zap.Int("missing_count", len(txns)),
-		zap.Any("txns", txnHashes))
+		zap.Any("txns", txnHashes),
+		zap.Any("past txns", pastTxnHash))
 	err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
 	if err != nil {
 		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))

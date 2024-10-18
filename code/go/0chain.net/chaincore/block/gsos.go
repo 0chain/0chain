@@ -40,6 +40,12 @@ func (gsos *GroupSharesOrSigns) GetShares() map[string]*ShareOrSigns {
 	return result
 }
 
+func (gsos *GroupSharesOrSigns) Delete(id string) {
+	gsos.mutex.Lock()
+	delete(gsos.Shares, id)
+	gsos.mutex.Unlock()
+}
+
 func (gsos *GroupSharesOrSigns) Encode() []byte {
 	buff, _ := json.Marshal(gsos)
 	return buff

@@ -78,7 +78,7 @@ func handlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) 
 	m := map[string]func(http.ResponseWriter, *http.Request){
 		"/v1/block/get/latest_finalized": common.WithCORS(common.UserRateLimit(
 			common.ToJSONResponse(
-				LatestFinalizedBlockHandler,
+				LatestFinalizedBlockHandlerSummary,
 			),
 		)),
 		"/v1/block/get/latest_finalized_magic_block_summary": common.WithCORS(common.UserRateLimit(
@@ -803,7 +803,6 @@ func DiagnosticsHomepageHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "<li><a href='_diagnostics/info'>/_diagnostics/info</a> (with <a href='_diagnostics/info?ts=1'>ts</a>)</li>")
 	fmt.Fprintf(w, "<li><a href='_diagnostics/n2n/info'>/_diagnostics/n2n/info</a></li>")
 	if selfNodeType == node.NodeTypeMiner {
-		// ToDo: For sharders show who all can store the blocks
 		fmt.Fprintf(w, "<li><a href='_diagnostics/round_info'>/_diagnostics/round_info</a>")
 	}
 	fmt.Fprintf(w, "</td>")
@@ -1400,6 +1399,12 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 		return nil, err
 	}
 
+	logging.Logger.Debug("put transaction",
+		zap.String("txn", txn.Hash),
+		zap.String("client_id", txn.ClientID),
+		zap.String("func", txn.FunctionName),
+		zap.Int64("nonce", txn.Nonce))
+
 	if txn.Value > config.MaxTokenSupply {
 		logging.Logger.Error("put transaction error - value exceeds max token supply",
 			zap.Uint64("value", uint64(txn.Value)),
@@ -1536,7 +1541,6 @@ func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 		fmt.Fprintf(w, "<h3>Round: %v</h3>", rn)
 		fmt.Fprintf(w, "<div>&nbsp;</div>")
 		if node.Self.Underlying().Type != node.NodeTypeMiner {
-			// ToDo: Add Sharder related round info
 			return
 		}
 
