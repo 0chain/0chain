@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -147,6 +148,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 			httpclientutil.TxnFailedCountReset()
 		}
 		httpclientutil.ReleaseTxnLock()
+		incTxnSendCount(-1)
 	}()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
@@ -291,15 +293,23 @@ func (c *Chain) estimateTxnFee(txn *httpclientutil.Transaction) (currency.Coin, 
 	return fee, nil
 }
 
+var txnSendCount int64
+
+func incTxnSendCount(num int64) {
+	cout := atomic.AddInt64(&txnSendCount, num)
+	logging.Logger.Debug("[mvc] current send txn count", zap.Int64("count", cout))
+}
+
 func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	scData *httpclientutil.SmartContractTxnData,
 	minerUrls []string,
 	sharderUrls []string) error {
 
 	if !httpclientutil.AcquireTxnLock(time.Second) {
-		logging.Logger.Debug("[mvc] acquire txn lock")
 		return httpclientutil.ErrTxnSendBusy
 	}
+	logging.Logger.Debug("[mvc] acquire txn lock")
+	incTxnSendCount(1)
 
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	if txn.Fee == 0 {
