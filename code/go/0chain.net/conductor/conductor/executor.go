@@ -1305,8 +1305,14 @@ func (r *Runner) CheckRollbackTokenomicsComparison() error {
 		log.Printf("[INF] checking rollback tokenomics comparison")
 	}
 
+	// get the same allocation service from shareder url
+	fmt.Println(" =====================into CheckRollbackTokenomicsComparison=====================")
 	allocationService := services.NewAllocationService(r.conf.Sharder1BaseURL)
 
+	fmt.Println("============ allocation service ================")
+	fmt.Println(allocationService)
+	fmt.Println("============ allocation service ================")
+	// checking rollback tokens
 	check, err := allocationService.CompareRollBackTokens()
 	if err != nil {
 		return err
@@ -1324,8 +1330,10 @@ func (r *Runner) StoreAllocationsData() error {
 		log.Printf("[INF] storing allocations data : " + r.conf.Sharder1BaseURL)
 	}
 
+	// getting the allocation service from this Sharder1BaseURL
 	allocationService := services.NewAllocationService(r.conf.Sharder1BaseURL)
 
+	// set allocation data from here
 	err := allocationService.StoreAllocationsData()
 	if err != nil {
 		return err

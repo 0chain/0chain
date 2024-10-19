@@ -48,6 +48,7 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 		return false, err
 	}
 
+	fmt.Println("\n Allocation ID :", allocationID)
 	remoteAllocation, err := s.getRemoteAllocation(allocationID)
 	if err != nil {
 		return false, err
@@ -57,6 +58,9 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
+	fmt.Println("\n Remote Allocation :", remoteAllocation)
+	fmt.Println("\n Local Allocation :", localAllocation)
 
 	if remoteAllocation.MovedToChallenge == localAllocation.MovedToChallenge {
 		return false, errors.New("active blobbers did not commit write markers")
