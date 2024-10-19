@@ -925,7 +925,7 @@ func (r *Runner) runAsyncCommand(reply chan error, name string, params map[strin
 	if retryCount == 0 {
 		retryCount = 1
 	}
-	
+
 	for i := 0; i < retryCount; i++ {
 		err = r.conf.Execute(name, params, failureThreshold)
 		if err == nil {
@@ -934,7 +934,7 @@ func (r *Runner) runAsyncCommand(reply chan error, name string, params map[strin
 		}
 		log.Printf(" [ERR] command %q failed: %v", name, err)
 	}
-	
+
 	reply <- err // nil or error (of the latest run)
 }
 
@@ -1170,9 +1170,15 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.GenerateAllChallenges = bool(update)
 		case *config.RenameCommitControl:
 			if update.Fail {
+				fmt.Println("before :: ", state.FailRenameCommit)
+				fmt.Println(" fail true : union slice")
 				state.FailRenameCommit = utils.SliceUnion(state.FailRenameCommit, update.Nodes)
+				fmt.Println("after :: ", state.FailRenameCommit)
 			} else {
+				fmt.Println("before :: ", state.FailRenameCommit)
+				fmt.Println(" fail false : slice difference")
 				state.FailRenameCommit = utils.SliceDifference(state.FailRenameCommit, update.Nodes)
+				fmt.Println("after :: ", state.FailRenameCommit)
 			}
 			fmt.Printf("state.FailRenameCommit = %v\n", state.FailRenameCommit)
 		case *config.UploadCommitControl:
