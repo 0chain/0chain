@@ -664,8 +664,8 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 			}
 
 			// set self nonce to -1 so that next will be 0 and hence cause nonce sync
-			node.Self.SetNonce(-1)
-			logging.Logger.Debug("[mvc] nonce, reset nonce after clean future txn")
+			// node.Self.SetNonce(-1)
+			// logging.Logger.Debug("[mvc] nonce, reset nonce after clean future txn")
 			break
 		}
 	}
