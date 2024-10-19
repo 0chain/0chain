@@ -59,8 +59,11 @@ func (s *AllocationService) CompareRollBackTokens() (bool, error) {
 		return false, err
 	}
 
-	fmt.Println("\n Remote Allocation :", remoteAllocation)
-	fmt.Println("\n Local Allocation :", localAllocation)
+	fmt.Println("\n Local Allocation :",)
+
+	fmt.Println(localAllocation.DataShards, " data shards", localAllocation.ParityShards, " parity shards", localAllocation.Size, " size", localAllocation.Expiration, " expiration", localAllocation.Owner, " owner ")
+	fmt.Println(localAllocation.MovedBack, " moved back", localAllocation.MovedToChallenge, " moved to challenge", localAllocation.MovedToValidators, "moved to validators ",)
+
 
 	if remoteAllocation.MovedToChallenge == localAllocation.MovedToChallenge {
 		return false, errors.New("active blobbers did not commit write markers")
@@ -91,6 +94,11 @@ func (s *AllocationService) getRemoteAllocation(allocationID string) (*types.All
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("\n Remote Allocation :",)
+	fmt.Println("alloc id ",alloc.AllocationID)
+	fmt.Println(alloc.DataShards, " data shards", alloc.ParityShards, " parity shards", alloc.Size, " size", alloc.Expiration, " expiration", alloc.Owner, " owner ")
+	fmt.Println(alloc.MovedBack, " moved back", alloc.MovedToChallenge, " moved to challenge", alloc.MovedToValidators, "moved to validators ",)
 
 	return alloc, nil
 }

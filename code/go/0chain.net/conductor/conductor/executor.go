@@ -1330,6 +1330,7 @@ func (r *Runner) StoreAllocationsData() error {
 		log.Printf("[INF] storing allocations data : " + r.conf.Sharder1BaseURL)
 	}
 
+	fmt.Println(r.conf.Sharder1BaseURL)
 	// getting the allocation service from this Sharder1BaseURL
 	allocationService := services.NewAllocationService(r.conf.Sharder1BaseURL)
 
