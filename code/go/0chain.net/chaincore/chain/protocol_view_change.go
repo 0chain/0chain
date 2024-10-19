@@ -143,12 +143,9 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 	defer func() {
 		cancel()
 		if !found {
-			httpclientutil.TxnFailedCountInc()
-		} else {
-			httpclientutil.TxnFailedCountReset()
+			// reset the local nonce, set to -1 so that next will be 0 and hence cause nonce sync
+			node.Self.SetNonce(-1)
 		}
-		httpclientutil.ReleaseTxnLock()
-		incTxnSendCount(-1)
 	}()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
@@ -305,11 +302,11 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	minerUrls []string,
 	sharderUrls []string) error {
 
-	if !httpclientutil.AcquireTxnLock(time.Second) {
-		return httpclientutil.ErrTxnSendBusy
-	}
-	logging.Logger.Debug("[mvc] acquire txn lock")
-	incTxnSendCount(1)
+	// if !httpclientutil.AcquireTxnLock(time.Second) {
+	// 	return httpclientutil.ErrTxnSendBusy
+	// }
+	// logging.Logger.Debug("[mvc] acquire txn lock")
+	// incTxnSendCount(1)
 
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	if txn.Fee == 0 {
