@@ -104,6 +104,7 @@ func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState 
 
 		return 1, nil
 	}
+	logging.Logger.Debug("[mvc] nonce, set nonce in getCurrentSelfNonce", zap.Int64("nonce", s.Nonce))
 	node.Self.SetNonce(s.Nonce)
 	return node.Self.GetNextNonce(), nil
 }
@@ -668,6 +669,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 			txns = append(txns, selfInvalidTxns...)
 			// set self nonce to -1 so that next will be 0 and hence cause nonce sync
 			node.Self.SetNonce(-1)
+			logging.Logger.Debug("[mvc] nonce, reset nonce after clean future txn")
 			break
 		}
 	}

@@ -866,11 +866,13 @@ func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []st
 	if nextNonce == 0 || needSyncNonce() {
 		nonce, err := syncClientNonce(sharderUrls)
 		if err != nil {
-			logging.Logger.Error("can't get nonce from remote", zap.Error(err))
+			logging.Logger.Error("[mvc] nonce can't get nonce from remote", zap.Error(err))
 		}
 		node.Self.SetNonce(nonce)
 		nextNonce = node.Self.GetNextNonce()
+		logging.Logger.Debug("[mvc] nonce, sync in send smart txn", zap.Int64("nonce", nextNonce))
 	}
+	logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
 	txn.Nonce = nextNonce
 
 	signer := func(hash string) (string, error) {

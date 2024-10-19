@@ -145,6 +145,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		if !found {
 			// reset the local nonce, set to -1 so that next will be 0 and hence cause nonce sync
 			node.Self.SetNonce(-1)
+			logging.Logger.Debug("[mvc] nonce, reset nonce after confirming invalid txn in defer", zap.String("txn", t.Hash))
 		}
 	}()
 
@@ -214,6 +215,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 			logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
 			// reset the local nonce, set to -1 so that next will be 0 and hence cause nonce sync
 			node.Self.SetNonce(-1)
+			logging.Logger.Debug("[mvc] nonce, reset nonce after confirming invalid txn", zap.String("txn", t.Hash))
 			return false
 		}
 	}
