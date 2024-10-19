@@ -157,3 +157,44 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
 	}
 }
+
+func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, clientID string) error {
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	txn := transactionEntityMetadata.Instance().(*Transaction)
+	collectionName := txn.GetCollectionName()
+
+	var (
+		futureTxns []datastore.Entity
+		txnHashes  []string
+	)
+
+	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata,
+		collectionName, func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
+			txn, ok := qe.(*Transaction)
+			if !ok {
+				logging.Logger.Error("remove future txns (invalid entity)", zap.Any("entity", qe))
+				return true, nil
+			}
+
+			if txn.CreationDate >= creationDate && txn.ClientID == clientID {
+				futureTxns = append(futureTxns, txn)
+				txnHashes = append(txnHashes, txn.Hash)
+			}
+			return true, nil
+		})
+	if err != nil {
+		return err
+	}
+
+	if len(futureTxns) == 0 {
+		return nil
+	}
+
+	logging.Logger.Info("[mvc] cleaning future transactions",
+		zap.String("collection", collectionName),
+		zap.Any("txns", txnHashes))
+	return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, futureTxns)
+}
