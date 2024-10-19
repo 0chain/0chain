@@ -652,6 +652,26 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 		txns = append(txns, txn)
 	}
 
+	// check self generated block and remove all txns send from this miner
+	selfInvalidTxns := []datastore.Entity{}
+	proposedBlocks := mc.GetRound(b.Round).GetProposedBlocks()
+	selfID := node.Self.Underlying().GetKey()
+	for _, b := range proposedBlocks {
+		if b.MinerID == selfID {
+			for _, txn := range b.Txns {
+				if txn.ClientID == selfID {
+					selfInvalidTxns = append(selfInvalidTxns, txn)
+				}
+			}
+
+			logging.Logger.Debug("cleaning invalid future txns", zap.Any("txns", selfInvalidTxns))
+			txns = append(txns, selfInvalidTxns...)
+			// set self nonce to -1 so that next will be 0 and hence cause nonce sync
+			node.Self.SetNonce(-1)
+			break
+		}
+	}
+
 	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 	transaction.RemoveFromPool(cleanPoolCtx, txns)
