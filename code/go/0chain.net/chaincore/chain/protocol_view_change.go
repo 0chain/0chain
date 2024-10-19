@@ -223,6 +223,7 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 	}
 
+	logging.Logger.Debug("[mvc] confirm txn", zap.Bool("success", found), zap.Bool("timeout", pastTime))
 	return found
 }
 

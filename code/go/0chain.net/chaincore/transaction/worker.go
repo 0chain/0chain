@@ -193,8 +193,45 @@ func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, client
 		return nil
 	}
 
-	logging.Logger.Info("[mvc] cleaning future transactions",
-		zap.String("collection", collectionName),
-		zap.Any("txns", txnHashes))
+	logging.Logger.Info("[mvc] clean txns, future transactions", zap.Any("txns", txnHashes))
 	return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, futureTxns)
+}
+
+func RemoveOldNonceTxns(ctx context.Context, clientID string, nonce int64) error {
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	txn := transactionEntityMetadata.Instance().(*Transaction)
+	collectionName := txn.GetCollectionName()
+
+	var (
+		oldTxns   []datastore.Entity
+		txnHashes []string
+	)
+
+	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata,
+		collectionName, func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
+			txn, ok := qe.(*Transaction)
+			if !ok {
+				logging.Logger.Error("remove future txns (invalid entity)", zap.Any("entity", qe))
+				return true, nil
+			}
+
+			if txn.Nonce <= nonce && txn.ClientID == clientID {
+				oldTxns = append(oldTxns, txn)
+				txnHashes = append(txnHashes, txn.Hash)
+			}
+			return true, nil
+		})
+	if err != nil {
+		return err
+	}
+
+	if len(oldTxns) == 0 {
+		return nil
+	}
+
+	logging.Logger.Info("[mvc] clean txns, old transactions", zap.Any("txns", txnHashes))
+	return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, oldTxns)
 }

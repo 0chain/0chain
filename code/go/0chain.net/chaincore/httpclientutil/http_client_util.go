@@ -863,7 +863,7 @@ func syncClientNonce(sharders []string) (int64, error) {
 
 func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []string) error {
 	nextNonce := node.Self.GetNextNonce()
-	if nextNonce == 0 || needSyncNonce() {
+	if nextNonce == 0 {
 		nonce, err := syncClientNonce(sharderUrls)
 		if err != nil {
 			logging.Logger.Error("[mvc] nonce can't get nonce from remote", zap.Error(err))

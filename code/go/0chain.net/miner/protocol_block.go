@@ -653,28 +653,34 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 		txns = append(txns, txn)
 	}
 
+	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+	transaction.RemoveFromPool(cleanPoolCtx, txns)
+
+	selfID := node.Self.Underlying().GetKey()
+	cs, err := chain.GetStateById(b.ClientState, selfID)
+	if err != nil {
+		logging.Logger.Error("[mvc] clean txns, could not find node state", zap.Error(err),
+			zap.String("miner", selfID), zap.String("block", b.Hash))
+	} else {
+		transaction.RemoveOldNonceTxns(cleanPoolCtx, selfID, cs.Nonce)
+	}
+
 	// check self generated block and remove all txns send from this miner after the block creation date
 	proposedBlocks := mc.GetRound(b.Round).GetProposedBlocks()
-	selfID := node.Self.Underlying().GetKey()
 	for _, sb := range proposedBlocks {
 		if sb.MinerID == selfID && sb.Hash != b.Hash {
-			cleanTxnCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
-			defer cancel()
-			if err := transaction.RemoveFutureTxns(cleanTxnCtx, sb.CreationDate, selfID); err != nil {
-				logging.Logger.Error("[mvc] clean future txns failed", zap.Error(err),
+			// cleanTxnCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+			// defer cancel()
+			if err := transaction.RemoveFutureTxns(cleanPoolCtx, sb.CreationDate, selfID); err != nil {
+				logging.Logger.Error("[mvc] clean txns, future failed", zap.Error(err),
 					zap.String("miner", selfID), zap.String("block", b.Hash))
 			}
 
-			// set self nonce to -1 so that next will be 0 and hence cause nonce sync
-			// node.Self.SetNonce(-1)
-			// logging.Logger.Debug("[mvc] nonce, reset nonce after clean future txn")
 			break
 		}
 	}
 
-	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
-	defer cancel()
-	transaction.RemoveFromPool(cleanPoolCtx, txns)
 	return nil
 }
 
