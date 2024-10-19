@@ -80,7 +80,7 @@ func (c *Chain) CheckOrRegister(ctx context.Context, timeout time.Duration) (boo
 		return false, err
 	}
 
-	if c.ConfirmTransaction(ctx, txn, 0) {
+	if c.ConfirmTransaction(ctx, txn, 30) {
 		logging.Logger.Debug("CheckOrRegister - gegister node transaction confirmed")
 		return true, nil
 	}

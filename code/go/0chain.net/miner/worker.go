@@ -272,7 +272,7 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 					return
 				}
 
-				mc.ConfirmTransaction(ctx, txn, 0)
+				mc.ConfirmTransaction(ctx, txn, 30)
 			}()
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)

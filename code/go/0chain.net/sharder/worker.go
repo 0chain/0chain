@@ -133,7 +133,7 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			continue // repeat next time
 		}
 
-		if !sc.ConfirmTransaction(ctx, txn, 0) {
+		if !sc.ConfirmTransaction(ctx, txn, 30) {
 			logging.Logger.Debug("[mvc] register_sharder_keep_worker - register sharder keep txn failed",
 				zap.Any("txn", txn))
 			continue
@@ -186,7 +186,7 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 					return
 				}
 
-				sc.ConfirmTransaction(ctx, txn, 0)
+				sc.ConfirmTransaction(ctx, txn, 30)
 			}()
 
 		}
