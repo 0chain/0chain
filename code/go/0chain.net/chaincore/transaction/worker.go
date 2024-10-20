@@ -158,7 +158,7 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	}
 }
 
-func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, clientID string) error {
+func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, clientID string) ([]datastore.Entity, error) {
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
 	defer memorystore.Close(cctx)
 
@@ -186,18 +186,19 @@ func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, client
 			return true, nil
 		})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(futureTxns) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	logging.Logger.Info("[mvc] clean txns, future transactions", zap.Any("txns", txnHashes))
-	return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, futureTxns)
+	return futureTxns, nil
+	// return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, futureTxns)
 }
 
-func RemoveOldNonceTxns(ctx context.Context, clientID string, nonce int64) error {
+func RemoveOldNonceTxns(ctx context.Context, clientID string, nonce int64) ([]datastore.Entity, error) {
 	logging.Logger.Debug("[mvc] remove old nonce txns", zap.String("clientID", clientID), zap.Int64("nonce", nonce))
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
 	defer memorystore.Close(cctx)
@@ -226,14 +227,15 @@ func RemoveOldNonceTxns(ctx context.Context, clientID string, nonce int64) error
 			return true, nil
 		})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(oldTxns) == 0 {
 		logging.Logger.Debug("[mvc] see no old txns", zap.String("clientID", clientID), zap.Int64("nonce", nonce))
-		return nil
+		return nil, nil
 	}
 
 	logging.Logger.Info("[mvc] clean txns, old transactions", zap.Any("txns", txnHashes))
-	return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, oldTxns)
+	return oldTxns, nil
+	// return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, oldTxns)
 }
