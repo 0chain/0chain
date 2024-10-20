@@ -1763,6 +1763,12 @@ func (sc *StorageSmartContract) finishAllocation(
 		return fmt.Errorf("could not refund lock token: %v", err)
 	}
 
+	balances.EmitEvent(event.TypeStats, event.TagUnlockWritePool, alloc.ID, event.WritePoolLock{
+		Client:       t.ClientID,
+		AllocationId: alloc.ID,
+		Amount:       int64(alloc.WritePool),
+	})
+
 	alloc.WritePool = 0
 	return nil
 }
