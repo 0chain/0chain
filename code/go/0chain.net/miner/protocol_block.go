@@ -663,7 +663,9 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 		logging.Logger.Error("[mvc] clean txns, could not find node state", zap.Error(err),
 			zap.String("miner", selfID), zap.String("block", b.Hash))
 	} else {
-		transaction.RemoveOldNonceTxns(cleanPoolCtx, selfID, cs.Nonce)
+		if err := transaction.RemoveOldNonceTxns(cleanPoolCtx, selfID, cs.Nonce); err != nil {
+			logging.Logger.Error("[mvc] clean txns, could not remove old nonce txns", zap.Error(err))
+		}
 	}
 
 	// check self generated block and remove all txns send from this miner after the block creation date
@@ -1115,7 +1117,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	if len(iterInfo.invalidTxns) > 0 {
 		var keys []string
-		for _, txn := range iterInfo.pastTxns {
+		for _, txn := range iterInfo.invalidTxns {
 			keys = append(keys, txn.GetKey())
 		}
 		logging.Logger.Info("generate block (found txns very old)", zap.Int64("round", b.Round),

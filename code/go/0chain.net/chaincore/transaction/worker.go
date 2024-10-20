@@ -198,6 +198,7 @@ func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, client
 }
 
 func RemoveOldNonceTxns(ctx context.Context, clientID string, nonce int64) error {
+	logging.Logger.Debug("[mvc] remove old nonce txns", zap.String("clientID", clientID), zap.Int64("nonce", nonce))
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
 	defer memorystore.Close(cctx)
 
@@ -229,6 +230,7 @@ func RemoveOldNonceTxns(ctx context.Context, clientID string, nonce int64) error
 	}
 
 	if len(oldTxns) == 0 {
+		logging.Logger.Debug("[mvc] see no old txns", zap.String("clientID", clientID), zap.Int64("nonce", nonce))
 		return nil
 	}
 
