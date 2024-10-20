@@ -663,7 +663,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 		logging.Logger.Error("[mvc] clean txns, could not find node state", zap.Error(err),
 			zap.String("miner", selfID), zap.String("block", b.Hash))
 	} else {
-		if err := transaction.RemoveOldNonceTxns(cleanPoolCtx, selfID, cs.Nonce); err != nil {
+		if err := transaction.RemoveOldNonceTxns(common.GetRootContext(), selfID, cs.Nonce); err != nil {
 			logging.Logger.Error("[mvc] clean txns, could not remove old nonce txns", zap.Error(err))
 		}
 	}
@@ -674,7 +674,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 		if sb.MinerID == selfID && sb.Hash != b.Hash {
 			// cleanTxnCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 			// defer cancel()
-			if err := transaction.RemoveFutureTxns(cleanPoolCtx, sb.CreationDate, selfID); err != nil {
+			if err := transaction.RemoveFutureTxns(common.GetRootContext(), sb.CreationDate, selfID); err != nil {
 				logging.Logger.Error("[mvc] clean txns, future failed", zap.Error(err),
 					zap.String("miner", selfID), zap.String("block", b.Hash))
 			}
