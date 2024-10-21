@@ -179,7 +179,7 @@ func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, nonce 
 				return true, nil
 			}
 
-			if (txn.CreationDate >= creationDate || txn.Nonce >= nonce) && txn.ClientID == clientID {
+			if (txn.CreationDate >= creationDate || (nonce > 0 && txn.Nonce >= nonce)) && txn.ClientID == clientID {
 				futureTxns = append(futureTxns, txn)
 				txnHashes = append(txnHashes, txn.Hash)
 			}
