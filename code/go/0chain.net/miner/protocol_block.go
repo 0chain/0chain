@@ -681,7 +681,7 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 		if sb.MinerID == selfID && sb.Hash != b.Hash {
 			// cleanTxnCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 			// defer cancel()
-			ftxns, err := transaction.RemoveFutureTxns(common.GetRootContext(), sb.CreationDate, selfID)
+			ftxns, err := transaction.RemoveFutureTxns(common.GetRootContext(), sb.CreationDate, cs.Nonce, selfID)
 			if err != nil {
 				logging.Logger.Error("[mvc] clean txns, future failed", zap.Error(err),
 					zap.String("miner", selfID), zap.String("block", b.Hash))

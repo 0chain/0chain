@@ -158,7 +158,7 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	}
 }
 
-func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, clientID string) ([]datastore.Entity, error) {
+func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, nonce int64, clientID string) ([]datastore.Entity, error) {
 	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
 	defer memorystore.Close(cctx)
 
@@ -179,7 +179,7 @@ func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, client
 				return true, nil
 			}
 
-			if txn.CreationDate >= creationDate && txn.ClientID == clientID {
+			if (txn.CreationDate >= creationDate || txn.Nonce >= nonce) && txn.ClientID == clientID {
 				futureTxns = append(futureTxns, txn)
 				txnHashes = append(txnHashes, txn.Hash)
 			}
