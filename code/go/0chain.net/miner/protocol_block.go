@@ -90,25 +90,6 @@ func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) 
 	return feeTxn, nil
 }
 
-func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
-	s, err := chain.GetStateById(bState, minerId)
-	if err != nil {
-		if cstate.ErrInvalidState(err) {
-			mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
-		}
-
-		if err != util.ErrValueNotPresent {
-			logging.Logger.Error("can't get nonce", zap.Error(err))
-			return 0, err
-		}
-
-		return 1, nil
-	}
-	logging.Logger.Debug("[mvc] nonce, set nonce in getCurrentSelfNonce", zap.Int64("nonce", s.Nonce))
-	node.Self.SetNonce(s.Nonce)
-	return node.Self.GetNextNonce(), nil
-}
-
 func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) (*transaction.Transaction, error) {
 	scTxn := transaction.Provider().(*transaction.Transaction)
 	scTxn.ClientID = node.Self.ID
@@ -1227,7 +1208,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 l:
 	for _, biTxn := range buildInTxns {
-		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.Round, b.MinerID, blockState)
+		biTxn.Nonce, err = mc.GetCurrentSelfNonce(b.MinerID, blockState)
 		if err != nil {
 			logging.Logger.Error("generate block - could not get miner nonce",
 				zap.Error(err),

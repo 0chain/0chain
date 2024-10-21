@@ -17,10 +17,12 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
 	"0chain.net/core/util/orderbuffer"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
@@ -330,7 +332,39 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 		txn.Fee = int64(fee)
 	}
 
+	nextNonce := node.Self.GetNextNonce()
+	if nextNonce == 0 {
+		// try get nonce from LFB
+		lfb := c.GetLatestFinalizedBlock()
+		if lfb != nil {
+			var err error
+			nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
+			if err != nil && state.ErrInvalidState(err) {
+				return err
+			}
+		}
+
+		logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
+	}
+	logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
+	txn.Nonce = nextNonce
+
 	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
+}
+
+func (c *Chain) GetCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
+	s, err := GetStateById(bState, minerId)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			logging.Logger.Error("can't get nonce", zap.Error(err))
+			return 0, err
+		}
+
+		return 1, nil
+	}
+	logging.Logger.Debug("[mvc] nonce, set nonce in getCurrentSelfNonce", zap.Int64("nonce", s.Nonce))
+	node.Self.SetNonce(s.Nonce)
+	return node.Self.GetNextNonce(), nil
 }
 
 func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
