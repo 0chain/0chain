@@ -20,6 +20,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
@@ -92,7 +93,9 @@ type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
 	GetMagicBlock(round int64) *block.MagicBlock
-	SetMagicBlock(block *block.MagicBlock)    // cannot use in smart contracts or REST endpoints
+	LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error)
+	SetMagicBlock(block *block.MagicBlock) // cannot use in smart contracts or REST endpoints
+	SetDKG(dkg *bls.DKG) error
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientState(clientID datastore.Key) (*state.State, error)
@@ -129,9 +132,12 @@ type StateContext struct {
 	getLatestFinalizedBlock       func() *block.Block
 	getMagicBlock                 func(round int64) *block.MagicBlock
 	getChainCurrentMagicBlock     func() *block.MagicBlock
+	getDKGSummary                 func(magicBlockNum int64) (*bls.DKGSummary, error)
+	setDKG                        func(dkg *bls.DKG) error
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
+	setMagicBlock                 func(mb *block.MagicBlock) error
 }
 
 type GetNow func() common.Timestamp
@@ -162,6 +168,8 @@ func NewStateContext(
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
 	getLatestFinalizedBlock func() *block.Block,
+	getDKGSummary func(magicBlockNum int64) (*bls.DKGSummary, error),
+	setDKG func(dkg *bls.DKG) error,
 	eventDb *event.EventDb,
 ) (
 	balances *StateContext,
@@ -176,6 +184,8 @@ func NewStateContext(
 		getLatestFinalizedBlock:       getLatestFinalizedBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
+		getDKGSummary:                 getDKGSummary,
+		setDKG:                        setDKG,
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
@@ -199,6 +209,14 @@ func (sc *StateContext) GetState() util.MerklePatriciaTrieI {
 // GetTransaction - get the transaction associated with this context
 func (sc *StateContext) GetTransaction() *transaction.Transaction {
 	return sc.txn
+}
+
+func (sc *StateContext) LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
+	return sc.getDKGSummary(magicBlockNum)
+}
+
+func (sc *StateContext) SetDKG(dkg *bls.DKG) error {
+	return sc.setDKG(dkg)
 }
 
 // AddTransfer - add the transfer
@@ -505,7 +523,7 @@ type errorIndex struct {
 	index int
 }
 
-type GetItemFunc[T any] func(id string, balance CommonStateContextI) (T, error)
+type GetItemFunc[T any] func(id string, balance StateContextI) (T, error)
 
 type rspIndex struct {
 	index int
@@ -515,7 +533,7 @@ type rspIndex struct {
 // GetItemsByIDs read items by ids from MPT concurrently and safely with consistent values
 // Note: the GetItemFunc should not return custom error that wraps the error returned from
 // StateContextI
-func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[*T], balances CommonStateContextI) ([]*T, error) {
+func GetItemsByIDs[T any](ids []string, getItem GetItemFunc[*T], balances StateContextI) ([]*T, error) {
 	var (
 		itemC     = make(chan rspIndex, len(ids))
 		stateErrC = make(chan error, len(ids))

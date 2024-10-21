@@ -18,6 +18,7 @@ import (
 	"0chain.net/core/cache"
 	"0chain.net/core/config"
 	"0chain.net/core/util/orderbuffer"
+	"0chain.net/core/util/ringbuffer"
 	"0chain.net/smartcontract/stakepool"
 	"0chain.net/smartcontract/stakepool/spenum"
 	"github.com/0chain/common/core/currency"
@@ -25,11 +26,11 @@ import (
 	"github.com/rcrowley/go-metrics"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/smartcontract/faucetsc"
 	"0chain.net/smartcontract/storagesc"
 	"0chain.net/smartcontract/vestingsc"
 	"0chain.net/smartcontract/zcnsc"
-	"github.com/herumi/bls-go-binary/bls"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -57,6 +58,9 @@ const (
 	genesisRandomSeed = 839695260482366273
 	// genesisBlockCreationDate is the time when the genesis block was created.
 	genesisBlockCreationDate = 1676096659 // TODO: make it configurable
+
+	// magicBlockStartingRoundsMax represents the maximum number of rounds store in memory for the magic block starting rounds.
+	magicBlockStartingRoundsMax = 1000
 )
 
 var (
@@ -72,9 +76,8 @@ const (
 	Generator  = 12
 	Generators = 13
 
-	// ViewChangeOffset is offset between block with new MB (501) and the block
-	// where the new MB should be used (505).
-	ViewChangeOffset = 4
+	// ViewChangeOffset is offset between block with new MB and the block where the new MB should be used.
+	ViewChangeOffset = 25
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
@@ -186,7 +189,6 @@ type Chain struct {
 
 	fetchedNotarizedBlockHandler FetchedNotarizedBlockHandler
 	viewChanger                  ViewChanger
-	afterFetcher                 AfterFetcher
 	magicBlockSaver              MagicBlockSaver
 
 	pruneStats *util.PruneStats
@@ -196,7 +198,8 @@ type Chain struct {
 	configInfoStore datastore.Store
 	RoundF          round.RoundFactory
 
-	magicBlockStartingRounds map[int64]*block.Block // block MB by starting round VC
+	magicBlockStartingRoundsMap map[int64]*block.Block // block MB by starting round VC
+	magicBlockStaringRounds     *ringbuffer.RingBuffer
 
 	EventDb    *event.EventDb
 	eventMutex *sync.RWMutex
@@ -210,7 +213,7 @@ type Chain struct {
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	syncMissingNodesC     chan syncPathNodes
 	// precise DKG phases tracking
-	phaseEvents chan PhaseEvent
+	phaseEvents *orderbuffer.OrderBuffer
 
 	vldTxnsMtx               *sync.Mutex
 	validatedTxnsCache       map[string]string // validated transactions, key as hash, value as signature
@@ -235,6 +238,13 @@ type Chain struct {
 	pbMutex                sync.RWMutex
 	notifySyncBlockC       chan struct{}
 	notifyMoveToNextRoundC chan round.RoundI
+
+	roundDkg   round.RoundStorage
+	roundDkgMu sync.RWMutex
+}
+
+func (c *Chain) GetRoundDkg() round.RoundStorage {
+	return c.roundDkg
 }
 
 func (c *Chain) GetNotifyMoveToNextRoundC() chan round.RoundI {
@@ -418,6 +428,18 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				}
 				// see no block in buffer to process
 				syncing = false
+
+				// see if the miner is in the MB, and if not, continue to sync blocks
+				mb := c.GetMagicBlock(cr)
+				if !mb.Miners.HasNode(node.Self.Underlying().GetKey()) {
+					logging.Logger.Debug("process block, miner not in the MB, continue to sync blocks",
+						zap.Int64("current round", cr),
+						zap.Int64("mb round", mb.StartingRound))
+					time.Sleep(100 * time.Millisecond)
+					syncBlocksTimer.Reset(0)
+					continue
+				}
+
 				time.Sleep(100 * time.Millisecond)
 				continue
 			}
@@ -590,7 +612,6 @@ func (c *Chain) processBlock(ctx context.Context, b *block.Block) error {
 		return fmt.Errorf("verify block notarization failed, err: %v", err)
 	}
 
-	//TODO remove it since verify block adds this block to round
 	b, _ = c.AddNotarizedBlockToRound(er, b)
 	c.SetRoundRank(er, b)
 	logging.Logger.Info("received notarized block", zap.Int64("round", b.Round),
@@ -930,12 +951,23 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
 		entity = c.MagicBlockStorage.GetLatest()
+		logging.Logger.Warn("[mvc] could not get related magic block, use latest one",
+			zap.Int64("round", round),
+			zap.Int64("current_round", c.GetCurrentRound()))
 	}
+
 	if entity == nil {
 		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
 	c.mbMutex.RUnlock()
-	return entity.(*block.MagicBlock)
+	mb := entity.(*block.MagicBlock)
+	logging.Logger.Debug("[mvc] GetMagicBlock",
+		zap.Int64("round", round),
+		zap.Int64("mb_starting_round", mb.StartingRound),
+		zap.String("mb_hash", mb.Hash),
+		zap.Int("mb_miners_size", mb.Miners.Size()),
+		zap.Int("mb_sharders_size", mb.Sharders.Size()))
+	return mb
 }
 
 // GetMagicBlockNoOffset returns magic block of a given round with out offset
@@ -985,6 +1017,10 @@ func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 		logging.Logger.Error("failed to put magic block", zap.Error(err))
 	}
 
+	logging.Logger.Debug("[mvc] set magic block",
+		zap.Int64("mb number", mb.MagicBlockNumber),
+		zap.Int64("mb sr", mb.StartingRound),
+		zap.String("mb hash", mb.Hash))
 }
 
 /*GetEntityMetadata - implementing the interface */
@@ -1076,7 +1112,7 @@ func Provider() datastore.Entity {
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncMissingNodesC = make(chan syncPathNodes, 1)
 
-	c.phaseEvents = make(chan PhaseEvent, 1) // at least 1 for buffer required
+	c.phaseEvents = orderbuffer.New(100)
 
 	c.vldTxnsMtx = &sync.Mutex{}
 	c.validatedTxnsCache = make(map[string]string)
@@ -1091,6 +1127,8 @@ func Provider() datastore.Entity {
 	c.computeBlockStateC = make(chan struct{}, 1)
 	c.notifySyncBlockC = make(chan struct{}, 1)
 	c.notifyMoveToNextRoundC = make(chan round.RoundI, 1)
+
+	c.roundDkg = round.NewRoundStartingStorage()
 	return c
 }
 
@@ -1108,7 +1146,8 @@ func (c *Chain) Initialize() {
 	// c.stateDB = util.NewMemoryNodeDB()
 	c.BlockChain = ring.New(10000)
 	c.minersStake = make(map[datastore.Key]uint64)
-	c.magicBlockStartingRounds = make(map[int64]*block.Block)
+	c.magicBlockStartingRoundsMap = make(map[int64]*block.Block)
+	c.magicBlockStaringRounds = ringbuffer.New(magicBlockStartingRoundsMax)
 	c.MagicBlockStorage = round.NewRoundStartingStorage()
 	c.OnBlockAdded = func(b *block.Block) {
 	}
@@ -1199,7 +1238,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	txnStateCache := statecache.NewTransactionCache(blockStateCache)
 	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil, txnStateCache)
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
-	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, c.GetEventDb())
+	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
 
 	c.mustInitGBState(initStates, stateCtx)
@@ -1540,7 +1579,6 @@ func (c *Chain) AddNotarizedBlockToRound(r round.RoundI, b *block.Block) (*block
 		}
 	}
 
-	//TODO set only if this block rank is better
 	c.SetRoundRank(r, b)
 	r.AddNotarizedBlock(b)
 
@@ -1784,7 +1822,8 @@ func (c *Chain) CanShardBlockWithReplicators(nRound int64, hash string, sharder 
 
 /*ValidGenerator - check whether this block is from a valid generator */
 func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
-	miner := c.GetMiners(r.GetRoundNumber()).GetNode(b.MinerID)
+	mb := c.GetMagicBlock(r.GetRoundNumber())
+	miner := mb.Miners.GetNode(b.MinerID)
 	if miner == nil {
 		return false
 	}
@@ -1792,7 +1831,12 @@ func (c *Chain) ValidGenerator(r round.RoundI, b *block.Block) bool {
 	isGen := c.IsRoundGenerator(r, miner)
 	if !isGen {
 		//This is a Byzantine condition?
-		logging.Logger.Info("Received a block from non-generator", zap.Int("miner", miner.SetIndex), zap.Int64("RRS", r.GetRandomSeed()))
+		logging.Logger.Info("Received a block from non-generator",
+			zap.Int("miner", miner.SetIndex),
+			zap.String("miner_id", b.MinerID),
+			zap.Int64("RRS", r.GetRandomSeed()),
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.Int64("mb_round", mb.StartingRound))
 		gens := c.GetGenerators(r)
 
 		logging.Logger.Info("Generators are: ", zap.Int64("round", r.GetRoundNumber()))
@@ -1972,7 +2016,8 @@ func (c *Chain) getBlocks() []*block.Block {
 
 // SetRoundRank - set the round rank of the block.
 func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
-	miners := c.GetMiners(r.GetRoundNumber())
+	mb := c.GetMagicBlock(r.GetRoundNumber())
+	miners := mb.Miners
 	if miners == nil || miners.Size() == 0 {
 		logging.Logger.DPanic("set_round_rank  --  empty miners", zap.Int64("round", r.GetRoundNumber()), zap.String("block", b.Hash))
 	}
@@ -1980,9 +2025,17 @@ func (c *Chain) SetRoundRank(r round.RoundI, b *block.Block) {
 	if bNode == nil {
 		logging.Logger.Warn("set_round_rank  --  get node by id", zap.Int64("round", r.GetRoundNumber()),
 			zap.String("block", b.Hash), zap.String("miner_id", b.MinerID))
+		b.RoundRank = -1
 		return
 	}
+
 	b.RoundRank = r.GetMinerRank(bNode)
+	logging.Logger.Debug("[mvc] set round rank",
+		zap.Int64("round", r.GetRoundNumber()),
+		zap.Int("randk", b.RoundRank),
+		zap.Int64("mb_round", mb.StartingRound),
+		zap.Int("mb_number", int(mb.MagicBlockNumber)),
+		zap.String("mb_hash", mb.Hash))
 }
 
 func (c *Chain) SetGenerationTimeout(newTimeout int) {
@@ -2123,10 +2176,6 @@ func (c *Chain) SetViewChanger(vcr ViewChanger) {
 	c.viewChanger = vcr
 }
 
-func (c *Chain) SetAfterFetcher(afr AfterFetcher) {
-	c.afterFetcher = afr
-}
-
 func (c *Chain) SetMagicBlockSaver(mbs MagicBlockSaver) {
 	c.magicBlockSaver = mbs
 }
@@ -2207,8 +2256,9 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	if b.Round > 0 {
 		// do not store genesis block, otherwise it would re-write the LFB to 0 round every time
 		// on restarting
-		if err := c.StoreLFBRound(b.Round, b.Hash); err != nil {
-			logging.Logger.Warn("set lfb - store round to state DB failed",
+		cmb := c.GetCurrentMagicBlock()
+		if err := c.StoreLFBRound(b.Round, cmb.MagicBlockNumber, b.Hash); err != nil {
+			logging.Logger.Warn("[mvc] set lfb - store round to state DB failed",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
 				zap.Error(err))
@@ -2414,7 +2464,6 @@ func (c *Chain) LatestOwnFinalizedBlockRound() int64 {
 }
 
 // SetLatestFinalizedMagicBlock - set the latest finalized block.
-// TODO: this should be called when UpdateMagicBlock is called successfully
 func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	if b == nil || b.MagicBlock == nil {
@@ -2439,10 +2488,16 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 
 	logging.Logger.Warn("update lfmb",
 		zap.Int64("mb_sr", b.MagicBlock.StartingRound),
-		zap.String("mb_hash", b.MagicBlock.Hash))
+		zap.String("mb_hash", b.MagicBlock.Hash),
+		zap.String("miners pool type", b.Miners.Type.String()),
+		zap.String("sharders pool type", b.Sharders.Type.String()),
+		zap.Int("miners num:", b.Miners.Size()),
+		zap.Int("sharders num:", b.Sharders.Size()),
+	)
 
 	c.lfmbMutex.Lock()
-	c.magicBlockStartingRounds[b.MagicBlock.StartingRound] = b
+	c.magicBlockStartingRoundsMap[b.MagicBlock.StartingRound] = b
+	c.magicBlockStaringRounds.Add(b.StartingRound)
 	c.lfmbMutex.Unlock()
 
 	if latest == nil || b.StartingRound >= latest.StartingRound {
@@ -2463,6 +2518,10 @@ func (c *Chain) GetLatestFinalizedMagicBlock(ctx context.Context) (lfb *block.Bl
 func (c *Chain) GetLatestFinalizedMagicBlockClone(ctx context.Context) (lfb *block.Block) {
 	select {
 	case lfb = <-c.getLFMBClone:
+		logging.Logger.Debug("[mvc] get lfmb",
+			zap.Int64("magic block number", lfb.MagicBlockNumber),
+			zap.Int("miners num", lfb.Miners.Size()),
+			zap.Int("sharders num", lfb.Sharders.Size()))
 	case <-ctx.Done():
 	}
 	return
@@ -2545,14 +2604,15 @@ func (c *Chain) callViewChange(ctx context.Context, lfb *block.Block) ( //nolint
 	}
 
 	// extract and send DKG phase first
-	var pn minersc.PhaseNode
-	if pn, err = c.GetPhaseOfBlock(lfb); err != nil {
+	var pn *minersc.PhaseNode
+	pn, err = c.GetPhaseOfBlock(lfb)
+	if err != nil {
 		return common.NewErrorf("view_change", "getting phase node: %v", err)
 	}
 
 	// even if it executed on a shader we don't treat this phase as obtained
 	// from sharders
-	c.sendPhase(pn, false) // optimistic, never block here
+	c.SendPhaseNode(context.TODO(), PhaseEvent{Phase: *pn, Sharders: false}) // optimistic, never block here
 
 	// this work is different for miners and sharders
 	return c.viewChanger.ViewChange(ctx, lfb)

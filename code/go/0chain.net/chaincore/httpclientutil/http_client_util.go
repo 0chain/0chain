@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 
@@ -41,10 +42,52 @@ const SleepBetweenRetries = 500
 const clientBalanceURL = "v1/client/get/balance?client_id="
 const txnSubmitURL = "v1/transaction/put"
 const txnVerifyURL = "v1/transaction/get/confirmation?hash="
+const txnPendingURL = "v1/transaction/get?hash="
 const specificMagicBlockURL = "v1/block/magic/get?magic_block_number="
 const scRestAPIURL = "v1/screst/"
 const magicBlockURL = "v1/block/get/latest_finalized_magic_block"
 const finalizeBlockURL = "v1/block/get/latest_finalized"
+const syncTxnNonceThreshold = 1
+
+var gSendTxnBufferC = make(chan struct{}, 1)
+var ErrTxnSendBusy = errors.New("send transaction channel busy")
+
+func AcquireTxnLock(timeout time.Duration) bool {
+	tmr := time.NewTimer(timeout)
+	select {
+	case <-tmr.C:
+		return false
+	case gSendTxnBufferC <- struct{}{}:
+		return true
+	}
+}
+
+func ReleaseTxnLock() {
+	select {
+	case <-gSendTxnBufferC:
+		logging.Logger.Debug("[mvc] release txn lock")
+	default:
+	}
+}
+
+var gTxnFailedCount int64
+
+func TxnFailedCountReset() {
+	atomic.StoreInt64(&gTxnFailedCount, 0)
+}
+
+func TxnFailedCountInc() {
+	atomic.AddInt64(&gTxnFailedCount, 1)
+}
+
+func getTxnFailedCount() int64 {
+	return atomic.LoadInt64(&gTxnFailedCount)
+}
+
+// needSyncNonce checks whether it's time to sync nonce
+func needSyncNonce() bool {
+	return getTxnFailedCount() >= syncTxnNonceThreshold
+}
 
 var httpClient *http.Client
 
@@ -156,7 +199,7 @@ func SendTransaction(txn *Transaction, urls []string, ID string, pkey string) {
 }
 
 // GetTransactionStatus check the status of the transaction.
-func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, error) {
+func GetTransactionStatus(txnHash string, sharders []string, sf int) (*Transaction, error) {
 	//ToDo: Add more error handling
 	numSuccess := 0
 	numErrs := 0
@@ -164,7 +207,7 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 	var retTxn *Transaction
 
 	// currently transaction information an be obtained only from sharders
-	for _, sharder := range urls {
+	for _, sharder := range sharders {
 		urlString := fmt.Sprintf("%v/%v%v", sharder, txnVerifyURL, txnHash)
 		response, err := httpClient.Get(urlString)
 		if err != nil {
@@ -212,6 +255,63 @@ func GetTransactionStatus(txnHash string, urls []string, sf int) (*Transaction, 
 
 	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
 	// We've at least one success and success rate sr is at least same as success factor sf
+	if numSuccess > 0 && sr >= sf {
+		if retTxn != nil {
+			return retTxn, nil
+		}
+		return nil, common.NewError("err_finding_txn_status", errString)
+	}
+	return nil, common.NewError("transaction_not_found", "Transaction was not found on any of the urls provided")
+}
+
+func GetTransactionPendingStatus(hash string, miners []string) (*Transaction, error) {
+	var (
+		numSuccess int
+		numErrs    int
+		errString  string
+		retTxn     *Transaction
+	)
+
+	for _, miner := range miners {
+		urlString := fmt.Sprintf("%v/%v%v", miner, txnPendingURL, hash)
+		response, err := httpClient.Get(urlString)
+		if err != nil {
+			logging.N2n.Error("get transaction status -- failed", zap.Error(err))
+			numErrs++
+		} else {
+			if response.StatusCode != 200 {
+				// logging.Logger.Error("transaction confirmation response code",
+				// 	zap.Any("code", response.StatusCode))
+				response.Body.Close()
+				continue
+			}
+
+			contents, err := io.ReadAll(response.Body)
+			if err != nil {
+				logging.Logger.Error("Error reading response from transaction confirmation", zap.Error(err))
+				response.Body.Close()
+				continue
+			}
+
+			txn := &Transaction{}
+			if err := json.Unmarshal(contents, &txn); err != nil {
+				logging.Logger.Error("Error unmarshalling response", zap.Error(err))
+				errString = errString + urlString + ":" + err.Error()
+				response.Body.Close()
+				continue
+			}
+
+			if len(txn.Signature) > 0 {
+				retTxn = txn
+			}
+			response.Body.Close()
+			numSuccess++
+		}
+	}
+
+	sr := int(math.Ceil((float64(numSuccess) * 100) / float64(numSuccess+numErrs)))
+	// We've at least one success and success rate sr is at least same as success factor sf
+	sf := 1
 	if numSuccess > 0 && sr >= sf {
 		if retTxn != nil {
 			return retTxn, nil
@@ -762,16 +862,16 @@ func syncClientNonce(sharders []string) (int64, error) {
 }
 
 func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []string) error {
-	nextNonce := node.Self.GetNextNonce()
-	if nextNonce == 0 {
+	if txn.Nonce == 0 {
 		nonce, err := syncClientNonce(sharderUrls)
 		if err != nil {
-			logging.Logger.Error("can't get nonce from remote", zap.Error(err))
+			logging.Logger.Error("[mvc] nonce can't get nonce from remote", zap.Error(err))
 		}
 		node.Self.SetNonce(nonce)
-		nextNonce = node.Self.GetNextNonce()
+		nextNonce := node.Self.GetNextNonce()
+		txn.Nonce = nextNonce
+		logging.Logger.Debug("[mvc] nonce, sync in send smart txn", zap.Int64("nonce", nextNonce))
 	}
-	txn.Nonce = nextNonce
 
 	signer := func(hash string) (string, error) {
 		return node.Self.Sign(hash)
@@ -782,6 +882,8 @@ func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []st
 		logging.Logger.Error("Signing Failed during registering miner to the mining network", zap.Error(err))
 		return err
 	}
+
+	logging.Logger.Debug("[mvc] send transaction", zap.Int64("txn nonce", txn.Nonce), zap.String("txn hash", txn.Hash))
 
 	SendTransaction(txn, minerUrls, node.Self.Underlying().GetKey(),
 		node.Self.Underlying().PublicKey)

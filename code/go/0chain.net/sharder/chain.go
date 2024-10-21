@@ -41,7 +41,6 @@ func SetupSharderChain(c *chain.Chain) {
 	sharderChain.BlockTxnCache = cache.NewLRUCache[string, *transaction.TransactionSummary](transactionCacheSize)
 	c.SetFetchedNotarizedBlockHandler(sharderChain)
 	c.SetViewChanger(sharderChain)
-	c.SetAfterFetcher(sharderChain)
 	c.SetMagicBlockSaver(sharderChain)
 	sharderChain.BlockSyncStats = &SyncStats{}
 	c.RoundF = SharderRoundFactory{}
@@ -549,6 +548,10 @@ loop:
 		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
 		if err != nil {
 			return err
+		}
+
+		if bl.lfb.Round > sc.GetCurrentRound() {
+			sc.SetCurrentRound(bl.lfb.Round)
 		}
 
 		logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")

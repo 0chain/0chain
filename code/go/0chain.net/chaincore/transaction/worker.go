@@ -122,6 +122,7 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	}
 
 	var past []datastore.Entity
+	var pastTxnHash []string
 	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata, collectionName,
 		func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
 			current, ok := qe.(*Transaction)
@@ -133,6 +134,7 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 			maxNonce := clientMaxNonce[current.ClientID]
 			if current.Nonce <= maxNonce {
 				past = append(past, current)
+				pastTxnHash = append(pastTxnHash, current.Hash)
 			}
 			return true, nil
 		})
@@ -148,9 +150,92 @@ func RemoveFromPool(ctx context.Context, txns []datastore.Entity) {
 	logging.Logger.Info("cleaning transactions",
 		zap.String("collection", collectionName),
 		zap.Int("missing_count", len(txns)),
-		zap.Any("txns", txnHashes))
+		zap.Any("txns", txnHashes),
+		zap.Any("past txns", pastTxnHash))
 	err = transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, txns)
 	if err != nil {
 		logging.Logger.Error("Error in MultiDeleteFromCollection", zap.Error(err))
 	}
+}
+
+func RemoveFutureTxns(ctx context.Context, creationDate common.Timestamp, nonce int64, clientID string) ([]datastore.Entity, error) {
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	txn := transactionEntityMetadata.Instance().(*Transaction)
+	collectionName := txn.GetCollectionName()
+
+	var (
+		futureTxns []datastore.Entity
+		txnHashes  []string
+	)
+
+	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata,
+		collectionName, func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
+			txn, ok := qe.(*Transaction)
+			if !ok {
+				logging.Logger.Error("remove future txns (invalid entity)", zap.Any("entity", qe))
+				return true, nil
+			}
+
+			if (txn.CreationDate >= creationDate || (nonce > 0 && txn.Nonce >= nonce)) && txn.ClientID == clientID {
+				futureTxns = append(futureTxns, txn)
+				txnHashes = append(txnHashes, txn.Hash)
+			}
+			return true, nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(futureTxns) == 0 {
+		return nil, nil
+	}
+
+	logging.Logger.Info("[mvc] clean txns, future transactions", zap.Any("txns", txnHashes))
+	return futureTxns, nil
+	// return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, futureTxns)
+}
+
+func RemoveOldNonceTxns(ctx context.Context, clientID string, nonce int64) ([]datastore.Entity, error) {
+	logging.Logger.Debug("[mvc] remove old nonce txns", zap.String("clientID", clientID), zap.Int64("nonce", nonce))
+	cctx := memorystore.WithEntityConnection(ctx, transactionEntityMetadata)
+	defer memorystore.Close(cctx)
+
+	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
+	txn := transactionEntityMetadata.Instance().(*Transaction)
+	collectionName := txn.GetCollectionName()
+
+	var (
+		oldTxns   []datastore.Entity
+		txnHashes []string
+	)
+
+	err := transactionEntityMetadata.GetStore().IterateCollection(cctx, transactionEntityMetadata,
+		collectionName, func(ctx context.Context, qe datastore.CollectionEntity) (bool, error) {
+			txn, ok := qe.(*Transaction)
+			if !ok {
+				logging.Logger.Error("remove future txns (invalid entity)", zap.Any("entity", qe))
+				return true, nil
+			}
+
+			if txn.Nonce <= nonce && txn.ClientID == clientID {
+				oldTxns = append(oldTxns, txn)
+				txnHashes = append(txnHashes, txn.Hash)
+			}
+			return true, nil
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	if len(oldTxns) == 0 {
+		logging.Logger.Debug("[mvc] see no old txns", zap.String("clientID", clientID), zap.Int64("nonce", nonce))
+		return nil, nil
+	}
+
+	logging.Logger.Info("[mvc] clean txns, old transactions", zap.Any("txns", txnHashes))
+	return oldTxns, nil
+	// return transactionEntityMetadata.GetStore().MultiDeleteFromCollection(cctx, transactionEntityMetadata, oldTxns)
 }

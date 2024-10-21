@@ -13,8 +13,9 @@ import (
 func (msc *MinerSmartContract) addToDelegatePool(t *transaction.Transaction,
 	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	string, error) {
+	gnb := gn.MustBase()
 	return stakepool.StakePoolLock(t, input, balances,
-		stakepool.ValidationSettings{MaxStake: gn.MaxStake, MinStake: gn.MinStake, MaxNumDelegates: gn.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
+		stakepool.ValidationSettings{MaxStake: gnb.MaxStake, MinStake: gnb.MinStake, MaxNumDelegates: gnb.MaxDelegates}, msc.getStakePoolAdapter, msc.refreshProvider)
 }
 
 // getStakePool of given blobber

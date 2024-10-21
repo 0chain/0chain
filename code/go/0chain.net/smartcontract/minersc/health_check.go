@@ -21,7 +21,7 @@ func (msc *MinerSmartContract) minerHealthCheck(t *transaction.Transaction,
 	}
 
 	//TODO move it to config
-	downtime := common.Downtime(mn.LastHealthCheck, t.CreationDate, gn.HealthCheckPeriod)
+	downtime := common.Downtime(mn.LastHealthCheck, t.CreationDate, gn.MustBase().HealthCheckPeriod)
 	mn.LastHealthCheck = t.CreationDate
 	emitMinerHealthCheck(mn, downtime, balances)
 
@@ -47,7 +47,7 @@ func (msc *MinerSmartContract) sharderHealthCheck(t *transaction.Transaction,
 			"can't get the sharder "+t.ClientID+": "+err.Error())
 	}
 
-	downtime := common.Downtime(sn.LastHealthCheck, t.CreationDate, gn.HealthCheckPeriod)
+	downtime := common.Downtime(sn.LastHealthCheck, t.CreationDate, gn.MustBase().HealthCheckPeriod)
 	sn.LastHealthCheck = t.CreationDate
 	emitSharderHealthCheck(sn, downtime, balances)
 
