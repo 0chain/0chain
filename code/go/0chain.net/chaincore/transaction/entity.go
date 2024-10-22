@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -284,7 +283,7 @@ func (t *Transaction) GetScore() (int64, error) {
 	if config.Configuration().ChainConfig.IsFeeEnabled() {
 		if t.IsExempt {
 			// high score for exempt transactions
-			return math.MaxInt64, nil
+			return 100 * 1e10, nil
 		}
 
 		return t.Fee.Int64()
