@@ -1893,6 +1893,10 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		if v2 := alloc.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 			isEnterprise = true
 		}
+	} else if alloc.Entity().GetVersion() == "v3" {
+		if v3 := alloc.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
+			isEnterprise = true
+		}
 	}
 
 	allocBase := alloc.mustBase()

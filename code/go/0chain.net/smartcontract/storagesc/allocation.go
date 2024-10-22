@@ -1486,6 +1486,10 @@ func (sc *StorageSmartContract) cancelAllocationRequest(
 			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 				isEnterprise = true
 			}
+		} else if sa.Entity().GetVersion() == "v3" {
+			if v3 := sa.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
+				isEnterprise = true
+			}
 		}
 		return nil
 	}); actErr != nil {
@@ -1611,6 +1615,10 @@ func (sc *StorageSmartContract) finalizeAllocationInternal(
 	}, func() error {
 		if sa.Entity().GetVersion() == "v2" {
 			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+				isEnterprise = true
+			}
+		} else if sa.Entity().GetVersion() == "v3" {
+			if v3 := sa.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
 				isEnterprise = true
 			}
 		}
