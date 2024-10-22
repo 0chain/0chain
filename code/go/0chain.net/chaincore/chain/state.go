@@ -308,6 +308,7 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	}
 
 	if _, ok := c.ChainConfig.TxnExempt()[txn.FunctionName]; ok {
+		txn.IsExempt = true
 		return cost, 0, nil
 	}
 
