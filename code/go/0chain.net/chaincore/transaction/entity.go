@@ -284,7 +284,7 @@ func (t *Transaction) GetScore() (int64, error) {
 	if config.Configuration().ChainConfig.IsFeeEnabled() {
 		if t.IsExempt {
 			// high score for exempt transactions
-			return math.MaxInt, nil
+			return math.MaxInt64, nil
 		}
 
 		return t.Fee.Int64()
