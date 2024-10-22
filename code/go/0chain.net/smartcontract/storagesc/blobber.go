@@ -933,6 +933,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 				return common.NewError("commit_connection_failed",
 					"commit connection not allowed for enterprise enterprise allocation")
 			}
+		} else if sa.Entity().GetVersion() == "v3" {
+			if v3 := sa.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
+				return common.NewError("commit_connection_failed",
+					"commit connection not allowed for enterprise enterprise allocation")
+			}
 		}
 		return nil
 	}); actErr != nil {
