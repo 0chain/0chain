@@ -840,7 +840,8 @@ type TxnIterInfo struct {
 	// included transaction data size
 	byteSize int64
 	// accumulated transaction cost
-	cost int
+	cost         int
+	exemptTxnNum int
 }
 
 func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
@@ -957,6 +958,15 @@ func txnIterHandlerFunc(
 
 			// skipping and continue
 			return true, nil
+		}
+
+		if fee == 0 { // exempt transaction
+			if tii.exemptTxnNum > 0 {
+				// only allow 1 exempt transaction per block
+				return true, nil // return and continue
+			}
+
+			tii.exemptTxnNum++
 		}
 
 		if mc.IsFeeEnabled() {
