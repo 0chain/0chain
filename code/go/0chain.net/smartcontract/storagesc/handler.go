@@ -280,6 +280,7 @@ type allocationBlobbersRequest struct {
 	WritePriceRange PriceRange `json:"write_price_range"`
 	Size            int64      `json:"size"`
 	IsRestricted    int        `json:"is_restricted"`
+	StorageVersion  int        `json:"storage_version"`
 }
 
 func (nar *allocationBlobbersRequest) decode(b []byte) error {
@@ -411,6 +412,7 @@ func getBlobbersForRequest(request allocationBlobbersRequest, edb *event.EventDb
 		AllocationSizeInGB: sizeInGB(allocationSize),
 		NumberOfDataShards: request.DataShards,
 		IsRestricted:       request.IsRestricted,
+		StorageVersion:     request.StorageVersion,
 	}
 
 	logging.Logger.Debug("alloc_blobbers", zap.Int64("ReadPriceRange.Min", allocation.ReadPriceRange.Min),
@@ -1891,6 +1893,10 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		if v2 := alloc.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
 			isEnterprise = true
 		}
+	} else if alloc.Entity().GetVersion() == "v3" {
+		if v3 := alloc.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
+			isEnterprise = true
+		}
 	}
 
 	allocBase := alloc.mustBase()
@@ -1947,7 +1953,7 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 		cpBalance = cp.Balance
 	}
 
-	tokensRequiredToLockZCN, err := allocBase.requiredTokensForUpdateAllocation(currency.Coin(cpBalance), req.Extend, isEnterprise, common.Timestamp(time.Now().Unix()))
+	tokensRequiredToLockZCN, err := requiredTokensForUpdateAllocation(allocBase, currency.Coin(cpBalance), req.Extend, isEnterprise, common.Timestamp(time.Now().Unix()))
 	if err != nil {
 		common.Respond(w, r, nil, common.NewErrInternal(err.Error()))
 		return
@@ -1959,6 +1965,47 @@ func (srh *StorageRestHandler) getAllocationUpdateMinLock(w http.ResponseWriter,
 	common.Respond(w, r, AllocationUpdateMinLockResponse{
 		MinLockDemand: tokensRequiredToLock,
 	}, nil)
+}
+
+func requiredTokensForUpdateAllocation(sa *storageAllocationBase, cpBalance currency.Coin, extend, isEnterprise bool, now common.Timestamp) (currency.Coin, error) {
+	var (
+		costOfAllocAfterUpdate currency.Coin
+		tokensRequiredToLock   currency.Coin
+		err                    error
+	)
+
+	if isEnterprise || extend {
+		costOfAllocAfterUpdate, err = sa.cost()
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+		}
+	} else {
+		costOfAllocAfterUpdate, err = sa.costForRDTU(now)
+		if err != nil {
+			return 0, fmt.Errorf("failed to get allocation cost: %v", err)
+		}
+	}
+
+	totalWritePool := sa.WritePool + cpBalance
+
+	if totalWritePool < costOfAllocAfterUpdate {
+		tokensRequiredToLock = costOfAllocAfterUpdate - totalWritePool
+	} else {
+		tokensRequiredToLock = 0
+	}
+
+	logging.Logger.Info("requiredTokensForUpdateAllocation",
+		zap.Any("costOfAllocAfterUpdate", costOfAllocAfterUpdate),
+		zap.Any("totalWritePool", totalWritePool),
+		zap.Any("tokensRequiredToLock", tokensRequiredToLock),
+		zap.Any("extend", extend),
+		zap.Any("isEnterprise", isEnterprise),
+		zap.Any("sa", sa),
+		zap.Any("cpBalance", cpBalance),
+		zap.Any("now", now),
+	)
+
+	return tokensRequiredToLock, nil
 }
 
 func changeBlobbersEventDB(
@@ -2604,8 +2651,9 @@ type storageNodeResponse struct {
 	UncollectedServiceCharge currency.Coin `json:"uncollected_service_charge"`
 	CreatedAt                time.Time     `json:"created_at"`
 
-	IsRestricted bool `json:"is_restricted"`
-	IsEnterprise bool `json:"is_enterprise"`
+	IsRestricted   bool `json:"is_restricted"`
+	IsEnterprise   bool `json:"is_enterprise"`
+	StorageVersion int  `json:"storage_version"`
 }
 
 func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNode) (storageNodeResponse, error) {
@@ -2643,6 +2691,19 @@ func StoragNodeToStorageNodeResponse(balances cstate.StateContextI, sn StorageNo
 				}
 				if v3.IsEnterprise != nil {
 					sr.IsEnterprise = *v3.IsEnterprise
+				}
+			}
+		} else if sn.Entity().GetVersion() == "v4" {
+			v4, ok := sn.Entity().(*storageNodeV4)
+			if ok {
+				if v4.IsRestricted != nil {
+					sr.IsRestricted = *v4.IsRestricted
+				}
+				if v4.IsEnterprise != nil {
+					sr.IsEnterprise = *v4.IsEnterprise
+				}
+				if v4.StorageVersion != nil {
+					sr.StorageVersion = *v4.StorageVersion
 				}
 			}
 		} else {
@@ -2712,6 +2773,33 @@ func storageNodeResponseToStorageNodeV3(snr storageNodeResponse) *storageNodeV3 
 	}
 }
 
+func storageNodeResponseToStorageNodeV4(snr storageNodeResponse) *storageNodeV4 {
+	return &storageNodeV4{
+		Provider: provider.Provider{
+			ID:              snr.ID,
+			ProviderType:    spenum.Blobber,
+			LastHealthCheck: snr.LastHealthCheck,
+			HasBeenKilled:   snr.IsKilled,
+			HasBeenShutDown: snr.IsShutdown,
+		},
+		Version:                 "v4",
+		BaseURL:                 snr.BaseURL,
+		Terms:                   snr.Terms,
+		Capacity:                snr.Capacity,
+		Allocated:               snr.Allocated,
+		PublicKey:               snr.PublicKey,
+		SavedData:               snr.SavedData,
+		DataReadLastRewardRound: snr.DataReadLastRewardRound,
+		LastRewardDataReadRound: snr.LastRewardDataReadRound,
+		StakePoolSettings:       snr.StakePoolSettings,
+		RewardRound:             snr.RewardRound,
+		NotAvailable:            snr.NotAvailable,
+		IsRestricted:            &snr.IsRestricted,
+		IsEnterprise:            &snr.IsEnterprise,
+		StorageVersion:          &snr.StorageVersion,
+	}
+}
+
 func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 	return storageNodeResponse{
 		ID:      blobber.ID,
@@ -2746,6 +2834,7 @@ func blobberTableToStorageNode(blobber event.Blobber) storageNodeResponse {
 		CreatedAt:                blobber.CreatedAt,
 		IsRestricted:             blobber.IsRestricted,
 		IsEnterprise:             blobber.IsEnterprise,
+		StorageVersion:           blobber.StorageVersion,
 	}
 }
 

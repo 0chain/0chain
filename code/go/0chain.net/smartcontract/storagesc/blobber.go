@@ -105,7 +105,7 @@ func (ssc *StorageSmartContract) resetBlobberStats(
 	}
 
 	sp.TotalOffers = fixRequest.NewTotalOffers
-	sp.isOfferChanged = true
+	sp.IsOfferChanged = true
 	if err := sp.Save(spenum.Blobber, fixRequest.BlobberID, balances); err != nil {
 		return "", common.NewError("reset_blobber_stats_failed",
 			"can't save stake pool: "+err.Error())
@@ -246,11 +246,27 @@ func (sc *StorageSmartContract) updateBlobber(
 				return nil
 			})
 		}, func() error {
-			return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
-				b := e.(*storageNodeV3)
-				b.IsRestricted = updateBlobber.IsRestricted
-				return nil
-			})
+			if actErr := cstate.WithActivation(balances, "hercules",
+				func() error {
+					return existingBlobber.Update(&storageNodeV3{}, func(e entitywrapper.EntityI) error {
+						b := e.(*storageNodeV3)
+						b.IsRestricted = updateBlobber.IsRestricted
+						return nil
+					})
+				}, func() error {
+					return existingBlobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+						b := e.(*storageNodeV4)
+						b.IsRestricted = updateBlobber.IsRestricted
+
+						if b.StorageVersion == nil || *b.StorageVersion == 0 {
+							b.StorageVersion = updateBlobber.StorageVersion
+						}
+						return nil
+					})
+				}); actErr != nil {
+				return fmt.Errorf("error updating blobber: %v", actErr)
+			}
+			return nil
 		}); actErr != nil {
 		return fmt.Errorf("error with activation: %v", actErr)
 	}
@@ -380,27 +396,37 @@ func (sc *StorageSmartContract) addBlobber(t *transaction.Transaction,
 
 	blobber := &StorageNode{}
 
-	beforeElectra := func() error {
-		b := storageNodeV2{}
+	err = state.WithActivation(balances, "hercules", func() error {
+		return state.WithActivation(balances, "electra", func() error {
+			b := storageNodeV2{}
+			if err := json.Unmarshal(input, &b); err != nil {
+				return common.NewError("add_or_update_blobber_failed",
+					"malformed request: "+err.Error())
+			}
+			blobber.SetEntity(&b)
+			return nil
+		}, func() error {
+			b := storageNodeV3{}
+			if err := json.Unmarshal(input, &b); err != nil {
+				return common.NewError("add_or_update_blobber_failed",
+					"malformed request: "+err.Error())
+			}
+			blobber.SetEntity(&b)
+			return nil
+		})
+	}, func() error {
+		b := storageNodeV4{}
 		if err := json.Unmarshal(input, &b); err != nil {
 			return common.NewError("add_or_update_blobber_failed",
 				"malformed request: "+err.Error())
 		}
-		blobber.SetEntity(&b)
-		return nil
-	}
-
-	afterElectra := func() error {
-		b := storageNodeV3{}
-		if err := json.Unmarshal(input, &b); err != nil {
-			return common.NewError("add_or_update_blobber_failed",
-				"malformed request: "+err.Error())
+		if b.ManagingWallet == nil || *b.ManagingWallet == "" {
+			b.ManagingWallet = new(string)
+			*b.ManagingWallet = b.StakePoolSettings.DelegateWallet
 		}
 		blobber.SetEntity(&b)
 		return nil
-	}
-
-	err = state.WithActivation(balances, "electra", beforeElectra, afterElectra)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -476,18 +502,44 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 			"blobber's delegate_wallet is not set")
 	}
 
-	if txn.ClientID != existingSp.Settings.DelegateWallet {
-		return "", common.NewError("update_blobber_settings_failed",
-			"access denied, allowed for delegate_wallet owner only")
+	isDelegateWallet := txn.ClientID == existingSp.Settings.DelegateWallet
+	if isDelegateWallet {
+		// merge the savedBlobber and updatedBlobber fields using the deltas from the updatedBlobber and
+		// emit the update blobber event to db.
+		if err = sc.updateBlobber(txn, conf, updatedBlobber, blobber, existingSp, balances); err != nil {
+			return "", common.NewError("update_blobber_settings_failed", err.Error())
+		}
 	}
 
-	// merge the savedBlobber and updatedBlobber fields using the deltas from the updatedBlobber and
-	// emit the update blobber event to db.
-	if err = sc.updateBlobber(txn, conf, updatedBlobber, blobber, existingSp, balances); err != nil {
-		return "", common.NewError("update_blobber_settings_failed", err.Error())
+	isManagingWallet := false
+
+	actErr := cstate.WithActivation(balances, "hercules", func() error {
+		return nil
+	}, func() error {
+		if blobber.Entity().GetVersion() == "v4" && updatedBlobber.StakePoolSettings != nil && updatedBlobber.StakePoolSettings.DelegateWallet != nil && *updatedBlobber.StakePoolSettings.DelegateWallet != "" {
+			v4 := blobber.Entity().(*storageNodeV4)
+			if v4.ManagingWallet != nil && *v4.ManagingWallet == txn.ClientID {
+				isManagingWallet = true
+				existingSp.Settings.DelegateWallet = *updatedBlobber.StakePoolSettings.DelegateWallet
+				err = existingSp.Save(spenum.Blobber, updatedBlobber.ID, balances)
+				if err != nil {
+					return common.NewError("update_blobber_settings_failed",
+						"can't save related stake pool: "+err.Error())
+				}
+			}
+		}
+		return nil
+	})
+	if actErr != nil {
+		return "", actErr
 	}
 
-	return string(blobber.Encode()), nil
+	if isManagingWallet || isDelegateWallet {
+		return string(blobber.Encode()), nil
+	}
+
+	return "", common.NewError("update_blobber_settings_failed",
+		"access denied, allowed for delegate_wallet owner only")
 }
 
 func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
@@ -878,6 +930,11 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 	if actErr := cstate.WithActivation(balances, "electra", func() error { return nil }, func() error {
 		if sa.Entity().GetVersion() == "v2" {
 			if v2 := sa.Entity().(*storageAllocationV2); v2 != nil && v2.IsEnterprise != nil && *v2.IsEnterprise {
+				return common.NewError("commit_connection_failed",
+					"commit connection not allowed for enterprise enterprise allocation")
+			}
+		} else if sa.Entity().GetVersion() == "v3" {
+			if v3 := sa.Entity().(*storageAllocationV3); v3 != nil && v3.IsEnterprise != nil && *v3.IsEnterprise {
 				return common.NewError("commit_connection_failed",
 					"commit connection not allowed for enterprise enterprise allocation")
 			}
@@ -1275,4 +1332,47 @@ func emitUpdateBlobberReadStatEvent(r *ReadMarker, balances cstate.StateContextI
 
 func isRollback(commitConnection BlobberCloseConnection, commitWM, lastWM *writeMarkerBase) bool {
 	return commitConnection.AllocationRoot == commitConnection.PrevAllocationRoot && commitWM.Size == 0 && lastWM != nil && commitWM.Timestamp == lastWM.Timestamp && commitConnection.AllocationRoot == lastWM.PreviousAllocationRoot
+}
+
+func (sc *StorageSmartContract) updateBlobberVersion(t *transaction.Transaction, input []byte, balances cstate.StateContextI) (string, error) {
+	conf, err := sc.getConfig(balances, true)
+	if err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"can't get the config: "+err.Error())
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("update_blobber_version", func() bool {
+		return t.ClientID == conf.OwnerId
+	}); err != nil {
+		return "", common.NewError("update_blobber_version_failed", err.Error())
+	}
+
+	storageNodeDto := &dto.StorageNodeVersion{}
+	if err := json.Unmarshal(input, storageNodeDto); err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"malformed request: "+err.Error())
+	}
+
+	var (
+		blobber *StorageNode
+	)
+	if blobber, err = sc.getBlobber(storageNodeDto.Id, balances); err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"can't get the blobber "+t.ClientID+": "+err.Error())
+	}
+
+	err = blobber.Update(&storageNodeV4{}, func(e entitywrapper.EntityI) error {
+		return nil
+	})
+	if err != nil {
+		return "", common.NewError("update_blobber_version_failed", "can't update blobber version: "+err.Error())
+	}
+
+	_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+	if err != nil {
+		return "", common.NewError("update_blobber_version_failed",
+			"can't Save blobber: "+err.Error())
+	}
+
+	return string(blobber.Encode()), nil
 }

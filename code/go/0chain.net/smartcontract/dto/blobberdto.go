@@ -23,6 +23,7 @@ type StorageDtoNode struct {
 	RewardRound             *RewardRound `json:"reward_round,omitempty"`
 	NotAvailable            *bool        `json:"not_available,omitempty"`
 	IsRestricted            *bool        `json:"is_restricted,omitempty"`
+	StorageVersion          *int         `json:"storage_version,omitempty"`
 }
 
 type RewardRound struct {
@@ -39,4 +40,8 @@ type ResetBlobberStatsDto struct {
 	BlobberID       string        `json:"blobber_id"`
 	PrevTotalOffers currency.Coin `json:"prev_total_offers"`
 	NewTotalOffers  currency.Coin `json:"new_total_offers"`
+}
+
+type StorageNodeVersion struct {
+	Id string `json:"id"`
 }
