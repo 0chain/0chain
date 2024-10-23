@@ -519,8 +519,10 @@ func (r *Runner) CheckFileMetaRoot(cfg *config.CheckFileMetaRoot) error {
 	}
 
 	curFmr := fmrs[0]
+	fmt.Println("\n \n current fmr : ", curFmr)
 	allEqual := true
 	for i := 1; i < len(fmrs); i++ {
+		fmt.Println("\n \n current fmr : ", fmrs[i])
 		allEqual = allEqual && curFmr == fmrs[i]
 		curFmr = fmrs[i]
 	}
@@ -925,7 +927,7 @@ func (r *Runner) runAsyncCommand(reply chan error, name string, params map[strin
 	if retryCount == 0 {
 		retryCount = 1
 	}
-	
+
 	for i := 0; i < retryCount; i++ {
 		err = r.conf.Execute(name, params, failureThreshold)
 		if err == nil {
@@ -934,7 +936,7 @@ func (r *Runner) runAsyncCommand(reply chan error, name string, params map[strin
 		}
 		log.Printf(" [ERR] command %q failed: %v", name, err)
 	}
-	
+
 	reply <- err // nil or error (of the latest run)
 }
 
@@ -1170,9 +1172,15 @@ func (r *Runner) SetServerState(update interface{}) error {
 			state.GenerateAllChallenges = bool(update)
 		case *config.RenameCommitControl:
 			if update.Fail {
+				fmt.Println("before :: ", state.FailRenameCommit)
+				fmt.Println(" fail true : union slice")
 				state.FailRenameCommit = utils.SliceUnion(state.FailRenameCommit, update.Nodes)
+				fmt.Println("after :: ", state.FailRenameCommit)
 			} else {
+				fmt.Println("before :: ", state.FailRenameCommit)
+				fmt.Println(" fail false : slice difference")
 				state.FailRenameCommit = utils.SliceDifference(state.FailRenameCommit, update.Nodes)
+				fmt.Println("after :: ", state.FailRenameCommit)
 			}
 			fmt.Printf("state.FailRenameCommit = %v\n", state.FailRenameCommit)
 		case *config.UploadCommitControl:
@@ -1305,8 +1313,14 @@ func (r *Runner) CheckRollbackTokenomicsComparison() error {
 		log.Printf("[INF] checking rollback tokenomics comparison")
 	}
 
+	// get the same allocation service from shareder url
+	fmt.Println(" =====================into CheckRollbackTokenomicsComparison=====================")
 	allocationService := services.NewAllocationService(r.conf.Sharder1BaseURL)
 
+	fmt.Println("============ allocation service ================")
+	fmt.Println(allocationService)
+	fmt.Println("============ allocation service ================")
+	// checking rollback tokens
 	check, err := allocationService.CompareRollBackTokens()
 	if err != nil {
 		return err
@@ -1324,8 +1338,11 @@ func (r *Runner) StoreAllocationsData() error {
 		log.Printf("[INF] storing allocations data : " + r.conf.Sharder1BaseURL)
 	}
 
+	fmt.Println(r.conf.Sharder1BaseURL)
+	// getting the allocation service from this Sharder1BaseURL
 	allocationService := services.NewAllocationService(r.conf.Sharder1BaseURL)
 
+	// set allocation data from here
 	err := allocationService.StoreAllocationsData()
 	if err != nil {
 		return err

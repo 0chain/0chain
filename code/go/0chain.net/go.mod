@@ -41,7 +41,7 @@ require (
 
 require (
 	github.com/0chain/common v1.13.1-0.20240726100134-cbf5bf9beaac
-	github.com/0chain/gosdk v1.16.0
+	github.com/0chain/gosdk v1.17.10-0.20241005164427-3de74604f3b8
 	github.com/IBM/sarama v1.42.2
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/herumi/bls-go-binary v1.33.0
@@ -72,6 +72,8 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.26 // indirect
+	github.com/hack-pad/go-webworkers v0.1.0 // indirect
+	github.com/hack-pad/safejs v0.1.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -81,6 +83,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 )
 
 require (

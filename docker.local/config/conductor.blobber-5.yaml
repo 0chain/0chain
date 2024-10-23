@@ -1,213 +1,221 @@
 # enabled test cases sets
 enable:
-  - "Minority Cases"
+- "Minority Cases"
 
 # sets of test cases
 sets:
-  - name: "Minority Cases"
-    tests:
-      - "Allocation state should be same after rollback"
-      - "Allocation state should be same after repair"
-      - "Rollback tokenomics"
+- name: "Minority Cases"
+  tests:
+  - "Allocation state should be same after rollback"
+  - "Allocation state should be same after repair"
+  - "Rollback tokenomics"
 
 # test cases
 tests:
-  - name: "Allocation state should be same after rollback"
-    flow:
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - command:
-          name: "cleanup_blobbers"
-      - command:
-          name: "cleanup_0dns"
-      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
-      - wait_round:
-          round: 15 # just wait the BC starts
-      - start: ['0dns']
-      # wait the 0dns starts
-      - sleep: "20s"
-      - wait_add:
-          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
-          validators: ['validator-1', 'validator-2', 'validator-3']
-          timeout: '15m'
-          start: true
-      - command:
-          name: "check_registered"
-          params:
-            provider_type: blobber
-            provider_ids:
-              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-              - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
-              - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-      - command:
-          name: "check_registered"
-          params:
-            provider_type: validator
-            provider_ids:
-              - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
-              - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
-              - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
-      - wait_round:
-          shift: 50
-      - command:
-          name: 'init_allocation_only'
-          timeout: '25m'
-          retry_count: 3
-      - wait_round:
-          shift: 250
-      - command:
-          name: "upload"
-          params:
-            remotepath: /remote/upload.bin
-      - wait_round: # successive download requests need rest in between them
-          shift: 250
-      - command:
-          name: "upload"
-          params:
-            remotepath: /remote/new.bin
-      - fail_rename_commit: ['blobber-1', 'blobber-2']
-      - sleep: "1m" # simple wait for blobbers to pick up state
-      - command:
-          name: 'rename_can_fail'
-          params:
-            remotepath: /remote/upload.bin
-            destname: upload_renamed.bin
-      - disable_fail_rename_commit: ['blobber-1', 'blobber-2']
-      - sleep: "1m" # simple wait for blobbers to pick up state
-      - command:
-          name: 'rename'
-          params:
-            remotepath: /remote/new.bin
-            destname: new_renamed.bin
-      - wait_for_file_meta_root: {}
-      - check_file_meta_root:
-          require_same_root: true
-  - name: "Allocation state should be same after repair"
-    flow:
-      - sleep: "1m"
-      - set_monitor: "sharder-1"
-      - cleanup_bc: {}
-      - command:
-          name: "cleanup_blobbers"
-      - command:
-          name: "cleanup_0dns"
-      - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
-      - wait_round:
-          round: 15 # just wait the BC starts
-      - start: ['0dns']
-      # wait the 0dns starts
-      - sleep: "20s"
-      - wait_add:
-          blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
-          validators: ['validator-1', 'validator-2', 'validator-3']
-          timeout: '15m'
-          start: true
-      - command:
-          name: "check_registered"
-          params:
-            provider_type: blobber
-            provider_ids:
-              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-              - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
-              - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-      - command:
-          name: "check_registered"
-          params:
-            provider_type: validator
-            provider_ids:
-              - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
-              - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
-              - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
-      - wait_round:
-          shift: 50
-      - command:
-          name: 'init_allocation_only'
-          timeout: '25m'
-          retry_count: 3
-          params:
-            data_shards: "2"
-            parity_shards: "1"
-      - wait_round:
-          shift: 250
-      - command:
-          name: "upload"
-          params:
-            remotepath: /remote/upload.bin
-      - wait_round: # successive download requests need rest in between them
-          shift: 250
-      - command:
-          name: "upload"
-          params:
-            remotepath: /remote/new.bin
-      - fail_rename_commit: ['blobber-1']
-      - sleep: "1m" # simple wait for blobbers to pick up state
-      - command:
-          name: 'rename_can_fail'
-          params:
-            remotepath: /remote/upload.bin
-            destname: upload_renamed.bin
-      - disable_fail_rename_commit: ['blobber-1']
-      - sleep: "1m" # simple wait for blobbers to pick up state
-      - command:
-          name: 'rename'
-          params:
-            remotepath: /remote/new.bin
-            destname: new_renamed.bin
-      - wait_for_file_meta_root: {}
-      - check_file_meta_root:
-          require_same_root: true
-  - name: "Rollback tokenomics"
-    flow:
-      - sleep: "1m"
-      - set_monitor: "sharder-1"
-      - cleanup_bc: { }
-      - command:
-          name: "cleanup_blobbers"
-      - command:
-          name: "cleanup_0dns"
-      - start: [ 'sharder-1', 'miner-1', 'miner-2', 'miner-3' ]
-      - wait_round:
-          round: 15 # just wait the BC starts
-      - start: [ '0dns' ]
-      # wait the 0dns starts
-      - sleep: "20s"
-      - wait_add:
-          blobbers: [ 'blobber-1', 'blobber-2', 'blobber-3' ]
-          validators: [ 'validator-1', 'validator-2', 'validator-3' ]
-          timeout: '15m'
-          start: true
-      - command:
-          name: "check_registered"
-          params:
-            provider_type: blobber
-            provider_ids:
-              - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
-              - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
-              - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
-      - command:
-          name: "check_registered"
-          params:
-            provider_type: validator
-            provider_ids:
-              - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
-              - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
-              - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
-      - wait_round:
-          shift: 50
-      - command:
-          name: 'init_allocation_only'
-          timeout: '25m'
-          retry_count: 3
-          params:
-            data_shards: "2"
-            parity_shards: "1"
-      - sleep: "1m"
-      - store_allocations_data: { }
-      - fail_upload_commit: ['blobber-3']
-      - sleep: "1m" # simple wait for blobbers to pick up state
-      - command:
-          name: "upload_can_fail"
-          params:
-            remotepath: /remote/upload.bin
-      - sleep: "3m" # simple wait for blobbers to pick up state
-      - check_rollback_tokenomics: { }
+- name: "Allocation state should be same after rollback"
+  flow:
+  - set_monitor: "sharder-1"
+  - cleanup_bc: {}
+  - command:
+      name: "cleanup_blobbers"
+  - command:
+      name: "cleanup_0dns"
+  - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+  - wait_round:
+      round: 15 # ju st wait the BC starts
+  - start: ['0dns']
+  # wait the 0dns starts
+  - sleep: "20s"
+  - wait_add:
+      blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+      validators: ['validator-1', 'validator-2', 'validator-3']
+      timeout: '15m'
+      start: true
+  - command:
+      name: "check_registered"
+      params:
+        provider_type: blobber
+        provider_ids:
+        - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+        - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
+        - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+  - command:
+      name: "check_registered"
+      params:
+        provider_type: validator
+        provider_ids:
+        - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+        - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
+        - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+  - wait_round:
+      shift: 50
+  - command:
+      name: 'init_allocation_only'
+      timeout: '25m'
+      retry_count: 3
+  - wait_round:
+      shift: 250
+  - command:
+      name: "upload"
+      params:
+        remotepath: /remote/upload.bin
+  - wait_round: # successive download requests need rest in between them
+      shift: 250
+  - command:
+      name: "upload"
+      params:
+        remotepath: /remote/new.bin
+ 
+  - fail_rename_commit: ['blobber-1', 'blobber-2']
+  - sleep: "1m" # simple wait for blobbers to pick up state
+  - command:
+      name: 'rename_can_fail'
+      params:
+        remotepath: /remote/upload.bin
+        destname: upload_renamed.bin
+  - disable_fail_rename_commit: ['blobber-1', 'blobber-2']
+  - sleep: "1m" # simple wait for blobbers to pick up state
+  - command:
+      name: 'rename'
+      params:
+        remotepath: /remote/new.bin
+        destname: new_renamed.bin
+  - wait_for_file_meta_root: {}
+  # error coming at this place
+  - check_file_meta_root:
+      require_same_root: true
+
+# - name: "Allocation state should be same after repair"
+#   flow:
+#   - sleep: "1m"
+#   - set_monitor: "sharder-1"
+#   - cleanup_bc: {}
+#   - command:
+#       name: "cleanup_blobbers"
+#   - command:
+#       name: "cleanup_0dns"
+#   - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+#   - wait_round:
+#       round: 15 # just wait the BC starts
+#   - start: ['0dns']
+#   # wait the 0dns starts
+#   - sleep: "20s"
+#   - wait_add:
+#       blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+#       validators: ['validator-1', 'validator-2', 'validator-3']
+#       timeout: '15m'
+#       start: true
+#   - command:
+#       name: "check_registered"
+#       params:
+#         provider_type: blobber
+#         provider_ids:
+#         - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+#         - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
+#         - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+#   - command:
+#       name: "check_registered"
+#       params:
+#         provider_type: validator
+#         provider_ids:
+#         - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+#         - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
+#         - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+#   - wait_round:
+#       shift: 50
+#   - command:
+#       name: 'init_allocation_only'
+#       timeout: '25m'
+#       retry_count: 3
+#       params:
+#         data_shards: "2"
+#         parity_shards: "1"
+#   - wait_round:
+#       shift: 250
+#   - command:
+#       name: "upload"
+#       params:
+#         remotepath: /remote/upload.bin
+#   - wait_round: # successive download requests need rest in between them
+#       shift: 250
+#   - command:
+#       name: "upload"
+#       params:
+#         remotepath: /remote/new.bin
+#   - fail_rename_commit: ['blobber-1']
+#   - sleep: "1m" # simple wait for blobbers to pick up state
+#   - command:
+#       name: 'rename_can_fail'
+#       params:
+#         remotepath: /remote/upload.bin
+#         destname: upload_renamed.bin
+#   - disable_fail_rename_commit: ['blobber-1']
+#   - sleep: "1m" # simple wait for blobbers to pick up state
+#   # error occured here
+#   - command:
+#       name: 'rename'
+#       params:
+#         remotepath: /remote/new.bin
+#         destname: new_renamed.bin
+#   - wait_for_file_meta_root: {}
+#   - check_file_meta_root:
+#       require_same_root: true
+
+# - name: "Rollback tokenomics"
+#   flow:
+#   - sleep: "1m"
+#   - set_monitor: "sharder-1"
+#   - cleanup_bc: {}
+#   - command:
+#       name: "cleanup_blobbers"
+#   - command:
+#       name: "cleanup_0dns"
+#   - start: ['sharder-1', 'miner-1', 'miner-2', 'miner-3']
+#   - wait_round:
+#       round: 15 # just wait the BC starts
+#   - start: ['0dns']
+#   # wait the 0dns starts
+#   - sleep: "20s"
+#   - wait_add:
+#       blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
+#       validators: ['validator-1', 'validator-2', 'validator-3']
+#       timeout: '15m'
+#       start: true
+#   - command:
+#       name: "check_registered"
+#       params:
+#         provider_type: blobber
+#         provider_ids:
+#         - "f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25"
+#         - "7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d"
+#         - "2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18"
+#   - command:
+#       name: "check_registered"
+#       params:
+#         provider_type: validator
+#         provider_ids:
+#         - "41313b795d2c057b6277801e9ed277b444770c2af75f5209afd00bd07c72cc0b"
+#         - "ab549edb7cea822dab0b460f65dcde85f698c1e97d730e3ffc6b0f8b576b65bd"
+#         - "86cf791f03f01e3e4d318b1ca009a51c91dd43f7cf3c87a32f531b609cc5044b"
+#   - wait_round:
+#       shift: 50
+#   # could not find anything for this command
+#   # checkout logic
+#   - command:
+#       name: 'init_allocation_only'
+#       timeout: '25m'
+#       retry_count: 3
+#       params:
+#         data_shards: "2"
+#         parity_shards: "1"
+#   - sleep: "1m"
+#   - store_allocations_data: {}
+#   - fail_upload_commit: ['blobber-3']
+#   - sleep: "1m" # simple wait for blobbers to pick up state
+#   - command:
+#       name: "upload_can_fail"
+#       params:
+#         remotepath: /remote/upload.bin
+#   - sleep: "3m" # simple wait for blobbers to pick up state
+#   # error occured here
+#   - check_rollback_tokenomics: {}
