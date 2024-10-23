@@ -137,6 +137,8 @@ type Transaction struct {
 	//
 	// required: true
 	Status int `json:"transaction_status" msgpack:"sot"`
+
+	IsExempt bool `json:"-" msgpack:"-"`
 }
 
 type FeeStats struct {
@@ -279,6 +281,11 @@ func (t *Transaction) Validate(ctx context.Context) error {
 
 func (t *Transaction) GetScore() (int64, error) {
 	if config.Configuration().ChainConfig.IsFeeEnabled() {
+		if t.IsExempt {
+			// high score for exempt transactions
+			return 100 * 1e10, nil
+		}
+
 		return t.Fee.Int64()
 	}
 	return 0, nil
@@ -521,6 +528,7 @@ func (t *Transaction) Clone() *Transaction {
 		TransactionOutput: t.TransactionOutput,
 		OutputHash:        t.OutputHash,
 		Status:            t.Status,
+		IsExempt:          t.IsExempt,
 	}
 
 	if t.SmartContractData != nil {

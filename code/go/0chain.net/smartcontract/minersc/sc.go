@@ -82,10 +82,11 @@ func (msc *MinerSmartContract) GetCostTable(balances cstate.StateContextI) (map[
 	if err != nil {
 		return map[string]int{}, err
 	}
-	if node.Cost == nil {
+	nb := node.MustBase()
+	if nb.Cost == nil {
 		return map[string]int{}, err
 	}
-	return node.Cost, nil
+	return nb.Cost, nil
 }
 
 // setSC setting up smartcontract. implementing the interface
@@ -138,13 +139,13 @@ func getGlobalNode(
 	return gn, nil
 }
 
-func InitConfig(balances cstate.CommonStateContextI) error {
+func InitConfig(balances cstate.StateContextI) error {
 	gn := new(GlobalNode)
 	if err := balances.GetTrieNode(GlobalNodeKey, gn); err != nil {
 		if err != util.ErrValueNotPresent {
 			return fmt.Errorf("failed to get global node: %w", err)
 		}
-		if err := gn.readConfig(); err != nil {
+		if err := gn.readConfig(balances); err != nil {
 			return fmt.Errorf("failed to read config: %w", err)
 		}
 		if err := gn.validate(); err != nil {

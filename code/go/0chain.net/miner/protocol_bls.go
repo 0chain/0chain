@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -15,6 +16,7 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/encryption"
 
+	"github.com/0chain/common/core/logging"
 	. "github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 
@@ -36,16 +38,25 @@ func init() {
 // SetDKG - starts the DKG process
 func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	mc := GetMinerChain()
-	if mc.ChainConfig.IsDkgEnabled() {
-		err := mc.SetDKGSFromStore(ctx, mb)
-		if err != nil {
-			return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
-				" may be damaged or permissions may not be available?",
-				err.Error())
-		}
-	} else {
-		Logger.Info("DKG is not enabled. So, starting protocol")
+	if !mc.ChainConfig.IsDkgEnabled() {
+		Logger.Info("DKG is disabled. So, starting protocol")
+		return nil
 	}
+
+	if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
+		return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
+			" may be damaged or permissions may not be available?",
+			err.Error())
+	}
+
+	dkg := mc.GetDKGByStartingRound(mb.StartingRound)
+	logging.Logger.Debug("[mvc] dkg process set dkg success",
+		zap.Int("dkg T", dkg.T),
+		zap.Int("dkg N", dkg.N),
+		zap.Int("gmpk len", len(dkg.GetMPKs())),
+		zap.Int64("mb number", mb.MagicBlockNumber),
+		zap.Int64("mb sr", mb.StartingRound),
+	)
 	return nil
 }
 
@@ -80,6 +91,10 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		return
 	}
 
+	if mb.StartingRound > 0 && !summary.IsFinalized {
+		return errors.New("DKG summary is not finalized")
+	}
+
 	if summary.SecretShares == nil {
 		return common.NewError("failed to set dkg from store",
 			"no saved shares for dkg")
@@ -93,14 +108,28 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		return common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
 	}
 
+	logging.Logger.Debug("[mvc] dkg summary",
+		zap.Int("secrets shares", len(summary.SecretShares)),
+		zap.Int("miners num", len(mb.Miners.CopyNodesMap())),
+		zap.Int("T", mb.T),
+		zap.Int("N", mb.N),
+		zap.Any("mb", mb),
+		zap.Any("summary", summary))
+
 	for k := range mb.Miners.CopyNodesMap() {
+		logging.Logger.Debug("[mvc] set dkg key", zap.String("key", ComputeBlsID(k)))
 		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
 			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
+				logging.Logger.Error("[mvc] failed to add secret share",
+					zap.Error(err), zap.String("share", savedShare))
 				return err
 			}
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
+			logging.Logger.Debug("[mvc] get key from mb", zap.String("key", ComputeBlsID(k)))
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
 				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
+					logging.Logger.Debug("[mvc] failed to add secret share 2",
+						zap.Error(err), zap.String("share", share.Share))
 					return err
 				}
 			}
@@ -123,7 +152,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		return err
 	}
 
-	if err = mc.SetDKG(newDKG, mb.StartingRound); err != nil {
+	if err = mc.SetDKG(newDKG); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
 		return // error
 	}
@@ -437,7 +466,10 @@ func (mc *Chain) ThresholdNumBLSSigReceived(ctx context.Context, mr *Round, blsT
 	Logger.Info("receive bls sign",
 		zap.Int64("round", mr.GetRoundNumber()),
 		zap.String("group_signature", groupSignature.GetHexString()),
-		zap.String("rboOutput", rbOutput))
+		zap.String("rboOutput", rbOutput),
+		zap.Int64("dkg_starting_round", dkg.StartingRound),
+		zap.Int64("dkg_mb_number", dkg.MagicBlockNumber),
+	)
 
 	//mc.computeRBO(ctx, mr, rbOutput)
 	if err := mc.computeRBO(ctx, mr, rbOutput); err != nil {
@@ -475,7 +507,10 @@ func getVRFShareInfo(mr *Round) ([]string, []string) {
 
 func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r *Round, rbo string) error {
 
-	var seed int64
+	var (
+		seed   int64
+		prSeed int64
+	)
 	if mc.ChainConfig.IsDkgEnabled() {
 		useed, err := strconv.ParseUint(rbo[0:16], 16, 64)
 		if err != nil {
@@ -484,8 +519,9 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 		seed = int64(useed)
 	} else {
 		if pr != nil {
+			prSeed = pr.GetRandomSeed()
 			if mpr := pr.(*Round); mpr.IsVRFComplete() {
-				seed = rand.New(rand.NewSource(pr.GetRandomSeed())).Int63()
+				seed = rand.New(rand.NewSource(prSeed)).Int63()
 			}
 		} else {
 			return fmt.Errorf("pr is null")
@@ -497,8 +533,7 @@ func (mc *Chain) computeRoundRandomSeed(ctx context.Context, pr round.RoundI, r 
 		Logger.Info("Starting round with vrf", zap.Int64("round", r.GetRoundNumber()),
 			zap.Int("roundtimeout", r.GetTimeoutCount()),
 			zap.Int64("rseed", seed), zap.Int64("prev_round", pr.GetRoundNumber()),
-			//zap.Int("Prev_roundtimeout", pr.GetTimeoutCount()),
-			zap.Int64("Prev_rseed", pr.GetRandomSeed()))
+			zap.Int64("Prev_rseed", prSeed))
 	}
 	vrfStartTime := r.GetVrfStartTime()
 	if !vrfStartTime.IsZero() {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -201,6 +202,116 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 	return
 }
 
+func (c *Chain) BumpLFBTicket(ctx context.Context) {
+	list := c.GetLatestFinalizedBlockFromSharder(ctx)
+	if len(list) == 0 {
+		logging.Logger.Debug("ensure_lfb - no new lfb received")
+		return // no LFB given
+	}
+
+	rcvd := list[0].Block // the highest received LFB
+	c.BumpTicket(ctx, rcvd)
+}
+
+// bump the ticket if necessary
+func (c *Chain) BumpTicket(ctx context.Context, lfb *block.Block) {
+	if lfb == nil {
+		return
+	}
+	var tk = c.GetLatestLFBTicket(ctx) // is the worker starts
+	if tk == nil || tk.Round < lfb.Round {
+		logging.Logger.Debug("bumpLFBTicket", zap.Int64("lfb_round", lfb.Round))
+		c.AddReceivedLFBTicket(ctx, &LFBTicket{Round: lfb.Round})
+	}
+}
+
+type BlockConsensus struct {
+	*block.Block
+	Consensus int
+}
+
+// GetLatestFinalizedBlockFromSharder - request for latest finalized block from
+// all the sharders.
+func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
+	fbs []*BlockConsensus) {
+
+	mb := c.GetLatestFinalizedMagicBlockBrief()
+	if mb == nil {
+		return
+	}
+
+	fbs = make([]*BlockConsensus, 0, len(mb.ShardersN2NURLs))
+	fbc := make(chan *block.Block, len(mb.ShardersN2NURLs))
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		var fb, ok = entity.(*block.Block)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+
+		if fb.Round == 0 {
+			return
+		}
+
+		if err = fb.Validate(ctx); err != nil {
+			logging.Logger.Error("lfb from sharder - invalid",
+				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+				zap.Error(err))
+			return
+		}
+		select {
+		case fbc <- fb:
+		default:
+		}
+
+		return fb, nil
+	}
+
+	c.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
+	close(fbc)
+
+	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	for fb := range fbc {
+		// increase consensus
+		for i, b := range fbs {
+			if b.Hash == fb.Hash {
+				fbs[i].Consensus++
+				continue
+			}
+		}
+
+		lfbtk := c.GetLatestLFBTicket(ctx)
+
+		if fb.Round < lfbtk.Round {
+			logging.Logger.Debug("lfb from sharder - round too old",
+				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+				zap.Int64("current_round", c.GetCurrentRound()),
+			)
+			continue
+		}
+
+		// add new block
+		fbs = append(fbs, &BlockConsensus{
+			Block:     fb,
+			Consensus: 1,
+		})
+	}
+
+	// highest (the first sorting order), most popular (the second order)
+	sort.Slice(fbs, func(i int, j int) bool {
+		if fbs[i].Round == fbs[j].Round {
+			return fbs[i].Consensus > fbs[j].Consensus
+		}
+
+		return fbs[i].Round > fbs[j].Round
+	})
+
+	return
+}
+
 func (c *Chain) sendLFBTicketEventToSubscribers(
 	subs map[chan *LFBTicket]struct{}, ticket *LFBTicket) {
 
@@ -393,7 +504,10 @@ func (c *Chain) StartLFMBWorker(ctx context.Context) {
 		case v := <-c.updateLFMB:
 			lfmb = v.block
 			clone = v.clone
-			logging.Logger.Debug("update LFMB", zap.Int64("round", lfmb.Round))
+			logging.Logger.Debug("receive update LFMB",
+				zap.Int64("round", clone.Round),
+				zap.Int("miners", clone.Miners.Size()),
+				zap.Int("sharders", clone.Sharders.Size()))
 			v.reply <- struct{}{}
 		case <-ctx.Done():
 			return

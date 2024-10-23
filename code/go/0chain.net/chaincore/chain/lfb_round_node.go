@@ -17,16 +17,21 @@ var (
 //
 //go:generate msgp -v -io=false -tests=false
 type LfbRound struct {
-	Round int64  `msg:"r"`
-	Hash  string `msg:"b"`
+	Round            int64  `msg:"r"`
+	Hash             string `msg:"b"`
+	MagicBlockNumber int64  `msg:"mb_num"`
 }
 
 // StoreLFBRound stores LFB round to state DB
-func (c *Chain) StoreLFBRound(round int64, blockHash string) error {
-	logging.Logger.Debug("store lfb", zap.Int64("round", round), zap.String("block", blockHash))
+func (c *Chain) StoreLFBRound(round, magicBlockNum int64, blockHash string) error {
+	logging.Logger.Debug("[mvc] store lfb",
+		zap.Int64("round", round),
+		zap.String("block", blockHash),
+		zap.Int64("mb number", magicBlockNum))
 	lfbr := &LfbRound{
-		Round: round,
-		Hash:  blockHash,
+		Round:            round,
+		Hash:             blockHash,
+		MagicBlockNumber: magicBlockNum,
 	}
 	vn := util.NewValueNode()
 	vn.SetValue(lfbr)

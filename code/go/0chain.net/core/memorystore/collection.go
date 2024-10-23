@@ -75,7 +75,7 @@ func (ms *Store) iterateCollection(ctx context.Context, entityMetadata datastore
 			ce := bucket[i].(datastore.CollectionEntity)
 			scoredata, ok := bkeys[2*i+1].([]byte)
 			if ok {
-				score, err := strconv.ParseInt(string(scoredata), 10, 63)
+				score, err := strconv.ParseInt(string(scoredata), 10, 64)
 				if err != nil {
 					Logger.Debug("iterator error", zap.ByteString("score", scoredata), zap.String("type", fmt.Sprintf("%T", bkeys[2*i+1])))
 					return err

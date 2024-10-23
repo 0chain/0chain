@@ -176,3 +176,8 @@ func emitUpdateMiner(mn *MinerNode, balances cstate.StateContextI, updateStatus 
 	balances.EmitEvent(event.TypeStats, event.TagUpdateMiner, mn.ID, dbUpdates)
 	return nil
 }
+
+func emitDeleteMiner(id string, balances cstate.StateContextI) {
+	logging.Logger.Info("emitting delete miner event")
+	balances.EmitEvent(event.TypeStats, event.TagDeleteMiner, id, id)
+}

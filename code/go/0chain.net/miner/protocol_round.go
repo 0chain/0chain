@@ -176,7 +176,7 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 			}
 			logging.Logger.Debug("[wait not ahead] [4*] still ahead, can't move on")
 			if tk.Round < lfb.Round {
-				BumpLFBTicket(ctx, mc)
+				mc.BumpLFBTicket(ctx)
 			}
 
 		case ntk := <-tksubq: // the ntk can't be nil
@@ -314,10 +314,11 @@ func (mc *Chain) TryProposeBlock(ctx context.Context, mr *Round) {
 
 	var (
 		self = node.Self.Underlying()
-		rank = mr.GetMinerRank(self)
+		mn   = mc.GetMagicBlock(rn).Miners.GetNode(self.GetKey())
+		rank = mr.GetMinerRank(mn)
 	)
 
-	if !mc.IsRoundGenerator(mr, self) {
+	if !mc.IsRoundGenerator(mr, mn) {
 		logging.Logger.Info("TOC_FIX Not a generator", zap.Int64("round", rn),
 			zap.Int("index", self.SetIndex),
 			zap.Int("rank", rank),
@@ -772,7 +773,7 @@ func (mc *Chain) updatePreviousBlockNotarization(ctx context.Context, b *block.B
 
 		// reset ctx so the timeout of parent ctx would not stop the ticket verification here
 		ctx = context.Background()
-		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), b.Round-1); err != nil {
+		if err := mc.VerifyNotarization(ctx, b.PrevHash, b.GetPrevBlockVerificationTickets(), b.Round-1, pb.LatestFinalizedMagicBlockRound); err != nil {
 			logging.Logger.Error("update prev block notarization failed",
 				zap.Int64("round", pr.Number), zap.String("miner_id", b.MinerID),
 				zap.String("block", b.PrevHash),
@@ -1227,93 +1228,6 @@ func (mc *Chain) CancelRoundVerification(ctx context.Context, r *Round) {
 	r.TryCancelBlockGeneration()
 }
 
-type BlockConsensus struct {
-	*block.Block
-	Consensus int
-}
-
-// GetLatestFinalizedBlockFromSharder - request for latest finalized block from
-// all the sharders.
-func (mc *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
-	fbs []*BlockConsensus) {
-
-	mb := mc.GetLatestFinalizedMagicBlockBrief()
-	if mb == nil {
-		return
-	}
-
-	fbs = make([]*BlockConsensus, 0, len(mb.ShardersN2NURLs))
-	fbc := make(chan *block.Block, len(mb.ShardersN2NURLs))
-
-	var handler = func(ctx context.Context, entity datastore.Entity) (
-		resp interface{}, err error) {
-
-		var fb, ok = entity.(*block.Block)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		if fb.Round == 0 {
-			return
-		}
-
-		if err = fb.Validate(ctx); err != nil {
-			logging.Logger.Error("lfb from sharder - invalid",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			return
-		}
-		select {
-		case fbc <- fb:
-		default:
-		}
-
-		return fb, nil
-	}
-
-	mc.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
-	close(fbc)
-
-	cctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	for fb := range fbc {
-		// increase consensus
-		for i, b := range fbs {
-			if b.Hash == fb.Hash {
-				fbs[i].Consensus++
-				continue
-			}
-		}
-
-		if err := mc.VerifyBlockNotarization(cctx, fb); err != nil {
-			logging.Logger.Error("lfb from sharder - notarization failed",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			continue
-		}
-
-		// don't use the round, just create it or make sure it's created
-		mc.getOrCreateRound(cctx, fb.Round) // can' return nil
-
-		// add new block
-		fbs = append(fbs, &BlockConsensus{
-			Block:     fb,
-			Consensus: 1,
-		})
-	}
-
-	// highest (the first sorting order), most popular (the second order)
-	sort.Slice(fbs, func(i int, j int) bool {
-		if fbs[i].Round == fbs[j].Round {
-			return fbs[i].Consensus > fbs[j].Consensus
-		}
-
-		return fbs[i].Round > fbs[j].Round
-	})
-
-	return
-}
-
 // SyncFetchFinalizedBlockFromSharders fetches FB from sharders by hash.
 // It used by miner to get FB by LFB ticket in restart round.
 func (mc *Chain) SyncFetchFinalizedBlockFromSharders(ctx context.Context,
@@ -1458,6 +1372,8 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 			}
 			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
 				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
+					zap.Int64("round", b.Round),
+					zap.String("block miner", b.MinerID),
 					zap.String("lfmbr hash", lfmbr.Hash),
 					zap.String("block lfmbr hash", b.LatestFinalizedMagicBlockHash),
 					zap.Int64("lfmbr starting round", lfmbr.Round),
@@ -1588,7 +1504,7 @@ func (mc *Chain) getRoundRandomSeed(rn int64) (seed int64) {
 }
 
 func (mc *Chain) restartRound(ctx context.Context, rn int64) {
-	BumpLFBTicket(ctx, mc)
+	mc.BumpLFBTicket(ctx)
 	mc.sendRestartRoundEvent(ctx) // trigger restart round event
 
 	mc.IncrementRoundTimeoutCount()
@@ -1668,212 +1584,6 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	mc.ProgressOnNotarization(r)
 }
 
-// ensureState makes sure block state is computed and initialized, it can't
-// be sure the block stat will not be changed later (or will not become invalid)
-// so, it's optimistic, let's track logs to find out how it's critical
-// in reality
-func (mc *Chain) ensureState(ctx context.Context, b *block.Block) (ok bool) {
-
-	var err error
-	if !b.IsStateComputed() {
-		if err = mc.ComputeOrSyncState(ctx, b); err != nil {
-			logging.Logger.Error("ensure_state -- compute or sync",
-				zap.Error(err), zap.Int64("round", b.Round))
-		}
-	}
-	if b.ClientState == nil {
-		if err = mc.InitBlockState(b); err != nil {
-			logging.Logger.Error("ensure_state -- initialize block state",
-				zap.Error(err), zap.Int64("round", b.Round))
-		}
-	}
-
-	// ensure next view change (from sharders)
-	if ok = b.IsStateComputed() && b.ClientState != nil; ok {
-		var nvc int64
-		if nvc, err = mc.NextViewChangeOfBlock(b); err != nil {
-			logging.Logger.Error("ensure_state -- next view change",
-				zap.Error(err), zap.Int64("round", b.Round))
-			return // but return result
-		}
-		mc.SetNextViewChange(nvc)
-	}
-
-	return
-}
-
-func (mc *Chain) ensureLatestFinalizedBlock(ctx context.Context) (
-	updated bool, err error) {
-
-	// LFB regardless a ticket
-	var (
-		have = mc.GetLatestFinalizedBlock()
-		list = mc.GetLatestFinalizedBlockFromSharder(ctx)
-	)
-
-	if len(list) == 0 {
-		logging.Logger.Debug("ensure_lfb - no new lfb received")
-		return // no LFB given
-	}
-
-	rcvd := list[0].Block // the highest received LFB
-	if have != nil && rcvd.Round == have.Round {
-		logging.Logger.Debug("ensure_lfb - no new lfb received", zap.Int64("lfb_round", have.Round))
-		return
-	}
-
-	if have != nil && rcvd.Round <= have.Round {
-		// local lfb could be higher than lfb from sharders when kickFinalization happens
-		logging.Logger.Debug("ensure_lfb - local lfb.Round > new lfb ",
-			zap.Int64("lfb_round", have.Round),
-			zap.Int64("new lfb_round", rcvd.Round))
-		mc.ensureState(ctx, have)
-		return // nothing to update
-	}
-
-	// received latest finalized block is one around ahead of local latest finalized block
-	if have != nil && rcvd.Round-1 == have.Round {
-		rcvd.SetPreviousBlock(have)
-		mc.bumpLFBTicket(ctx, rcvd)
-		if err := mc.GetBlockStateChange(rcvd); err != nil {
-			logging.Logger.Error("ensure lfb", zap.Error(err))
-		}
-
-		logging.Logger.Info("ensure_lfb - ensure latest finalized block - set lfb",
-			zap.Int64("round", rcvd.Round))
-		mc.SetLatestFinalizedBlock(ctx, rcvd)
-		return true, nil
-	}
-
-	var lfbRound int64
-	if have != nil {
-		lfbRound = have.Round
-	}
-
-	if err := mc.GetBlockStateChange(rcvd); err != nil {
-		logging.Logger.Error("ensure_lfb - sync state of new lfb failed", zap.Error(err))
-		return false, err
-	}
-
-	nvc, err := mc.NextViewChangeOfBlock(rcvd)
-	if err != nil {
-		logging.Logger.Error("ensure_lfb -- next view change", zap.Error(err), zap.Int64("round", rcvd.Round))
-		return false, err
-	}
-
-	mc.SetNextViewChange(nvc)
-
-	logging.Logger.Info("ensure_lfb - sync blocks",
-		zap.Int64("lfb round", lfbRound),
-		zap.Int64("lfb new round", rcvd.Round),
-		zap.Int64("sync num", 1))
-	pb := mc.SyncPreviousBlocks(ctx, rcvd, 1, chain.SaveToDB(true))
-	if pb != nil {
-		rcvd.SetPreviousBlock(pb)
-	}
-
-	mc.bumpLFBTicket(ctx, rcvd)
-
-	mc.SetLatestFinalizedBlock(ctx, rcvd)
-	logging.Logger.Info("ensure_lfb - set lfb",
-		zap.Int64("round", rcvd.Round))
-
-	if rcvd.MagicBlock != nil {
-
-		// update magic block or notify to do finalization
-		lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
-		if lfmb == nil || rcvd.StartingRound > lfmb.StartingRound {
-			logging.Logger.Debug("ensure_lfb - update magic block",
-				zap.Int64("round", rcvd.Round))
-			if err := mc.UpdateMagicBlock(rcvd.MagicBlock); err == nil {
-				mc.SetLatestFinalizedMagicBlock(rcvd)
-			}
-		}
-	}
-
-	return true, nil // updated
-}
-
-func (mc *Chain) ensureDKG(ctx context.Context, mb *block.Block) {
-	if mb == nil {
-		return
-	}
-	if !mc.ChainConfig.IsViewChangeEnabled() {
-		return
-	}
-	var err error
-	if err = mc.SetDKGSFromStore(ctx, mb.MagicBlock); err != nil {
-		logging.Logger.Error("setting DKG from store",
-			zap.Int64("mb_round", mb.Round), zap.Error(err))
-	}
-}
-
-func (mc *Chain) ensureLatestFinalizedBlocks(ctx context.Context) (
-	updated bool, err error) {
-
-	// So, there is worker that updates LFMB from configured 0DNS sever.
-	// This MB used to request other nodes.
-
-	defer mc.SetupLatestAndPreviousMagicBlocks(ctx)
-
-	if updated, err = mc.ensureLatestFinalizedBlock(ctx); err != nil {
-		return
-	}
-
-	// LFMB. The LFMB can be already update by LFMD worker (which uses 0DNS)
-	// and here we just set correct DKG.
-
-	rcvd := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
-	if rcvd == nil {
-		return
-	}
-
-	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
-	mc.ensureDKG(ctx, lfmb)
-
-	if lfmb != nil && rcvd.MagicBlockNumber <= lfmb.MagicBlockNumber {
-		logging.Logger.Debug("lfmb from sharders has MagicBlockNumber <= lfmb",
-			zap.Int64("sharder lfmb number", rcvd.MagicBlockNumber),
-			zap.Int64("local lfmb number", lfmb.MagicBlockNumber))
-		return
-	}
-
-	if err = mc.VerifyChainHistoryAndRepair(ctx, rcvd, nil); err != nil {
-		return false, err
-	}
-	if err = mc.UpdateMagicBlock(rcvd.MagicBlock); err != nil {
-		return false, err
-	}
-	mc.ensureDKG(ctx, rcvd)
-	mc.SetLatestFinalizedMagicBlock(rcvd)
-
-	// bump the ticket if necessary
-	var tk = mc.GetLatestLFBTicket(ctx)
-	if tk == nil || tk.Round < rcvd.Round {
-		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{
-			Round: rcvd.Round,
-		})
-	}
-
-	// don't set the MB as latest finalized MB; it should be done inside
-	// ensure view change;
-
-	updated = true
-	return
-}
-
-// bump the ticket if necessary
-func (mc *Chain) bumpLFBTicket(ctx context.Context, lfb *block.Block) {
-	if lfb == nil {
-		return
-	}
-	var tk = mc.GetLatestLFBTicket(ctx) // is the worker starts
-	if tk == nil || tk.Round < lfb.Round {
-		logging.Logger.Debug("bumpLFBTicket", zap.Int64("lfb_round", lfb.Round))
-		mc.AddReceivedLFBTicket(ctx, &chain.LFBTicket{Round: lfb.Round})
-	}
-}
-
 func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	mr *Round) {
 
@@ -1881,7 +1591,7 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 		return // nil
 	}
 
-	mc.bumpLFBTicket(ctx, lfb)
+	mc.BumpTicket(ctx, lfb)
 
 	// we can't compute state in the start protocol
 	if err := mc.InitBlockState(lfb); err != nil {
@@ -1901,18 +1611,6 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 	return mc.GetMinerRound(lfb.Round)
 }
 
-func BumpLFBTicket(ctx context.Context, mc *Chain) {
-	list := mc.GetLatestFinalizedBlockFromSharder(ctx)
-	if len(list) == 0 {
-		logging.Logger.Debug("ensure_lfb - no new lfb received")
-		return // no LFB given
-	}
-
-	rcvd := list[0].Block // the highest received LFB
-	// received latest finalized block is one around ahead of local latest finalized block
-	mc.bumpLFBTicket(ctx, rcvd)
-}
-
 func StartProtocol(ctx context.Context, gb *block.Block) {
 
 	var (
@@ -1925,37 +1623,21 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		// return
 	}
 
-	BumpLFBTicket(ctx, mc)
+	mc.loadLatestFinalizedMagicBlockFromStore(ctx)
+
+	mc.BumpLFBTicket(ctx)
 
 	lfb := mc.GetLatestFinalizedBlock()
 	if lfb != nil {
 		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {
 		// start on genesis block
-		mc.bumpLFBTicket(ctx, gb)
+		mc.BumpTicket(ctx, gb)
 		var r = round.NewRound(gb.Round)
 		mr = mc.CreateRound(r)
 		mr = mc.AddRound(mr).(*Round)
 	}
 	var nr = mc.StartNextRound(ctx, mr)
-	for nr == nil {
-		select {
-		case <-time.After(4 * time.Second): // repeat after some time
-			_, err := mc.ensureLatestFinalizedBlocks(ctx)
-			if err != nil {
-				logging.Logger.Error("getting latest blocks from sharders",
-					zap.Error(err))
-				continue
-			}
-
-			lfb = mc.GetLatestFinalizedBlock()
-
-			mr = mc.startProtocolOnLFB(ctx, lfb)
-		case <-ctx.Done():
-			return
-		}
-		nr = mc.StartNextRound(ctx, mr)
-	}
 	logging.Logger.Info("starting the blockchain ...", zap.Int64("round", nr.Number))
 }
 
@@ -1971,50 +1653,66 @@ func (mc *Chain) setupLoadedMagicBlock(mb *block.MagicBlock) (err error) {
 // DKGs. But in a normal case miner can have or haven't the MBs and the DKGs.
 func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 
-	// latest MB
+	// current MB
 	var (
-		latest *block.MagicBlock
-		err    error
+		current *block.MagicBlock
+		err     error
 	)
-	if latest, err = LoadLatestMB(ctx); err != nil {
+
+	lfbr, err := mc.LoadLFBRound()
+	if err != nil {
+		logging.Logger.Error("load_lfb - could not load lfb from state DB", zap.Error(err))
+		return
+	}
+
+	logging.Logger.Debug("load_lfb - load magic blocks and dkg",
+		zap.Int64("round", lfbr.Round),
+		zap.String("block", lfbr.Hash),
+		zap.Int64("mb_round", lfbr.MagicBlockNumber))
+
+	current, err = LoadLatestMB(ctx, lfbr.Round, lfbr.MagicBlockNumber)
+	if err != nil {
 		logging.Logger.Error("load_mbs_and_dkg -- loading the latest MB",
 			zap.Error(err))
 		return // can't continue
 	}
 
-	// don't setup the latest MB since it can be promoted
+	logging.Logger.Debug("[mvc] load current MB",
+		zap.Int64("mb number", current.MagicBlockNumber),
+		zap.Int64("mb sr", current.StartingRound),
+		zap.String("mb hash", current.Hash))
 
-	if latest.MagicBlockNumber <= 1 {
-		return // done
-	}
-	// otherwise, load and setup previous
-	var (
-		prev *block.MagicBlock
-		id   = strconv.FormatInt(latest.MagicBlockNumber-1, 10)
-	)
-	if prev, err = LoadMagicBlock(ctx, id); err != nil {
-		logging.Logger.Info("load_mbs_and_dkg -- loading previous MB",
-			zap.String("sr", id), zap.Error(err))
-		return // can't continue
-	}
-	if err = mc.setupLoadedMagicBlock(prev); err != nil {
+	if err = mc.setupLoadedMagicBlock(current); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- updating previous MB",
 			zap.Error(err))
 		return // can't continue
 	}
-	mc.SetMagicBlock(prev)
-
-	// don't setup latest MB since it can be promoted
-	//
-	//	// and then setup the latest again for proper nodes registration,
-	//	// ignoring its error
-	//	mc.setupLoadedMagicBlock(latest)
-	// DKG relates previous MB
-
-	if err = mc.SetDKGSFromStore(ctx, prev); err != nil {
+	mc.SetMagicBlock(current)
+	if err = mc.SetDKGSFromStore(ctx, current); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- loading previous DKG",
 			zap.Error(err))
 	}
+
+	// check if there are new MB which is possible, load them into memory store if any
+	newMBNum := lfbr.MagicBlockNumber + 1
+	newMB, err := LoadMagicBlock(ctx, strconv.FormatInt(newMBNum, 10))
+	if err != nil {
+		logging.Logger.Debug("load_mbs_and_dkg -- see no newer MB")
+		return
+	}
+
+	if err := mc.SetDKGSFromStore(ctx, newMB); err != nil {
+		logging.Logger.Info("load_mbs_and_dkg -- see no newer DKG")
+		return
+	}
+
+	logging.Logger.Debug("load_mbs_and_dkg -- load newer MB and DKG",
+		zap.Int64("mb number", newMB.MagicBlockNumber),
+		zap.Int64("mb sr", newMB.StartingRound),
+		zap.String("mb hash", newMB.Hash))
+
+	mc.SetMagicBlock(newMB)
+
 	// everything is OK
 }
 

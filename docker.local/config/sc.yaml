@@ -66,6 +66,7 @@ smart_contracts:
       add_sharder: 331
       delete_miner: 484
       delete_sharder: 335
+      vc_add: 361
       miner_health_check: 149
       sharder_health_check: 145
       contributeMpk: 1433
