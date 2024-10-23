@@ -15,8 +15,8 @@ cloud.google.com/go/storage v1.14.0 h1:6RRlFMv1omScs6iq2hfE3IvgE+l6RfJPampq8UZc5
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9 h1:VpgP7xuJadIUuKccphEpTJnWhS2jkQyMt6Y7pJCD7fY=
 github.com/0chain/common v0.0.7-0.20231108122201-3e2bad6b9d20 h1:c46aB5l0xbD7nc/q6gJHNOmE/LWMjozNgQS2EXLTq+o=
 github.com/0chain/common v0.0.7-0.20231108122201-3e2bad6b9d20/go.mod h1:gbmUdgY4Gu2jKmnYnHr8533gcokviV3MDMs8wNk74sk=
-github.com/0chain/gosdk v1.16.0 h1:3CKuU9i9d+X2/htJOIyxNwviKG5H/lp+q8ogzCgnoQI=
-github.com/0chain/gosdk v1.16.0/go.mod h1:y7Ucdmv40VltqulZnncMNjNQ4piX5Dta5ujNmPmXnxg=
+github.com/0chain/gosdk v1.17.10-0.20241020033800-36ccc3e1667e h1:2MvjXZQUbkpyurwrbFmxlYRGmpqMN9qQozSxRWPrCew=
+github.com/0chain/gosdk v1.17.10-0.20241020033800-36ccc3e1667e/go.mod h1:+oA+SR2eQLJSo4NfNew93HeE39CiRFqznWE6t1grjDM=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v0.21.1 h1:qoVeMsc9/fh/yhxVaA0obYjVH/oI/ihrOoMwsLS9KSA=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v0.21.1/go.mod h1:fBF9PQNqB8scdgpZ3ufzaLntG0AG7C1WjPMsiFOmfHM=
 github.com/Azure/azure-sdk-for-go/sdk/internal v0.8.3 h1:E+m3SkZCN0Bf5q7YdTs5lSm2CYY3CK4spn5OmUIiQtk=

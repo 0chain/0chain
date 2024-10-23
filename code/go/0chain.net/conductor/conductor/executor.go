@@ -519,8 +519,10 @@ func (r *Runner) CheckFileMetaRoot(cfg *config.CheckFileMetaRoot) error {
 	}
 
 	curFmr := fmrs[0]
+	fmt.Println("\n \n current fmr : ", curFmr)
 	allEqual := true
 	for i := 1; i < len(fmrs); i++ {
+		fmt.Println("\n \n current fmr : ", fmrs[i])
 		allEqual = allEqual && curFmr == fmrs[i]
 		curFmr = fmrs[i]
 	}
