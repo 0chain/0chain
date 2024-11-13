@@ -340,6 +340,9 @@ commands:
     work_dir: "../0dns"
     exec: "../0dns/docker.local/bin/docker-clean.sh"
     can_fail: true
+  init_hardfork:
+    work_dir: "../"
+    exec: "sh -x 0chain/docker.local/bin/conductor/add_hardfork.sh"
   build_test_blobbers:
     work_dir: "../blobber"
     exec: "../blobber/docker.local/bin/build.blobber-integration-tests.sh"

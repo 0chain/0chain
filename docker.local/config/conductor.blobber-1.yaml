@@ -34,6 +34,7 @@ tests:
           round: 15 # just wait the BC starts
       #wait the 0dns starts
       - sleep: "20s"
+      - init_hardfork: {}
       - wait_add:
           blobbers: ['blobber-1', 'blobber-2', 'blobber-3']
           validators: ['validator-1', 'validator-2', 'validator-3']
