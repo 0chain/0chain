@@ -939,8 +939,8 @@ func (sc *StorageSmartContract) extendAllocation(
 	}
 
 	var (
-		diff = req.getBlobbersSizeDiff(alloc) // size difference
-		size = req.getNewBlobbersSize(alloc)  // blobber size
+		diff = req.getBlobbersSizeDiff(alloc) // size difference 1 gb
+		size = req.getNewBlobbersSize(alloc)  // blobber size 2 gb
 
 		// keep original terms to adjust challenge pool value
 		originalTerms = make([]Terms, 0, len(alloc.BlobberAllocs))
@@ -949,8 +949,7 @@ func (sc *StorageSmartContract) extendAllocation(
 	)
 
 	alloc.Expiration = common.Timestamp(common.ToTime(txn.CreationDate).Add(conf.TimeUnit).Unix()) // new expiration
-
-	alloc.Size += req.Size // new size
+	alloc.Size += req.Size                                                                         // new size
 
 	// 1. update terms
 	for i, details := range alloc.BlobberAllocs {
@@ -960,7 +959,8 @@ func (sc *StorageSmartContract) extendAllocation(
 		}
 
 		originalTerms = append(originalTerms, details.Terms) // keep original terms will be changed
-		oldOffer := details.Offer()
+		oldOffer := details.Offer()                          // offer = size * write price
+
 		var b = blobbers[i]
 
 		if err = b.mustUpdateBase(func(snb *storageNodeBase) error {
