@@ -21,7 +21,7 @@ sudo rm -rf docker.local/sharder*/log/*
 # docker.local/bin/build.sharders.sh
 set -e
 
-GIT_COMMIT=$(git rev-list -1 HEAD)
+GIT_COMMIT=$(git describe --tags --dirty --always)
 echo $GIT_COMMIT
 
 docker build --build-arg GIT_COMMIT=$GIT_COMMIT -f docker.local/build.sharder/Dockerfile . -t sharder
