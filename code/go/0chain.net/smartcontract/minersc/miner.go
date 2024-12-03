@@ -306,20 +306,6 @@ func computeBlsID(key string) string {
 	return computeID.GetHexString()
 }
 
-func (msc *MinerSmartContract) getDKGSummary(balances cstate.StateContextI, magicBlockNum int64) (*bls.DKGSummary, error) {
-	var summary bls.DKGSummary
-	if err := balances.GetTrieNode(dkgSummaryKey(magicBlockNum), &summary); err != nil {
-		return nil, err
-	}
-
-	return &summary, nil
-}
-
-func (msc *MinerSmartContract) saveDKGSummary(balances cstate.StateContextI, dkgSummary *bls.DKGSummary, magicBlockNum int64) error {
-	_, err := balances.InsertTrieNode(dkgSummaryKey(magicBlockNum), dkgSummary)
-	return err
-}
-
 func (msc *MinerSmartContract) deleteNode(
 	gn *GlobalNode,
 	deleteNode *MinerNode,

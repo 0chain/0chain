@@ -9,7 +9,6 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
-	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -644,65 +643,6 @@ func (msc *MinerSmartContract) widdleDKGMinersForShare(
 	// return nil
 }
 
-func (msc *MinerSmartContract) reduceShardersList(
-	keep,
-	all *MinerNodes,
-	gn *GlobalNode,
-	balances cstate.StateContextI) (nodes []*MinerNode, err error) {
-
-	simpleNodes := NewSimpleNodes()
-
-	tmpMinerNodes := make([]*MinerNode, 0, len(keep.Nodes))
-
-	for _, keepNode := range keep.Nodes {
-		var found = all.FindNodeById(keepNode.ID)
-		if found == nil {
-			return nil, common.NewErrorf("invalid state", "a sharder exists in"+
-				" keep list doesn't exists in all sharders list: %s", keepNode.ID)
-		}
-		tmpMinerNodes = append(tmpMinerNodes, found)
-		simpleNodes[found.ID] = found.SimpleNode
-	}
-
-	gnb := gn.MustBase()
-
-	if len(simpleNodes) < gnb.MinS {
-		return nil, fmt.Errorf("too few sharders: %d, want at least: %d", len(simpleNodes), gnb.MinS)
-	}
-
-	var pmbrss int64
-	var pmbnp *node.Pool
-	pmb := balances.GetLastestFinalizedMagicBlock()
-	if pmb != nil {
-		pmbrss = pmb.RoundRandomSeed
-		if pmb.MagicBlock != nil {
-			pmbnp = pmb.MagicBlock.Sharders
-		}
-	}
-	logging.Logger.Debug("sharder keep before", zap.Int("num", len(simpleNodes)))
-	simpleNodes.reduce(gnb.MaxS, gnb.XPercent, pmbrss, pmbnp)
-	logging.Logger.Debug("sharder keep after", zap.Int("num", len(simpleNodes)))
-
-	nodes = make([]*MinerNode, 0, len(simpleNodes))
-
-	for _, mn := range tmpMinerNodes {
-		if sn, ok := simpleNodes[mn.ID]; ok {
-			mn.SimpleNode = sn
-			nodes = append(nodes, mn)
-		}
-	}
-
-	if !hasPrevSharderInList(pmb.MagicBlock, nodes) {
-		var prev = rankedPrevSharders(pmb.MagicBlock, nodes)
-		if len(prev) == 0 {
-			panic("must not happen")
-		}
-		nodes = append(nodes, prev[0])
-	}
-
-	return
-}
-
 func (msc *MinerSmartContract) createMagicBlockForWait(
 	balances cstate.StateContextI, gn *GlobalNode) error {
 
@@ -1199,52 +1139,4 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 
 func getFunctionName(i interface{}) string {
 	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
-}
-
-func newDKGWithMagicBlock(mb *block.MagicBlock, summary *bls.DKGSummary) (*bls.DKG, error) {
-	selfNodeKey := node.Self.Underlying().GetKey()
-
-	if summary.SecretShares == nil {
-		return nil, common.NewError("failed to set dkg from store", "no saved shares for dkg")
-	}
-
-	var newDKG = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
-	newDKG.MagicBlockNumber = mb.MagicBlockNumber
-	newDKG.StartingRound = mb.StartingRound
-
-	if mb.Miners == nil {
-		return nil, common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
-	}
-
-	for k := range mb.Miners.CopyNodesMap() {
-		if savedShare, ok := summary.SecretShares[computeBlsID(k)]; ok {
-			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
-				return nil, err
-			}
-		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
-			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-
-	if !newDKG.HasAllSecretShares() {
-		return nil, common.NewError("failed to set dkg from store",
-			"not enough secret shares for dkg")
-	}
-
-	newDKG.AggregateSecretKeyShares()
-	newDKG.Pi = newDKG.Si.GetPublicKey()
-	mpks, err := mb.Mpks.GetMpkMap()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
-		return nil, err
-	}
-
-	return newDKG, nil
 }

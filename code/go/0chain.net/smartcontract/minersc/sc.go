@@ -27,12 +27,6 @@ var (
 	PhaseRounds = make(map[Phase]int64)
 	phaseFuncs  = make(map[Phase]phaseFunctions)
 
-	lockPhaseFunctions = map[Phase]*sync.Mutex{
-		Start:      {},
-		Contribute: {},
-		Publish:    {},
-	}
-
 	lockSmartContractExecute = map[string]*sync.Mutex{
 		"add_miner":          {},
 		"add_sharder":        {},
