@@ -215,6 +215,23 @@ func (bp *BurnPayloadResponse) Decode(input []byte) error {
 	return err
 }
 
+// ------ RepairEthAddressPayload ----------------
+
+type RepairEthAddressPayload struct {
+	EthereumAddress string `json:"ethereum_address"`
+	Nonce           int64  `json:"nonce"`
+}
+
+func (reap *RepairEthAddressPayload) Encode() []byte {
+	buff, _ := json.Marshal(reap)
+	return buff
+}
+
+func (reap *RepairEthAddressPayload) Decode(input []byte) error {
+	err := json.Unmarshal(input, reap)
+	return err
+}
+
 // ------ BurnPayload ----------------
 
 type BurnPayload struct {

@@ -1,12 +1,10 @@
 package zcnsc
 
 import (
-	"fmt"
-
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/provider"
-
 	"0chain.net/smartcontract/stakepool/spenum"
+	"fmt"
 	"github.com/0chain/common/core/util"
 
 	"0chain.net/chaincore/chain/state"
@@ -48,6 +46,17 @@ func GetUserNode(id string, ctx state.StateContextI) (*UserNode, error) {
 	default:
 		return nil, err
 	}
+}
+
+// DeleteUserNodeIfExist returns error if node not found
+func DeleteUserNodeIfExist(id string, ctx state.StateContextI) error {
+	node := NewUserNode(id)
+	err := ctx.GetTrieNode(node.GetKey(), node)
+	if err != nil {
+		return nil
+	}
+	_, err = ctx.DeleteTrieNode(node.GetKey())
+	return err
 }
 
 func GetGlobalSavedNode(ctx state.CommonStateContextI) (*GlobalNode, error) {
