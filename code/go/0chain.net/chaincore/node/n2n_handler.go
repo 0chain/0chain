@@ -18,8 +18,8 @@ import (
 )
 
 var (
-	TimeoutSmallMessage   = 1000 * time.Millisecond
-	TimeoutLargeMessage   = 3000 * time.Millisecond
+	TimeoutSmallMessage   = 100000 * time.Millisecond
+	TimeoutLargeMessage   = 300000 * time.Millisecond
 	LargeMessageThreshold = 10 * 1024
 )
 
