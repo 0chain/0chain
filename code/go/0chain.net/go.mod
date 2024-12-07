@@ -1,6 +1,8 @@
 module 0chain.net
 
-go 1.21
+go 1.22.0
+
+toolchain go1.22.10
 
 require (
 	github.com/alicebob/miniredis/v2 v2.30.5
@@ -40,8 +42,8 @@ require (
 )
 
 require (
-	github.com/0chain/common v1.13.1-0.20240726100134-cbf5bf9beaac
-	github.com/0chain/gosdk v1.16.0
+	github.com/0chain/common v1.18.3
+	github.com/0chain/gosdk v1.18.12-0.20241206142928-5ff7542fd5ef
 	github.com/IBM/sarama v1.42.2
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/herumi/bls v1.37.0
@@ -52,7 +54,7 @@ require (
 	github.com/minio/sha256-simd v1.0.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
-	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
+	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
 	golang.org/x/sys v0.21.0
 	gorm.io/driver/sqlite v1.5.3
 	moul.io/zapgorm2 v1.3.0

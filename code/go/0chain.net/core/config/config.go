@@ -186,6 +186,8 @@ type ChainConfig interface {
 	FromViper() error
 	Update(configMap map[string]string, version int64) error
 	TxnExempt() map[string]bool
+	IsSplit() bool
+	ZauthServer() string
 	MinTxnFee() currency.Coin
 	MaxTxnFee() currency.Coin
 	TxnTransferCost() int

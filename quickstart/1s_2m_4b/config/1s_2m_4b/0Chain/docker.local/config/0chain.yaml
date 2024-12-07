@@ -143,6 +143,11 @@ min_stake: 0.0 # tokens
 # SC max_stake
 max_stake: 20000.0 # tokens
 
+# enables split key mode for transaction sign operations.
+is_split: false
+
+# represents zauth server used for split key transaction signing operations.
+zauth_server: ""
 
 cassandra:
   connection:
