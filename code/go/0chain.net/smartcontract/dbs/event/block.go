@@ -30,6 +30,7 @@ type Block struct {
 	StateChangesCount     int       `json:"state_changes_count"`
 	RunningTxnCount       string    `json:"running_txn_count"`
 	RoundTimeoutCount     int       `json:"round_timeout_count"`
+	FinalityDuration      int64     `json:"finality_duration"`
 	FinalizationTime      time.Time `json:"-" gorm:"-"` //NOT TO BE STORED in db, in state, or to be sent in kafka
 }
 
