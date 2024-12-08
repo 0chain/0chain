@@ -79,6 +79,9 @@ type TestConfigData struct {
 	DbsEvents   config.DbAccess   `json:"dbs_event"`
 	DbsSettings config.DbSettings `json:"dbs_settings"`
 	TxnExempt   map[string]bool   `json:"txn_exempt"`
+
+	IsSplit bool `json:"is_split"`
+	ZauthServer string `json:"zauth_server"`
 }
 
 func (t *TestConfig) IsStateEnabled() bool {
@@ -257,6 +260,14 @@ func (t *TestConfig) Update(configMap map[string]string, version int64) error {
 
 func (t *TestConfig) TxnExempt() map[string]bool {
 	return t.conf.TxnExempt
+}
+
+func (t *TestConfig) IsSplit() bool {
+	return t.conf.IsSplit
+}
+
+func (t *TestConfig) ZauthServer() string {
+	return t.conf.ZauthServer
 }
 
 func (t *TestConfig) MinTxnFee() currency.Coin {
