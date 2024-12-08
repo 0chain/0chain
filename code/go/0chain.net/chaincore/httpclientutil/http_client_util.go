@@ -269,11 +269,6 @@ func MakeGetRequest(remoteUrl string, result interface{}) (err error) {
 }
 
 func MakeClientBalanceRequest(clientID string, urls []string) (currency.Coin, error) {
-	consensus := len(urls)
-	if consensus > 3 {
-		consensus = 3
-	}
-
 	balance, err2 := client.GetBalance(clientID)
 
 	coin := currency.Coin(balance.Balance)
@@ -282,11 +277,6 @@ func MakeClientBalanceRequest(clientID string, urls []string) (currency.Coin, er
 }
 
 func MakeClientNonceRequest(clientID string, urls []string) (int64, error) {
-	consensus := len(urls)
-	if consensus > 3 {
-		consensus = 3
-	}
-
 	balance, err2 := client.GetBalance(clientID)
 
 	return balance.Nonce, err2
