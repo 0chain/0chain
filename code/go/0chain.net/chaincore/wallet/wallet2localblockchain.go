@@ -7,6 +7,7 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/config"
 	"0chain.net/core/datastore"
+	"0chain.net/miner"
 	"github.com/0chain/common/core/currency"
 )
 
@@ -39,7 +40,10 @@ func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg
 	if isFeeEnabled {
 		txn.Fee = estimateFeeFunc(txn)
 	}
-	if _, err := txn.Sign(w.SignatureScheme); err != nil {
+
+	mc := miner.GetMinerChain()
+
+	if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
 		panic(err)
 	}
 	return txn
@@ -64,7 +68,10 @@ func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg s
 		txn.Fee = estimateFeeFunc(txn)
 	}
 	txn.TransactionType = transaction.TxnTypeSmartContract
-	if _, err := txn.Sign(w.SignatureScheme); err != nil {
+
+	mc := miner.GetMinerChain()
+
+	if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
 		return nil, err
 	}
 	return txn, nil
@@ -87,7 +94,10 @@ func (w *Wallet) CreateDataTransaction(msg string, fee currency.Coin) *transacti
 	if isFeeEnabled {
 		txn.Fee = fee
 	}
-	if _, err := txn.Sign(w.SignatureScheme); err != nil {
+
+	mc := miner.GetMinerChain()
+
+	if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
 		panic(err)
 	}
 	return txn

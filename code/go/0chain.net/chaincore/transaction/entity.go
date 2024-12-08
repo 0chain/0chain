@@ -12,7 +12,6 @@ import (
 
 	"0chain.net/core/config"
 	"0chain.net/core/viper"
-	"0chain.net/miner"
 
 	"encoding/json"
 
@@ -461,7 +460,7 @@ func SetupEntity(store datastore.Store) {
 }
 
 /*Sign - given a client and client's private key, sign this transaction */
-func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme) (string, error) {
+func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme, isSplit bool, zauthServer string) (string, error) {
 	t.Hash = t.ComputeHash()
 
 	signature, err := signatureScheme.Sign(t.Hash)
@@ -469,10 +468,8 @@ func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme) (string, 
 		return signature, err
 	}
 
-	mc := miner.GetMinerChain()
-
-	if mc.ChainConfig.IsSplit() {
-		signature, err = PerformZauthSignTxn(signature)
+	if isSplit {
+		signature, err = PerformZauthSignTxn(signature, zauthServer)
 		if err != nil {
 			return signature, err
 		}

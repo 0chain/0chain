@@ -7,16 +7,13 @@ import (
 	"net/http"
 
 	"0chain.net/chaincore/node"
-	"0chain.net/miner"
 	"github.com/pkg/errors"
 )
 
 // PerformZauthSignTxn performs zauth transaction sign call.
-func PerformZauthSignTxn(signature string) (string, error) {
-	mc := miner.GetMinerChain()
-
+func PerformZauthSignTxn(signature, zauthServer string) (string, error) {
 	req, err := http.NewRequest(
-		"POST", mc.ChainConfig.ZauthServer()+"/sign/txn", bytes.NewBuffer([]byte(signature)))
+		"POST", zauthServer+"/sign/txn", bytes.NewBuffer([]byte(signature)))
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create HTTP request")
 	}

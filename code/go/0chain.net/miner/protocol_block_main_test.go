@@ -314,7 +314,7 @@ func TestChain_deletingTxns(t *testing.T) {
 				require.NoError(t, err)
 				txn.TransactionData = string(txnData)
 
-				sig, err := txn.Sign(sigScheme)
+				sig, err := txn.Sign(sigScheme, false, "")
 				require.NoError(t, err)
 
 				txn.Signature = sig

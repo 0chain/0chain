@@ -172,7 +172,7 @@ func postTransaction(t *testing.B, privateKey string, publicKey string, txnData 
 	c.ID = datastore.ToKey(encryption.Hash(publicKey))
 	ss, err := c.GetSignatureScheme()
 	require.NoError(t, err)
-	signature, err := txn.Sign(ss)
+	signature, err := txn.Sign(ss, false, "")
 	if err != nil {
 		fmt.Printf("error signing %v\n", err)
 		return
