@@ -73,6 +73,8 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.26 // indirect
+	github.com/hack-pad/go-webworkers v0.1.0 // indirect
+	github.com/hack-pad/safejs v0.1.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -82,6 +84,8 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
+	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 )
 
