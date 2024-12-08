@@ -27,7 +27,7 @@ import (
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
-	node2 "github.com/0chain/gosdk/core/node"
+	"github.com/0chain/gosdk/core/client"
 	"go.uber.org/zap"
 )
 
@@ -275,7 +275,7 @@ func MakeClientBalanceRequest(clientID string, urls []string) (currency.Coin, er
 	if consensus > 3 {
 		consensus = 3
 	}
-	holder := node2.NewHolder(urls, consensus)
+	holder := client.NewHolder(urls, consensus)
 	balance, _, err2 := holder.GetBalanceFieldFromSharders(clientID, "balance")
 	coin := currency.Coin(balance)
 	return coin, err2
@@ -286,7 +286,7 @@ func MakeClientNonceRequest(clientID string, urls []string) (int64, error) {
 	if consensus > 3 {
 		consensus = 3
 	}
-	holder := node2.NewHolder(urls, consensus)
+	holder := client.NewHolder(urls, consensus)
 	sharders, _, err2 := holder.GetNonceFromSharders(clientID)
 	return sharders, err2
 }
