@@ -983,3 +983,10 @@ func (c *Chain) emitUniqueAddressEvent(sc bcstate.StateContextI, s *state.State)
 	}
 	sc.EmitEvent(event.TypeStats, event.TagUniqueAddress, s.TxnHash, nil)
 }
+
+func (c *Chain) emitSteadyStateBlockEvent(sc bcstate.StateContextI, b *block.Block, time int) {
+	if c.GetEventDb() == nil {
+		return
+	}
+	sc.EmitEvent(event.TypeStats, event.TagFinalizeBlock, b.Hash, b)
+}

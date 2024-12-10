@@ -113,6 +113,7 @@ const (
 	TagShutdownProvider
 	TagInsertReadpool
 	TagUpdateReadpool
+	TagUpdateSteadyStateBlockFinality
 	NumberOfTags
 )
 
