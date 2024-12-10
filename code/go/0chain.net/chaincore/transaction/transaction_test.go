@@ -50,7 +50,7 @@ func BenchmarkTransactionVerify(b *testing.B) {
 	t.TransactionData = txnData
 	t.CreationDate = common.Now()
 
-	_, err = t.Sign(sigScheme)
+	_, err = t.Sign(sigScheme, false, "")
 	if err != nil {
 		fmt.Printf("Error signing\n")
 	}
