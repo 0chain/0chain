@@ -1,6 +1,6 @@
 module 0chain.net
 
-go 1.22.0
+go 1.21
 
 require (
 	github.com/alicebob/miniredis/v2 v2.30.5
@@ -40,8 +40,8 @@ require (
 )
 
 require (
-	github.com/0chain/common v1.18.3
-	github.com/0chain/gosdk v1.18.12-0.20241206142928-5ff7542fd5ef
+	github.com/0chain/common v1.13.1-0.20240726100134-cbf5bf9beaac
+	github.com/0chain/gosdk v1.16.0
 	github.com/IBM/sarama v1.42.2
 	github.com/go-faker/faker/v4 v4.2.0
 	github.com/herumi/bls v1.37.0
@@ -52,7 +52,7 @@ require (
 	github.com/minio/sha256-simd v1.0.1
 	github.com/ory/dockertest/v3 v3.10.0
 	github.com/pressly/goose/v3 v3.15.0
-	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
+	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc
 	golang.org/x/sys v0.21.0
 	gorm.io/driver/sqlite v1.5.3
 	moul.io/zapgorm2 v1.3.0
@@ -73,8 +73,6 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230731223053-c322873962e3 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.26 // indirect
-	github.com/hack-pad/go-webworkers v0.1.0 // indirect
-	github.com/hack-pad/safejs v0.1.1 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -84,8 +82,6 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
-	github.com/tyler-smith/go-bip39 v1.1.0 // indirect
-	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 )
 
