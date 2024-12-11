@@ -181,6 +181,8 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) (*transaction.Transa
 		return nil, err
 	}
 
+	mc := miner.GetMinerChain()
+
 	txn := wf.CreateRandomSendTransaction(wt.ClientID, value, func(txn *transaction.Transaction) currency.Coin {
 		fee, err := c.EstimateTransactionFeeLFB(context.Background(), txn)
 		if err != nil {
@@ -188,14 +190,17 @@ func createSendTransaction(c *chain.Chain, prng *rand.Rand) (*transaction.Transa
 		}
 
 		return fee
-	})
+	}, mc.IsSplit(), mc.ZauthServer())
 	return txn, nil
 }
 
 func createDataTransaction(prng *rand.Rand) *transaction.Transaction {
 	csize := len(wallets)
 	wf := wallets[prng.Intn(csize)]
-	txn := wf.CreateRandomDataTransaction(0)
+
+	mc := miner.GetMinerChain()
+
+	txn := wf.CreateRandomDataTransaction(0, mc.IsSplit(), mc.ZauthServer())
 	return txn
 }
 
@@ -240,6 +245,8 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 	defer memorystore.Close(tctx)
 	tctx = datastore.WithAsyncChannel(ctx, transaction.TransactionEntityChannel)
 
+	mc := miner.GetMinerChain()
+
 	for i := 0; i < numClients; i++ {
 		//client side code
 		w := &wallet.Wallet{}
@@ -263,7 +270,7 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 				}
 
 				return fee
-			})
+			}, mc.IsSplit(), mc.ZauthServer())
 
 		_, err = transaction.PutTransactionWithoutVerifySig(tctx, txn)
 		if err != nil {
@@ -280,7 +287,7 @@ func GenerateClients(c *chain.Chain, numClients int, workdir string) {
 					return defaultGenerateTxnFee
 				}
 				return fee
-			})
+			}, mc.IsSplit(), mc.ZauthServer())
 		if err != nil {
 			logging.Logger.Error("client generator - faucet refill", zap.Error(err))
 		}

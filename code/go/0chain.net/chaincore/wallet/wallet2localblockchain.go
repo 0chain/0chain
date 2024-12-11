@@ -7,7 +7,6 @@ import (
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/config"
 	"0chain.net/core/datastore"
-	"0chain.net/miner"
 	"github.com/0chain/common/core/currency"
 )
 
@@ -21,14 +20,15 @@ func SetupWallet() {
 }
 
 /*CreateRandomSendTransaction - create a transaction */
-func (w *Wallet) CreateRandomSendTransaction(toClient string, value currency.Coin, estimateFeeFunc func(t *transaction.Transaction) currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateRandomSendTransaction(
+	toClient string, value currency.Coin, estimateFeeFunc func(t *transaction.Transaction) currency.Coin, isSplit bool, zauthServer string) *transaction.Transaction {
 	msg := fmt.Sprintf("0chain zerochain zipcode Europe rightthing Oriental California honest accurate India network %v %v", rand.Int63(), value)
-	return w.CreateSendTransaction(toClient, value, msg, estimateFeeFunc)
+	return w.CreateSendTransaction(toClient, value, msg, estimateFeeFunc, isSplit, zauthServer)
 }
 
 /*CreateSendTransaction - create a send transaction */
 func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg string,
-	estimateFeeFunc func(t *transaction.Transaction) currency.Coin) *transaction.Transaction {
+	estimateFeeFunc func(t *transaction.Transaction) currency.Coin, isSplit bool, zauthServer string) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.PublicKey = w.PublicKey
 	txn.ClientID = w.ClientID
@@ -41,15 +41,8 @@ func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg
 		txn.Fee = estimateFeeFunc(txn)
 	}
 
-	mc := miner.GetMinerChain()
-	if mc != nil && mc.IsConfigured() {
-		if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
-			panic(err)
-		}
-	} else {
-		if _, err := txn.Sign(w.SignatureScheme, false, ""); err != nil {
-			panic(err)
-		}
+	if _, err := txn.Sign(w.SignatureScheme, isSplit, zauthServer); err != nil {
+		panic(err)
 	}
 
 	return txn
@@ -57,7 +50,7 @@ func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg
 
 // CreateSCTransaction creates a faucet refill transaction
 func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg string,
-	estimateFeeFunc func(txn *transaction.Transaction) currency.Coin) (*transaction.Transaction, error) {
+	estimateFeeFunc func(txn *transaction.Transaction) currency.Coin, isSplit bool, zauthServer string) (*transaction.Transaction, error) {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.PublicKey = w.PublicKey
 	txn.ClientID = w.ClientID
@@ -75,28 +68,21 @@ func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg s
 	}
 	txn.TransactionType = transaction.TxnTypeSmartContract
 
-	mc := miner.GetMinerChain()
-	if mc != nil && mc.IsConfigured() {
-		if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
-			return nil, err
-		}
-	} else {
-		if _, err := txn.Sign(w.SignatureScheme, false, ""); err != nil {
-			return nil, err
-		}
+	if _, err := txn.Sign(w.SignatureScheme, isSplit, zauthServer); err != nil {
+		return nil, err
 	}
 
 	return txn, nil
 }
 
 /*CreateRandomDataTransaction - creat a random data transaction */
-func (w *Wallet) CreateRandomDataTransaction(fee currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateRandomDataTransaction(fee currency.Coin, isSplit bool, zauthServer string) *transaction.Transaction {
 	msg := fmt.Sprintf("storing some random data - 1234567890 abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ %v", rand.Int63())
-	return w.CreateDataTransaction(msg, fee)
+	return w.CreateDataTransaction(msg, fee, isSplit, zauthServer)
 }
 
 /*CreateDataTransaction - create a data transaction */
-func (w *Wallet) CreateDataTransaction(msg string, fee currency.Coin) *transaction.Transaction {
+func (w *Wallet) CreateDataTransaction(msg string, fee currency.Coin, isSplit bool, zauthServer string) *transaction.Transaction {
 	txn := transactionMetadataProvider.Instance().(*transaction.Transaction)
 	txn.ClientID = w.ClientID
 	txn.TransactionData = msg
@@ -107,15 +93,8 @@ func (w *Wallet) CreateDataTransaction(msg string, fee currency.Coin) *transacti
 		txn.Fee = fee
 	}
 
-	mc := miner.GetMinerChain()
-	if mc != nil && mc.IsConfigured() {
-		if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
-			panic(err)
-		}
-	} else {
-		if _, err := txn.Sign(w.SignatureScheme, false, ""); err != nil {
-			panic(err)
-		}
+	if _, err := txn.Sign(w.SignatureScheme, isSplit, zauthServer); err != nil {
+		panic(err)
 	}
 
 	return txn

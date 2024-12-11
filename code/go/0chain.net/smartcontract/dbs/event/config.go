@@ -84,10 +84,6 @@ type TestConfigData struct {
 	ZauthServer string `json:"zauth_server"`
 }
 
-func (t *TestConfig) IsConfigured() bool {
-	return t.conf != nil
-}
-
 func (t *TestConfig) IsStateEnabled() bool {
 	return t.conf.IsStateEnabled
 }

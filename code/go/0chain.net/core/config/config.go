@@ -142,7 +142,6 @@ const (
 
 //go:generate mockery --case underscore --name=ChainConfig --output=./mocks
 type ChainConfig interface {
-	IsConfigured() bool
 	IsStateEnabled() bool
 	IsDkgEnabled() bool
 	IsViewChangeEnabled() bool
