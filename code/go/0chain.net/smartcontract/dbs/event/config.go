@@ -80,8 +80,12 @@ type TestConfigData struct {
 	DbsSettings config.DbSettings `json:"dbs_settings"`
 	TxnExempt   map[string]bool   `json:"txn_exempt"`
 
-	IsSplit bool `json:"is_split"`
+	IsSplit     bool   `json:"is_split"`
 	ZauthServer string `json:"zauth_server"`
+}
+
+func (t *TestConfig) IsConfigured() bool {
+	return t.conf != nil
 }
 
 func (t *TestConfig) IsStateEnabled() bool {

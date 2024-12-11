@@ -62,6 +62,13 @@ func NewConfigImpl(conf *ConfigData) *ConfigImpl {
 	return &ConfigImpl{conf: conf}
 }
 
+func (c *ConfigImpl) IsConfigured() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf != nil
+}
+
 func (c *ConfigImpl) IsStateEnabled() bool {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
