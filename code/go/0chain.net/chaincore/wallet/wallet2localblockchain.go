@@ -42,10 +42,16 @@ func (w *Wallet) CreateSendTransaction(toClient string, value currency.Coin, msg
 	}
 
 	mc := miner.GetMinerChain()
-
-	if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
-		panic(err)
+	if mc != nil {
+		if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
+			panic(err)
+		}
+	} else {
+		if _, err := txn.Sign(w.SignatureScheme, false, ""); err != nil {
+			panic(err)
+		}
 	}
+
 	return txn
 }
 
@@ -70,10 +76,16 @@ func (w *Wallet) CreateSCTransaction(toClient string, value currency.Coin, msg s
 	txn.TransactionType = transaction.TxnTypeSmartContract
 
 	mc := miner.GetMinerChain()
-
-	if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
-		return nil, err
+	if mc != nil {
+		if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
+			return nil, err
+		}
+	} else {
+		if _, err := txn.Sign(w.SignatureScheme, false, ""); err != nil {
+			return nil, err
+		}
 	}
+
 	return txn, nil
 }
 
@@ -96,9 +108,15 @@ func (w *Wallet) CreateDataTransaction(msg string, fee currency.Coin) *transacti
 	}
 
 	mc := miner.GetMinerChain()
-
-	if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
-		panic(err)
+	if mc != nil {
+		if _, err := txn.Sign(w.SignatureScheme, mc.IsSplit(), mc.ZauthServer()); err != nil {
+			panic(err)
+		}
+	} else {
+		if _, err := txn.Sign(w.SignatureScheme, false, ""); err != nil {
+			panic(err)
+		}
 	}
+
 	return txn
 }

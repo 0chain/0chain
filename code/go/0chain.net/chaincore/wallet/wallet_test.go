@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"0chain.net/core/config"
-	"0chain.net/miner"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/statecache"
 
@@ -270,11 +269,6 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 	if err := os.MkdirAll("/tmp/txn/data/", 0700); err != nil {
 		t.Fatal(err)
 	}
-
-	c := chain.Provider().(*chain.Chain)
-	data := &chain.ConfigData{}
-	c.ChainConfig = chain.NewConfigImpl(data)
-	miner.SetupMinerChain(c)
 
 	common.SetupRootContext(node.GetNodeContext())
 	transaction.SetupEntity(memorystore.GetStorageProvider())
