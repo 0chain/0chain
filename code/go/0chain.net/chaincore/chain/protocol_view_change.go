@@ -237,6 +237,7 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mn.PublicKey = selfNode.PublicKey
 	mn.ShortName = selfNode.Description
 	mn.BuildTag = selfNode.Info.BuildTag
+	logging.Logger.Debug("register node", zap.Any("build tag", mn.BuildTag))
 
 	// miner SC configurations
 	mn.Settings.DelegateWallet = viper.GetString("delegate_wallet")
