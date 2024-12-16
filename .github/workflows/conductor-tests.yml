@@ -367,7 +367,7 @@ jobs:
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [compute-branches, standard-miner, standard-sharder, zchain-config, byzantine-try-1, byzantine-try-2, byzantine-try-3, fault-tolerance, blobber-01, blobber-02-try-1, blobber-02-try-2, blobber-02-try-3, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02-try-1, node-recovery-02-try-2, node-recovery-02-try-3, node-recovery-03]
+    needs: [compute-branches, standard-miner, standard-sharder, zchain-config, byzantine-try-1, byzantine-try-2, byzantine-try-3, fault-tolerance, blobber-01, blobber-02-try-1, blobber-02-try-2, blobber-02-try-3, blobber-03, blobber-04, blobber-05, blobber-06, node-recovery-01, node-recovery-02-try-1, node-recovery-02-try-2, node-recovery-02-try-3]
     if: always()
     steps:
       - name: "Notify Slack"
