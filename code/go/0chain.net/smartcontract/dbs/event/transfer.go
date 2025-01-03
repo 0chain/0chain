@@ -42,3 +42,18 @@ type BridgeMint struct {
 	Amount    currency.Coin `json:"amount"`
 	Signers   []string      `json:"signers"`
 }
+
+func mergeToChallengePoolsEvents() *eventsMergerImpl[ChallengePoolLock] {
+	return newEventsMerger[ChallengePoolLock](TagToChallengePool, withMergeChallengePoolLockEvents())
+}
+
+func mergeFromChallengePoolsEvents() *eventsMergerImpl[ChallengePoolLock] {
+	return newEventsMerger[ChallengePoolLock](TagFromChallengePool, withMergeChallengePoolLockEvents())
+}
+
+func withMergeChallengePoolLockEvents() eventMergeMiddleware {
+	return withEventMerge(func(a, b *ChallengePoolLock) (*ChallengePoolLock, error) {
+		a.Amount += a.Amount
+		return a, nil
+	})
+}

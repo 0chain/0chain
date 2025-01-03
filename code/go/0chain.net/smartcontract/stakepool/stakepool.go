@@ -274,7 +274,7 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId, dbs.ProviderID{
+		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId+":"+clientId, dbs.ProviderID{
 			ID:   providerId,
 			Type: providerType,
 		})
@@ -300,7 +300,7 @@ func (sp *StakePool) MintRewards(
 		}); err != nil {
 			return 0, fmt.Errorf("could not transfer rewards: %v", err)
 		}
-		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
+		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId+":"+providerId, event.RewardMint{
 			Amount:       int64(dPool.Reward),
 			BlockNumber:  balances.GetBlock().Round,
 			ClientID:     clientId,
@@ -308,7 +308,7 @@ func (sp *StakePool) MintRewards(
 			ProviderID:   providerId,
 		})
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.UserAggregate{
+		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId+":"+providerId, event.UserAggregate{
 			CollectedReward: int64(dPool.Reward),
 			UserID:          clientId,
 		})

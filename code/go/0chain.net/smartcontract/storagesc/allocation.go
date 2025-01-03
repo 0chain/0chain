@@ -2,6 +2,7 @@ package storagesc
 
 import (
 	"0chain.net/core/util/entitywrapper"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -589,6 +590,14 @@ func validateBlobbers(
 	return list[:size], bSize, nil
 }
 
+type Ticket struct {
+	AllocationID  string `json:"allocation_id"`
+	UserID        string `json:"user_id"`
+	RoundExpiry   int64  `json:"round_expiry"`
+	OperationType string `json:"operation_type"`
+	Signature     string `json:"signature"`
+}
+
 type updateAllocationRequest struct {
 	ID                      string `json:"id"`               // allocation id
 	Name                    string `json:"name"`             // allocation name
@@ -603,6 +612,8 @@ type updateAllocationRequest struct {
 	FileOptionsChanged      bool   `json:"file_options_changed"`
 	FileOptions             uint16 `json:"file_options"`
 
+	UpdateTicket *Ticket `json:"update_ticket" binding:"-"`
+
 	OwnerSigningPublicKey string `json:"owner_signing_public_key"`
 }
 
@@ -612,7 +623,8 @@ func (uar *updateAllocationRequest) decode(b []byte) error {
 
 // validate request
 func (uar *updateAllocationRequest) validate(
-	conf *Config,
+	txnClientId string,
+	balances chainstate.StateContextI,
 	alloc *storageAllocationBase,
 ) error {
 	if uar.Size == 0 &&
@@ -652,6 +664,71 @@ func (uar *updateAllocationRequest) validate(
 
 	if uar.FileOptions > 63 {
 		return fmt.Errorf("FileOptions %d incorrect", uar.FileOptions)
+	}
+
+	if err := chainstate.WithActivation(balances, "hermes", func() error {
+		return nil
+	}, func() error {
+		updateTicket := uar.UpdateTicket
+		if updateTicket != nil {
+			if updateTicket.AllocationID != alloc.ID {
+				return fmt.Errorf("UpdateTicket AllocationID %s does not match allocation ID %s", updateTicket.AllocationID, alloc.ID)
+			}
+
+			if updateTicket.UserID != txnClientId {
+				return fmt.Errorf("UpdateTicket UserID %s does not match transaction client ID %s", updateTicket.UserID, txnClientId)
+			}
+
+			round := balances.GetBlock().Round
+			if updateTicket.RoundExpiry < round {
+				return fmt.Errorf("UpdateTicket RoundExpiry %d is less than current round %d", updateTicket.RoundExpiry, round)
+			}
+
+			validOperation := func(op string, conditions ...bool) error {
+				for _, condition := range conditions {
+					if !condition {
+						return fmt.Errorf("invalid UpdateTicket: OperationType %s has conflicting or missing parameters", op)
+					}
+				}
+				return nil
+			}
+
+			switch updateTicket.OperationType {
+			case "add_blobber":
+				if err := validOperation("add_blobber", uar.AddBlobberId != "", uar.RemoveBlobberId == "", uar.Size <= 0); err != nil {
+					return err
+				}
+			case "replace_blobber":
+				if err := validOperation("replace_blobber", uar.AddBlobberId != "", uar.RemoveBlobberId != "", uar.Size <= 0, !uar.Extend); err != nil {
+					return err
+				}
+			case "size_upgrade":
+				if err := validOperation("size_upgrade", uar.Size > 0, uar.AddBlobberId == "", uar.RemoveBlobberId == ""); err != nil {
+					return err
+				}
+			case "extend":
+				if err := validOperation("extend", uar.Extend, uar.AddBlobberId == "", uar.RemoveBlobberId == "", uar.Size <= 0); err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("invalid UpdateTicket: OperationType %s is not recognized", updateTicket.OperationType)
+			}
+
+			payload := fmt.Sprintf("%s:%d:%s:%s", updateTicket.AllocationID, updateTicket.RoundExpiry, updateTicket.UserID, updateTicket.OperationType)
+			logging.Logger.Debug("update_alloc_ticket verify", zap.String("payload", payload))
+			signatureScheme := balances.GetSignatureScheme()
+			if err := signatureScheme.SetPublicKey(alloc.OwnerPublicKey); err != nil {
+				return fmt.Errorf("failed to set public key: %v", err)
+			}
+			success, err := signatureScheme.Verify(updateTicket.Signature, hex.EncodeToString([]byte(payload)))
+			if err != nil || !success {
+				return fmt.Errorf("UpdateTicket Signature verification failed: %v", err)
+			}
+		}
+
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil
@@ -1101,14 +1178,26 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	alloc := sa.mustBase()
 
-	if t.ClientID != alloc.Owner {
+	isThirdPartyUnAuthorizedRequest := false
+	actErr = chainstate.WithActivation(balances, "hermes", func() error {
+		isThirdPartyUnAuthorizedRequest = t.ClientID != alloc.Owner
+		return nil
+	}, func() error {
+		isThirdPartyUnAuthorizedRequest = t.ClientID != alloc.Owner && request.UpdateTicket == nil
+		return nil
+	})
+	if actErr != nil {
+		return "", actErr
+	}
+
+	if isThirdPartyUnAuthorizedRequest {
 		if !alloc.ThirdPartyExtendable || !request.Extend {
 			return "", common.NewError("allocation_updating_failed",
 				"only owner can update the allocation")
 		}
 	}
 
-	if err = request.validate(conf, alloc); err != nil {
+	if err = request.validate(t.ClientID, balances, alloc); err != nil {
 		return "", common.NewError("allocation_updating_failed", err.Error())
 	}
 
@@ -1170,7 +1259,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 	// If the txn client_id is not the owner of the allocation, should just be able to extend the allocation if permissible
 	// This way, even if an atttacker of an innocent user incorrectly tries to modify any other part of the allocation, it will not have any effect
-	if t.ClientID != alloc.Owner /* Third-party actions */ {
+	if isThirdPartyUnAuthorizedRequest /* Third-party actions */ {
 		err = sc.extendAllocation(t, conf, isEnterprise, alloc, blobbers, &request, balances)
 		if err != nil {
 			return "", err

@@ -1,0 +1,41 @@
+name: Update Sprint Branch on every merge to staging
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - staging
+
+jobs:
+  update-sprint:
+    runs-on: [self-hosted, arc-runner]
+
+    steps:
+      # Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Configure Git
+      - name: Set up Git
+        run: |
+          git config user.name "${{ secrets.SVC_ACCOUNT_USER }}"
+          git config user.email "${{ secrets.SVC_ACCOUNT_EMAIL }}"
+          git remote set-url origin https://${{ secrets.SVC_ACCOUNT_USER }}:${{ secrets.SVC_ACCOUNT_SECRET }}@github.com/0chain/0chain.git
+
+      # Pull latest changes in the staging branch
+      - name: Pull staging branch
+        run: |
+          git fetch origin
+          git checkout staging
+
+      # Merge staging into sprint
+      - name: Merge staging into latest sprint branch
+        run: |
+          git branch --sort=-committerdate | grep "sprint-*" | head -1
+          BRANCH=$(git branch --sort=-committerdate | grep "sprint-*" | head -1)
+          git checkout $BRANCH
+          # git merge staging --no-edit
+          # echo "Push changes"
+          # git push origin sprint

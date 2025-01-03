@@ -21,7 +21,7 @@ func (sp *StakePool) EmitStakePoolBalanceUpdate(
 		dpu := dbs.NewDelegatePoolUpdate(id, pId, pType)
 		dpu.Updates["balance"] = dp.Balance
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id, *dpu)
+		balances.EmitEvent(event.TypeStats, event.TagUpdateDelegatePool, id+":"+pId, *dpu)
 	}
 }
 

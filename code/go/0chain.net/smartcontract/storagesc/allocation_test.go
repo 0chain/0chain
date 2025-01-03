@@ -1819,10 +1819,6 @@ func Test_updateAllocationRequest_decode(t *testing.T) {
 }
 
 func Test_updateAllocationRequest_validate(t *testing.T) {
-
-	config := &Config{
-		MinAllocSize: 1 * GB,
-	}
 	alloc := &storageAllocationBase{
 		BlobberAllocsMap: make(map[string]*BlobberAllocation),
 		Owner:            "owner123",
@@ -1922,7 +1918,7 @@ func Test_updateAllocationRequest_validate(t *testing.T) {
 			if tt.name == "Positive case" {
 				alloc.BlobberAllocs = []*BlobberAllocation{{}}
 			}
-			err := tt.uar.validate(config, alloc)
+			err := tt.uar.validate(clientId, nil, alloc)
 
 			if tt.expectErr && err == nil {
 				t.Error("Expected an error, but got nil")

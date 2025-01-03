@@ -110,3 +110,7 @@ func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 		UpdateAll: true,
 	}).Create(&dps).Error
 }
+
+func mergeUpdateDelegatePoolEvents() *eventsMergerImpl[*dbs.DelegatePoolUpdate] {
+	return newEventsMerger[*dbs.DelegatePoolUpdate](TagUpdateDelegatePool, withUniqueEventOverwrite())
+}
