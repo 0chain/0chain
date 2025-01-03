@@ -249,19 +249,6 @@ jobs:
             version: '1.7'
             force: 'false'
 
-      - name: "Create Tenderly virtual testnet"
-        run: |
-          echo "TENDERLY_CREATION_INFO=$(curl -X POST \
-           -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
-           -H "Content-Type: application/json" \
-           -d '{"slug":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}","displayName":"mainnet-dev-${{ env.RUNNER_NUMBER }}-${{ github.run_id }}","description":"","visibility":"TEAM","tags":{"purpose":"development"},"networkConfig":{"networkId":"1","blockNumber":"18512782","chainConfig":{"chainId":"1"},"baseFeePerGas":"1"},"explorerConfig":{"enabled":false,"verificationVisibility":"bytecode"},"syncState":false}' \
-           https://api.tenderly.co/api/v1/account/zus_network/project/project/testnet/container)" >> $GITHUB_ENV
-
-      - name: "Parse Tenderly virtual testnet creation transaction result"
-        run: |
-          echo "TENDERLY_VIRTUAL_TESTNET_ID=$(echo '${{ env.TENDERLY_CREATION_INFO }}' | jq -r '.container.id')" >> $GITHUB_ENV
-          echo "TENDERLY_VIRTUAL_TESTNET_RPC_ID=$(echo '${{ env.TENDERLY_CREATION_INFO }}' | jq -r '.container.connectivityConfig.endpoints[0].id')" >> $GITHUB_ENV
-
       - name: "Deploy 0Chain"
         uses: 0chain/actions/deploy-0chain@master
         with:
@@ -272,10 +259,10 @@ jobs:
           kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
           teardown_condition: "TESTS_PASSED"
           SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
-          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ${{ env.TENDERLY_VIRTUAL_TESTNET_RPC_ID }}
+          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ""
           graphnode_sc: ${{ secrets.GRAPHNODE_SC }}
           graphnode_network: ${{ secrets.GRAPHNODE_NETWORK }}
-          graphnode_ethereum_node_url: https://virtual.mainnet.rpc.tenderly.co/${{ env.TENDERLY_VIRTUAL_TESTNET_RPC_ID }}
+          graphnode_ethereum_node_url: ""
 
       - name: "Run System tests"
         uses: 0chain/actions/run-system-tests@master
@@ -288,18 +275,10 @@ jobs:
           run_flaky_tests: false
           run_smoke_tests: ${{ github.ref != 'refs/heads/staging' && github.base_ref != 'staging' && github.ref != 'refs/heads/master' && github.base_ref != 'master' }}
           retry_failures: true
-          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ${{ env.TENDERLY_VIRTUAL_TESTNET_RPC_ID }}
+          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ""
           DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
           S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
           S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-
-      - name: "Remove Tenderly virtual testnet"
-        if: always()
-        run: |
-          curl -X DELETE \
-            -H "x-access-key: ${{ secrets.TENDERLY_SECRET }}" \
-            -H "Content-Type: application/json" \
-            https://api.tenderly.co/api/v1/account/zus_network/project/project/testnet/container/${{ env.TENDERLY_VIRTUAL_TESTNET_ID }}
 
       - name: "Set PR status as ${{ job.status }}"
         if: ${{ (success() || failure()) && steps.findPr.outputs.number }}

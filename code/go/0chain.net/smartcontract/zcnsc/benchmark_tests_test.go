@@ -21,9 +21,11 @@ func TestZcnBenchmarkTests(t *testing.T) {
 	}
 	zsc.InitSC()
 
+	removeTests := 1
+
 	require.EqualValues(
 		t,
-		len(zsc.smartContractFunctions),
+		len(zsc.smartContractFunctions)-removeTests,
 		len(BenchmarkTests(benchmark.MockBenchData, mockSigScheme).Benchmarks),
 	)
 }

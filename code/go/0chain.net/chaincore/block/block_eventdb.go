@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func blockToBlockEvent(block *Block) *event.Block {
+func blockToBlockEvent(block *Block, steadyStateFinalityDuration int64) *event.Block {
 	return &event.Block{
 		Hash:                  block.Hash,
 		Version:               block.Version,
@@ -26,18 +26,19 @@ func blockToBlockEvent(block *Block) *event.Block {
 		StateChangesCount:     block.StateChangesCount,
 		RunningTxnCount:       fmt.Sprintf("%d", block.RunningTxnCount),
 		RoundTimeoutCount:     block.RoundTimeoutCount,
+		FinalityDuration:      steadyStateFinalityDuration,
 		FinalizationTime:      time.Now(),
 	}
 }
 
-func CreateFinalizeBlockEvent(block *Block) event.Event {
+func CreateFinalizeBlockEvent(block *Block, steadyStateFinalityDuration int64) event.Event {
 	return event.Event{
 		BlockNumber: block.Round,
 		TxHash:      "",
 		Type:        event.TypeChain,
 		Tag:         event.TagFinalizeBlock,
 		Index:       block.Hash,
-		Data:        blockToBlockEvent(block),
+		Data:        blockToBlockEvent(block, steadyStateFinalityDuration),
 		Version:     event.Version1,
 	}
 }

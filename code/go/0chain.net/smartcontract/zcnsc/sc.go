@@ -28,6 +28,7 @@ const (
 	DeleteFromDelegatePoolFunc    = "delete-from-delegate-pool"
 	UpdateAuthorizerStakePoolFunc = "update-authorizer-stake-pool"
 	CollectRewardsFunc            = "collect-rewards"
+	RepairEthAddressMergeFunc     = "repair-eth-address-merge"
 )
 
 // ZCNSmartContract ...
@@ -66,6 +67,9 @@ func (zcn *ZCNSmartContract) InitSC() {
 	zcn.smartContractFunctions[CollectRewardsFunc] = zcn.CollectRewards
 	zcn.smartContractFunctions[AddToDelegatePoolFunc] = zcn.AddToDelegatePool           // stakepool lock
 	zcn.smartContractFunctions[DeleteFromDelegatePoolFunc] = zcn.DeleteFromDelegatePool // stakepool unlock
+
+	//Repair
+	zcn.smartContractFunctions[RepairEthAddressMergeFunc] = zcn.RepairEthAddressMerge
 }
 
 // SetSC ...
@@ -123,6 +127,17 @@ func (zcn *ZCNSmartContract) GetCostTable(balances cstate.StateContextI) (map[st
 // Execute ...
 func (zcn *ZCNSmartContract) Execute(trans *transaction.Transaction, method string, input []byte, ctx cstate.StateContextI,
 ) (string, error) {
+	if actErr := cstate.WithActivation(ctx, "hermes", func() error {
+		if method == "repair-eth-address-merge" {
+			return common.NewErrorf("failed execution", "no zcnsc smart contract method with name: %v", method)
+		}
+		return nil
+	}, func() error {
+		return nil
+	}); actErr != nil {
+		return "", actErr
+	}
+
 	scFunc, found := zcn.smartContractFunctions[method]
 	if !found {
 		return common.NewErrorf("failed execution", "no zcnsc smart contract method with name: %v", method).Error(), nil

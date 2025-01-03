@@ -161,3 +161,64 @@ func (z DeleteAuthorizerPayload) Msgsize() (s int) {
 	s = 1 + 3 + msgp.StringPrefixSize + len(z.ID)
 	return
 }
+
+// MarshalMsg implements msgp.Marshaler
+func (z RepairEthAddressPayload) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 2
+	// string "EthereumAddress"
+	o = append(o, 0x82, 0xaf, 0x45, 0x74, 0x68, 0x65, 0x72, 0x65, 0x75, 0x6d, 0x41, 0x64, 0x64, 0x72, 0x65, 0x73, 0x73)
+	o = msgp.AppendString(o, z.EthereumAddress)
+	// string "Nonce"
+	o = append(o, 0xa5, 0x4e, 0x6f, 0x6e, 0x63, 0x65)
+	o = msgp.AppendInt64(o, z.Nonce)
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *RepairEthAddressPayload) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "EthereumAddress":
+			z.EthereumAddress, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "EthereumAddress")
+				return
+			}
+		case "Nonce":
+			z.Nonce, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "Nonce")
+				return
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z RepairEthAddressPayload) Msgsize() (s int) {
+	s = 1 + 16 + msgp.StringPrefixSize + len(z.EthereumAddress) + 6 + msgp.Int64Size
+	return
+}

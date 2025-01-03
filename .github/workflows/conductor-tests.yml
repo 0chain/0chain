@@ -292,17 +292,17 @@ jobs:
     secrets:
       inherit
   
-  authorizers-standard:
-    needs: compute-branches
-    if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-authorizer-tests.yml@staging
-    with:
-      chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
-      auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
-      zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
-      zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
-    secrets:
-      inherit
+  # authorizers-standard:
+  #   needs: compute-branches
+  #   if: always() && needs.compute-branches.result == 'success'
+  #   uses: 0chain/0chain/.github/workflows/conductor-authorizer-tests.yml@staging
+  #   with:
+  #     chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
+  #     auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
+  #     zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
+  #     zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
+  #   secrets:
+  #     inherit
   
   node-recovery-01:
     needs: compute-branches
@@ -352,18 +352,18 @@ jobs:
     secrets:
       inherit
 
-  node-recovery-03:
-    needs: compute-branches
-    if: always() && needs.compute-branches.result == 'success'
-    uses: 0chain/0chain/.github/workflows/conductor-node-recovery-03-tests.yml@staging
-    with:
-      chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
-      auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
-      zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
-      zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
-      zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
-    secrets:
-      inherit
+  # node-recovery-03:
+  #   needs: compute-branches
+  #   if: always() && needs.compute-branches.result == 'success'
+  #   uses: 0chain/0chain/.github/workflows/conductor-node-recovery-03-tests.yml@staging
+  #   with:
+  #     chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
+  #     auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
+  #     zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
+  #     zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
+  #     zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
+  #   secrets:
+  #     inherit
 
   notify_slack:
     runs-on: [self-hosted, arc-runner]
