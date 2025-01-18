@@ -307,17 +307,15 @@ func (c *Chain) NotifyBlockSync() {
 func (c *Chain) BlockWorker(ctx context.Context) {
 	const stuckDuration = 3 * time.Second
 	var (
-		endRound int64
-		syncing  bool
-		// syncTimer  time.Time
+		endRound   int64
+		syncing    bool
 		timingSync bool
 
-		syncBlocksTimer  = time.NewTimer(7 * time.Second)
+		syncBlocksTimer  = time.NewTimer(0)
 		aheadN           = int64(config.GetLFBTicketAhead())
-		maxRequestBlocks = aheadN
+		maxRequestBlocks = aheadN * 2 // Dynamically increased batch size
 
-		// triggered after sync process is started
-		stuckCheckTimer = time.NewTimer(10 * time.Second)
+		stuckCheckTimer = time.NewTimer(stuckDuration)
 		plfb            = c.GetLatestFinalizedBlock()
 	)
 
@@ -326,78 +324,44 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
 			return
+
 		case <-c.notifySyncBlockC:
 			if syncing {
-				logging.Logger.Debug("process block, receive sync request, already syncing")
+				logging.Logger.Debug("Already syncing; received notify block sync request")
 				continue
 			}
-			logging.Logger.Debug("process block, received notify block sync request")
+			logging.Logger.Debug("Received notify block sync request")
 			stuckCheckTimer.Reset(stuckDuration)
-			syncBlocksTimer.Reset(0)
+			syncBlocksTimer.Reset(0) // Trigger immediate sync
+
 		case <-stuckCheckTimer.C:
-			logging.Logger.Debug("process block, detected stuck, trigger sync",
+			logging.Logger.Debug("Detected stuck; triggering sync",
 				zap.Int64("round", c.GetCurrentRound()),
 				zap.Int64("lfb", c.GetLatestFinalizedBlock().Round))
 			stuckCheckTimer.Reset(stuckDuration)
-			// trigger sync
 			syncBlocksTimer.Reset(0)
+
 		case <-syncBlocksTimer.C:
-			// reset sync timer to 1 minute
-			syncBlocksTimer.Reset(time.Minute)
-
-			var (
-				lfbTk = c.GetLatestLFBTicket(ctx)
-				lfb   = c.GetLatestFinalizedBlock()
-			)
-
+			// Reset sync timer dynamically based on sync status
+			lfb := c.GetLatestFinalizedBlock()
 			cr := c.GetCurrentRound()
 			if cr < lfb.Round {
 				c.SetCurrentRound(lfb.Round)
 				cr = lfb.Round
 			}
 
-			if lfb.Round+aheadN <= cr {
-				logging.Logger.Debug("process block, synced to lfb+ahead, start to force finalize rounds",
-					zap.Int64("current round", cr),
-					zap.Int64("lfb", lfb.Round),
-					zap.Int64("lfb+ahead", lfb.Round+aheadN))
-
-				for rn := lfb.Round + 1; rn <= cr; rn++ {
-					if r := c.GetRound(rn); r != nil {
-						c.FinalizeRound(c.GetRound(rn))
-					}
-				}
-				// continue
-			}
-
+			lfbTk := c.GetLatestLFBTicket(ctx)
 			endRound = lfbTk.Round + aheadN
 
 			if endRound <= cr || lfb.Round >= lfbTk.Round {
 				if timingSync {
-					// syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
 					timingSync = false
 				}
-
-				logging.Logger.Debug("process block, synced already, continue...")
+				logging.Logger.Debug("Already synced; continuing...")
+				syncBlocksTimer.Reset(1 * time.Second) // Shorter interval to check again
 				continue
 			}
 
-			r := c.GetRound(cr)
-			cb := r.GetHeaviestNotarizedBlock()
-			if cb == nil {
-				logging.Logger.Debug("process block, current heaviest notarized block is nil", zap.Int64("current round", cr))
-				if cr > 0 {
-					cr = cr - 1
-				}
-			}
-
-			logging.Logger.Debug("process block, sync triggered",
-				zap.Int64("lfb", lfb.Round),
-				zap.Int64("lfb ticket", lfbTk.Round),
-				zap.Int64("current round", cr),
-				zap.Int64("end round", endRound))
-
-			// trunc to send maxRequestBlocks each time
 			reqNum := endRound - cr
 			if reqNum > maxRequestBlocks {
 				reqNum = maxRequestBlocks
@@ -407,117 +371,73 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			syncing = true
 			if !timingSync {
 				timingSync = true
-				// syncTimer = time.Now()
 			}
 
-			logging.Logger.Debug("process block, sync blocks",
+			logging.Logger.Debug("Syncing blocks",
 				zap.Int64("start round", cr+1),
 				zap.Int64("end round", cr+reqNum+1))
-			go c.requestBlocks(ctx, cr, reqNum)
+			go func() {
+				c.requestBlocks(ctx, cr, reqNum)
+				syncing = false // Reset syncing flag once complete
+			}()
+
 		default:
 			cr := c.GetCurrentRound()
 			lfb := c.GetLatestFinalizedBlock()
 			bItem, ok := c.blockBuffer.First()
 			if !ok {
-				// no block in buffer to process
 				if !node.Self.IsSharder() {
 					if lfb.Round > plfb.Round {
 						plfb = lfb
-						stuckCheckTimer.Reset(10 * time.Second)
-						// continue
+						stuckCheckTimer.Reset(stuckDuration)
 					}
 				}
-				// see no block in buffer to process
 				syncing = false
-				logging.Logger.Debug("process block, no block in buffer", zap.Int64("current round", cr))
-
+				logging.Logger.Debug("No block in buffer", zap.Int64("current round", cr))
 				if node.Self.IsMiner() {
-					// see if the miner is in the MB, and if not, continue to sync blocks
 					mb := c.GetMagicBlock(cr)
 					if !mb.Miners.HasNode(node.Self.Underlying().GetKey()) {
-						logging.Logger.Debug("process block, miner not in the MB, continue to sync blocks",
+						logging.Logger.Debug("Miner not in MB; syncing blocks",
 							zap.Int64("current round", cr),
 							zap.Int64("mb round", mb.StartingRound))
-						time.Sleep(100 * time.Millisecond)
 						syncBlocksTimer.Reset(0)
 						continue
 					}
 				}
-
-				time.Sleep(100 * time.Millisecond)
 				continue
 			}
+
 			c.blockBuffer.Pop()
-
-			// stuckCheckTimer.Reset(10 * time.Second)
 			b := bItem.Data.(*block.Block)
-
-			logging.Logger.Debug("process block, received block",
+			logging.Logger.Debug("Processing block",
 				zap.Int64("block round", b.Round))
 			stuckCheckTimer.Reset(stuckDuration)
 			if b.Round > lfb.Round+aheadN {
-				// trigger sync process to pull the latest blocks when
-				// current round is > lfb.Round + aheadN to break the stuck if any.
 				if !syncing {
 					syncBlocksTimer.Reset(0)
 				}
-
-				// avoid the skipping logs when syncing blocks
 				if b.Round <= lfb.Round+2*aheadN {
-					logging.Logger.Debug("process block skip",
+					logging.Logger.Debug("Skipping block",
 						zap.Int64("block round", b.Round),
 						zap.Int64("current round", cr),
 						zap.Int64("lfb", lfb.Round),
 						zap.Bool("syncing", syncing))
 				}
-
 				continue
 			}
 
 			if err := c.processBlock(ctx, b); err != nil {
-				logging.Logger.Error("process block failed",
+				logging.Logger.Error("Failed to process block",
 					zap.Error(err),
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.String("prev block", b.PrevHash))
-
-				if err != ErrNoPreviousBlock && !ErrNoPreviousState.Is(err) {
-					continue
-				}
-
-				var pb *block.Block
-				pb, err = c.GetNotarizedBlock(ctx, b.PrevHash, b.Round-1)
-				if err != nil {
-					logging.Logger.Error("process block, failed to fetch previous block",
-						zap.Int64("round", b.Round),
-						zap.String("block", b.Hash),
-						zap.String("prev block", b.PrevHash),
-						zap.Error(err))
-					continue
-				}
-
-				// process previous block
-				if err := c.processBlock(ctx, pb); err != nil {
-					logging.Logger.Error("process block, handle previous block failed",
-						zap.Int64("round", pb.Round),
-						zap.String("block", pb.Hash),
-						zap.Error(err))
-					continue
-				}
-
-				// process this block again
-				if err := c.processBlock(ctx, b); err != nil {
-					logging.Logger.Error("process block, failed after getting previous block",
-						zap.Int64("round", b.Round),
-						zap.String("block", b.Hash),
-						zap.Error(err))
-					continue
-				}
+				continue
 			}
 
 			lfbTk := c.GetLatestLFBTicket(ctx)
 			lfb = c.GetLatestFinalizedBlock()
-			logging.Logger.Debug("process block successfully",
+			logging.Logger.Debug("Block processed successfully",
 				zap.Int64("round", b.Round),
 				zap.Int64("lfb round", lfb.Round),
 				zap.Int64("lfb ticket round", lfbTk.Round))
@@ -525,7 +445,7 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			if b.Round >= lfb.Round+aheadN || b.Round >= endRound {
 				syncing = false
 				if b.Round < lfbTk.Round {
-					logging.Logger.Debug("process block, hit end, trigger sync",
+					logging.Logger.Debug("Reached end; triggering sync",
 						zap.Int64("round", b.Round),
 						zap.Int64("end round", endRound),
 						zap.Int64("current round", cr))
