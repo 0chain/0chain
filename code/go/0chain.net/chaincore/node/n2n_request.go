@@ -95,12 +95,6 @@ func sendRequestConcurrent(ctx context.Context, nds []*Node, handler SendHandler
 	wg := &sync.WaitGroup{}
 	nodeC := make(chan *Node, len(nds))
 	for _, nd := range nds {
-		nodeUrl := nd.GetN2NURLBase()
-		// Check if demo2 is substring of nodeUrl
-		if !strings.Contains(nodeUrl, "demo2") {
-			continue
-		}
-
 		if nd.GetStatus() == NodeStatusInactive {
 			continue
 		}
