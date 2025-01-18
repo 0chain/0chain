@@ -189,19 +189,17 @@ func (bf *BlockFetcher) StartBlockFetchWorker(ctx context.Context,
 			}
 
 			// if force from sharders
-			if bfr.sharders {
-				if bf.acquire(ctx, shardersl) {
-					if bfr.hash != "" {
-						fetching[bfr.hash] = bfr // add, increasing map length
-					} else {
-						fetching[strconv.FormatInt(bfr.round, 10)] = bfr
-					}
-					go bf.fetchFromSharders(ctx, bfr, got, chainer, shardersl)
+			if bf.acquire(ctx, shardersl) {
+				if bfr.hash != "" {
+					fetching[bfr.hash] = bfr // add, increasing map length
 				} else {
-					go bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull)
+					fetching[strconv.FormatInt(bfr.round, 10)] = bfr
 				}
-				continue
+				go bf.fetchFromSharders(ctx, bfr, got, chainer, shardersl)
+			} else {
+				go bf.terminate(ctx, bfr, ErrBlockFetchShardersQueueFull)
 			}
+			continue
 
 			// fetch from miners first
 			if bf.acquire(ctx, minersl) {

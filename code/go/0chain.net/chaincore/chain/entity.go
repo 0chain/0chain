@@ -307,35 +307,26 @@ func (c *Chain) NotifyBlockSync() {
 func (c *Chain) BlockWorker(ctx context.Context) {
 	const stuckDuration = 3 * time.Second
 	var (
-		endRound          int64
-		syncing           bool
-		timingSync        bool
-		maxRequestBlocks  = int64(config.GetLFBTicketAhead() * 2)
-		blockProcessQueue = make(chan *block.Block, 100) // Buffer for concurrent processing
-
-		syncBlocksTimer = time.NewTimer(0)
-		stuckCheckTimer = time.NewTimer(stuckDuration)
+		syncing          bool
+		timingSync       bool
+		maxRequestBlocks = int64(config.GetLFBTicketAhead() * 2)
+		syncBlocksTimer  = time.NewTimer(0)
+		stuckCheckTimer  = time.NewTimer(stuckDuration)
+		blockAvailable   = make(chan struct{}, 1) // Signal when new blocks are added
 	)
 
-	// Worker pool for concurrent block processing
-	for i := 0; i < 4; i++ { // Use 4 workers for concurrent processing
-		go func() {
-			for b := range blockProcessQueue {
-				if err := c.processBlock(ctx, b); err != nil {
-					logging.Logger.Error("Failed to process block",
-						zap.Error(err),
-						zap.Int64("round", b.Round),
-						zap.String("block", b.Hash))
-				}
-			}
-		}()
+	// Reset or signal block availability
+	notifyBlockAvailable := func() {
+		select {
+		case blockAvailable <- struct{}{}:
+		default: // Avoid blocking if already signaled
+		}
 	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			logging.Logger.Error("BlockWorker exit", zap.Error(ctx.Err()))
-			close(blockProcessQueue) // Close the processing queue
 			return
 
 		case <-c.notifySyncBlockC:
@@ -362,13 +353,13 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				cr = lfb.Round
 			}
 
-			endRound = lfbTk.Round + int64(config.GetLFBTicketAhead())
+			endRound := lfbTk.Round + int64(config.GetLFBTicketAhead())
 			if endRound <= cr || lfb.Round >= lfbTk.Round {
 				if timingSync {
 					timingSync = false
 				}
 				logging.Logger.Debug("Already synced; continuing")
-				syncBlocksTimer.Reset(500 * time.Millisecond) // Frequent check during high lag
+				syncBlocksTimer.Reset(500 * time.Millisecond)
 				continue
 			}
 
@@ -377,42 +368,39 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				reqNum = maxRequestBlocks
 			}
 
-			endRound = cr + reqNum
 			syncing = true
-			if !timingSync {
-				timingSync = true
-			}
-
 			logging.Logger.Debug("Syncing blocks",
 				zap.Int64("start round", cr+1),
-				zap.Int64("end round", endRound))
+				zap.Int64("end round", cr+reqNum))
 
 			go func() {
 				c.requestBlocks(ctx, cr, reqNum)
 				syncing = false
+				notifyBlockAvailable() // Signal that blocks might be available
 			}()
 
-		default:
+		case <-blockAvailable:
 			bItem, ok := c.blockBuffer.First()
 			if !ok {
 				syncing = false
-				logging.Logger.Debug("No block in buffer; sleeping briefly")
-				time.Sleep(100 * time.Millisecond)
+				logging.Logger.Debug("No block in buffer")
+				stuckCheckTimer.Reset(stuckDuration)
 				continue
 			}
 
 			c.blockBuffer.Pop()
 			b := bItem.Data.(*block.Block)
 
-			logging.Logger.Debug("Processing block",
-				zap.Int64("round", b.Round))
+			logging.Logger.Debug("Processing block", zap.Int64("round", b.Round))
+			stuckCheckTimer.Reset(stuckDuration)
 
-			// Add to processing queue
-			select {
-			case blockProcessQueue <- b:
-			default:
-				logging.Logger.Warn("Block process queue is full; dropping block",
-					zap.Int64("round", b.Round))
+			if err := c.processBlock(ctx, b); err != nil {
+				logging.Logger.Error("Failed to process block",
+					zap.Error(err),
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash))
+			} else {
+				notifyBlockAvailable() // Continue processing if more blocks are available
 			}
 		}
 	}
