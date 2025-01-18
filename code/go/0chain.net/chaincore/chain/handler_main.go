@@ -9,8 +9,6 @@ import (
 	"net/http"
 
 	"0chain.net/core/common"
-	"github.com/0chain/common/core/logging"
-	"go.uber.org/zap"
 )
 
 // swagger:route GET /v1/block/get/latest_finalized miner sharder GetLatestFinalizedBlock
@@ -35,12 +33,6 @@ func LatestFinalizedMagicBlockHandler(c Chainer) common.JSONResponderF {
 
 		if lfmb.Hash == nodeLFMBHash {
 			return nil, common.ErrNotModified
-		}
-
-		mb := c.GetMagicBlock(c.GetCurrentRound())
-		if mb != nil {
-			logging.Logger.Debug("get latest finalized magic block",
-				zap.Any("mb", mb))
 		}
 
 		return lfmb, nil
