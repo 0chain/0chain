@@ -437,7 +437,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			if localBumpTicket.Round < ticket.Round {
 				localBumpTicket = ticket // update the latest
-				latest = ticket
+				if ticket.Round > latest.Round {
+					latest = ticket
+				}
 				logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
 			}
 
