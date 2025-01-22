@@ -100,6 +100,8 @@ type newAllocationRequest struct {
 	IsEnterprise           bool   `json:"is_enterprise"`
 	StorageVersion         int    `json:"storage_version"`
 	OwnerSigningPublickKey string `json:"owner_signing_public_key"`
+
+	AuthRoundExpiry int64 `json:"auth_round_expiry"`
 }
 
 // storageAllocation from the request
@@ -615,6 +617,8 @@ type updateAllocationRequest struct {
 	UpdateTicket *Ticket `json:"update_ticket" binding:"-"`
 
 	OwnerSigningPublicKey string `json:"owner_signing_public_key"`
+
+	AuthRoundExpiry int64 `json:"auth_round_expiry"`
 }
 
 func (uar *updateAllocationRequest) decode(b []byte) error {
@@ -748,22 +752,22 @@ func (uar *updateAllocationRequest) getNewBlobbersSize(
 }
 
 // get blobbers by IDs concurrently, return error if any of them could not be acquired.
-func getBlobbersByIDs(ids []string, balances chainstate.CommonStateContextI) ([]*StorageNode, error) {
+func getBlobbersByIDs(ids []string, balances chainstate.StateContextI) ([]*StorageNode, error) {
 	return chainstate.GetItemsByIDs(ids,
-		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
+		func(id string, balances chainstate.StateContextI) (*StorageNode, error) {
 			return getBlobber(id, balances)
 		},
 		balances)
 }
 
-func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances chainstate.CommonStateContextI) (map[string]*stakePool, error) {
+func getStakePoolsByIDs(ids []string, providerType spenum.Provider, balances chainstate.StateContextI) (map[string]*stakePool, error) {
 	type stakePoolPID struct {
 		pid  string
 		pool *stakePool
 	}
 
 	stakePools, err := chainstate.GetItemsByIDs(ids,
-		func(id string, balances chainstate.CommonStateContextI) (*stakePoolPID, error) {
+		func(id string, balances chainstate.StateContextI) (*stakePoolPID, error) {
 			sp, err := getStakePool(providerType, id, balances)
 			if err != nil {
 				return nil, err
@@ -796,7 +800,7 @@ func (sc *StorageSmartContract) getAllocationBlobbers(alloc *storageAllocationBa
 	}
 
 	return chainstate.GetItemsByIDs(ids,
-		func(id string, balances chainstate.CommonStateContextI) (*StorageNode, error) {
+		func(id string, balances chainstate.StateContextI) (*StorageNode, error) {
 			return sc.getBlobber(id, balances)
 		},
 		balances)
@@ -1271,7 +1275,7 @@ func (sc *StorageSmartContract) updateAllocationRequestInternal(
 
 		if len(request.AddBlobberId) > 0 {
 			blobbers, err = alloc.changeBlobbers(
-				conf, blobbers, request.AddBlobberId, request.AddBlobberAuthTicket, request.RemoveBlobberId, t.CreationDate, balances, sc, t, isEnterprise, storageVersion,
+				conf, blobbers, request.AddBlobberId, request.AddBlobberAuthTicket, request.RemoveBlobberId, t.CreationDate, balances, sc, t, isEnterprise, storageVersion, request.AuthRoundExpiry,
 			)
 			if err != nil {
 				return "", common.NewError("allocation_updating_failed", err.Error())

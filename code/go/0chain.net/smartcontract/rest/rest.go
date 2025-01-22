@@ -25,6 +25,7 @@ type Int64Map map[string]int64
 type InterfaceMap map[string]interface{}
 
 type QueryChainer interface {
+	GetStateContext() state.StateContextI
 	GetQueryStateContext() state.TimedQueryStateContextI
 	SetQueryStateContext(state.TimedQueryStateContextI)
 }
@@ -44,6 +45,10 @@ func (qc *TestQueryChainer) GetQueryStateContext() state.TimedQueryStateContextI
 
 func (qc *TestQueryChainer) SetQueryStateContext(sctx state.TimedQueryStateContextI) {
 	qc.sctx = sctx
+}
+
+func (qc *TestQueryChainer) GetStateContext() state.StateContextI {
+	return nil
 }
 
 type RestHandler struct {

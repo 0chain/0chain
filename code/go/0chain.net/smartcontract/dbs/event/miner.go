@@ -6,6 +6,8 @@ import (
 
 	common2 "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/currency"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 
 	"0chain.net/smartcontract/dbs"
@@ -257,24 +259,34 @@ func (mn *Miner) exists(edb *EventDb) (bool, error) {
 	return true, nil
 }
 
-func (edb *EventDb) updateMiner(updates dbs.DbUpdates) error {
-	var miner = Miner{Provider: Provider{ID: updates.Id}}
-	exists, err := miner.exists(edb)
+func (edb *EventDb) updateMiner(updates []dbs.DbUpdates) error {
+	errs := make([]error, 0)
+	for _, update := range updates {
+		var miner = Miner{Provider: Provider{ID: update.Id}}
+		exists, err := miner.exists(edb)
 
-	if err != nil {
-		return err
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return fmt.Errorf("miner %v not in database cannot update",
+				miner.ID)
+		}
+
+		result := edb.Store.Get().
+			Model(&Miner{}).
+			Where(&Miner{Provider: Provider{ID: miner.ID}}).
+			Updates(update.Updates)
+
+		if result.Error != nil {
+			errs = append(errs, result.Error)
+		}
 	}
-	if !exists {
-		return fmt.Errorf("miner %v not in database cannot update",
-			miner.ID)
+
+	if len(errs) > 0 {
+		return fmt.Errorf("errors updating miners %v", errs)
 	}
-
-	result := edb.Store.Get().
-		Model(&Miner{}).
-		Where(&Miner{Provider: Provider{ID: miner.ID}}).
-		Updates(updates.Updates)
-
-	return result.Error
+	return nil
 }
 
 func (edb *EventDb) updateMinerBlocksFinalised(minerID string) error {
@@ -287,11 +299,19 @@ func (edb *EventDb) updateMinerBlocksFinalised(minerID string) error {
 }
 
 func (edb *EventDb) deleteMiner(id string) error {
+	logging.Logger.Debug("[mvc] event db: deleting miner", zap.String("id", id))
 	result := edb.Store.Get().
 		Where(&Miner{Provider: Provider{ID: id}}).
 		Delete(&Miner{})
 
-	return result.Error
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// delete from provider rewards table
+	return edb.Store.Get().Where(&ProviderRewards{ProviderID: id}).Delete(&ProviderRewards{}).Error
+
+	// return result.Error
 }
 
 func NewUpdateMinerTotalStakeEvent(ID string, totalStake currency.Coin) (tag EventTag, data interface{}) {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1399,6 +1400,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 	txn *transaction.Transaction,
 	isEnterpriseAlloc bool,
 	storageVersion int,
+	authRoundExpiry int64,
 ) ([]*StorageNode, error) {
 	var err error
 
@@ -1438,7 +1440,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 				b := e.(*storageNodeV2)
 
 				if b.IsRestricted != nil && *b.IsRestricted {
-					success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
+					success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey, authRoundExpiry)
 					if err != nil {
 						return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
 					} else if !success {
@@ -1461,7 +1463,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 						}
 
 						if (b.IsEnterprise != nil && *b.IsEnterprise) || (b.IsRestricted != nil && *b.IsRestricted) {
-							success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
+							success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey, authRoundExpiry)
 							if err != nil {
 								return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
 							} else if !success {
@@ -1482,7 +1484,7 @@ func (sab *storageAllocationBase) changeBlobbers(
 						}
 
 						if (b.IsEnterprise != nil && *b.IsEnterprise) || (b.IsRestricted != nil && *b.IsRestricted) {
-							success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey)
+							success, err := verifyBlobberAuthTicket(balances, sab.Owner, authTicket, b.PublicKey, authRoundExpiry)
 							if err != nil {
 								return fmt.Errorf("blobber %s auth ticket verification failed: %v", b.ID, err.Error())
 							} else if !success {
@@ -1646,7 +1648,7 @@ func (sab *storageAllocationBase) validateEachBlobber(
 		}
 
 		if (b.IsEnterprise) || (b.IsRestricted) {
-			success, err := verifyBlobberAuthTicket(balances, sab.Owner, blobberAuthTickets[i], sn.mustBase().PublicKey)
+			success, err := verifyBlobberAuthTicket(balances, sab.Owner, blobberAuthTickets[i], sn.mustBase().PublicKey, request.AuthRoundExpiry)
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("blobber %s auth ticket verification failed: %v", b.ID, err.Error()))
 				continue
@@ -1668,18 +1670,35 @@ func (sab *storageAllocationBase) validateEachBlobber(
 	return filtered, errs
 }
 
-func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, authTicket, publicKey string) (bool, error) {
+func verifyBlobberAuthTicket(balances cstate.StateContextI, clientID, authTicket, publicKey string, roundExpiry int64) (bool, error) {
 	if authTicket == "" {
 		return false, common.NewError("invalid_auth_ticket", "empty auth ticket")
 	}
 
-	logging.Logger.Info("verifyBlobberAuthTicket", zap.String("clientID", clientID), zap.String("authTicket", authTicket), zap.String("publicKey", publicKey))
+	var payload string
+
+	if actErr := cstate.WithActivation(balances, "hermes", func() error {
+		payload = clientID
+		return nil
+	}, func() error {
+		if roundExpiry < balances.GetBlock().Round {
+			return common.NewError("auth_ticket_expired", "auth ticket expired, current round: "+strconv.FormatInt(balances.GetBlock().Round, 10)+", expiry round: "+strconv.FormatInt(roundExpiry, 10))
+		}
+		payload = encryption.Hash(fmt.Sprintf("%s_%d", clientID, roundExpiry))
+
+		return nil
+	}); actErr != nil {
+		return false, actErr
+	}
+
+	logging.Logger.Info("verifyBlobberAuthTicket", zap.String("clientID", clientID), zap.String("authTicket", authTicket), zap.String("publicKey", publicKey), zap.Any("roundExpiry", roundExpiry))
 
 	signatureScheme := balances.GetSignatureScheme()
 	if err := signatureScheme.SetPublicKey(publicKey); err != nil {
 		return false, err
 	}
-	return signatureScheme.Verify(authTicket, clientID)
+	success, err := signatureScheme.Verify(authTicket, payload)
+	return success, err
 }
 
 // Until returns allocation expiration.

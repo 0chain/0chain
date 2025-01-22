@@ -78,6 +78,9 @@ func TestGetLatestFinalizedMagicBlock(t *testing.T) {
 			req := httptest.NewRequest("POST", "/v1/block/get/latest_finalized_magic_block", data)
 			req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
+			c.On("GetCurrentRound").Return(int64(1))
+			c.On("GetMagicBlock", int64(1)).Return(&block.MagicBlock{})
+
 			c.On("GetLatestFinalizedMagicBlockClone", req.Context()).Return(tc.retLFMB)
 			handler := common.ToJSONResponse(LatestFinalizedMagicBlockHandler(&c))
 

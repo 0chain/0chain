@@ -88,6 +88,10 @@ func (c *Chain) GetQueryStateContext() state.TimedQueryStateContextI {
 func (c *Chain) SetQueryStateContext(_ state.TimedQueryStateContextI) {
 }
 
+func (c *Chain) GetStateContext() state.StateContextI {
+	return c.GetStateContextI()
+}
+
 func (c *Chain) GetStateContextI() state.StateContextI {
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.ClientState == nil {
@@ -194,15 +198,17 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 // Retrieves the balance of a client.
 //
 // parameters:
-//    +name: client_id
-//      in: query
-//      required: true
-//      type: string
-//      description: Client ID
+//
+//	+name: client_id
+//	  in: query
+//	  required: true
+//	  type: string
+//	  description: Client ID
 //
 // responses:
-//   200: State
-//   400:
+//
+//	200: State
+//	400:
 func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
 	if c.GetEventDb() == nil {
@@ -222,8 +228,9 @@ func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interfa
 // Retrieves the current round number as int64.
 //
 // Responses:
-//   200:
-//   400:
+//
+//	200:
+//	400:
 func (c *Chain) GetCurrentRoundHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	return c.GetCurrentRound(), nil
 }

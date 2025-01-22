@@ -14,6 +14,7 @@ import (
 
 	"0chain.net/chaincore/node"
 	sci "0chain.net/chaincore/smartcontractinterface"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/smartcontract/dbs/event"
 
 	metrics "github.com/rcrowley/go-metrics"
@@ -307,6 +308,7 @@ func (c *Chain) EstimateTransactionCostFee(ctx context.Context,
 	}
 
 	if _, ok := c.ChainConfig.TxnExempt()[txn.FunctionName]; ok {
+		txn.IsExempt = true
 		return cost, 0, nil
 	}
 
@@ -391,8 +393,14 @@ func (c *Chain) NewStateContext(
 		c.GetCurrentMagicBlock,
 		c.GetSignatureScheme,
 		c.GetLatestFinalizedBlock,
+		c.getDKGSummary,
+		c.SetDKG,
 		eventDb,
 	)
+}
+
+func (c *Chain) getDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
+	return LoadDKGSummary(common.GetRootContext(), magicBlockNum)
 }
 
 func (c *Chain) updateState(ctx context.Context,

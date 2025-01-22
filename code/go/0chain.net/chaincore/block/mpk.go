@@ -24,6 +24,10 @@ func NewMpks() *Mpks {
 	return &Mpks{Mpks: make(map[string]*MPK)}
 }
 
+func (mpks *Mpks) Delete(id string) {
+	delete(mpks.Mpks, id)
+}
+
 func (mpks *Mpks) Encode() []byte {
 	buff, _ := json.Marshal(mpks)
 	return buff

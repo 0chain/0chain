@@ -227,17 +227,17 @@ func TestBuildChangedProvidersMapFromEvents(t *testing.T) {
 		},
 		{
 			Tag: TagUpdateMiner,
-			Data: dbs.DbUpdates{
+			Data: []dbs.DbUpdates{{
 				Id:      miners[1].ID,
 				Updates: map[string]interface{}{"path": miners[1].Path},
-			},
+			}},
 		},
 		{
 			Tag: TagUpdateMiner,
-			Data: dbs.DbUpdates{
+			Data: []dbs.DbUpdates{{
 				Id:      miners[2].ID,
 				Updates: map[string]interface{}{"path": miners[2].Path},
-			},
+			}},
 		},
 		{
 			Tag: TagUpdateSharderTotalStake,

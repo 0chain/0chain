@@ -51,6 +51,10 @@ type chainer struct {
 	qsc cstate.TimedQueryStateContextI
 }
 
+func (ch *chainer) GetStateContext() cstate.StateContextI {
+	return nil
+}
+
 func (ch *chainer) GetQueryStateContext() cstate.TimedQueryStateContextI {
 	return ch.qsc
 }
@@ -459,7 +463,7 @@ func runEventDatabaseBenchmark(
 		nil,
 		nil,
 		nil,
-		cloneEdb,
+		nil, nil, cloneEdb,
 	)
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0

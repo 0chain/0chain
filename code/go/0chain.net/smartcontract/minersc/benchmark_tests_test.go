@@ -16,7 +16,7 @@ func TestMinerBenchmarkTests(t *testing.T) {
 	mockSigScheme.On("SetPrivateKey", mock.Anything).Return()
 	mockSigScheme.On("Sign", mock.Anything).Return("", nil)
 
-	removedTests := 2
+	removedTests := 3
 
 	var msc = &MinerSmartContract{
 		SmartContract: sci.NewSC(ADDRESS),

@@ -82,22 +82,34 @@ func (edb *EventDb) GetUserDelegatePools(userId string, pType spenum.Provider, p
 	return dps, nil
 }
 
-func (edb *EventDb) updateDelegatePool(updates dbs.DelegatePoolUpdate) error {
-	var dp = DelegatePool{
-		ProviderID:   updates.ID,
-		ProviderType: updates.Type,
-		PoolID:       updates.PoolId,
+func (edb *EventDb) updateDelegatePool(updates []dbs.DelegatePoolUpdate) error {
+	var errs []error
+	for _, update := range updates {
+		var dp = DelegatePool{
+			ProviderID:   update.ID,
+			ProviderType: update.Type,
+			PoolID:       update.PoolId,
+		}
+
+		result := edb.Store.Get().
+			Model(&DelegatePool{}).
+			Where(&DelegatePool{
+				ProviderType: dp.ProviderType,
+				ProviderID:   dp.ProviderID,
+				PoolID:       dp.PoolID,
+			}).
+			Updates(update.Updates)
+
+		if result.Error != nil {
+			errs = append(errs, result.Error)
+		}
 	}
 
-	result := edb.Store.Get().
-		Model(&DelegatePool{}).
-		Where(&DelegatePool{
-			ProviderType: dp.ProviderType,
-			ProviderID:   dp.ProviderID,
-			PoolID:       dp.PoolID,
-		}).
-		Updates(updates.Updates)
-	return result.Error
+	if len(errs) > 0 {
+		return fmt.Errorf("update delegate pool: %v", errs)
+	}
+
+	return nil
 }
 
 func mergeAddDelegatePoolsEvents() *eventsMergerImpl[DelegatePool] {
@@ -109,4 +121,8 @@ func (edb *EventDb) addDelegatePools(dps []DelegatePool) error {
 		Columns:   []clause.Column{{Name: "provider_id"}, {Name: "provider_type"}, {Name: "pool_id"}},
 		UpdateAll: true,
 	}).Create(&dps).Error
+}
+
+func mergeUpdateDelegatePoolEvents() *eventsMergerImpl[dbs.DelegatePoolUpdate] {
+	return newEventsMerger[dbs.DelegatePoolUpdate](TagUpdateDelegatePool, withUniqueEventOverwrite())
 }

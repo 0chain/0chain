@@ -1,6 +1,7 @@
 package smartcontract_test
 
 import (
+	"0chain.net/chaincore/block"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -181,6 +182,7 @@ func TestGetSmartContract(t *testing.T) {
 
 func makeTestStateContextIMock() *mocks.StateContextI {
 	stateContextI := mocks.StateContextI{}
+
 	stateContextI.On("GetClientBalance", mock.AnythingOfType("string")).Return(
 		func(_ datastore.Key) currency.Coin {
 			return 5
@@ -218,6 +220,20 @@ func makeTestStateContextIMock() *mocks.StateContextI {
 			return nil
 		},
 	)
+
+	hardForks := []string{"apollo", "ares", "artemis", "athena", "demeter", "electra", "hercules", "hermes"}
+	for _, name := range hardForks {
+		h := chstate.NewHardFork(name, 0)
+		key := datastore.Key(name)
+		stateContextI.On("InsertTrieNode", key, h).Return(
+			func(_ datastore.Key, _ util.MPTSerializable) datastore.Key {
+				return key
+			},
+			func(_ datastore.Key, _ util.MPTSerializable) error {
+				return nil
+			},
+		)
+	}
 
 	return &stateContextI
 }
@@ -321,10 +337,19 @@ func TestExecuteSmartContract(t *testing.T) {
 		mock.MatchedBy(func(v *minersc.MinerNodes) bool {
 			return true
 		})).Return(nil)
+
+	mockBlock := &block.Block{}
+	mockBlock.Round = 0
+	stateContextIMock.On("GetBlock").Return(mockBlock).Maybe()
+
+	stateContextIMock.On("GetTrieNode", mock.AnythingOfType("string"), mock.MatchedBy(func(v *chstate.HardFork) bool {
+		return true
+	})).Return(nil)
+
 	stateContextIMock.On("GetTrieNode",
 		mock.AnythingOfType("string"),
 		mock.MatchedBy(func(v *minersc.GlobalNode) bool {
-			gn := &minersc.GlobalNode{}
+			gn := minersc.NewGlobalNode("", map[string]int{})
 			blob, err := gn.MarshalMsg(nil)
 			require.NoError(t, err)
 

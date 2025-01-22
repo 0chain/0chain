@@ -150,7 +150,7 @@ func existInDelegatesOfNodes(id string, nodes []*MinerNode) bool {
 }
 
 func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
-	blockReward := gn.BlockReward
+	blockReward := gn.MustBase().BlockReward
 	minerR, _, err := gn.splitByShareRatio(blockReward)
 	if err != nil {
 		return 0, err
@@ -168,7 +168,7 @@ func computeMinerPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Bloc
 }
 
 func computeShardersPayments(gn *GlobalNode, msc *MinerSmartContract, b *block.Block) (currency.Coin, error) {
-	blockReward := gn.BlockReward
+	blockReward := gn.MustBase().BlockReward
 	_, sharderR, err := gn.splitByShareRatio(blockReward)
 	if err != nil {
 		return 0, err
@@ -339,7 +339,7 @@ func Test_payFees(t *testing.T) {
 
 		gn, err = getGlobalNode(balances)
 		require.NoError(t, err, "can't get global node")
-		assert.EqualValues(t, 251, gn.LastRound)
+		assert.EqualValues(t, 251, gn.MustBase().LastRound)
 	})
 
 	// add all the miners to DKG miners list
@@ -588,9 +588,9 @@ func Test_payFees(t *testing.T) {
 	t.Run("epoch", func(t *testing.T) {
 		var gn, err = getGlobalNode(balances)
 		require.NoError(t, err)
-		var rr = gn.RewardRate
+		var rr = gn.MustBase().RewardRate
 		gn.epochDecline()
-		assert.True(t, gn.RewardRate < rr)
+		assert.True(t, gn.MustBase().RewardRate < rr)
 	})
 
 }

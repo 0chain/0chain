@@ -42,8 +42,10 @@ func (edb *EventDb) addOrUpdateUsers(users []User) error {
 // update or create users
 func (edb *EventDb) updateUserMintNonce(users []User) error {
 	return edb.Store.Get().Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "user_id"}},
-		DoUpdates: clause.AssignmentColumns([]string{"mint_nonce"}),
+		Columns: []clause.Column{{Name: "user_id"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"mint_nonce": gorm.Expr("GREATEST(users.mint_nonce, EXCLUDED.mint_nonce)"),
+		}),
 	}).Create(&users).Error
 }
 

@@ -274,7 +274,7 @@ func (sp *StakePool) MintRewards(
 		if err != nil {
 			return 0, err
 		}
-		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId, dbs.ProviderID{
+		balances.EmitEvent(event.TypeStats, event.TagCollectProviderReward, providerId+":"+clientId, dbs.ProviderID{
 			ID:   providerId,
 			Type: providerType,
 		})
@@ -300,7 +300,7 @@ func (sp *StakePool) MintRewards(
 		}); err != nil {
 			return 0, fmt.Errorf("could not transfer rewards: %v", err)
 		}
-		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId, event.RewardMint{
+		balances.EmitEvent(event.TypeStats, event.TagMintReward, clientId+":"+providerId, event.RewardMint{
 			Amount:       int64(dPool.Reward),
 			BlockNumber:  balances.GetBlock().Round,
 			ClientID:     clientId,
@@ -308,7 +308,7 @@ func (sp *StakePool) MintRewards(
 			ProviderID:   providerId,
 		})
 
-		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId, event.UserAggregate{
+		balances.EmitEvent(event.TypeStats, event.TagUpdateUserCollectedRewards, clientId+":"+providerId, event.UserAggregate{
 			CollectedReward: int64(dPool.Reward),
 			UserID:          clientId,
 		})
@@ -746,6 +746,7 @@ func equallyDistributeRewards(coins currency.Coin, pools []*DelegatePool, spUpda
 type StakePoolRequest struct {
 	ProviderType spenum.Provider `json:"provider_type,omitempty"`
 	ProviderID   string          `json:"provider_id,omitempty"`
+	ClientID     string          `json:"client_id,omitempty"`
 }
 
 func (spr *StakePoolRequest) Encode() []byte {
@@ -864,15 +865,34 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		return "", common.NewError("stake_pool_lock_failed",
 			"provide get func")
 	}
+
 	get := funcs[0]
 	var sp AbstractStakePool
 	if sp, err = get(spr.ProviderType, spr.ProviderID, balances); err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"can't get related stake pool: %v", err)
 	}
-	dp, ok := sp.GetPools()[t.ClientID]
+
+	if actErr := cstate.WithActivation(balances, "hermes", func() error {
+		spr.ClientID = t.ClientID
+		return nil
+	}, func() error {
+		if spr.ClientID == "" {
+			spr.ClientID = t.ClientID
+		}
+
+		if t.ClientID != spr.ClientID && t.ClientID != sp.GetSettings().DelegateWallet {
+			return common.NewErrorf("stake_pool_unlock_failed",
+				"only provider or client can unlock : %v", err)
+		}
+		return nil
+	}); actErr != nil {
+		return "", actErr
+	}
+
+	dp, ok := sp.GetPools()[spr.ClientID]
 	if !ok {
-		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", t.ClientID)
+		return "", common.NewErrorf("stake_pool_unlock_failed", "no such delegate pool: %v ", spr.ClientID)
 	}
 
 	// if StakeAt has valid value and lock period is less than MinLockPeriod
@@ -884,18 +904,18 @@ func StakePoolUnlock(t *transaction.Transaction, input []byte, balances cstate.S
 		}
 	}
 
-	output, err := sp.UnlockPool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	output, err := sp.UnlockPool(spr.ClientID, spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed", "%v", err)
 	}
 
-	err = sp.Empty(t.ToClientID, t.ClientID, t.ClientID, balances)
+	err = sp.Empty(t.ToClientID, spr.ClientID, spr.ClientID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"unlocking tokens: %v", err)
 	}
 
-	err = sp.DeletePool(t.ClientID, spr.ProviderType, spr.ProviderID, balances)
+	err = sp.DeletePool(spr.ClientID, spr.ProviderType, spr.ProviderID, balances)
 	if err != nil {
 		return "", common.NewErrorf("stake_pool_unlock_failed",
 			"deleting stake pool: %v", err)

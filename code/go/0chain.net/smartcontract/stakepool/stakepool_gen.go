@@ -545,9 +545,9 @@ func (z *StakePool) Msgsize() (s int) {
 // MarshalMsg implements msgp.Marshaler
 func (z *StakePoolRequest) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
+	// map header, size 3
 	// string "ProviderType"
-	o = append(o, 0x82, 0xac, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65)
+	o = append(o, 0x83, 0xac, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x54, 0x79, 0x70, 0x65)
 	o, err = z.ProviderType.MarshalMsg(o)
 	if err != nil {
 		err = msgp.WrapError(err, "ProviderType")
@@ -556,6 +556,9 @@ func (z *StakePoolRequest) MarshalMsg(b []byte) (o []byte, err error) {
 	// string "ProviderID"
 	o = append(o, 0xaa, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x49, 0x44)
 	o = msgp.AppendString(o, z.ProviderID)
+	// string "ClientID"
+	o = append(o, 0xa8, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x49, 0x44)
+	o = msgp.AppendString(o, z.ClientID)
 	return
 }
 
@@ -589,6 +592,12 @@ func (z *StakePoolRequest) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "ProviderID")
 				return
 			}
+		case "ClientID":
+			z.ClientID, bts, err = msgp.ReadStringBytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "ClientID")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -603,7 +612,7 @@ func (z *StakePoolRequest) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z *StakePoolRequest) Msgsize() (s int) {
-	s = 1 + 13 + z.ProviderType.Msgsize() + 11 + msgp.StringPrefixSize + len(z.ProviderID)
+	s = 1 + 13 + z.ProviderType.Msgsize() + 11 + msgp.StringPrefixSize + len(z.ProviderID) + 9 + msgp.StringPrefixSize + len(z.ClientID)
 	return
 }
 

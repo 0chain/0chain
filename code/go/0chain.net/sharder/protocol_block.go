@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
@@ -19,7 +20,9 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/core/datastore"
+	"github.com/0chain/common/core/logging"
 	. "github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
 )
 
@@ -47,7 +50,7 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 
 	b = b.Clone()
 	fr.Finalize(b)
-	wg := waitgroup.New(5)
+	wg := waitgroup.New(6)
 	Logger.Info("update finalized block",
 		zap.Int64("round", b.Round),
 		zap.String("block", b.Hash),
@@ -143,8 +146,47 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 		Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 	}
 
+	cmb := sc.GetCurrentMagicBlock()
+	if err := sc.StoreLFBRound(b.Round, cmb.MagicBlockNumber, b.Hash); err != nil {
+		Logger.Panic("db error (save lfb with magicblock round)", zap.Int64("round", b.Round),
+			zap.Int64("magicblock number", cmb.MagicBlockNumber),
+			zap.String("block", b.Hash),
+			zap.Error(err))
+	}
+
 	//nolint:errcheck
 	notifyConductor(b)
+
+	// return if view change is off
+	if !sc.IsViewChangeEnabled() {
+		Logger.Debug("update finalized blocks storage success",
+			zap.Int64("round", b.Round), zap.String("block", b.Hash))
+		return nil
+	}
+
+	nodeLists, err := sc.GetRegisterNodesList(b)
+	if err != nil {
+		Logger.Debug("update finalized block - get node lists failed", zap.Error(err))
+	} else {
+		// update the register node list cache
+		node.UpdateVCAddNodesCache(nodeLists)
+	}
+
+	pn, err := sc.GetPhaseOfBlock(b)
+	if err != nil && err != util.ErrValueNotPresent {
+		logging.Logger.Error("[mvc] update finalized block - get phase of block failed", zap.Error(err))
+		return err
+	}
+
+	if pn == nil {
+		return nil
+	}
+
+	logging.Logger.Debug("[mvc] update finalized block - send phase node",
+		zap.Int64("round", b.Round),
+		zap.Int64("start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
+	go sc.SendPhaseNode(context.Background(), chain.PhaseEvent{Phase: *pn})
 
 	Logger.Debug("update finalized blocks storage success",
 		zap.Int64("round", b.Round), zap.String("block", b.Hash))
@@ -183,52 +225,6 @@ func (sc *Chain) hasRelatedMagicBlock(b *block.Block) (ok bool) {
 			zap.Int64("relatedMb", relatedmbr))
 	}
 	return mb.StartingRound == relatedmbr
-}
-
-// pull related magic block if missing (sync)
-func (sc *Chain) pullRelatedMagicBlock(ctx context.Context, b *block.Block) (
-	err error) {
-
-	if sc.hasRelatedMagicBlock(b) {
-		return // already have the MB, nothing to do
-	}
-
-	// TODO (sfxdx): get magic block by number/hash/round to be sure its
-	//               really related, not just latest
-	if err = sc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
-		return // got error
-	}
-
-	if !sc.hasRelatedMagicBlock(b) {
-		return fmt.Errorf("can't pull related magic block for %d", b.Round)
-	}
-
-	return
-}
-
-// AfterFetch used to pull related MB (if missing) for blocks fetched by
-// AsyncFetch* function in LFB-tickets worker. E.g. for blocks kicked by
-// a LFB ticket.
-func (sc *Chain) AfterFetch(ctx context.Context, b *block.Block) (err error) {
-
-	// pull related magic block if missing
-	if err = sc.pullRelatedMagicBlock(ctx, b); err != nil {
-		Logger.Error("after_fetch -- pulling related magic block",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash),
-			zap.Error(err))
-		return
-	}
-
-	// ok, already have or just pulled, check out LFB
-
-	var lfb = sc.GetLatestFinalizedBlock()
-	if lfb.Round < b.Round {
-		Logger.Warn("after_fetch - newer finalize round",
-			zap.Int64("round", b.Round),
-			zap.Int64("lfb round", lfb.Round))
-	}
-
-	return // everything is done
 }
 
 func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRange int64, scan HealthCheckScan) *round.Round {

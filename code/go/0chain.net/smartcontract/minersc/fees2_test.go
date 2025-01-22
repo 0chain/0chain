@@ -246,18 +246,23 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 		sharderDelegates: sharderStakes,
 	}
 
-	var globalNode = &GlobalNode{
-		//ViewChange:           runtime.nextViewChange,
-		LastRound:                   runtime.lastRound,
-		RewardRate:                  scYaml.rewardRate,
-		BlockReward:                 zcnToBalance(scYaml.blockReward),
-		Epoch:                       scYaml.epoch,
-		ShareRatio:                  scYaml.shareRatio,
-		RewardRoundFrequency:        scYaml.rewardRoundPeriod,
-		NumShardersRewarded:         5,
-		NumSharderDelegatesRewarded: 1,
-		NumMinerDelegatesRewarded:   10,
+	var globalNodeObjV2 = &globalNodeV2{
+		globalNodeV1: globalNodeV1{
+			LastRound:                   runtime.lastRound,
+			RewardRate:                  scYaml.rewardRate,
+			BlockReward:                 zcnToBalance(scYaml.blockReward),
+			Epoch:                       scYaml.epoch,
+			ShareRatio:                  scYaml.shareRatio,
+			RewardRoundFrequency:        scYaml.rewardRoundPeriod,
+			NumShardersRewarded:         5,
+			NumSharderDelegatesRewarded: 1,
+			NumMinerDelegatesRewarded:   10,
+		},
 	}
+
+	var globalNode GlobalNode
+	globalNode.SetEntity(globalNodeObjV2)
+
 	var msc = &MinerSmartContract{
 		SmartContract: &sci.SmartContract{
 			SmartContractExecutionStats: make(map[string]interface{}),
@@ -284,7 +289,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 			nil,
 			nil,
 			nil,
-			nil,
+			nil, nil, nil,
 		),
 		block: &block.Block{
 			UnverifiedBlockBody: block.UnverifiedBlockBody{
@@ -379,7 +384,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	// Add information only relevant to view change rounds
 	config.Configuration().ChainConfig = mockChainConfig
 
-	globalNode.ViewChange = 100
+	globalNode.MustBase().ViewChange = 100
 	if runValues.blockRound == runValues.nextViewChange {
 		var allMinersList = &MinerNodes{}
 		err = updateAllShardersList(ctx, allMinersList)
@@ -390,7 +395,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	if err != nil {
 		return err
 	}
-	_, err = msc.payFees(txn, marshal, globalNode, ctx)
+	_, err = msc.payFees(txn, marshal, &globalNode, ctx)
 	if err != nil {
 		return err
 	}
@@ -399,7 +404,7 @@ func testPayFees(t *testing.T, minerStakes []float64, sharderStakes [][]float64,
 	mn, err := getMinerNode(txn.ClientID, ctx)
 	require.NoError(t, err)
 
-	confirmResults(t, *globalNode, runtime, f, mn, ctx)
+	confirmResults(t, globalNode, runtime, f, mn, ctx)
 
 	return err
 }

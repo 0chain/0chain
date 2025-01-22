@@ -3,6 +3,9 @@ package round
 import (
 	"errors"
 	"sync"
+
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 )
 
 var (
@@ -13,6 +16,7 @@ type RoundStorageEntity = interface{}
 
 type RoundStorage interface {
 	Get(round int64) RoundStorageEntity
+	GetByStartingRound(round int64) RoundStorageEntity
 	GetLatest() RoundStorageEntity
 	Put(entity RoundStorageEntity, round int64) error
 	Prune(round int64) error
@@ -51,6 +55,18 @@ func (s *roundStartingStorage) Get(round int64) RoundStorageEntity {
 	if !ok {
 		return nil
 	}
+
+	return entity
+}
+
+func (s *roundStartingStorage) GetByStartingRound(round int64) RoundStorageEntity {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	entity, ok := s.items[round]
+	if !ok {
+		return nil
+	}
+
 	return entity
 }
 
@@ -61,10 +77,9 @@ func (s *roundStartingStorage) FindRoundIndex(round int64) int {
 		return len(s.rounds) - 1
 	}
 	found := -1
-	for i := 0; i < len(s.rounds); i++ {
+	for i := len(s.rounds) - 1; i >= 0; i-- {
 		if round >= s.rounds[i] {
 			found = i
-		} else {
 			break
 		}
 	}
@@ -76,10 +91,9 @@ func (s *roundStartingStorage) calcNearestRound(round int64) int64 {
 		return s.max
 	}
 	found := int64(-1)
-	for i := 0; i < len(s.rounds); i++ {
+	for i := len(s.rounds) - 1; i >= 0; i-- {
 		if round >= s.rounds[i] {
 			found = s.rounds[i]
-		} else {
 			break
 		}
 	}
@@ -92,6 +106,7 @@ func (s *roundStartingStorage) GetLatest() RoundStorageEntity {
 	if len(s.items) == 0 {
 		return nil
 	}
+
 	return s.items[s.max]
 }
 
@@ -108,22 +123,23 @@ func (s *roundStartingStorage) Put(entity RoundStorageEntity, round int64) error
 		s.putToSlice(round)
 	}
 
+	logging.Logger.Info("[mvc] put to round storage", zap.Int64("round", round), zap.Any("entity", entity))
+
 	return nil
 }
 
 func (s *roundStartingStorage) putToSlice(round int64) {
 	index := -1
-	for i := len(s.rounds) - 1; i >= 0; i-- {
-		sRound := s.rounds[i]
-		if sRound < round {
+	for i := 0; i < len(s.rounds); i++ {
+		if s.rounds[i] >= round {
 			index = i
 			break
 		}
 	}
 	if index == -1 {
-		s.rounds = append([]int64{round}, s.rounds...)
+		s.rounds = append(s.rounds, round)
 	} else {
-		s.rounds = append(s.rounds[:index+1], append([]int64{round}, s.rounds[index+1:]...)...)
+		s.rounds = append(s.rounds[:index], append([]int64{round}, s.rounds[index:]...)...)
 	}
 }
 
@@ -142,6 +158,7 @@ func (s *roundStartingStorage) GetRounds() []int64 {
 	defer s.mu.RUnlock()
 	result := make([]int64, len(s.rounds))
 	copy(result, s.rounds)
+
 	return result
 }
 
@@ -159,9 +176,7 @@ func (s *roundStartingStorage) Prune(round int64) error {
 		return ErrRoundEntityNotFound
 	}
 	pruneIndex := -1
-	pruneRounds := make([]int64, 0)
 	for i := 0; i < len(s.rounds); i++ {
-		pruneRounds = append(pruneRounds, s.rounds[i])
 		if round == s.rounds[i] {
 			pruneIndex = i
 			break
@@ -171,8 +186,9 @@ func (s *roundStartingStorage) Prune(round int64) error {
 		return ErrRoundEntityNotFound
 	}
 
-	for _, roundRemove := range pruneRounds {
-		delete(s.items, roundRemove)
+	// Remove all items up to and including pruneIndex (lower or equal rounds in ascending order)
+	for i := 0; i <= pruneIndex; i++ {
+		delete(s.items, s.rounds[i])
 	}
 	s.rounds = s.rounds[pruneIndex+1:]
 	return nil

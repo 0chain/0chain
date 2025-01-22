@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"0chain.net/smartcontract/stakepool/spenum"
@@ -17,10 +18,13 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/datastore"
+	"0chain.net/core/util/orderbuffer"
 	"0chain.net/core/viper"
 	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/logging"
@@ -133,12 +137,20 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		active = c.IsActiveInChain()
 		mb     = c.GetCurrentMagicBlock()
 
-		found, pastTime bool
-		urls            []string
-		cctx, cancel    = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
+		found, pastTime, notPendingTxn bool
+		urls                           []string
+		minerUrls                      = make([]string, 0, mb.Miners.Size())
+		cctx, cancel                   = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
-	defer cancel()
+	defer func() {
+		cancel()
+		if !found {
+			logging.Logger.Debug("[mvc] invalid txn", zap.String("txn", t.Hash))
+		} else {
+			logging.Logger.Debug("[mvc] txn confirmed", zap.String("txn", t.Hash))
+		}
+	}()
 
 	for _, sharder := range mb.Sharders.CopyNodesMap() {
 		if !active || sharder.GetStatus() == node.NodeStatusActive {
@@ -146,11 +158,41 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 	}
 
+	for _, m := range mb.Miners.CopyNodesMap() {
+		if !active || m.GetStatus() == node.NodeStatusActive {
+			minerUrls = append(minerUrls, m.GetN2NURLBase())
+		}
+	}
+
+	txnPoolCheckingTime := time.NewTicker(3 * time.Second)
 	for !found && !pastTime {
 		select {
 		case <-cctx.Done():
 			return false
-		default:
+		case <-txnPoolCheckingTime.C:
+			if !node.Self.IsSharder() {
+				txn, err := transaction.GetTransactionByHash(ctx, t.Hash)
+				if err != nil {
+					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+					notPendingTxn = true
+				} else {
+					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+				}
+			} else {
+				txn, err := httpclientutil.GetTransactionPendingStatus(t.Hash, minerUrls)
+				if err != nil {
+					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+					notPendingTxn = true
+				} else {
+					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+				}
+			}
+			// default:
+		}
+
+		if !notPendingTxn {
+			// in the txn pool, pending
+			continue
 		}
 
 		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
@@ -168,10 +210,20 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		}
 
 		found = err == nil && txn != nil
-		if !found {
-			time.Sleep(time.Second)
+		if found {
+			return true
+		}
+
+		if notPendingTxn {
+			logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
+			// reset the local nonce, set to -1 so that next will be 0 and hence cause nonce sync
+			node.Self.SetNonce(-1)
+			logging.Logger.Debug("[mvc] nonce, reset nonce after confirming invalid txn", zap.String("txn", t.Hash))
+			return false
 		}
 	}
+
+	logging.Logger.Debug("[mvc] confirm txn", zap.Bool("success", found), zap.Bool("timeout", pastTime))
 	return found
 }
 
@@ -244,10 +296,26 @@ func (c *Chain) estimateTxnFee(txn *httpclientutil.Transaction) (currency.Coin, 
 	return fee, nil
 }
 
+var txnSendCount int64
+
+func incTxnSendCount(num int64) {
+	cout := atomic.AddInt64(&txnSendCount, num)
+	logging.Logger.Debug("[mvc] current send txn count", zap.Int64("count", cout))
+}
+
 func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	scData *httpclientutil.SmartContractTxnData,
 	minerUrls []string,
 	sharderUrls []string) error {
+
+	logging.Logger.Info("Jayash SendSmartContractTxn", zap.Any("txn", txn), zap.Any("scData", scData), zap.Any("minerUrls", minerUrls), zap.Any("sharderUrls", sharderUrls))
+
+	// if !httpclientutil.AcquireTxnLock(time.Second) {
+	// 	return httpclientutil.ErrTxnSendBusy
+	// }
+	// logging.Logger.Debug("[mvc] acquire txn lock")
+	// incTxnSendCount(1)
+
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	if txn.Fee == 0 {
 		scBytes, err := json.Marshal(scData)
@@ -264,7 +332,39 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 		txn.Fee = int64(fee)
 	}
 
+	nextNonce := node.Self.GetNextNonce()
+	if nextNonce == 0 {
+		// try get nonce from LFB
+		lfb := c.GetLatestFinalizedBlock()
+		if lfb != nil {
+			var err error
+			nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
+			if err != nil && state.ErrInvalidState(err) {
+				return err
+			}
+		}
+
+		logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
+	}
+	logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
+	txn.Nonce = nextNonce
+
 	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
+}
+
+func (c *Chain) GetCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
+	s, err := GetStateById(bState, minerId)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			logging.Logger.Error("can't get nonce", zap.Error(err))
+			return 0, err
+		}
+
+		return 1, nil
+	}
+	logging.Logger.Debug("[mvc] nonce, set nonce in getCurrentSelfNonce", zap.Int64("nonce", s.Nonce))
+	node.Self.SetNonce(s.Nonce)
+	return node.Self.GetNextNonce(), nil
 }
 
 func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
@@ -513,18 +613,14 @@ func GetFromSharders(ctx context.Context, address, relative string, sharders []s
 }
 
 // PhaseEvents notifications channel.
-func (c *Chain) PhaseEvents() (pe chan PhaseEvent) {
+func (c *Chain) PhaseEvents() *orderbuffer.OrderBuffer {
 	return c.phaseEvents
 }
 
-// The sendPhase optimistically sends given phase to phase trackers.
+// The SendPhaseNode optimistically sends given phase to phase trackers.
 // It never blocks. Skipping event if no one can accept it at this time.
-func (c *Chain) sendPhase(pn minersc.PhaseNode, sharders bool) {
-	select {
-	case c.phaseEvents <- PhaseEvent{Phase: pn, Sharders: sharders}:
-	default:
-		// never block here, be optimistic
-	}
+func (c *Chain) SendPhaseNode(ctx context.Context, pe PhaseEvent) {
+	c.phaseEvents.Add(pe.Phase.StartRound, pe)
 }
 
 // The GetPhaseFromSharders obtains minersc.PhaseNode from sharders and sends
@@ -576,24 +672,44 @@ func (c *Chain) GetPhaseFromSharders(ctx context.Context) {
 		zap.Int64("restarts", phase.Restarts))
 
 	const isGivenFromSharders = true // it is given from sharders 100%
-	c.sendPhase(*phase, isGivenFromSharders)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	c.SendPhaseNode(ctx, PhaseEvent{Phase: *phase, Sharders: isGivenFromSharders})
 }
 
 // The GetPhaseOfBlock extracts and returns Miner SC phase node for given block.
-func (c *Chain) GetPhaseOfBlock(b *block.Block) (pn minersc.PhaseNode,
-	err error) {
+func (c *Chain) GetPhaseOfBlock(b *block.Block) (*minersc.PhaseNode, error) {
+	var pn minersc.PhaseNode
+	err := c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
+	if err != nil {
+		return nil, err
+	}
 
-	err = c.GetBlockStateNode(b, minersc.PhaseKey, &pn)
+	return &pn, nil
+}
+
+func (c *Chain) GetRegisterNodesList(b *block.Block) (minersc.NodeIDs, error) {
+	var mids minersc.NodeIDs
+	minerKey, ok := minersc.GetRegisterNodeKey(spenum.Miner)
+	if !ok {
+		return nil, fmt.Errorf("invalid node type: %s", spenum.Miner)
+	}
+
+	err := c.GetBlockStateNode(b, minerKey, &mids)
 	if err != nil && err != util.ErrValueNotPresent {
-		err = fmt.Errorf("get_block_phase -- can't get: %v, block %d",
-			err, b.Round)
-		return
+		return nil, err
 	}
 
-	if err == util.ErrValueNotPresent {
-		err = nil // not a real error, Miner SC just is not started (yet)
-		return
+	sharderKey, ok := minersc.GetRegisterNodeKey(spenum.Sharder)
+	if !ok {
+		return nil, fmt.Errorf("invalid node type: %s", spenum.Sharder)
 	}
 
-	return // ok
+	var sids minersc.NodeIDs
+	err = c.GetBlockStateNode(b, sharderKey, &sids)
+	if err != nil && err != util.ErrValueNotPresent {
+		return nil, err
+	}
+
+	return append(mids, sids...), nil
 }

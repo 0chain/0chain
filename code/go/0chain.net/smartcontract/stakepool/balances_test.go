@@ -1,6 +1,7 @@
 package stakepool
 
 import (
+	"0chain.net/chaincore/threshold/bls"
 	"context"
 	"os"
 	"path/filepath"
@@ -39,6 +40,15 @@ type testBalances struct {
 
 	mpts      *mptStore // use for benchmarks
 	skipMerge bool      // don't merge for now
+}
+
+func (tb *testBalances) LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetDKG(dkg *bls.DKG) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func scConfigKey(scKey string) datastore.Key {
@@ -91,6 +101,11 @@ func newTestBalances(t testing.TB, mpts bool) (tb *testBalances) {
 	}
 
 	h = cstate.NewHardFork("hercules", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
+
+	h = cstate.NewHardFork("hermes", 0)
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}

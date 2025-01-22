@@ -36,7 +36,6 @@ func SetupWorkers(ctx context.Context) {
 
 	go sc.PruneStorageWorker(ctx, time.Minute*5, sc.getPruneCountRoundStorage(),
 		sc.MagicBlockStorage)
-	go sc.UpdateMagicBlockWorker(ctx)
 	go sc.RegisterSharderKeepWorker(ctx)
 	go sc.SharderHealthCheck(ctx)
 
@@ -84,40 +83,30 @@ func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool 
 }
 
 func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
-	if !sc.ChainConfig.IsViewChangeEnabled() {
-		return // don't send sharder_keep if view_change is false
-	}
-
-	// common register sharder keep constants
-	const (
-		repeat = 5 * time.Second // repeat every 5 seconds
-	)
-
 	var (
-		ticker = time.NewTicker(repeat)
 		phaseq = sc.PhaseEvents()
 		pe     chain.PhaseEvent //
-		latest time.Time        // last time phase updated by the node itself
 
 		phaseRound int64 // starting round of latest accepted phase
 	)
 
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
-			return
-		case tp := <-ticker.C:
-			if tp.Sub(latest) < repeat || len(phaseq) > 0 {
-				continue // already have a fresh phase
+		default:
+			if !sc.ChainConfig.IsViewChangeEnabled() {
+				// don't send sharder_keep if view_change is false
+				time.Sleep(time.Second)
+				continue
 			}
-			go sc.GetPhaseFromSharders(ctx)
-			continue
-		case pe = <-phaseq:
-			if !pe.Sharders {
-				latest = time.Now()
+
+			pei, ok := phaseq.Pop()
+			if !ok {
+				time.Sleep(200 * time.Millisecond)
+				continue
 			}
+
+			pe = pei.Data.(chain.PhaseEvent)
 		}
 
 		if pe.Phase.StartRound < phaseRound {
@@ -134,27 +123,24 @@ func (sc *Chain) RegisterSharderKeepWorker(ctx context.Context) {
 			continue
 		}
 
-		logging.Logger.Debug("Start to register to sharder keep list")
+		logging.Logger.Debug("[mvc] register_sharder_keep_worker - start to register to sharder keep list")
 		var txn, err = sc.RegisterSharderKeep()
 		if err != nil {
-			logging.Logger.Error("Register sharder keep failed",
+			logging.Logger.Error("[mvc] register_sharder_keep_worker - register sharder keep failed",
 				zap.Int64("phase start round", pe.Phase.StartRound),
 				zap.Int64("phase current round", pe.Phase.CurrentRound),
 				zap.Error(err))
 			continue // repeat next time
 		}
 
-		// so, transaction sent, let's verify it
-
-		if !sc.ConfirmTransaction(ctx, txn, 0) {
-			logging.Logger.Debug("register_sharder_keep_worker -- failed "+
-				"to confirm transaction", zap.Any("txn", txn))
+		if !sc.ConfirmTransaction(ctx, txn, 30) {
+			logging.Logger.Debug("[mvc] register_sharder_keep_worker - register sharder keep txn failed",
+				zap.Any("txn", txn))
 			continue
 		}
 
-		logging.Logger.Info("register_sharder_keep_worker -- registered")
+		logging.Logger.Info("[mvc] register_sharder_keep_worker - register success")
 		phaseRound = pe.Phase.StartRound // accepted
-
 	}
 }
 
@@ -178,8 +164,9 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 		return
 	}
 
-	logging.Logger.Debug("sharder health check - start", zap.Any("period", gn.HealthCheckPeriod))
-	HEALTH_CHECK_TIMER := gn.HealthCheckPeriod
+	gnb := gn.MustBase()
+	logging.Logger.Debug("sharder health check - start", zap.Any("period", gnb.HealthCheckPeriod))
+	HEALTH_CHECK_TIMER := gnb.HealthCheckPeriod
 
 	for {
 		select {
@@ -193,9 +180,14 @@ func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 
 			mb := sc.GetCurrentMagicBlock()
 			var minerUrls = mb.Miners.N2NURLs()
-			if err := sc.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
-				logging.Logger.Warn("sharder health check failed, try again")
-			}
+			go func() {
+				if err := sc.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs()); err != nil {
+					logging.Logger.Warn("sharder health check failed, try again")
+					return
+				}
+
+				sc.ConfirmTransaction(ctx, txn, 30)
+			}()
 
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)

@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -20,6 +21,22 @@ func SetupHandlers() {
 /*GetTransaction - given an id returns the transaction information */
 func GetTransaction(ctx context.Context, r *http.Request) (interface{}, error) {
 	return datastore.GetEntityHandler(ctx, r, transactionEntityMetadata, "hash")
+}
+
+func GetTransactionByHash(ctx context.Context, hash string) (interface{}, error) {
+	// check if txn is invalid future txn
+	if IsInvalidFutureTxn(hash) {
+		return nil, errors.New("invalid future transaction")
+	}
+
+	tem := datastore.GetEntityMetadata("txn")
+	if tem == nil {
+		return nil, nil
+	}
+
+	cctx := memorystore.WithConnection(ctx)
+	defer memorystore.Close(cctx)
+	return datastore.GetEntityByHash(cctx, tem, hash)
 }
 
 /*PutTransaction - Given a transaction data, it stores it */

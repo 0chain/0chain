@@ -87,6 +87,14 @@ func (rb *OrderBuffer) Pop() (Item, bool) {
 	return first, true
 }
 
+func (rb *OrderBuffer) Size() int {
+	var size int
+	rb.mu.Lock()
+	size = len(rb.Buffer)
+	rb.mu.Unlock()
+	return size
+}
+
 // func (rb *OrderBuffer) Ch() <-chan Item {
 // 	ch := make(chan Item, rb.max)
 // 	go func() {

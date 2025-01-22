@@ -408,6 +408,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 	nar.WritePriceRange = PriceRange{0 * x10, 20 * x10}
 
 	nar.IsEnterprise = IsEnterpriseAllocation
+	nar.AuthRoundExpiry = 1000000000
 
 	if allocSize == 0 {
 		nar.Size = 1 * GB // 20 GB
@@ -424,7 +425,7 @@ func addAllocation(t testing.TB, ssc *StorageSmartContract, client *Client,
 		nar.Blobbers = append(nar.Blobbers, b.id)
 
 		if isRestricted || IsEnterpriseAllocation {
-			blobberAuthTicket, err := b.scheme.Sign(client.id)
+			blobberAuthTicket, err := b.scheme.Sign(encryption.Hash(fmt.Sprintf("%s_%d", client.id, 1000000000)))
 			require.NoError(t, err)
 			nar.BlobberAuthTickets = append(nar.BlobberAuthTickets, blobberAuthTicket)
 		} else {

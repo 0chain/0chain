@@ -1,13 +1,11 @@
 package miner
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"math"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 
@@ -90,24 +88,6 @@ func (mc *Chain) createFeeTxn(b *block.Block) (*transaction.Transaction, error) 
 		return nil, err
 	}
 	return feeTxn, nil
-}
-
-func (mc *Chain) getCurrentSelfNonce(round int64, minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
-	s, err := chain.GetStateById(bState, minerId)
-	if err != nil {
-		if cstate.ErrInvalidState(err) {
-			mc.SyncMissingNodes(round, bState.GetMissingNodeKeys())
-		}
-
-		if err != util.ErrValueNotPresent {
-			logging.Logger.Error("can't get nonce", zap.Error(err))
-			return 0, err
-		}
-
-		return 1, nil
-	}
-	node.Self.SetNonce(s.Nonce)
-	return node.Self.GetNextNonce(), nil
 }
 
 func (mc *Chain) storageScCommitSettingChangesTx(b *block.Block) (*transaction.Transaction, error) {
@@ -290,24 +270,6 @@ func (mc *Chain) VerifyBlockMagicBlock(ctx context.Context, b *block.Block) (
 			mb.StartingRound, nvc)
 	}
 
-	// check out the MB if this miner is member of it
-	var (
-		id  = strconv.FormatInt(mb.MagicBlockNumber, 10)
-		lmb *block.MagicBlock
-	)
-
-	// get stored MB
-	if lmb, err = LoadMagicBlock(ctx, id); err != nil {
-		return common.NewErrorf("verify_block_mb",
-			"can't load related MB from store: %v", err)
-	}
-
-	// compare given MB and the stored one (should be equal)
-	if !bytes.Equal(mb.Encode(), lmb.Encode()) {
-		return common.NewError("verify_block_mb",
-			"MB given doesn't match the stored one")
-	}
-
 	return
 }
 
@@ -398,6 +360,7 @@ func (mc *Chain) VerifyBlock(ctx context.Context, b *block.Block) (
 	logging.Logger.Debug("verifySmartContracts finished", zap.String("block", b.Hash), zap.Duration("spent", time.Since(cur)))
 
 	cur = time.Now()
+	// TODO: verify magic block in MPT
 	if err = mc.VerifyBlockMagicBlock(ctx, b); err != nil {
 		return
 	}
@@ -664,10 +627,6 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 	}
 
 	go mc.SendFinalizedBlock(context.Background(), b)
-	fr := mc.GetRound(b.Round)
-	if fr != nil {
-		fr.Finalize(b)
-	}
 	mc.DeleteRoundsBelow(b.Round)
 
 	var txns []datastore.Entity
@@ -678,6 +637,43 @@ func (mc *Chain) updateFinalizedBlock(ctx context.Context, b *block.Block) error
 	cleanPoolCtx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
 	defer cancel()
 	transaction.RemoveFromPool(cleanPoolCtx, txns)
+
+	selfID := node.Self.Underlying().GetKey()
+	cs, err := chain.GetStateById(b.ClientState, selfID)
+	if err != nil {
+		logging.Logger.Error("[mvc] clean txns, could not find node state", zap.Error(err),
+			zap.String("miner", selfID), zap.String("block", b.Hash))
+	} else {
+		otxns, err := transaction.GetOldNonceTxns(common.GetRootContext(), selfID, cs.Nonce)
+		if err != nil {
+			logging.Logger.Error("[mvc] clean txns, could not remove old nonce txns", zap.Error(err))
+		} else {
+			if len(otxns) > 0 {
+				if err := mc.deleteTxns(otxns); err != nil {
+					logging.Logger.Error("[mvc] clean txns, delete old nonce txns failed", zap.Error(err))
+				}
+			}
+		}
+	}
+
+	br := mc.GetRound(b.Round)
+	if br == nil {
+		return nil
+	}
+
+	proposedBlocks := br.GetProposedBlocks()
+	for _, sb := range proposedBlocks {
+		if sb.MinerID == selfID && sb.Hash != b.Hash {
+			_, err := transaction.CollectInvalidFutureTxns(common.GetRootContext(), sb.CreationDate, cs.Nonce, selfID)
+			if err != nil {
+				logging.Logger.Error("[mvc] clean txns, get invalid future txns failed", zap.Error(err),
+					zap.String("miner", selfID), zap.String("block", b.Hash))
+			}
+
+			break
+		}
+	}
+
 	return nil
 }
 
@@ -840,7 +836,8 @@ type TxnIterInfo struct {
 	// included transaction data size
 	byteSize int64
 	// accumulated transaction cost
-	cost int
+	cost         int
+	exemptTxnNum int
 }
 
 func (tii *TxnIterInfo) checkForCurrent(txn *transaction.Transaction) {
@@ -959,6 +956,12 @@ func txnIterHandlerFunc(
 			return true, nil
 		}
 
+		isExemptTxn := fee == 0
+		if isExemptTxn && tii.exemptTxnNum > 0 {
+			// only allow 1 exempt transaction per block
+			return true, nil
+		}
+
 		if mc.IsFeeEnabled() {
 			confMinFee := mc.ChainConfig.MinTxnFee()
 			if confMinFee > fee {
@@ -1004,6 +1007,11 @@ func txnIterHandlerFunc(
 			zap.String("txn", txn.Hash))
 
 		tii.cost += cost
+
+		if isExemptTxn { // exempt transaction
+			tii.exemptTxnNum++
+		}
+
 		if tii.byteSize >= mc.MaxByteSize() {
 			logging.Logger.Debug("generate block (too big block size)",
 				zap.Bool("byteSize >= mc.NMaxByteSize", tii.byteSize >= mc.ChainConfig.MaxByteSize()),
@@ -1112,14 +1120,14 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 	if len(iterInfo.invalidTxns) > 0 {
 		var keys []string
-		for _, txn := range iterInfo.pastTxns {
+		for _, txn := range iterInfo.invalidTxns {
 			keys = append(keys, txn.GetKey())
 		}
 		logging.Logger.Info("generate block (found txns very old)", zap.Int64("round", b.Round),
 			zap.Int("num_invalid_txns", len(iterInfo.invalidTxns)), zap.Strings("txn_hashes", keys))
 		go func() {
 			if err := mc.deleteTxns(iterInfo.invalidTxns); err != nil {
-				logging.Logger.Warn("generate block - delete txns failed", zap.Error(err))
+				logging.Logger.Warn("generate block - delete invalid txns failed", zap.Error(err))
 			}
 		}()
 	}
@@ -1129,6 +1137,11 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 			keys = append(keys, txn.GetKey())
 		}
 		logging.Logger.Info("generate block (found pastTxns transactions)", zap.Int64("round", b.Round), zap.Int("txn num", len(keys)))
+		go func() {
+			if err := mc.deleteTxns(iterInfo.pastTxns); err != nil {
+				logging.Logger.Warn("generate block - delete past txns failed", zap.Error(err))
+			}
+		}()
 	}
 	if iterInfo.roundMismatch {
 		logging.Logger.Debug("generate block (round mismatch)", zap.Int64("round", b.Round), zap.Int64("current_round", mc.GetCurrentRound()))
@@ -1203,7 +1216,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 l:
 	for _, biTxn := range buildInTxns {
-		biTxn.Nonce, err = mc.getCurrentSelfNonce(b.Round, b.MinerID, blockState)
+		biTxn.Nonce, err = mc.GetCurrentSelfNonce(b.MinerID, blockState)
 		if err != nil {
 			logging.Logger.Error("generate block - could not get miner nonce",
 				zap.Error(err),

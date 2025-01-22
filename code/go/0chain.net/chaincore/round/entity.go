@@ -332,7 +332,7 @@ func (r *Round) AddNotarizedBlock(b *block.Block) {
 	b.SetBlockState(block.StateNotarized)
 	r.setPhase(Share)
 
-	if r.Block == nil || r.Block.RoundRank > b.RoundRank {
+	if r.Block == nil || (r.Block.RoundRank > b.RoundRank && b.RoundRank >= 0) {
 		r.Block = b
 	}
 
@@ -384,7 +384,7 @@ func (r *Round) addProposedBlock(b *block.Block) {
 	}
 	r.proposedBlocks = append(r.proposedBlocks, b)
 	sort.SliceStable(r.proposedBlocks, func(i, j int) bool {
-		return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank
+		return r.proposedBlocks[i].RoundRank < r.proposedBlocks[j].RoundRank && r.proposedBlocks[i].RoundRank >= 0 // avoid treat -1 as the highest rank
 	})
 	//nolint:gosimple
 	return
@@ -633,7 +633,8 @@ func (r *Round) GetMinersByRank(nodes []*node.Node) []*node.Node {
 				zap.Ints("r.minerPerm", r.minerPerm), zap.Int("set_index", nodes[j].SetIndex),
 				zap.String("node", nodes[j].ID))
 		}
-		return idxi > idxj
+		// return idxi > idxj
+		return idxi < idxj
 	})
 	return nodes
 }
