@@ -36,10 +36,6 @@ const (
 	scNameContributeMpk = "contributeMpk"
 	scNamePublishShares = "shareSignsOrShares"
 	scNameWait          = "wait"
-	// REST API requests
-	scRestAPIGetDKGMiners  = "/getDkgList"
-	scRestAPIGetMinersMPKS = "/getMpksList"
-	scRestAPIGetMagicBlock = "/getMagicBlock"
 )
 
 // PhaseFunc represents local VC function returns optional

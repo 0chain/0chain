@@ -211,22 +211,6 @@ func (sc *Chain) ViewChange(ctx context.Context, b *block.Block) error { //nolin
 	return nil
 }
 
-// The hasRelatedMagicBlock reports true if the Chain has MB related to the
-// given block (checked by round number). It never checks persistent store,
-// checking MB in round magic block store (memory) only.
-func (sc *Chain) hasRelatedMagicBlock(b *block.Block) (ok bool) {
-	var (
-		relatedmbr = b.LatestFinalizedMagicBlockRound
-		mb         = sc.GetMagicBlock(b.Round)
-	)
-	if mb.StartingRound != relatedmbr {
-		Logger.Warn("do not have related MB",
-			zap.Int64("mb", mb.StartingRound),
-			zap.Int64("relatedMb", relatedmbr))
-	}
-	return mb.StartingRound == relatedmbr
-}
-
 func (sc *Chain) syncRoundSummary(ctx context.Context, roundNum int64, roundRange int64, scan HealthCheckScan) *round.Round {
 	bss := sc.BlockSyncStats
 	// Get cycle control

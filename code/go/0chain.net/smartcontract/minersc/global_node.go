@@ -424,31 +424,6 @@ func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
 	return // false, hasn't
 }
 
-// hasPrevSharderInList checks if there are nodes in previous magic block sharder list
-func hasPrevSharderInList(prevMB *block.MagicBlock, nodes []*MinerNode) bool {
-	for _, n := range nodes {
-		if prevMB.Sharders.HasNode(n.ID) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// rankedPrevSharders receives a list of ranked sharders and extract sharder of
-// previous MB preserving order. The given list not modified.
-func rankedPrevSharders(prevMB *block.MagicBlock, list []*MinerNode) []*MinerNode {
-	prev := make([]*MinerNode, 0, len(list))
-
-	for _, node := range list {
-		if prevMB.Sharders.HasNode(node.ID) {
-			prev = append(prev, node)
-		}
-	}
-
-	return prev
-}
-
 // has previous sharder in sharders keep list
 func (gn *GlobalNode) hasPrevShader(sharders *MinerNodes,
 	balances cstate.StateContextI) (has bool) {
