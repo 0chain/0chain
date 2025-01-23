@@ -22,7 +22,7 @@ cd $zChain_Root
 
 set -e
 
-GIT_COMMIT=$(git rev-list -1 HEAD)
+GIT_COMMIT=$(git describe --tags --dirty --always)
 echo $GIT_COMMIT
 
 DOCKERFILE="./docker.local/build.miner/Dockerfile"

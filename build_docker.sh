@@ -12,7 +12,7 @@ DOCKERFILE_MINER="docker.local/build.miner/Dockerfile"
 DOCKERFILE_SHARDER="docker.local/build.sharder/Dockerfile"
 ZCHAIN_BUILDBASE="zchain_build_base"
 ZCHAIN_BUILDRUN="zchain_run_base"
-GIT_COMMIT=$(git rev-list -1 HEAD)
+GIT_COMMIT=$(git describe --tags --dirty --always)
 echo $GIT_COMMIT
 if [ -n "$TAG" ]; then
 echo " $TAG is the tage name provided"

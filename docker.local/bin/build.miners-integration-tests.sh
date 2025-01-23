@@ -17,7 +17,7 @@ do
     esac
 done
 
-GIT_COMMIT=$(git rev-list -1 HEAD)
+GIT_COMMIT=$(git describe --tags --dirty --always)
 echo "$GIT_COMMIT"
 
 docker $cmd --build-arg GIT_COMMIT=$GIT_COMMIT -f docker.local/build.miner/Dockerfile.integration_tests . -t miner
