@@ -292,18 +292,6 @@ jobs:
     secrets:
       inherit
   
-  # authorizers-standard:
-  #   needs: compute-branches
-  #   if: always() && needs.compute-branches.result == 'success'
-  #   uses: 0chain/0chain/.github/workflows/conductor-authorizer-tests.yml@staging
-  #   with:
-  #     chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
-  #     auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
-  #     zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
-  #     zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
-  #   secrets:
-  #     inherit
-  
   node-recovery-01:
     needs: compute-branches
     if: always() && needs.compute-branches.result == 'success'
@@ -352,22 +340,9 @@ jobs:
     secrets:
       inherit
 
-  # node-recovery-03:
-  #   needs: compute-branches
-  #   if: always() && needs.compute-branches.result == 'success'
-  #   uses: 0chain/0chain/.github/workflows/conductor-node-recovery-03-tests.yml@staging
-  #   with:
-  #     chain_branch: ${{ needs.compute-branches.outputs.zchain_branch }}
-  #     auth_branch: ${{ needs.compute-branches.outputs.authorizer_branch }}
-  #     zboxcli_branch: ${{ needs.compute-branches.outputs.zboxcli_branch }}
-  #     zwalletcli_branch: ${{ needs.compute-branches.outputs.zwalletcli_branch }}
-  #     zbox_branch: ${{ needs.compute-branches.outputs.zbox_branch }}
-  #   secrets:
-  #     inherit
-
   notify_slack:
     runs-on: [self-hosted, arc-runner]
-    needs: [compute-branches, standard-miner, standard-sharder, zchain-config, byzantine-try-1, byzantine-try-2, byzantine-try-3, fault-tolerance, blobber-01, blobber-02-try-1, blobber-02-try-2, blobber-02-try-3, blobber-03, blobber-04, blobber-05, blobber-06, authorizers-standard, node-recovery-01, node-recovery-02-try-1, node-recovery-02-try-2, node-recovery-02-try-3, node-recovery-03]
+    needs: [compute-branches, standard-miner, standard-sharder, zchain-config, byzantine-try-1, byzantine-try-2, byzantine-try-3, fault-tolerance, blobber-01, blobber-02-try-1, blobber-02-try-2, blobber-02-try-3, blobber-03, blobber-04, blobber-05, blobber-06, node-recovery-01, node-recovery-02-try-1, node-recovery-02-try-2, node-recovery-02-try-3]
     if: always()
     steps:
       - name: "Notify Slack"
@@ -422,10 +397,7 @@ jobs:
           
           BLOBBER_06_STATUS=$([ "${{ needs.blobber-06.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           BLOBBER_06_COLOR=$([ "${{ needs.blobber-06.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
-          
-          AUTHORIZER_STATUS=$([ "${{ needs.authorizers-standard.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
-          AUTHORIZER_COLOR=$([ "${{ needs.authorizers-standard.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
-          
+
           NODE_RECOVERY_01_STATUS=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
           NODE_RECOVERY_01_COLOR=$([ "${{ needs.node-recovery-01.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           
@@ -434,9 +406,6 @@ jobs:
           NODE_RECOVERY_02_COLOR=$([ "$NODE_RECOVERY_02_STATUS" = "$PASSED_TEXT" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
           NODE_RECOVERY_02_ATTEMPTS_COUNT=$([ "${{ needs.node-recovery-02-try-1.result }}" = "success" ] && echo "1" || echo "3")
           NODE_RECOVERY_02_ATTEMPTS_COUNT=$([ "${{ needs.node-recovery-02-try-2.result }}" = "success" ] && echo "2" || echo "$NODE_RECOVERY_02_ATTEMPTS_COUNT")
-          
-          NODE_RECOVERY_03_STATUS=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "$PASSED_TEXT" || echo "$FAILED_TEXT")
-          NODE_RECOVERY_03_COLOR=$([ "${{ needs.node-recovery-03.result }}" = "success" ] && echo "$PASSED_COLOR" || echo "$FAILED_COLOR")
 
           payload="{
             \"text\": \"*📝 CONDUCTOR TESTING RESULTS 📝*\n🐙 Branches: 0chain ($ZCHAIN_BRANCH) - blobber ($BLOBBER_BRANCH) - authorizer ($AUTHORIZER_BRANCH) - 0box ($ZBOX_BRANCH) - zboxcli ($ZBOXCLI_BRANCH) - zwalletcli ($ZWALLETCLI_BRANCH) \n⚙️ Github run: https://github.com/0chain/0chain/actions/runs/${{ github.run_id }}\n\",
@@ -486,20 +455,12 @@ jobs:
               \"color\": \"$BLOBBER_06_COLOR\"
               },
               {
-              \"text\": \"CONDUCTOR AUTHORIZER TEST $AUTHORIZER_STATUS\",
-              \"color\": \"$AUTHORIZER_COLOR\"
-              },
-              {
               \"text\": \"CONDUCTOR NODE RECOVERY TEST 01 $NODE_RECOVERY_01_STATUS\",
               \"color\": \"$NODE_RECOVERY_01_COLOR\"
               },
               {
               \"text\": \"CONDUCTOR NODE RECOVERY TEST 02 $NODE_RECOVERY_02_STATUS ($NODE_RECOVERY_02_ATTEMPTS_COUNT Attempts)\",
               \"color\": \"$NODE_RECOVERY_02_COLOR\"
-              },
-              {
-              \"text\": \"CONDUCTOR NODE RECOVERY TEST 03 $NODE_RECOVERY_03_STATUS\",
-              \"color\": \"$NODE_RECOVERY_03_COLOR\"
               }
           ]
           }"
