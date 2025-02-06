@@ -60,6 +60,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 			"unexpected error: %v", err)
 	}
 
+	logging.Logger.Info("1Jayash_debug")
+
 	largeData := make([]byte, 2*1024*1024+1) // 2MB + 1 byte
 
 	alloc.mustUpdateBase(func(sab *storageAllocationBase) error {
@@ -72,6 +74,8 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewErrorf("add_allocation_failed",
 			"saving new allocation: %v", err)
 	}
+
+	logging.Logger.Info("2Jayash_debug")
 
 	err = alloc.emitAdd(balances)
 	if err != nil {
