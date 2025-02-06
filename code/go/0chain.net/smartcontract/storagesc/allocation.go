@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
+	"reflect"
 	"strings"
 	"time"
+	"unsafe"
 
 	"0chain.net/core/maths"
 
@@ -47,6 +49,27 @@ func (sc *StorageSmartContract) getAllocation(allocID string,
 	return
 }
 
+func sizeOf(v interface{}) uintptr {
+	val := reflect.ValueOf(v)
+	size := unsafe.Sizeof(v)
+
+	// Recursively calculate the size of struct fields if applicable
+	switch val.Kind() {
+	case reflect.Struct:
+		for i := 0; i < val.NumField(); i++ {
+			size += sizeOf(val.Field(i).Interface())
+		}
+	case reflect.Slice:
+		size += uintptr(val.Cap()) * unsafe.Sizeof(val.Index(0).Interface())
+	case reflect.String:
+		size += uintptr(len(val.String()))
+	default:
+		panic("unhandled default case")
+	}
+
+	return size
+}
+
 func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 	balances chainstate.StateContextI) (string, error) {
 	ta := &StorageAllocation{}
@@ -59,6 +82,14 @@ func (sc *StorageSmartContract) addAllocation(alloc *StorageAllocation,
 		return "", common.NewErrorf("add_allocation_failed",
 			"unexpected error: %v", err)
 	}
+
+	largeData := make([]byte, 2*1024*1024+1) // 2MB + 1 byte
+	alloc.mustUpdateBase(func(sab *storageAllocationBase) error {
+		sab.Owner = string(largeData)
+		return nil
+	})
+
+	logging.Logger.Info("Jayash Alloc size", zap.Any("size", sizeOf(alloc)))
 
 	_, err = balances.InsertTrieNode(alloc.GetKey(sc.ID), alloc)
 	if err != nil {
