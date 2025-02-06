@@ -28,8 +28,7 @@ func SetupWorkers(ctx context.Context) {
 
 	go mc.SyncLFBStateWorker(ctx)
 
-	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.roundDkg)
-	go mc.UpdateMagicBlockWorker(ctx)
+	go mc.PruneStorageWorker(ctx, time.Minute*5, mc.getPruneCountRoundStorage(), mc.MagicBlockStorage, mc.GetRoundDkg())
 	//TODO uncomment it, atm it breaks executing faucet pour somehow
 	go mc.MinerHealthCheck(ctx)
 	go mc.NotarizationProcessWorker(ctx)
@@ -232,7 +231,7 @@ func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 	pruneBelowCountDKG := viper.GetInt("server_chain.round_dkg_storage.prune_below_count")
 	return func(storage round.RoundStorage) int {
 		switch storage {
-		case mc.roundDkg:
+		case mc.GetRoundDkg():
 			return pruneBelowCountDKG
 		case mc.MagicBlockStorage:
 			return pruneBelowCountMB
@@ -249,8 +248,9 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 		return
 	}
 
-	logging.Logger.Debug("miner health check - start", zap.Any("period", gn.HealthCheckPeriod))
-	HEALTH_CHECK_TIMER := gn.HealthCheckPeriod
+	gnb := gn.MustBase()
+	logging.Logger.Debug("miner health check - start", zap.Any("period", gnb.HealthCheckPeriod))
+	HEALTH_CHECK_TIMER := gnb.HealthCheckPeriod
 
 	for {
 		select {
@@ -269,7 +269,10 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 					logging.Logger.Warn("miner health check -  send smart contract failed",
 						zap.Int("urls len", len(minerUrls)),
 						zap.Error(err))
+					return
 				}
+
+				mc.ConfirmTransaction(ctx, txn, 30)
 			}()
 		}
 		time.Sleep(HEALTH_CHECK_TIMER)

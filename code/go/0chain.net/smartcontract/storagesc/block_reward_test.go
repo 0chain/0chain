@@ -613,7 +613,7 @@ func prepareMPTState(t *testing.T) (state.StateContextI, func()) {
 	b := block.Block{}
 	return state.NewStateContext(&b,
 		mpt, nil, nil, nil,
-		nil, nil, nil, nil), clean
+		nil, nil, nil, nil, nil, nil), clean
 }
 
 func TestAddBlobberChallengeItems(t *testing.T) {

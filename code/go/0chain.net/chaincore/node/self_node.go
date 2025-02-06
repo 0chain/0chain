@@ -141,3 +141,7 @@ func (sn *SelfNode) SetNodeIfPublicKeyIsEqual(node *Node) {
 func (sn *SelfNode) IsSharder() bool {
 	return sn.Type == NodeTypeSharder
 }
+
+func (sn *SelfNode) IsMiner() bool {
+	return sn.Type == NodeTypeMiner
+}

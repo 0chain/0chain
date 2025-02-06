@@ -14,6 +14,11 @@ var deleteNodeKeyMap = map[spenum.Provider]string{
 	spenum.Sharder: DeleteShardersKey,
 }
 
+var registerNodeKeyMap = map[spenum.Provider]string{
+	spenum.Miner:   RegisterMinersKey,
+	spenum.Sharder: RegisterShardersKey,
+}
+
 var allNodeKeyMap = map[spenum.Provider]string{
 	spenum.Miner:   AllMinersKey,
 	spenum.Sharder: AllShardersKey,

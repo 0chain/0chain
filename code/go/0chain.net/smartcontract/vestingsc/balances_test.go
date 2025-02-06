@@ -4,6 +4,7 @@ import (
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -24,6 +25,15 @@ type testBalances struct {
 	transfers []*state.Transfer
 	tree      map[datastore.Key]util.MPTSerializable
 	tc        *statecache.TransactionCache
+}
+
+func (tb *testBalances) LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetDKG(dkg *bls.DKG) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func newTestBalances() *testBalances {

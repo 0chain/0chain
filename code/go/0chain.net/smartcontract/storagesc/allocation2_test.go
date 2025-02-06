@@ -147,6 +147,8 @@ func TestCancelAllocationRequest(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil,
+		nil,
 	)
 
 	setConfig(t, ctx)
@@ -516,6 +518,7 @@ func TestFinalizeAllocation(t *testing.T) {
 		nil,
 		nil,
 		nil,
+		nil, nil,
 	)
 
 	setConfig(t, ctx)
@@ -889,6 +892,7 @@ func setupMocksFinishAllocation(
 		nil,
 		nil,
 		nil,
+		nil, nil,
 	)
 
 	var ssc = &StorageSmartContract{
@@ -980,6 +984,7 @@ func setupMocksFinishEnterpriseAllocation(
 		nil,
 		nil,
 		nil,
+		nil, nil,
 	)
 
 	var ssc = &StorageSmartContract{
@@ -1238,7 +1243,8 @@ func testNewAllocation(t *testing.T, request newAllocationRequest, blobbers Sort
 		nil,
 		nil,
 		nil,
-		eventDb,
+		nil,
+		nil, eventDb,
 	)
 
 	var ssc = &StorageSmartContract{

@@ -1745,8 +1745,8 @@ func TestRound_GetMinersByRank(t *testing.T) {
 			},
 			args: args{miners: p.Nodes},
 			want: []*node.Node{
-				n2,
 				n,
+				n2,
 			},
 		},
 	}

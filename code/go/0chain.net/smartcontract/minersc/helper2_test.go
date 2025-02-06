@@ -116,9 +116,9 @@ func confirmResults(t *testing.T, global GlobalNode, runtime runtimeValues, f fo
 	var epochChangeRound = runtime.blockRound%scYaml.epoch == 0
 
 	if epochChangeRound {
-		require.InEpsilon(t, global.RewardRate, scYaml.rewardRate*(1.0-scYaml.rewardDeclineRate), errEpsilon)
+		require.InEpsilon(t, global.MustBase().RewardRate, scYaml.rewardRate*(1.0-scYaml.rewardDeclineRate), errEpsilon)
 	} else {
-		require.EqualValues(t, global.RewardRate, scYaml.rewardRate)
+		require.EqualValues(t, global.MustBase().RewardRate, scYaml.rewardRate)
 	}
 
 	require.InEpsilon(t, float64(f.minerReward(EtBoth)), float64(mn.Reward), errEpsilon)

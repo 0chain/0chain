@@ -1328,6 +1328,11 @@ func enableHardForks(t *testing.T, tb state.StateContextI) {
 	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
 		t.Fatal(err)
 	}
+
+	h = state.NewHardFork("hermes", 0)
+	if _, err := tb.InsertTrieNode(h.GetKey(), h); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestPartitionsForEachPart(t *testing.T) {

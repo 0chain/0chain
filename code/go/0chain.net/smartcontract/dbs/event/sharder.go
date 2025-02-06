@@ -235,14 +235,26 @@ func (edb *EventDb) GetStakableShardersWithFilterAndPagination(filter SharderQue
 	return sharders, result.Error
 }
 
-func (edb *EventDb) updateSharder(updates dbs.DbUpdates) error {
-	var sharder = Sharder{Provider: Provider{ID: updates.Id}}
-	result := edb.Store.Get().
-		Model(&Sharder{}).
-		Where(&Sharder{Provider: Provider{ID: sharder.ID}}).
-		Updates(updates.Updates)
+func (edb *EventDb) updateSharder(updates []dbs.DbUpdates) error {
+	var errs []error
+	for _, update := range updates {
+		var sharder = Sharder{Provider: Provider{ID: update.Id}}
+		result := edb.Store.Get().
+			Model(&Sharder{}).
+			Where(&Sharder{Provider: Provider{ID: sharder.ID}}).
+			Updates(update.Updates)
 
-	return result.Error
+		if result.Error != nil {
+			errs = append(errs, result.Error)
+		}
+
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("update sharder: %v", errs)
+	}
+
+	return nil
 }
 
 func (edb *EventDb) deleteSharder(id string) error {

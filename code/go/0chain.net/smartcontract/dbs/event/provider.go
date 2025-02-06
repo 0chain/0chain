@@ -229,13 +229,15 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 				ids[spenum.Miner][m.ID] = nil
 			}
 		case TagUpdateMiner:
-			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+			updates, ok := fromEvent[[]dbs.DbUpdates](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				return nil, common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
-			ids[spenum.Miner][updates.Id] = nil
+			for _, update := range *updates {
+				ids[spenum.Miner][update.Id] = nil
+			}
 		case TagAddSharder,
 			TagUpdateSharderTotalStake:
 			sharders, ok := fromEvent[[]Sharder](event.Data)
@@ -248,13 +250,16 @@ func extractIdsFromEvents(events []Event) (ProviderIdsMap, error) {
 				ids[spenum.Sharder][s.ID] = nil
 			}
 		case TagUpdateSharder:
-			updates, ok := fromEvent[dbs.DbUpdates](event.Data)
+			updates, ok := fromEvent[[]dbs.DbUpdates](event.Data)
 			if !ok {
 				logging.Logger.Error("snapshot",
 					zap.Any("event", event.Data), zap.Error(ErrInvalidEventData))
 				return nil, common.NewError("update_snapshot", fmt.Sprintf("invalid data for event %s", event.Tag.String()))
 			}
-			ids[spenum.Sharder][updates.Id] = nil
+
+			for _, update := range *updates {
+				ids[spenum.Sharder][update.Id] = nil
+			}
 
 		case TagAddAuthorizer,
 			TagUpdateAuthorizer,

@@ -1,6 +1,7 @@
 package minersc
 
 import (
+	"0chain.net/chaincore/threshold/bls"
 	"testing"
 
 	cstate "0chain.net/chaincore/chain/state"
@@ -29,6 +30,15 @@ type testBalances struct {
 	lfmb          *block.Block
 	magicBlock    *block.MagicBlock
 	tc            *statecache.TransactionCache
+}
+
+func (tb *testBalances) LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error) {
+	return nil, nil
+}
+
+func (tb *testBalances) SetDKG(dkg *bls.DKG) error {
+	//TODO implement me
+	panic("implement me")
 }
 
 func newTestBalances() *testBalances {

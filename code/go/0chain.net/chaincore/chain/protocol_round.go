@@ -1,13 +1,14 @@
 package chain
 
 import (
-	"0chain.net/smartcontract/dbs/event"
 	"context"
 	"errors"
 	"net/url"
 	"sort"
 	"sync"
 	"time"
+
+	"0chain.net/smartcontract/dbs/event"
 
 	"0chain.net/core/config"
 	metrics "github.com/rcrowley/go-metrics"
@@ -320,14 +321,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				zap.Int64("to", fb.Round-1))
 		}
 
-		// perform view change (or not perform)
-		if err := c.viewChanger.ViewChange(ctx, lfb); err != nil {
-			logging.Logger.Error("view_changing_lfb",
-				zap.Int64("round", roundNumber),
-				zap.Int64("lfb_round", lfb.Round),
-				zap.Error(err))
-			return
-		}
 		FinalizationLagMetric.Update(int64(c.GetCurrentRound() - lfb.Round))
 
 		logging.Logger.Info("finalize round - latest finalized round",
@@ -455,13 +448,6 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 				zap.Int64("round", cfb.Round),
 				zap.String("block", cfb.Hash))
 		}
-		// perform view change or not perform
-		if err := c.viewChanger.ViewChange(ctx, b); err != nil {
-			logging.Logger.Error("view_changing_lfb",
-				zap.Int64("lfb_round", b.Round),
-				zap.Error(err))
-			return
-		}
 		c.SetLatestOwnFinalizedBlockRound(b.Round)
 		c.SetLatestFinalizedBlock(b)
 		return
@@ -490,8 +476,6 @@ func (c *Chain) createRoundIfNotExist(ctx context.Context, b *block.Block) (roun
 }
 
 // GetHeaviestNotarizedBlock - get a notarized block for a round.
-// TODO: move to the place where getNotarizedBlockFromMiners() is implemented, this is kind of
-// duplicate actions here
 func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *block.Block {
 
 	rn := r.GetRoundNumber()
@@ -513,8 +497,6 @@ func (c *Chain) GetHeaviestNotarizedBlock(ctx context.Context, r round.RoundI) *
 	// This is a notarized block. So, use this method to sync round info with the notarized block.
 	c.AddNotarizedBlockToRound(r, nb)
 
-	// TODO: this may not be the best round block or the best chain weight
-	// block. Do we do that extra work?
 	return r.GetHeaviestNotarizedBlock()
 }
 
@@ -609,22 +591,28 @@ func (c *Chain) GetLatestFinalizedMagicBlockFromSharders(ctx context.Context) *b
 
 // GetLatestFinalizedMagicBlockRound returns LFMB for given round number
 func (c *Chain) GetLatestFinalizedMagicBlockRound(rn int64) *block.Block {
-	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
-	// TODO: improve this lfmbMutex
-	c.lfmbMutex.RLock()
-	defer c.lfmbMutex.RUnlock()
 	rn = mbRoundOffset(rn) // round number with mb offset
-	if len(c.magicBlockStartingRounds) > 0 {
-		lfmbr := int64(-1)
-		for r := range c.magicBlockStartingRounds {
-			if r <= rn && r > lfmbr {
-				lfmbr = r
+	c.lfmbMutex.RLock()
+	if len(c.magicBlockStartingRoundsMap) > 0 {
+		r := c.magicBlockStartingRounds.Prev()
+		ringSize := c.magicBlockStartingRounds.Len()
+		for i := 0; i < ringSize; i++ {
+			startRound := r.Value.(int64)
+			r = r.Prev()
+			if startRound <= rn {
+				b := c.magicBlockStartingRoundsMap[startRound]
+				c.lfmbMutex.RUnlock()
+				return b
 			}
 		}
-		if lfmbr >= 0 {
-			lfmb = c.magicBlockStartingRounds[lfmbr]
-		}
 	}
+	c.lfmbMutex.RUnlock()
+	lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
+	logging.Logger.Warn("GetLatestFinalizedMagicBlockRound: no magic block found for round, use the latest one",
+		zap.Int64("round", rn),
+		zap.Int64("lfmb starting round", lfmb.StartingRound),
+		zap.Int64("mb number", lfmb.MagicBlockNumber),
+		zap.String("mb hash", lfmb.MagicBlock.Hash))
 	return lfmb
 }
 

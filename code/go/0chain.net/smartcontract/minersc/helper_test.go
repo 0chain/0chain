@@ -261,10 +261,9 @@ func mustSave(t *testing.T, key datastore.Key, val util.MPTSerializable,
 	require.NoError(t, err)
 }
 
-func setConfig(t *testing.T, balances cstate.StateContextI) (
-	gn *GlobalNode) {
+func setConfig(t *testing.T, balances cstate.StateContextI) *GlobalNode {
 
-	gn = new(GlobalNode)
+	gn := new(globalNodeV2)
 	gn.ViewChange = 0
 	gn.MaxN = 100
 	gn.MinN = 3
@@ -286,8 +285,11 @@ func setConfig(t *testing.T, balances cstate.StateContextI) (
 	gn.Epoch = 15e6    // 15M
 	gn.RewardDeclineRate = 0.1
 
-	mustSave(t, GlobalNodeKey, gn, balances)
-	return
+	res := new(GlobalNode)
+	res.SetEntity(gn)
+
+	mustSave(t, GlobalNodeKey, res, balances)
+	return res
 }
 
 func setMagicBlock(t *testing.T, miners []*Client, sharders []*Client,
@@ -325,8 +327,13 @@ func setRounds(t *testing.T, _ *MinerSmartContract, last, vc int64,
 
 	var gn, err = getGlobalNode(balances)
 	require.NoError(t, err, "getting global node")
-	gn.LastRound = last
-	gn.ViewChange = vc
+
+	gn.MustUpdateBase(func(base *globalNodeBase) error {
+		base.LastRound = last
+		base.ViewChange = vc
+		return nil
+	})
+
 	require.NoError(t, gn.save(balances), "saving global node")
 
 }

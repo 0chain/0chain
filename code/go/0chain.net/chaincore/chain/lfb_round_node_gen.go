@@ -9,13 +9,16 @@ import (
 // MarshalMsg implements msgp.Marshaler
 func (z LfbRound) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
-	// map header, size 2
+	// map header, size 3
 	// string "r"
-	o = append(o, 0x82, 0xa1, 0x72)
+	o = append(o, 0x83, 0xa1, 0x72)
 	o = msgp.AppendInt64(o, z.Round)
 	// string "b"
 	o = append(o, 0xa1, 0x62)
 	o = msgp.AppendString(o, z.Hash)
+	// string "mb_num"
+	o = append(o, 0xa6, 0x6d, 0x62, 0x5f, 0x6e, 0x75, 0x6d)
+	o = msgp.AppendInt64(o, z.MagicBlockNumber)
 	return
 }
 
@@ -49,6 +52,12 @@ func (z *LfbRound) UnmarshalMsg(bts []byte) (o []byte, err error) {
 				err = msgp.WrapError(err, "Hash")
 				return
 			}
+		case "mb_num":
+			z.MagicBlockNumber, bts, err = msgp.ReadInt64Bytes(bts)
+			if err != nil {
+				err = msgp.WrapError(err, "MagicBlockNumber")
+				return
+			}
 		default:
 			bts, err = msgp.Skip(bts)
 			if err != nil {
@@ -63,6 +72,6 @@ func (z *LfbRound) UnmarshalMsg(bts []byte) (o []byte, err error) {
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
 func (z LfbRound) Msgsize() (s int) {
-	s = 1 + 2 + msgp.Int64Size + 2 + msgp.StringPrefixSize + len(z.Hash)
+	s = 1 + 2 + msgp.Int64Size + 2 + msgp.StringPrefixSize + len(z.Hash) + 7 + msgp.Int64Size
 	return
 }

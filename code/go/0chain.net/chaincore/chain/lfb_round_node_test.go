@@ -11,7 +11,7 @@ func TestStoreLFBRound(t *testing.T) {
 	c := &Chain{stateDB: util.NewMemoryNodeDB()}
 	round := int64(123)
 	blockHash := "abc123"
-	err := c.StoreLFBRound(round, blockHash)
+	err := c.StoreLFBRound(round, 0, blockHash)
 	require.NoError(t, err)
 
 	// Verify that the LFB round was stored correctly

@@ -10,14 +10,18 @@ import (
 	"0chain.net/smartcontract/stakepool/spenum"
 
 	cstate "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
+	"0chain.net/core/config"
 	"github.com/0chain/common/core/util"
 
 	commonsc "0chain.net/smartcontract/common"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
+
+const ErrWrongProviderTypeCode = "wrong_provider_type"
 
 func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
@@ -40,7 +44,7 @@ func (msc *MinerSmartContract) UpdateSharderSettings(t *transaction.Transaction,
 		return "", common.NewError("update_sharder_settings", err.Error())
 	}
 
-	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.CooldownPeriod {
+	if sn.LastSettingUpdateRound > 0 && balances.GetBlock().Round-sn.LastSettingUpdateRound < gn.MustBase().CooldownPeriod {
 		return "", common.NewError("update_sharder_settings", "block round is in cooldown period")
 	}
 
@@ -90,10 +94,35 @@ func (msc *MinerSmartContract) AddSharder(
 	}
 
 	magicBlockSharders := balances.GetChainCurrentMagicBlock().Sharders
-	if !magicBlockSharders.HasNode(newSharder.ID) {
-		logging.Logger.Error("add_sharder: Error in Adding a new sharder: Not in magic block", zap.String("SharderID", newSharder.ID))
-		return "", common.NewErrorf("add_sharder",
-			"failed to add new sharder: Not in magic block")
+	sharderInMB := magicBlockSharders.HasNode(newSharder.ID)
+	if err := cstate.WithActivation(balances, "hermes", func() error {
+		if !sharderInMB {
+			logging.Logger.Error("add_sharder: Error in Adding a new sharder: Not in magic block", zap.String("SharderID", newSharder.ID))
+			return common.NewErrorf("add_sharder", "failed to add new sharder: Not in magic block")
+		}
+
+		return nil
+	}, func() error {
+		if sharderInMB {
+			return nil
+		}
+
+		// check if the sharder is in the register node list
+		regIDs, err := getRegisterNodes(balances, spenum.Sharder)
+		if err != nil {
+			return common.NewErrorf("add_sharder", "failed to get register node list: %v", err)
+		}
+
+		for _, regID := range regIDs {
+			if regID == newSharder.ID {
+				// in the register node list, so allow to add the sharder
+				return nil
+			}
+		}
+
+		return common.NewErrorf("add_sharder", "sharder is neither in the MB nor in the register node list")
+	}); err != nil {
+		return "", err
 	}
 
 	newSharder.LastHealthCheck = t.CreationDate
@@ -125,7 +154,7 @@ func (msc *MinerSmartContract) AddSharder(
 
 	newSharder.NodeType = NodeTypeSharder // set node type
 	newSharder.ProviderType = spenum.Sharder
-	newSharder.Settings.MinStake = gn.MinStakePerDelegate
+	newSharder.Settings.MinStake = gn.MustBase().MinStakePerDelegate
 
 	exist, err := msc.getSharderNode(newSharder.ID, balances)
 	if err != nil && err != util.ErrValueNotPresent {
@@ -161,12 +190,47 @@ func (msc *MinerSmartContract) AddSharder(
 
 // DeleteSharder Function to handle removing a sharder from the chain
 func (msc *MinerSmartContract) DeleteSharder(
-	_ *transaction.Transaction,
+	txn *transaction.Transaction,
 	inputData []byte,
 	gn *GlobalNode,
 	balances cstate.StateContextI,
 ) (string, error) {
-	return "", errors.New("delete sharder is disabled")
+	if err := cstate.WithActivation(balances, "hermes",
+		func() error {
+			return errors.New("delete sharder is disabled")
+		}, func() error {
+			return nil
+		}); err != nil {
+		return "", err
+	}
+
+	if err := smartcontractinterface.AuthorizeWithOwner("delete_sharder", func() bool {
+		return gn.MustBase().OwnerId == txn.ClientID
+	}); err != nil {
+		return "", err
+	}
+
+	if !config.Configuration().IsViewChangeEnabled() {
+		return "", common.NewError("delete_sharder", "view change is disabled")
+	}
+
+	var deleteSharder = NewMinerNode()
+	if err := deleteSharder.Decode(inputData); err != nil {
+		return "", common.NewErrorf("delete_sharder",
+			"decoding request: %v", err)
+	}
+
+	mn, err := getSharderNode(deleteSharder.ID, balances)
+	if err != nil {
+		return "", common.NewError("delete_sharder", err.Error())
+	}
+
+	_, err = msc.deleteNode(gn, mn, balances)
+	if err != nil {
+		return "", common.NewError("delete_sharder", err.Error())
+	}
+
+	return "delete sharder successfully", nil
 }
 
 // ------------- local functions ---------------------
@@ -197,7 +261,7 @@ func (_ *MinerSmartContract) getSharderNode(
 
 func getSharderNode(
 	sid string,
-	balances cstate.CommonStateContextI,
+	balances cstate.StateContextI,
 ) (*MinerNode, error) {
 	sn := NewMinerNode()
 	sn.ID = sid
@@ -206,13 +270,20 @@ func getSharderNode(
 		return nil, err
 	}
 	if sn.ProviderType != spenum.Sharder {
-		return nil, fmt.Errorf("provider is %s should be %s", sn.ProviderType, spenum.Blobber)
+		err := cstate.WithActivation(balances, "hermes", func() error {
+			return fmt.Errorf("provider is %s should be %s", sn.ProviderType, spenum.Blobber)
+		}, func() error {
+			return common.NewErrorf(ErrWrongProviderTypeCode, "provider is %s should be %s", sn.ProviderType, spenum.Sharder)
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 	return sn, nil
 }
 
 func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
-	input []byte, _ *GlobalNode, balances cstate.StateContextI) (
+	input []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err2 error) {
 
 	pn, err := GetPhaseNode(balances)
@@ -268,6 +339,42 @@ func (msc *MinerSmartContract) sharderKeep(_ *transaction.Transaction,
 		// do not return error for sharder already exist,
 		logging.Logger.Debug("Add sharder already exists", zap.String("ID", newSharder.ID))
 		return string(newSharder.Encode()), nil
+	}
+
+	if err := cstate.WithActivation(balances, "hermes", func() error {
+		return nil
+	}, func() error {
+		// check if the sharder is in MB
+		// we should not add the sharder to keep list if the new MB will exclude it.
+		//
+		// once the sharder is removed from the MB, sharder_keep will ignore it unless
+		// it is in the register node list.
+		mb, err := getMagicBlock(balances)
+		if err != nil {
+			return common.NewErrorf("sharder_keep", "failed to get magic block: %v", err)
+		}
+
+		exist := mb.Sharders.GetNode(newSharder.ID)
+		if exist != nil {
+			// sharder in MB
+			return nil
+		}
+
+		// sharder not in the MB, check if the sharder is in the register nodes list, otherwise return error
+		regIDs, err := getRegisterNodes(balances, spenum.Sharder)
+		if err != nil {
+			return common.NewErrorf("sharder_keep", "failed to get register node list: %v", err)
+		}
+		for _, regID := range regIDs {
+			if regID == newSharder.ID {
+				// sharder is in register node list
+				return nil
+			}
+		}
+		logging.Logger.Error("[mvc] sharder_keep failed, node is neither in MB nor in the register node list", zap.String("ID", newSharder.ID))
+		return common.NewError("sharder_keep", "sharder is not in the register node list")
+	}); err != nil {
+		return "", err
 	}
 
 	keepNodeIDs = append(keepNodeIDs, newSharder.ID)

@@ -132,6 +132,8 @@ func testStakePoolLock(t *testing.T, value, clientBalance currency.Coin, delegat
 			nil,
 			nil,
 			nil,
+			nil,
+			nil,
 		),
 		clientBalance: currency.Coin(clientBalance),
 		store:         make(map[datastore.Key]util.MPTSerializable),

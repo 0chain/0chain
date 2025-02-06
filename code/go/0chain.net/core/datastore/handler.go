@@ -79,6 +79,15 @@ func GetEntityHandler(ctx context.Context, r *http.Request, entityMetadata Entit
 	return entity, nil
 }
 
+func GetEntityByHash(ctx context.Context, entityMetadata EntityMetadata, hash string) (interface{}, error) {
+	entity := entityMetadata.Instance()
+	err := entity.Read(ctx, ToKey(hash))
+	if err != nil {
+		return nil, err
+	}
+	return entity, nil
+}
+
 /*PutEntityHandler - default put handler implementation for any Entity */
 func PutEntityHandler(ctx context.Context, object interface{}) (interface{}, error) {
 	entity, ok := object.(Entity)

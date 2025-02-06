@@ -33,8 +33,9 @@ import (
 )
 
 const (
-	CHUNK_SIZE       = 64 * KB
-	MAX_CHAIN_LENGTH = 32
+	CHUNK_SIZE             = 64 * KB
+	MAX_CHAIN_LENGTH       = 32
+	LARGE_MAX_CHAIN_LENGTH = 128
 )
 
 func blobberKey(id string) datastore.Key {
@@ -552,6 +553,20 @@ func (sc *StorageSmartContract) updateBlobberSettings(txn *transaction.Transacti
 					return common.NewError("update_blobber_settings_failed",
 						"can't save related stake pool: "+err.Error())
 				}
+
+				if err = blobber.mustUpdateBase(func(b *storageNodeBase) error {
+					b.StakePoolSettings.DelegateWallet = *updatedBlobber.StakePoolSettings.DelegateWallet
+					return nil
+				}); err != nil {
+					return err
+				}
+				_, err = balances.InsertTrieNode(blobber.GetKey(), blobber)
+				if err != nil {
+					return common.NewError("update_blobber_settings_failed", "saving blobber: "+err.Error())
+				}
+				if err := emitUpdateBlobber(blobber, existingSp, balances); err != nil {
+					return fmt.Errorf("emmiting blobber %v: %v", blobber, err)
+				}
 			}
 		}
 		return nil
@@ -999,9 +1014,21 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"Invalid chain data")
 	}
 
-	if len(commitConnection.ChainData) > (32 * MAX_CHAIN_LENGTH) {
-		return "", common.NewError("commit_connection_failed",
-			"Chain data length exceeds the maximum chainlength "+strconv.Itoa(MAX_CHAIN_LENGTH))
+	if actErr := cstate.WithActivation(balances, "hermes", func() error {
+		if len(commitConnection.ChainData) > (32 * MAX_CHAIN_LENGTH) {
+			return common.NewError("commit_connection_failed",
+				"Chain data length exceeds the maximum chainlength "+strconv.Itoa(MAX_CHAIN_LENGTH))
+		}
+
+		return nil
+	}, func() error {
+		if len(commitConnection.ChainData) > (32 * LARGE_MAX_CHAIN_LENGTH) {
+			return common.NewError("commit_connection_failed",
+				"Chain data length exceeds the maximum chainlength "+strconv.Itoa(LARGE_MAX_CHAIN_LENGTH))
+		}
+		return nil
+	}); actErr != nil {
+		return "", actErr
 	}
 
 	var (

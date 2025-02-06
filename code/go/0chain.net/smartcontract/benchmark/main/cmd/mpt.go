@@ -116,7 +116,7 @@ func getBalances(
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
 		func() *block.Block { return bk },
-		edb,
+		nil, nil, edb,
 	)
 }
 
@@ -242,7 +242,7 @@ func setUpMpt(
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
 		nil,
-		nil,
+		nil, nil, nil,
 	)
 
 	initSCTokens := currency.Coin(viper.GetInt64(benchmark.StartTokens))

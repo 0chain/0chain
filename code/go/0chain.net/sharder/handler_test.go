@@ -1,6 +1,7 @@
 package sharder
 
 import (
+	"0chain.net/chaincore/node"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -38,6 +39,10 @@ func TestBlockHandler(t *testing.T) {
 	cl := initDBs(t)
 	defer cl()
 	sc.Initialize()
+	mb := block.NewMagicBlock()
+	mb.Miners = node.NewPool(node.NodeTypeMiner)
+	mb.Sharders = node.NewPool(node.NodeTypeSharder)
+	sc.SetMagicBlock(mb)
 	sc.SetLatestFinalizedBlock(b)
 
 	type test struct {

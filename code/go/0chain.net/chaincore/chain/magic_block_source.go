@@ -64,6 +64,7 @@ func ReadMagicBlockFile(path string) (mb *block.MagicBlock, err error) {
 
 // GetMagicBlockFrom0DNS with given URL base.
 func GetMagicBlockFrom0DNS(urlBase string) (mb *block.MagicBlock, err error) {
+	logging.Logger.Info("get magic block from 0DNS", zap.String("0dns", urlBase))
 	if urlBase == "" {
 		return nil, errors.New("empty 0DNS URL base configured")
 	}

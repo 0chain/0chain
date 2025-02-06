@@ -146,6 +146,8 @@ func main() {
 			logging.Logger.Panic("can't read magic block from DNS", zap.Error(err))
 			return
 		}
+
+		logging.Logger.Info("read magic block from 0DNS", zap.Any("magic_block", magicBlock))
 	}
 
 	if state.Debug() {
@@ -267,9 +269,9 @@ func main() {
 	// TODO: all update latest magic block from sharders should be adjusted when VC is enabled
 	// this is because miners will now start from the LFB it stopped, so would not start immediately
 	// from the LFB from sharders, therefore, the latest magic block from sharders would be incorrect
-	if err = mc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
-		logging.Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
-	}
+	// if err = mc.UpdateLatestMagicBlockFromSharders(ctx); err != nil {
+	// 	logging.Logger.Panic(fmt.Sprintf("can't update LFMB from sharders, err: %v", err))
+	// }
 
 	// ignoring error and without retries, restart round will resolve it
 	// if there is errors
@@ -322,6 +324,10 @@ func main() {
 		if err = miner.StoreDKGSummary(ctx, dkgShare); err != nil {
 			logging.Logger.Panic(fmt.Sprintf("Failed to store genesis dkg: ERROR: %v", err.Error()))
 		}
+
+		if err := miner.SetDKG(ctx, mb); err != nil {
+			logging.Logger.Panic(fmt.Sprintf("Failed to set DKG for genesis MB"))
+		}
 	}
 
 	initHandlers(mc)
@@ -339,15 +345,7 @@ func main() {
 	// to subscribe to its events
 	go mc.RestartRoundEventWorker(ctx)
 
-	var activeMiner = mb.Miners.HasNode(node.Self.Underlying().GetKey())
-	if activeMiner {
-		mb = mc.GetLatestMagicBlock()
-		if err := miner.SetDKGFromMagicBlocksChainPrev(ctx, mb); err != nil {
-			logging.Logger.Error("failed to set DKG", zap.Error(err))
-		} else {
-			miner.StartProtocol(ctx, gb)
-		}
-	}
+	miner.StartProtocol(ctx, gb)
 	mc.SetStarted()
 	miner.SetupWorkers(ctx)
 
@@ -361,9 +359,10 @@ func main() {
 			mc.SetupSC(ctx)
 			setupSCDoneC <- struct{}{}
 		}()
-		if mc.ChainConfig.IsViewChangeEnabled() {
-			go mc.DKGProcess(ctx)
-		}
+
+		// start the dkg process worker so that when view change is on, it can start to
+		// process the phase events immediately.
+		go mc.DKGProcess(ctx)
 	}
 
 	shutdown := common.HandleShutdown(server, []func(){
@@ -497,6 +496,9 @@ func initEntities(workdir string, redisHost string, redisPort int, redisTxnsHost
 
 	block.SetupMagicBlockData(ememoryStorage)
 	block.SetupMagicBlockDataDB(workdir)
+
+	block.SetupDKGKeyEntity(ememoryStorage)
+	block.SetupDKGKeyDB(workdir)
 }
 
 func initHandlers(c chain.Chainer) {
@@ -525,7 +527,6 @@ func initN2NHandlers(c *miner.Chain) {
 	miner.SetupM2MReceivers(c)
 	miner.SetupM2MSenders()
 	miner.SetupM2SSenders()
-	miner.SetupM2SRequestors()
 	miner.SetupM2MRequestors()
 
 	miner.SetupX2MResponders()
@@ -539,7 +540,6 @@ func initN2NHandlers(c *miner.Chain) {
 func initWorkers(ctx context.Context) {
 	serverChain := chain.GetServerChain()
 	serverChain.SetupWorkers(ctx)
-	//miner.SetupWorkers(ctx)
 	transaction.SetupWorkers(ctx)
 }
 

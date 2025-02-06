@@ -73,22 +73,28 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 	})
 }
 
-func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block) error {
-	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round); err != nil {
+func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block, skipTicketsVerify ...bool) error {
+	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round, b.LatestFinalizedMagicBlockRound); err != nil {
 		return err
 	}
 
-	if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
-		return err
-	}
+	// if err := c.VerifyRelatedMagicBlockPresence(b); err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
 
+// InViewChangeWindow means the MB of this round is in the view change window that
+// new MB may be created. So it's not safe to use latest MB to verify the block of this round.
+func (c *Chain) InViewChangeWindow(round int64) bool {
+	lfb := c.GetLatestFinalizedBlock()
+	return round-ViewChangeOffset > lfb.Round
+}
+
 // VerifyNotarization - verify that the notarization is correct.
 func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
-	bvt []*block.VerificationTicket, round int64) (err error) {
-
+	bvt []*block.VerificationTicket, round, mbRound int64) (err error) {
 	if bvt == nil {
 		return common.NewError("no_verification_tickets",
 			"No verification tickets for this block")
@@ -108,7 +114,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
 		ticketsMap[vt.VerifierID] = true
 	}
 
-	if !c.reachedNotarization(round, hash, bvt) {
+	if !c.reachedNotarization(round, mbRound, hash, bvt) {
 		return common.NewError("block_not_notarized",
 			"Verification tickets not sufficient to reach notarization")
 	}
@@ -167,7 +173,7 @@ func (c *Chain) UpdateBlockNotarization(b *block.Block) bool {
 		return false
 	}
 
-	if c.reachedNotarization(b.Round, b.Hash, b.GetVerificationTickets()) {
+	if c.reachedNotarization(b.Round, b.LatestFinalizedMagicBlockRound, b.Hash, b.GetVerificationTickets()) {
 		b.SetBlockNotarized()
 		return true
 	}
@@ -175,7 +181,7 @@ func (c *Chain) UpdateBlockNotarization(b *block.Block) bool {
 	return false
 }
 
-func (c *Chain) reachedNotarization(round int64, hash string,
+func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
@@ -184,6 +190,12 @@ func (c *Chain) reachedNotarization(round int64, hash string,
 		threshold = c.GetNotarizationThresholdCount(num)
 		err       error
 	)
+
+	if mb.StartingRound != mbRound {
+		// return true when local MB does not match the block's mb_round,
+		// this could be the miner just started, and try to fetch the MagicBlock from remote
+		return true
+	}
 
 	if c.ThresholdByCount() > 0 {
 		var numSignatures = len(bvt)
@@ -295,7 +307,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int64("lf_round", c.GetLatestFinalizedBlock().Round), zap.String("hash", fb.Hash),
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	ts := time.Now()
-	numGenerators := c.GetGeneratorsNum()
+	numGenerators := c.GetGeneratorsNumOfRound(fb.Round)
 	if fb.RoundRank >= numGenerators || fb.RoundRank < 0 {
 		logging.Logger.Warn("finalize block - round rank is invalid or greater than num_generators",
 			zap.Int("round_rank", fb.RoundRank),
@@ -445,6 +457,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 				zap.Error(err))
 			return err
 		}
+
 		c.SetLatestFinalizedMagicBlock(fb)
 	}
 
@@ -591,7 +604,6 @@ func hasBlockFinalizeEvent(events []event.Event) bool {
 
 // IsFinalizedDeterministically - checks if a block is finalized deterministically
 func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
-	//TODO: The threshold count should happen w.r.t the view of the block
 	mb := c.GetMagicBlock(b.Round)
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false

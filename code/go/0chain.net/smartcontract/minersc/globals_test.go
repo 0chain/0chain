@@ -58,7 +58,7 @@ func TestUpdateGlobals(t *testing.T) {
 			msc:      msc,
 			txn:      txn,
 			input:    (&config.StringMap{p.inputMap}).Encode(),
-			gn:       &minersc.GlobalNode{OwnerId: owner},
+			gn:       minersc.NewGlobalNode(owner, make(map[string]int)),
 			balances: balances,
 		}
 	}

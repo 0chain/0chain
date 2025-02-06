@@ -94,7 +94,6 @@ func (cmd *cmdMagicBlock) setupNodes() error {
 			return err
 		}
 	}
-
 	return nil
 }
 

@@ -1,10 +1,12 @@
 package chain
 
 import (
-	"0chain.net/core/common"
+	"0chain.net/chaincore/node"
 	"context"
 	"strconv"
 	"testing"
+
+	"0chain.net/core/common"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/round"
@@ -63,10 +65,17 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 	for _, test := range cases {
 		t.Run(test.Name, func(t *testing.T) {
 			chain := &Chain{
-				magicBlockStartingRounds: map[int64]*block.Block{},
-				getLFMB:                  make(chan *block.Block),
-				updateLFMB:               make(chan *updateLFMBWithReply, 1),
+				magicBlockStartingRoundsMap: map[int64]*block.Block{},
+				getLFMB:                     make(chan *block.Block),
+				updateLFMB:                  make(chan *updateLFMBWithReply, 1),
 			}
+			chain.Initialize()
+			mb := block.NewMagicBlock()
+			mb.Miners = node.NewPool(node.NodeTypeMiner)
+			mb.Sharders = node.NewPool(node.NodeTypeSharder)
+			chain.SetMagicBlock(mb)
+			lfmb.MagicBlock = mb
+
 			ctx, cancel := context.WithCancel(context.Background())
 			doneC := make(chan struct{})
 			go func() {
@@ -75,9 +84,10 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 			}()
 			chain.updateLatestFinalizedMagicBlock(ctx, lfmb)
 			for _, r := range test.MagicBlocks {
-				chain.magicBlockStartingRounds[r] = &block.Block{
+				chain.magicBlockStartingRoundsMap[r] = &block.Block{
 					HashIDField: datastore.HashIDField{Hash: strconv.FormatInt(r, 10)},
 				}
+				chain.magicBlockStartingRounds.Add(r)
 			}
 
 			for _, checkRound := range test.CheckRounds {
@@ -87,7 +97,7 @@ func TestChain_GetLatestFinalizedMagicBlockRound(t *testing.T) {
 				if checkRound.WantRound == -1 {
 					assert.Equal(t, lfmb, got)
 				} else {
-					assert.Equal(t, chain.magicBlockStartingRounds[checkRound.WantRound].Hash, got.Hash)
+					assert.Equal(t, chain.magicBlockStartingRoundsMap[checkRound.WantRound].Hash, got.Hash)
 				}
 			}
 
