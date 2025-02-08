@@ -269,7 +269,7 @@ func (ssc *StorageSmartContract) freeAllocationRequest(
 		WritePriceRange:      conf.FreeAllocationSettings.WritePriceRange,
 		Blobbers:             marker.Blobbers,
 		ThirdPartyExtendable: true,
-		StorageVersion:       1, // Use storageV2 for free allocation
+		StorageVersion:       0, // Use storageV2 for free allocation
 	}
 
 	for range marker.Blobbers {
