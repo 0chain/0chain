@@ -341,6 +341,7 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	logging.Logger.Info("finalize block -- round", zap.Any("round", fr), zap.String("block", fb.Hash))
 	generators := c.GetGenerators(fr)
 	for idx, g := range generators {
+		logging.Logger.Info("Jayash finalize block -- generator", zap.Any("generator", g.ProtocolStats), zap.Int("index", idx))
 		ms := g.ProtocolStats.(*MinerStats)
 		if len(generators) > len(ms.GenerationCountByRank) {
 			newRankStat := make([]int64, len(generators))
