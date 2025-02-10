@@ -1753,7 +1753,7 @@ func (c *Chain) ValidateMagicBlock(_ context.Context, mr *round.Round, b *block.
 
 // GetGenerators - get all the block generators for a given round.
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	nodes := c.GetMiners(r.GetRoundNumber(), "options").CopyNodes("options")
+	nodes := c.GetMiners(r.GetRoundNumber()).CopyNodes("options")
 	miners := r.GetMinersByRank(nodes)
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
@@ -1798,8 +1798,8 @@ func getGeneratorsNum(minersNum, minGenerators int, generatorsPercent float64) i
 }
 
 /*GetMiners - get all the miners for a given round */
-func (c *Chain) GetMiners(round int64, options ...string) *node.Pool {
-	return c.GetMagicBlock(round, options...).Miners
+func (c *Chain) GetMiners(round int64) *node.Pool {
+	return c.GetMagicBlock(round).Miners
 }
 
 /*IsBlockSharder - checks if the sharder can store the block in the given round */
