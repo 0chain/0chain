@@ -1750,6 +1750,8 @@ func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
 	logging.Logger.Info("2Jayash_debug", zap.Any("nodes", nodes))
 	miners := r.GetMinersByRank(nodes)
 	logging.Logger.Info("3Jayash_debug", zap.Any("miners", miners))
+	logging.Logger.Info("4Jayash_debug", zap.Any("ProtocolStats", miners[0].ProtocolStats))
+	logging.Logger.Info("5Jayash_debug", zap.Any("ProtocolStats", miners[1].ProtocolStats))
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
