@@ -244,11 +244,16 @@ func (np *Pool) N2NURLs() (n2n []string) {
 }
 
 // CopyNodes list.
-func (np *Pool) CopyNodes() (list []*Node) {
+func (np *Pool) CopyNodes(options ...string) (list []*Node) {
 	np.mmx.RLock()
 	defer np.mmx.RUnlock()
 	if len(np.Nodes) == 0 {
 		return
+	}
+
+	if len(options) > 0 {
+		logging.Logger.Info("Jayash Copynodes", zap.Any("protocol stats", np.Nodes[0].ProtocolStats))
+		logging.Logger.Info("Jayash Copynodes", zap.Any("protocol stats", np.Nodes[1].ProtocolStats))
 	}
 
 	list = make([]*Node, len(np.Nodes))
