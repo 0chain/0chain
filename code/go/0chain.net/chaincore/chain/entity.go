@@ -947,7 +947,7 @@ func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
 	return entity.(*block.MagicBlock)
 }
 
-func (c *Chain) GetMagicBlock(round int64, options ...string) *block.MagicBlock {
+func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 
 	round = mbRoundOffset(round)
 
@@ -967,14 +967,12 @@ func (c *Chain) GetMagicBlock(round int64, options ...string) *block.MagicBlock 
 	// mb := entity.(*block.MagicBlock).Clone()
 	mb := entity.(*block.MagicBlock)
 
-	if len(options) > 0 {
-		logging.Logger.Debug("[mvc] GetMagicBlock",
-			zap.Int64("round", round),
-			zap.Int64("mb_starting_round", mb.StartingRound),
-			zap.String("mb_hash", mb.Hash),
-			zap.Int("mb_miners_size", mb.Miners.Size()),
-			zap.Int("mb_sharders_size", mb.Sharders.Size()))
-	}
+	logging.Logger.Debug("[mvc] GetMagicBlock",
+		zap.Int64("round", round),
+		zap.Int64("mb_starting_round", mb.StartingRound),
+		zap.String("mb_hash", mb.Hash),
+		zap.Int("mb_miners_size", mb.Miners.Size()),
+		zap.Int("mb_sharders_size", mb.Sharders.Size()))
 
 	return mb
 }
