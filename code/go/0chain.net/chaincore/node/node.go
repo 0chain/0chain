@@ -3,6 +3,8 @@ package node
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/0chain/common/core/logging"
+	"go.uber.org/zap"
 	"io"
 	"math"
 	"strings"
@@ -642,9 +644,15 @@ func (n *Node) SetNode(old *Node) {
 	n.setSmallMessageSendTime(clone.GetSmallMessageSendTime())
 	n.LargeMessagePullServeTime = clone.LargeMessagePullServeTime
 	n.SmallMessagePullServeTime = clone.SmallMessagePullServeTime
+
+	logging.Logger.Info("1Jayash Node set", zap.Any("node", clone.ProtocolStats))
+
 	if clone.ProtocolStats != nil {
 		n.ProtocolStats = clone.ProtocolStats.(interface{ Clone() interface{} }).Clone()
+		logging.Logger.Info("2Jayash Node set", zap.Any("node", n.ProtocolStats))
 	}
+
+	logging.Logger.Info("3Jayash Node set", zap.Any("node", n.ProtocolStats))
 
 	// Don't override build tag if it's set
 	buildTag := n.Info.BuildTag
@@ -712,10 +720,16 @@ func (n *Node) Clone() *Node {
 	clone.idBytes = make([]byte, len(n.idBytes))
 	copy(clone.idBytes, n.idBytes)
 
+	logging.Logger.Info("1Jayash Node cloned", zap.Any("node", clone))
+	logging.Logger.Info("2Jayash Node cloned", zap.Any("protocol_stats", n.ProtocolStats))
+
 	ps, ok := n.ProtocolStats.(interface{ Clone() interface{} })
 	if ok {
 		clone.ProtocolStats = ps.Clone()
+		logging.Logger.Info("3Jayash Node cloned", zap.Any("protocol_stats", clone.ProtocolStats))
 	}
+
+	logging.Logger.Info("4Jayash Node cloned", zap.Any("node", clone.ProtocolStats))
 
 	return clone
 }
