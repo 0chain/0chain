@@ -209,6 +209,8 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 		waited++
 	}
 
+	logging.Logger.Info("Jayash_debug", zap.Any("dmn", dmn.SimpleNodes), zap.Int("waited", waited))
+
 	if err := cstate.WithActivation(balances, "hermes",
 		func() error {
 			err = dmn.reduceNodes(true, gn, balances)
