@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -77,7 +78,7 @@ func SetDKGFromMagicBlocksChainPrev(ctx context.Context, mb *block.MagicBlock) e
 	return nil
 }
 
-func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, workdir string) (
 	err error) {
 
 	var (
@@ -89,6 +90,22 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 
 	if summary, err = LoadDKGSummary(ctx, id); err != nil {
 		return
+	}
+
+	mpks, err := mb.Mpks.GetMpkMap()
+	if err != nil {
+		logging.Logger.Panic("[mvc2] Get mpks map failed", zap.Error(err))
+	}
+
+	if err = summary.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), mpks); err != nil {
+		logging.Logger.Error("[mvc2] failed to verify dkg summary", zap.Error(err))
+		// load summary from file
+		summary, err = ReadDKGSummaryFile(filepath.Join(workdir, "data/dkg/summary.json"))
+		if err != nil {
+			logging.Logger.Panic(fmt.Sprintf("[mvc2] Error reading DKG file. ERROR: %v", err.Error()))
+		} else {
+			logging.Logger.Info("[mvc2] successfully read dkg summary from file", zap.Any("ID", summary.ID))
+		}
 	}
 
 	if mb.StartingRound > 0 && !summary.IsFinalized {
@@ -369,11 +386,13 @@ func verifyVRFShare(r *Round, vrfs *round.VRFShare, blsMsg string, dkg *bls.DKG)
 		return false
 	}
 
+	pi := dkg.GetPublicKeyByID(partyID)
 	Logger.Info("verified vrf",
 		zap.Int64("round", vrfs.Round),
 		zap.String("node_id", vrfs.GetParty().GetKey()),
 		zap.String("share", share.GetHexString()),
 		zap.String("from", (&partyID).GetHexString()),
+		zap.String("pi", pi.GetHexString()),
 		zap.String("message", blsMsg))
 	return true
 }
