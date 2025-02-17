@@ -164,10 +164,10 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, wor
 
 	newDKG.AggregateSecretKeyShares()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
-	mpks, err := mb.Mpks.GetMpkMap()
-	if err != nil {
-		return err
-	}
+	// mpks, err := mb.Mpks.GetMpkMap()
+	// if err != nil {
+	// 	return err
+	// }
 
 	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
 		return err
