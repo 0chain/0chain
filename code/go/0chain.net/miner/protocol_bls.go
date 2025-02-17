@@ -51,13 +51,15 @@ func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
 	}
 
 	dkg := mc.GetDKGByStartingRound(mb.StartingRound)
-	logging.Logger.Debug("[mvc] dkg process set dkg success",
-		zap.Int("dkg T", dkg.T),
-		zap.Int("dkg N", dkg.N),
-		zap.Int("gmpk len", len(dkg.GetMPKs())),
-		zap.Int64("mb number", mb.MagicBlockNumber),
-		zap.Int64("mb sr", mb.StartingRound),
-	)
+	if dkg != nil {
+		logging.Logger.Debug("[mvc] dkg process set dkg success",
+			zap.Int("dkg T", dkg.T),
+			zap.Int("dkg N", dkg.N),
+			zap.Int("gmpk len", len(dkg.GetMPKs())),
+			zap.Int64("mb number", mb.MagicBlockNumber),
+			zap.Int64("mb sr", mb.StartingRound))
+	}
+
 	return nil
 }
 
