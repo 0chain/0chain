@@ -1650,7 +1650,7 @@ func (mc *Chain) setupLoadedMagicBlock(mb *block.MagicBlock) (err error) {
 // The method can write INFO logs that doesn't really mean an error. Since, the
 // method is optimistic and tries to load latest and previous MBs and related
 // DKGs. But in a normal case miner can have or haven't the MBs and the DKGs.
-func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
+func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context, workdir string) {
 
 	// current MB
 	var (
@@ -1687,7 +1687,7 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		return // can't continue
 	}
 	mc.SetMagicBlock(current)
-	if err = mc.SetDKGSFromStore(ctx, current); err != nil {
+	if err = mc.SetDKGSFromStore(ctx, current, workdir); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- loading previous DKG",
 			zap.Error(err))
 	}
