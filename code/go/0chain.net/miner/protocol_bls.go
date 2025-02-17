@@ -106,6 +106,10 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, wor
 				logging.Logger.Panic(fmt.Sprintf("[mvc2] Error reading DKG file. ERROR: %v", err.Error()))
 			} else {
 				logging.Logger.Info("[mvc2] successfully read dkg summary from file", zap.Any("ID", summary.ID))
+				// save the summary to DB
+				if err = StoreDKGSummary(ctx, summary); err != nil {
+					logging.Logger.Error("[mvc2] failed to save dkg summary to DB", zap.Error(err))
+				}
 			}
 		} else {
 			return errors.New("invalid dkg summary")
