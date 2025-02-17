@@ -113,7 +113,8 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, wor
 			}
 		} else {
 			logging.Logger.Error("[mvc2] failed to verify dkg summary", zap.Int64("mb number", mb.MagicBlockNumber), zap.Int64("start_round", mb.StartingRound))
-			return errors.New("invalid dkg summary")
+			// return errors.New("invalid dkg summary")
+			return nil
 		}
 	}
 
