@@ -78,7 +78,7 @@ func SetDKGFromMagicBlocksChainPrev(ctx context.Context, mb *block.MagicBlock) e
 	return nil
 }
 
-func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, workdir string) (
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, workdir ...string) (
 	err error) {
 
 	var (
@@ -100,11 +100,15 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, wor
 	if err = summary.Verify(bls.ComputeIDdkg(node.Self.Underlying().GetKey()), mpks); err != nil {
 		logging.Logger.Error("[mvc2] failed to verify dkg summary", zap.Error(err))
 		// load summary from file
-		summary, err = ReadDKGSummaryFile(filepath.Join(workdir, "data/dkg/summary.json"))
-		if err != nil {
-			logging.Logger.Panic(fmt.Sprintf("[mvc2] Error reading DKG file. ERROR: %v", err.Error()))
+		if len(workdir) > 0 {
+			summary, err = ReadDKGSummaryFile(filepath.Join(workdir[0], "data/dkg/summary.json"))
+			if err != nil {
+				logging.Logger.Panic(fmt.Sprintf("[mvc2] Error reading DKG file. ERROR: %v", err.Error()))
+			} else {
+				logging.Logger.Info("[mvc2] successfully read dkg summary from file", zap.Any("ID", summary.ID))
+			}
 		} else {
-			logging.Logger.Info("[mvc2] successfully read dkg summary from file", zap.Any("ID", summary.ID))
+			return errors.New("invalid dkg summary")
 		}
 	}
 
