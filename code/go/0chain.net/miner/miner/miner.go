@@ -260,7 +260,7 @@ func main() {
 
 	// load previous MB and related DKG if any. Don't load the latest, since
 	// it can be promoted (not finalized).
-	mc.LoadMagicBlocksAndDKG(ctx)
+	mc.LoadMagicBlocksAndDKG(ctx, workdir)
 
 	if err = mc.WaitForActiveSharders(ctx); err != nil {
 		logging.Logger.Error("failed to wait sharders", zap.Error(err))
