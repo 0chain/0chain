@@ -401,6 +401,8 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return nil
 	}
 
+	logging.Logger.Debug("[mvc2] view change load dkg summary", zap.Any("summary", dkgSum))
+
 	dkgSum.IsFinalized = true
 	if err := StoreDKGSummary(ctx, dkgSum); err != nil {
 		logging.Logger.Error("[mvc] view change failed to update dkg summary",
