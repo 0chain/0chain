@@ -59,9 +59,10 @@ func chainhandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Requ
 }
 
 func minerHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Request) {
+	logging.Logger.Info("Jayash_debug minerHandlersMap")
 	transactionEntityMetadata := datastore.GetEntityMetadata("txn")
 	m := handlersMap(c)
-	m["/v1/transaction/put"] = common.WithCORS(common.UserRateLimit(
+	m["/v1/transaction/put"] = common.WithCORS(
 		datastore.ToJSONEntityReqResponse(
 			datastore.DoAsyncEntityJSONHandler(
 				memorystore.WithConnectionEntityJSONHandler(PutTransaction, transactionEntityMetadata),
@@ -69,7 +70,7 @@ func minerHandlersMap(c Chainer) map[string]func(http.ResponseWriter, *http.Requ
 			),
 			transactionEntityMetadata,
 		),
-	))
+	)
 	m[GetBlockV1Pattern] = common.UserRateLimit(common.ToJSONResponse(GetBlockHandler))
 	return m
 }
