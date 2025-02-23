@@ -48,6 +48,7 @@ func ConfigRateLimits() {
 // UserRateLimit - rate limiting for end user handlers
 func UserRateLimit(handler ReqRespHandlerf) ReqRespHandlerf {
 	logging.Logger.Info("Jayash_debug UserRateLimit", zap.Any("userRateLimit", userRateLimit))
+	return Recover(handler)
 	if !userRateLimit.RateLimit {
 		return Recover(handler)
 	}
