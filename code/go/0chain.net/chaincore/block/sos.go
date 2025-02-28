@@ -2,7 +2,9 @@ package block
 
 import (
 	"encoding/json"
+	"runtime"
 	"sort"
+	"sync"
 
 	"github.com/0chain/common/core/logging"
 
@@ -37,44 +39,135 @@ func (sos *ShareOrSigns) Hash() string {
 }
 
 func (sos *ShareOrSigns) Validate(mpks *Mpks, publicKeys map[string]string, scheme encryption.SignatureScheme) ([]string, bool) {
-	var keys []string
-	for key, share := range sos.ShareOrSigns {
-		if share == nil {
-			continue
-		}
-		if share.Sign != "" {
-			signatureScheme := scheme
-			pk, ok := publicKeys[key]
-			if !ok {
-				return nil, false
-			}
-			if err := signatureScheme.SetPublicKey(pk); err != nil {
-				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.String("message", share.Message), zap.String("sign", share.Sign))
-				return nil, false
-			}
-			sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
-			if !sigOK || err != nil {
-				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.String("message", share.Message), zap.String("sign", share.Sign))
-				return nil, false
-			}
-		} else {
-			var sij bls.Key
-			if err := sij.SetHexString(share.Share); err != nil {
-				return nil, false
-			}
-			pks, err := bls.ConvertStringToMpk(mpks.Mpks[sos.ID].Mpk)
-			if err != nil {
-				logging.Logger.Error("failed to convert mpks", zap.Error(err))
-				return nil, false
-			}
-
-			if !bls.ValidateShare(pks, sij, bls.ComputeIDdkg(key)) {
-				logging.Logger.Error("failed to validate share or signs", zap.Any("share", share), zap.String("sij.pi", sij.GetPublicKey().GetHexString()))
-				return nil, false
-			}
-			keys = append(keys, key)
-		}
+	if len(sos.ShareOrSigns) == 0 {
+		return nil, true
 	}
+
+	type validationResult struct {
+		key     string
+		valid   bool
+		isShare bool
+	}
+
+	type job struct {
+		key   string
+		share *bls.DKGKeyShare
+	}
+
+	// Number of concurrent workers
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(sos.ShareOrSigns) {
+		numWorkers = len(sos.ShareOrSigns)
+	}
+
+	// Create work and result channels
+	jobs := make(chan job, len(sos.ShareOrSigns))
+	results := make(chan validationResult, len(sos.ShareOrSigns))
+
+	// Start worker goroutines
+	var wg sync.WaitGroup
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				key := job.key
+				share := job.share
+
+				if share == nil {
+					continue
+				}
+
+				result := validationResult{key: key, valid: false, isShare: false}
+
+				if share.Sign != "" {
+					// Create a new signature scheme instance to avoid concurrent access issues
+					// We need to use the same type as the input scheme
+					signatureScheme := scheme
+					pk, ok := publicKeys[key]
+					if !ok {
+						results <- result
+						continue
+					}
+					if err := signatureScheme.SetPublicKey(pk); err != nil {
+						logging.Logger.Error("failed to validate share or signs",
+							zap.Any("share", share),
+							zap.String("message", share.Message),
+							zap.String("sign", share.Sign))
+						results <- result
+						continue
+					}
+					sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
+					if !sigOK || err != nil {
+						logging.Logger.Error("failed to validate share or signs",
+							zap.Any("share", share),
+							zap.String("message", share.Message),
+							zap.String("sign", share.Sign))
+						results <- result
+						continue
+					}
+					result.valid = true
+				} else {
+					var sij bls.Key
+					if err := sij.SetHexString(share.Share); err != nil {
+						results <- result
+						continue
+					}
+
+					// Slightly inefficient to convert MPK for each worker, but safer than concurrent access
+					pks, err := bls.ConvertStringToMpk(mpks.Mpks[sos.ID].Mpk)
+					if err != nil {
+						logging.Logger.Error("failed to convert mpks", zap.Error(err))
+						results <- result
+						continue
+					}
+
+					if !bls.ValidateShare(pks, sij, bls.ComputeIDdkg(key)) {
+						logging.Logger.Error("failed to validate share or signs",
+							zap.Any("share", share),
+							zap.String("sij.pi", sij.GetPublicKey().GetHexString()))
+						results <- result
+						continue
+					}
+					result.valid = true
+					result.isShare = true
+				}
+				results <- result
+			}
+		}()
+	}
+
+	// Send jobs to workers
+	for key, share := range sos.ShareOrSigns {
+		jobs <- job{key, share}
+	}
+	close(jobs)
+
+	// Wait for all workers to finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Process results
+	var keys []string
+	validShareCount := 0
+	for result := range results {
+		if !result.valid {
+			// If any validation fails, abort and return false
+			return nil, false
+		}
+		if result.isShare {
+			keys = append(keys, result.key)
+		}
+		validShareCount++
+	}
+
+	// Make sure all validations were successful
+	if validShareCount != len(sos.ShareOrSigns) {
+		return nil, false
+	}
+
 	return keys, true
 }
 
