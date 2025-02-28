@@ -108,8 +108,8 @@ func (gsi *GroupSharesIndex) GetHashBytes() []byte {
 	return encryption.RawHash(data)
 }
 
-// GetPartitionKey generates the MPT key for a specific ShareOrSign partition
-func GetPartitionKey(id string) string {
+// GetSOSPartitionKey generates the MPT key for a specific ShareOrSign partition
+func GetSOSPartitionKey(id string) string {
 	return GSoSPartitionKey + "_" + id
 }
 
@@ -123,7 +123,7 @@ func NewPartitionedGroupSharesManager() *PartitionedGroupSharesManager {
 
 // AddShareOrSigns adds a new ShareOrSigns to the MPT
 // It updates the index and creates a new partition node for the share
-func (m *PartitionedGroupSharesManager) AddShareOrSigns(state state.StateContextI, id string, sos *block.ShareOrSigns) error {
+func (m *PartitionedGroupSharesManager) AddShareOrSigns(state state.StateContextI, sos *block.ShareOrSigns) error {
 	// 1. Get the current index
 	gsi := NewGroupSharesIndex()
 	err := state.GetTrieNode(GSoSIndexKey, gsi)
@@ -132,7 +132,7 @@ func (m *PartitionedGroupSharesManager) AddShareOrSigns(state state.StateContext
 	}
 
 	// 2. Add the ID to the index if it doesn't exist
-	if added := gsi.AddID(id); !added {
+	if added := gsi.AddID(sos.ID); !added {
 		return nil // ID already exists, nothing to do
 	}
 
@@ -142,11 +142,8 @@ func (m *PartitionedGroupSharesManager) AddShareOrSigns(state state.StateContext
 		return err
 	}
 
-	// 4. Set the ID in the ShareOrSigns
-	sos.ID = id
-
-	// 5. Store the individual ShareOrSigns in its own partition
-	partKey := GetPartitionKey(id)
+	// 4. Store the individual ShareOrSigns in its own partition
+	partKey := GetSOSPartitionKey(sos.ID)
 	_, err = state.InsertTrieNode(partKey, sos)
 
 	return err
@@ -167,7 +164,7 @@ func (m *PartitionedGroupSharesManager) GetShareOrSigns(state state.StateContext
 	}
 
 	// 3. Get the ShareOrSigns from its partition
-	partKey := GetPartitionKey(id)
+	partKey := GetSOSPartitionKey(id)
 	sos := block.NewShareOrSigns()
 	err = state.GetTrieNode(partKey, sos)
 	if err != nil {
@@ -192,7 +189,7 @@ func (m *PartitionedGroupSharesManager) GetAllShareOrSigns(state state.StateCont
 	// 3. Retrieve each ShareOrSigns from its partition
 	ids := gsi.GetIDs()
 	for _, id := range ids {
-		partKey := GetPartitionKey(id)
+		partKey := GetSOSPartitionKey(id)
 		sos := block.NewShareOrSigns()
 		err = state.GetTrieNode(partKey, sos)
 		if err != nil {
@@ -226,7 +223,7 @@ func (m *PartitionedGroupSharesManager) DeleteShareOrSigns(state state.StateCont
 	}
 
 	// 4. Delete the partition for this ID
-	partKey := GetPartitionKey(id)
+	partKey := GetSOSPartitionKey(id)
 	_, err = state.DeleteTrieNode(partKey)
 	return err
 }
@@ -242,7 +239,7 @@ func (m *PartitionedGroupSharesManager) DeleteAllShareOrSigns(state state.StateC
 
 	// 2. Delete each partition
 	for _, id := range gsi.GetIDs() {
-		partKey := GetPartitionKey(id)
+		partKey := GetSOSPartitionKey(id)
 		_, deleteErr := state.DeleteTrieNode(partKey)
 		if deleteErr != nil {
 			// Continue deleting even if some entries fail
@@ -285,7 +282,7 @@ func (m *PartitionedGroupSharesManager) MigrateFromLegacy(state state.StateConte
 		gsi.AddID(id)
 
 		// Store in individual partition
-		partKey := GetPartitionKey(id)
+		partKey := GetSOSPartitionKey(id)
 		_, err = state.InsertTrieNode(partKey, sos)
 		if err != nil {
 			return err
