@@ -2,7 +2,6 @@ package minersc
 
 import (
 	"sort"
-	"sync"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
@@ -21,8 +20,7 @@ const (
 // GroupSharesIndex is a lightweight structure that stores just the IDs of all ShareOrSigns
 // without the actual data
 type GroupSharesIndex struct {
-	mutex sync.RWMutex `json:"-" msgpack:"-" msg:"-"`
-	IDs   []string     `json:"ids" msg:"ids"`
+	IDs []string `json:"ids" msg:"ids"`
 }
 
 // NewGroupSharesIndex creates a new GroupSharesIndex instance
@@ -34,9 +32,6 @@ func NewGroupSharesIndex() *GroupSharesIndex {
 
 // AddID adds an ID to the index if it doesn't already exist
 func (gsi *GroupSharesIndex) AddID(id string) bool {
-	gsi.mutex.Lock()
-	defer gsi.mutex.Unlock()
-
 	// Check if ID already exists
 	for _, existingID := range gsi.IDs {
 		if existingID == id {
@@ -50,9 +45,6 @@ func (gsi *GroupSharesIndex) AddID(id string) bool {
 
 // RemoveID removes an ID from the index
 func (gsi *GroupSharesIndex) RemoveID(id string) bool {
-	gsi.mutex.Lock()
-	defer gsi.mutex.Unlock()
-
 	for i, existingID := range gsi.IDs {
 		if existingID == id {
 			// Remove the ID by replacing it with the last element and truncating
@@ -66,9 +58,6 @@ func (gsi *GroupSharesIndex) RemoveID(id string) bool {
 
 // GetIDs returns a copy of all IDs in the index
 func (gsi *GroupSharesIndex) GetIDs() []string {
-	gsi.mutex.RLock()
-	defer gsi.mutex.RUnlock()
-
 	result := make([]string, len(gsi.IDs))
 	copy(result, gsi.IDs)
 	return result
@@ -76,9 +65,6 @@ func (gsi *GroupSharesIndex) GetIDs() []string {
 
 // ContainsID checks if the ID exists in the index
 func (gsi *GroupSharesIndex) ContainsID(id string) bool {
-	gsi.mutex.RLock()
-	defer gsi.mutex.RUnlock()
-
 	for _, existingID := range gsi.IDs {
 		if existingID == id {
 			return true
@@ -94,9 +80,6 @@ func (gsi *GroupSharesIndex) GetHash() string {
 
 // GetHashBytes returns the hash bytes of the index
 func (gsi *GroupSharesIndex) GetHashBytes() []byte {
-	gsi.mutex.RLock()
-	defer gsi.mutex.RUnlock()
-
 	sortedIDs := make([]string, len(gsi.IDs))
 	copy(sortedIDs, gsi.IDs)
 	sort.Strings(sortedIDs)
@@ -222,33 +205,16 @@ func (m *PartitionedGroupSharesManager) DeleteShareOrSigns(state state.StateCont
 		return err
 	}
 
-	// 4. Delete the partition for this ID
-	partKey := GetSOSPartitionKey(id)
-	_, err = state.DeleteTrieNode(partKey)
-	return err
+	// Note: We no longer delete the actual node from state
+	// This is because we want to reduce the state writing, also
+	// the node data will be rewritten in next term of VC
+	return nil
 }
 
 // DeleteAllShareOrSigns deletes all ShareOrSigns from the MPT
 func (m *PartitionedGroupSharesManager) DeleteAllShareOrSigns(state state.StateContextI) error {
 	// 1. Get the current index
-	gsi := NewGroupSharesIndex()
-	err := state.GetTrieNode(GSoSIndexKey, gsi)
-	if err != nil && err != util.ErrValueNotPresent {
-		return err
-	}
-
-	// 2. Delete each partition
-	for _, id := range gsi.GetIDs() {
-		partKey := GetSOSPartitionKey(id)
-		_, deleteErr := state.DeleteTrieNode(partKey)
-		if deleteErr != nil {
-			// Continue deleting even if some entries fail
-			continue
-		}
-	}
-
-	// 3. Clear the index
-	_, err = state.InsertTrieNode(GSoSIndexKey, NewGroupSharesIndex())
+	_, err := state.InsertTrieNode(GSoSIndexKey, NewGroupSharesIndex())
 	return err
 }
 

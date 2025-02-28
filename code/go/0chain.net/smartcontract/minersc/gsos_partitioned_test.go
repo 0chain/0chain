@@ -233,16 +233,24 @@ func TestPartitionedGroupSharesManager_Delete(t *testing.T) {
 	err := manager.DeleteShareOrSigns(state, "miner2")
 	require.NoError(t, err)
 
-	// Verify it's deleted
-	_, err = manager.GetShareOrSigns(state, "miner2")
-	assert.Equal(t, util.ErrValueNotPresent, err)
-
-	// Verify others still exist
+	// Verify it's removed from the index
 	ids, err := manager.GetIDs(state)
 	require.NoError(t, err)
 	assert.Len(t, ids, 2)
 	assert.Contains(t, ids, "miner1")
 	assert.Contains(t, ids, "miner3")
+	assert.NotContains(t, ids, "miner2")
+
+	// Verify manager API reports it as "not present"
+	_, err = manager.GetShareOrSigns(state, "miner2")
+	assert.Equal(t, util.ErrValueNotPresent, err)
+
+	// Verify the data node still exists in the state
+	partitionKey := GetSOSPartitionKey("miner2")
+	directSos := block.NewShareOrSigns()
+	err = state.GetTrieNode(partitionKey, directSos)
+	require.NoError(t, err, "The data node should still exist in the state after deletion")
+	assert.Equal(t, "miner2", directSos.ID)
 }
 
 // Test deleting all ShareOrSigns
@@ -262,10 +270,24 @@ func TestPartitionedGroupSharesManager_DeleteAll(t *testing.T) {
 	err := manager.DeleteAllShareOrSigns(state)
 	require.NoError(t, err)
 
-	// Verify all are deleted
+	// Verify all are removed from the index
 	ids, err := manager.GetIDs(state)
 	require.NoError(t, err)
 	assert.Len(t, ids, 0)
+
+	// Verify manager API reports them as "not present"
+	_, err = manager.GetShareOrSigns(state, "miner1")
+	assert.Equal(t, util.ErrValueNotPresent, err)
+
+	// Verify the data nodes still exist in the state
+	for i := 1; i <= 3; i++ {
+		id := "miner" + string(rune('0'+i))
+		partitionKey := GetSOSPartitionKey(id)
+		directSos := block.NewShareOrSigns()
+		err = state.GetTrieNode(partitionKey, directSos)
+		require.NoError(t, err, "The data node for %s should still exist in the state after deletion", id)
+		assert.Equal(t, id, directSos.ID)
+	}
 }
 
 // Test error handling when the state returns errors
