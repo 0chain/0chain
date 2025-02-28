@@ -11,7 +11,7 @@ import (
 
 // Test the GroupSharesManager serialization
 func TestGroupSharesManager_Serialization(t *testing.T) {
-	gsm := NewGroupSharesManager()
+	gsm := NewGroupSharesOrSignsV2()
 
 	// Directly set IDs for testing
 	gsm.IDs = append(gsm.IDs, "id1", "id2", "id3")
@@ -19,7 +19,7 @@ func TestGroupSharesManager_Serialization(t *testing.T) {
 	data, err := gsm.MarshalMsg(nil)
 	require.NoError(t, err)
 
-	gsm2 := NewGroupSharesManager()
+	gsm2 := NewGroupSharesOrSignsV2()
 	_, err = gsm2.UnmarshalMsg(data)
 	require.NoError(t, err)
 
@@ -53,7 +53,7 @@ func TestGetSOSPartitionKey(t *testing.T) {
 // Test adding and retrieving a ShareOrSigns
 func TestGroupSharesManager_AddAndGet(t *testing.T) {
 	state := newTestBalances()
-	manager := NewGroupSharesManager()
+	manager := NewGroupSharesOrSignsV2()
 
 	// Create a ShareOrSigns
 	sos := block.NewShareOrSigns()
@@ -64,8 +64,8 @@ func TestGroupSharesManager_AddAndGet(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load manager again to simulate fresh start
-	retrieved := NewGroupSharesManager()
-	err = retrieved.LoadFromState(state)
+	retrieved := NewGroupSharesOrSignsV2()
+	err = retrieved.Load(state)
 	require.NoError(t, err)
 
 	// Retrieve the ShareOrSigns
@@ -81,7 +81,7 @@ func TestGroupSharesManager_AddAndGet(t *testing.T) {
 // Test getting IDs from the manager
 func TestGroupSharesManager_GetIDs(t *testing.T) {
 	state := newTestBalances()
-	manager := NewGroupSharesManager()
+	manager := NewGroupSharesOrSignsV2()
 
 	// Add multiple ShareOrSigns
 	for i := 1; i <= 3; i++ {
@@ -92,8 +92,8 @@ func TestGroupSharesManager_GetIDs(t *testing.T) {
 	}
 
 	// Load manager again to simulate fresh start
-	retrieved := NewGroupSharesManager()
-	err := retrieved.LoadFromState(state)
+	retrieved := NewGroupSharesOrSignsV2()
+	err := retrieved.Load(state)
 	require.NoError(t, err)
 
 	// Verify IDs
@@ -107,7 +107,7 @@ func TestGroupSharesManager_GetIDs(t *testing.T) {
 // Test retrieving all ShareOrSigns
 func TestGroupSharesManager_GetAll(t *testing.T) {
 	state := newTestBalances()
-	manager := NewGroupSharesManager()
+	manager := NewGroupSharesOrSignsV2()
 
 	// Add multiple ShareOrSigns
 	for i := 1; i <= 3; i++ {
@@ -118,8 +118,8 @@ func TestGroupSharesManager_GetAll(t *testing.T) {
 	}
 
 	// Load manager again to simulate fresh start
-	retrieved := NewGroupSharesManager()
-	err := retrieved.LoadFromState(state)
+	retrieved := NewGroupSharesOrSignsV2()
+	err := retrieved.Load(state)
 	require.NoError(t, err)
 
 	// Get all
@@ -139,7 +139,7 @@ func TestGroupSharesManager_GetAll(t *testing.T) {
 // Test deleting a ShareOrSigns
 func TestGroupSharesManager_Delete(t *testing.T) {
 	state := newTestBalances()
-	manager := NewGroupSharesManager()
+	manager := NewGroupSharesOrSignsV2()
 
 	// Add multiple ShareOrSigns
 	for i := 1; i <= 3; i++ {
@@ -150,8 +150,8 @@ func TestGroupSharesManager_Delete(t *testing.T) {
 	}
 
 	// Load manager again to simulate fresh start
-	retrieved := NewGroupSharesManager()
-	err := retrieved.LoadFromState(state)
+	retrieved := NewGroupSharesOrSignsV2()
+	err := retrieved.Load(state)
 	require.NoError(t, err)
 
 	// Delete one
@@ -159,8 +159,8 @@ func TestGroupSharesManager_Delete(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load again to verify changes were saved
-	verifier := NewGroupSharesManager()
-	err = verifier.LoadFromState(state)
+	verifier := NewGroupSharesOrSignsV2()
+	err = verifier.Load(state)
 	require.NoError(t, err)
 
 	// Verify it's removed from the index
@@ -185,7 +185,7 @@ func TestGroupSharesManager_Delete(t *testing.T) {
 // Test deleting all ShareOrSigns
 func TestGroupSharesManager_DeleteAll(t *testing.T) {
 	state := newTestBalances()
-	manager := NewGroupSharesManager()
+	manager := NewGroupSharesOrSignsV2()
 
 	// Add multiple ShareOrSigns
 	for i := 1; i <= 3; i++ {
@@ -196,8 +196,8 @@ func TestGroupSharesManager_DeleteAll(t *testing.T) {
 	}
 
 	// Load manager again to simulate fresh start
-	retrieved := NewGroupSharesManager()
-	err := retrieved.LoadFromState(state)
+	retrieved := NewGroupSharesOrSignsV2()
+	err := retrieved.Load(state)
 	require.NoError(t, err)
 
 	// Delete all
@@ -205,8 +205,8 @@ func TestGroupSharesManager_DeleteAll(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load again to verify changes were saved
-	verifier := NewGroupSharesManager()
-	err = verifier.LoadFromState(state)
+	verifier := NewGroupSharesOrSignsV2()
+	err = verifier.Load(state)
 	require.NoError(t, err)
 
 	// Verify all are removed from the index
@@ -234,7 +234,7 @@ func TestGroupSharesManager_ErrorHandling(t *testing.T) {
 	state := newTestBalances()
 
 	// Don't pre-populate the tree - this will cause errors when trying to retrieve nodes
-	manager := NewGroupSharesManager()
+	manager := NewGroupSharesOrSignsV2()
 
 	// Create a ShareOrSigns
 	sos := block.NewShareOrSigns()
@@ -257,7 +257,7 @@ func TestGroupSharesManager_ErrorHandling(t *testing.T) {
 // Test adding a ShareOrSigns that already exists
 func TestGroupSharesManager_AddExisting(t *testing.T) {
 	state := newTestBalances()
-	manager := NewGroupSharesManager()
+	manager := NewGroupSharesOrSignsV2()
 
 	// Create a ShareOrSigns
 	sos := block.NewShareOrSigns()
@@ -272,8 +272,8 @@ func TestGroupSharesManager_AddExisting(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load manager again to simulate fresh start
-	retrieved := NewGroupSharesManager()
-	err = retrieved.LoadFromState(state)
+	retrieved := NewGroupSharesOrSignsV2()
+	err = retrieved.Load(state)
 	require.NoError(t, err)
 
 	// Verify IDs (should still only have one entry)

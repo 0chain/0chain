@@ -14,21 +14,21 @@ const (
 
 //go:generate msgp -io=false -tests=false -v
 
-// GroupSharesManager is a combined structure that both stores the IDs of ShareOrSigns
+// GroupSharesOrSignsV2 is a combined structure that both stores the IDs of ShareOrSigns
 // and provides methods to manage them in state
-type GroupSharesManager struct {
+type GroupSharesOrSignsV2 struct {
 	IDs []string `json:"ids" msg:"ids"` // IDs of all ShareOrSigns
 }
 
-// NewGroupSharesManager creates a new GroupSharesManager instance
-func NewGroupSharesManager() *GroupSharesManager {
-	return &GroupSharesManager{
+// NewGroupSharesOrSignsV2 creates a new GroupSharesManager instance
+func NewGroupSharesOrSignsV2() *GroupSharesOrSignsV2 {
+	return &GroupSharesOrSignsV2{
 		IDs: make([]string, 0),
 	}
 }
 
 // addID adds an ID to the index if it doesn't already exist
-func (gsm *GroupSharesManager) addID(id string) bool {
+func (gsm *GroupSharesOrSignsV2) addID(id string) bool {
 	// Check if ID already exists
 	for _, existingID := range gsm.IDs {
 		if existingID == id {
@@ -41,7 +41,7 @@ func (gsm *GroupSharesManager) addID(id string) bool {
 }
 
 // removeID removes an ID from the index
-func (gsm *GroupSharesManager) removeID(id string) bool {
+func (gsm *GroupSharesOrSignsV2) removeID(id string) bool {
 	for i, existingID := range gsm.IDs {
 		if existingID == id {
 			// Remove the ID by replacing it with the last element and truncating
@@ -54,14 +54,14 @@ func (gsm *GroupSharesManager) removeID(id string) bool {
 }
 
 // GetIDs returns a copy of all IDs in the index
-func (gsm *GroupSharesManager) GetIDs() []string {
+func (gsm *GroupSharesOrSignsV2) GetIDs() []string {
 	result := make([]string, len(gsm.IDs))
 	copy(result, gsm.IDs)
 	return result
 }
 
 // ContainsID checks if the ID exists in the index
-func (gsm *GroupSharesManager) ContainsID(id string) bool {
+func (gsm *GroupSharesOrSignsV2) ContainsID(id string) bool {
 	for _, existingID := range gsm.IDs {
 		if existingID == id {
 			return true
@@ -76,7 +76,7 @@ func GetSOSPartitionKey(id string) string {
 }
 
 // GetHash computes a hash of the IDs to detect changes
-func (gsm *GroupSharesManager) GetHash() string {
+func (gsm *GroupSharesOrSignsV2) GetHash() string {
 	// Simple implementation - concatenate all IDs and compute a hash
 	// For a real implementation, consider using a cryptographic hash function
 	combined := ""
@@ -87,7 +87,7 @@ func (gsm *GroupSharesManager) GetHash() string {
 }
 
 // LoadFromState loads the GroupSharesManager from state
-func (gsm *GroupSharesManager) LoadFromState(state state.StateContextI) error {
+func (gsm *GroupSharesOrSignsV2) Load(state state.StateContextI) error {
 	err := state.GetTrieNode(GSoSIndexKey, gsm)
 	if err != nil && err != util.ErrValueNotPresent {
 		return err
@@ -96,30 +96,25 @@ func (gsm *GroupSharesManager) LoadFromState(state state.StateContextI) error {
 }
 
 // SaveToState saves the GroupSharesManager to state
-func (gsm *GroupSharesManager) SaveToState(state state.StateContextI) error {
+func (gsm *GroupSharesOrSignsV2) Save(state state.StateContextI) error {
 	_, err := state.InsertTrieNode(GSoSIndexKey, gsm)
 	return err
 }
 
 // AddShareOrSigns adds a new ShareOrSigns to the MPT
 // It updates the index and creates a new partition node for the share
-func (gsm *GroupSharesManager) AddShareOrSigns(state state.StateContextI, sos *block.ShareOrSigns) error {
-	// 1. Load the current state
-	if err := gsm.LoadFromState(state); err != nil {
-		return err
-	}
-
-	// 2. Add the ID to the index if it doesn't exist
+func (gsm *GroupSharesOrSignsV2) AddShareOrSigns(state state.StateContextI, sos *block.ShareOrSigns) error {
+	//  Add the ID to the index if it doesn't exist
 	if added := gsm.addID(sos.ID); !added {
 		return nil // ID already exists, nothing to do
 	}
 
-	// 3. Update the index in the MPT
-	if err := gsm.SaveToState(state); err != nil {
+	// Update the index in the MPT
+	if err := gsm.Save(state); err != nil {
 		return err
 	}
 
-	// 4. Store the individual ShareOrSigns in its own partition
+	// Store the individual ShareOrSigns in its own partition
 	partKey := GetSOSPartitionKey(sos.ID)
 	_, err := state.InsertTrieNode(partKey, sos)
 
@@ -127,7 +122,7 @@ func (gsm *GroupSharesManager) AddShareOrSigns(state state.StateContextI, sos *b
 }
 
 // GetShareOrSigns retrieves a ShareOrSigns by ID from the MPT
-func (gsm *GroupSharesManager) GetShareOrSigns(state state.StateContextI, id string) (*block.ShareOrSigns, error) {
+func (gsm *GroupSharesOrSignsV2) GetShareOrSigns(state state.StateContextI, id string) (*block.ShareOrSigns, error) {
 	// Check if the ID exists in the index
 	if !gsm.ContainsID(id) {
 		return nil, util.ErrValueNotPresent
@@ -145,7 +140,7 @@ func (gsm *GroupSharesManager) GetShareOrSigns(state state.StateContextI, id str
 }
 
 // GetAllShareOrSigns retrieves all ShareOrSigns from the MPT
-func (gsm *GroupSharesManager) GetAllShareOrSigns(state state.StateContextI) (*block.GroupSharesOrSigns, error) {
+func (gsm *GroupSharesOrSignsV2) GetAllShareOrSigns(state state.StateContextI) (*block.GroupSharesOrSigns, error) {
 	// Create a new GroupSharesOrSigns to hold the result
 	gsos := block.NewGroupSharesOrSigns()
 
@@ -166,27 +161,21 @@ func (gsm *GroupSharesManager) GetAllShareOrSigns(state state.StateContextI) (*b
 }
 
 // DeleteShareOrSigns deletes a ShareOrSigns by ID from the MPT
-func (gsm *GroupSharesManager) DeleteShareOrSigns(state state.StateContextI, id string) error {
+func (gsm *GroupSharesOrSignsV2) DeleteShareOrSigns(state state.StateContextI, id string) error {
 	// Remove the ID from the index
 	if removed := gsm.removeID(id); !removed {
 		return nil // ID doesn't exist, nothing to do
 	}
 
 	// Update the index in the MPT
-	if err := gsm.SaveToState(state); err != nil {
-		return err
-	}
-
-	// Note: We don't delete the actual node from state
-	// This allows the data to persist even after removal from the index
-	return nil
+	return gsm.Save(state)
 }
 
 // DeleteAllShareOrSigns deletes all ShareOrSigns from the MPT
-func (gsm *GroupSharesManager) DeleteAllShareOrSigns(state state.StateContextI) error {
+func (gsm *GroupSharesOrSignsV2) DeleteAllShareOrSigns(state state.StateContextI) error {
 	// Reset manager to empty state
 	gsm.IDs = make([]string, 0)
 
 	// Save empty state back to MPT
-	return gsm.SaveToState(state)
+	return gsm.Save(state)
 }
