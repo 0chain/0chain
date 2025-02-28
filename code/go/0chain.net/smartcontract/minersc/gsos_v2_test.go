@@ -110,7 +110,7 @@ func TestGroupSharesManager_GetAll(t *testing.T) {
 	manager := NewGroupSharesOrSignsV2()
 
 	// Add multiple ShareOrSigns
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 10; i++ {
 		sos := block.NewShareOrSigns()
 		sos.ID = "miner" + string(rune('0'+i))
 		err := manager.AddShareOrSigns(state, sos)
@@ -125,10 +125,10 @@ func TestGroupSharesManager_GetAll(t *testing.T) {
 	// Get all
 	allSOS, err := retrieved.GetAllShareOrSigns(state)
 	require.NoError(t, err)
-	assert.Len(t, allSOS.Shares, 3)
+	assert.Len(t, allSOS.Shares, 10)
 
 	// Verify all expected IDs are present
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 10; i++ {
 		id := "miner" + string(rune('0'+i))
 		share, exists := allSOS.Shares[id]
 		assert.True(t, exists)

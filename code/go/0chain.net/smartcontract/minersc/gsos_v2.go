@@ -3,6 +3,7 @@ package minersc
 import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	"github.com/0chain/common/core/util"
 )
 
@@ -139,22 +140,39 @@ func (gsm *GroupSharesOrSignsV2) GetShareOrSigns(state state.StateContextI, id s
 	return sos, nil
 }
 
+// loadShareOrSigns retrieves a single ShareOrSigns by ID from the MPT
+func loadShareOrSigns(id string, state cstate.StateContextI) (*block.ShareOrSigns, error) {
+	sos := block.NewShareOrSigns()
+	partKey := GetSOSPartitionKey(id)
+	err := state.GetTrieNode(partKey, sos)
+	if err != nil {
+		return nil, err
+	}
+	return sos, nil
+}
+
 // GetAllShareOrSigns retrieves all ShareOrSigns from the MPT
-func (gsm *GroupSharesOrSignsV2) GetAllShareOrSigns(state state.StateContextI) (*block.GroupSharesOrSigns, error) {
+func (gsm *GroupSharesOrSignsV2) GetAllShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
 	// Create a new GroupSharesOrSigns to hold the result
 	gsos := block.NewGroupSharesOrSigns()
 
-	// Retrieve each ShareOrSigns from its partition
+	// Get all IDs
 	ids := gsm.GetIDs()
-	for _, id := range ids {
-		partKey := GetSOSPartitionKey(id)
-		sos := block.NewShareOrSigns()
-		err := state.GetTrieNode(partKey, sos)
-		if err != nil {
-			// Skip entries that can't be retrieved
-			continue
+	if len(ids) == 0 {
+		return gsos, nil
+	}
+
+	// Retrieve all ShareOrSigns concurrently
+	shares, err := cstate.GetItemsByIDs(ids, loadShareOrSigns, state)
+	if err != nil {
+		return nil, err
+	}
+
+	// Populate the result map
+	for i, id := range ids {
+		if shares[i] != nil {
+			gsos.Shares[id] = shares[i]
 		}
-		gsos.Shares[id] = sos
 	}
 
 	return gsos, nil
