@@ -7,7 +7,7 @@ import (
 )
 
 // MarshalMsg implements msgp.Marshaler
-func (z *GroupSharesIndex) MarshalMsg(b []byte) (o []byte, err error) {
+func (z *GroupSharesManager) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 1
 	// string "ids"
@@ -20,7 +20,7 @@ func (z *GroupSharesIndex) MarshalMsg(b []byte) (o []byte, err error) {
 }
 
 // UnmarshalMsg implements msgp.Unmarshaler
-func (z *GroupSharesIndex) UnmarshalMsg(bts []byte) (o []byte, err error) {
+func (z *GroupSharesManager) UnmarshalMsg(bts []byte) (o []byte, err error) {
 	var field []byte
 	_ = field
 	var zb0001 uint32
@@ -69,54 +69,10 @@ func (z *GroupSharesIndex) UnmarshalMsg(bts []byte) (o []byte, err error) {
 }
 
 // Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z *GroupSharesIndex) Msgsize() (s int) {
+func (z *GroupSharesManager) Msgsize() (s int) {
 	s = 1 + 4 + msgp.ArrayHeaderSize
 	for za0001 := range z.IDs {
 		s += msgp.StringPrefixSize + len(z.IDs[za0001])
 	}
-	return
-}
-
-// MarshalMsg implements msgp.Marshaler
-func (z PartitionedGroupSharesManager) MarshalMsg(b []byte) (o []byte, err error) {
-	o = msgp.Require(b, z.Msgsize())
-	// map header, size 0
-	o = append(o, 0x80)
-	return
-}
-
-// UnmarshalMsg implements msgp.Unmarshaler
-func (z *PartitionedGroupSharesManager) UnmarshalMsg(bts []byte) (o []byte, err error) {
-	var field []byte
-	_ = field
-	var zb0001 uint32
-	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
-	if err != nil {
-		err = msgp.WrapError(err)
-		return
-	}
-	for zb0001 > 0 {
-		zb0001--
-		field, bts, err = msgp.ReadMapKeyZC(bts)
-		if err != nil {
-			err = msgp.WrapError(err)
-			return
-		}
-		switch msgp.UnsafeString(field) {
-		default:
-			bts, err = msgp.Skip(bts)
-			if err != nil {
-				err = msgp.WrapError(err)
-				return
-			}
-		}
-	}
-	o = bts
-	return
-}
-
-// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
-func (z PartitionedGroupSharesManager) Msgsize() (s int) {
-	s = 1
 	return
 }

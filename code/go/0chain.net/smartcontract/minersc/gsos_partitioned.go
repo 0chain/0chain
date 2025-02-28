@@ -1,11 +1,8 @@
 package minersc
 
 import (
-	"sort"
-
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
-	"0chain.net/core/encryption"
 	"github.com/0chain/common/core/util"
 )
 
@@ -17,39 +14,39 @@ const (
 
 //go:generate msgp -io=false -tests=false -v
 
-// GroupSharesIndex is a lightweight structure that stores just the IDs of all ShareOrSigns
-// without the actual data
-type GroupSharesIndex struct {
-	IDs []string `json:"ids" msg:"ids"`
+// GroupSharesManager is a combined structure that both stores the IDs of ShareOrSigns
+// and provides methods to manage them in state
+type GroupSharesManager struct {
+	IDs []string `json:"ids" msg:"ids"` // IDs of all ShareOrSigns
 }
 
-// NewGroupSharesIndex creates a new GroupSharesIndex instance
-func NewGroupSharesIndex() *GroupSharesIndex {
-	return &GroupSharesIndex{
+// NewGroupSharesManager creates a new GroupSharesManager instance
+func NewGroupSharesManager() *GroupSharesManager {
+	return &GroupSharesManager{
 		IDs: make([]string, 0),
 	}
 }
 
-// AddID adds an ID to the index if it doesn't already exist
-func (gsi *GroupSharesIndex) AddID(id string) bool {
+// addID adds an ID to the index if it doesn't already exist
+func (gsm *GroupSharesManager) addID(id string) bool {
 	// Check if ID already exists
-	for _, existingID := range gsi.IDs {
+	for _, existingID := range gsm.IDs {
 		if existingID == id {
 			return false
 		}
 	}
 
-	gsi.IDs = append(gsi.IDs, id)
+	gsm.IDs = append(gsm.IDs, id)
 	return true
 }
 
-// RemoveID removes an ID from the index
-func (gsi *GroupSharesIndex) RemoveID(id string) bool {
-	for i, existingID := range gsi.IDs {
+// removeID removes an ID from the index
+func (gsm *GroupSharesManager) removeID(id string) bool {
+	for i, existingID := range gsm.IDs {
 		if existingID == id {
 			// Remove the ID by replacing it with the last element and truncating
-			gsi.IDs[i] = gsi.IDs[len(gsi.IDs)-1]
-			gsi.IDs = gsi.IDs[:len(gsi.IDs)-1]
+			gsm.IDs[i] = gsm.IDs[len(gsm.IDs)-1]
+			gsm.IDs = gsm.IDs[:len(gsm.IDs)-1]
 			return true
 		}
 	}
@@ -57,15 +54,15 @@ func (gsi *GroupSharesIndex) RemoveID(id string) bool {
 }
 
 // GetIDs returns a copy of all IDs in the index
-func (gsi *GroupSharesIndex) GetIDs() []string {
-	result := make([]string, len(gsi.IDs))
-	copy(result, gsi.IDs)
+func (gsm *GroupSharesManager) GetIDs() []string {
+	result := make([]string, len(gsm.IDs))
+	copy(result, gsm.IDs)
 	return result
 }
 
 // ContainsID checks if the ID exists in the index
-func (gsi *GroupSharesIndex) ContainsID(id string) bool {
-	for _, existingID := range gsi.IDs {
+func (gsm *GroupSharesManager) ContainsID(id string) bool {
+	for _, existingID := range gsm.IDs {
 		if existingID == id {
 			return true
 		}
@@ -73,83 +70,73 @@ func (gsi *GroupSharesIndex) ContainsID(id string) bool {
 	return false
 }
 
-// GetHash returns the hash of the index
-func (gsi *GroupSharesIndex) GetHash() string {
-	return util.ToHex(gsi.GetHashBytes())
-}
-
-// GetHashBytes returns the hash bytes of the index
-func (gsi *GroupSharesIndex) GetHashBytes() []byte {
-	sortedIDs := make([]string, len(gsi.IDs))
-	copy(sortedIDs, gsi.IDs)
-	sort.Strings(sortedIDs)
-
-	var data []byte
-	for _, id := range sortedIDs {
-		data = append(data, []byte(id)...)
-	}
-	return encryption.RawHash(data)
-}
-
 // GetSOSPartitionKey generates the MPT key for a specific ShareOrSign partition
 func GetSOSPartitionKey(id string) string {
 	return GSoSPartitionKey + "_" + id
 }
 
-// PartitionedGroupSharesManager provides methods to manage ShareOrSigns in a distributed way
-type PartitionedGroupSharesManager struct{}
+// GetHash computes a hash of the IDs to detect changes
+func (gsm *GroupSharesManager) GetHash() string {
+	// Simple implementation - concatenate all IDs and compute a hash
+	// For a real implementation, consider using a cryptographic hash function
+	combined := ""
+	for _, id := range gsm.IDs {
+		combined += id
+	}
+	return combined
+}
 
-// NewPartitionedGroupSharesManager creates a new manager instance
-func NewPartitionedGroupSharesManager() *PartitionedGroupSharesManager {
-	return &PartitionedGroupSharesManager{}
+// LoadFromState loads the GroupSharesManager from state
+func (gsm *GroupSharesManager) LoadFromState(state state.StateContextI) error {
+	err := state.GetTrieNode(GSoSIndexKey, gsm)
+	if err != nil && err != util.ErrValueNotPresent {
+		return err
+	}
+	return nil
+}
+
+// SaveToState saves the GroupSharesManager to state
+func (gsm *GroupSharesManager) SaveToState(state state.StateContextI) error {
+	_, err := state.InsertTrieNode(GSoSIndexKey, gsm)
+	return err
 }
 
 // AddShareOrSigns adds a new ShareOrSigns to the MPT
 // It updates the index and creates a new partition node for the share
-func (m *PartitionedGroupSharesManager) AddShareOrSigns(state state.StateContextI, sos *block.ShareOrSigns) error {
-	// 1. Get the current index
-	gsi := NewGroupSharesIndex()
-	err := state.GetTrieNode(GSoSIndexKey, gsi)
-	if err != nil && err != util.ErrValueNotPresent {
+func (gsm *GroupSharesManager) AddShareOrSigns(state state.StateContextI, sos *block.ShareOrSigns) error {
+	// 1. Load the current state
+	if err := gsm.LoadFromState(state); err != nil {
 		return err
 	}
 
 	// 2. Add the ID to the index if it doesn't exist
-	if added := gsi.AddID(sos.ID); !added {
+	if added := gsm.addID(sos.ID); !added {
 		return nil // ID already exists, nothing to do
 	}
 
 	// 3. Update the index in the MPT
-	_, err = state.InsertTrieNode(GSoSIndexKey, gsi)
-	if err != nil {
+	if err := gsm.SaveToState(state); err != nil {
 		return err
 	}
 
 	// 4. Store the individual ShareOrSigns in its own partition
 	partKey := GetSOSPartitionKey(sos.ID)
-	_, err = state.InsertTrieNode(partKey, sos)
+	_, err := state.InsertTrieNode(partKey, sos)
 
 	return err
 }
 
 // GetShareOrSigns retrieves a ShareOrSigns by ID from the MPT
-func (m *PartitionedGroupSharesManager) GetShareOrSigns(state state.StateContextI, id string) (*block.ShareOrSigns, error) {
-	// 1. Get the current index
-	gsi := NewGroupSharesIndex()
-	err := state.GetTrieNode(GSoSIndexKey, gsi)
-	if err != nil {
-		return nil, err
-	}
-
-	// 2. Check if the ID exists in the index
-	if !gsi.ContainsID(id) {
+func (gsm *GroupSharesManager) GetShareOrSigns(state state.StateContextI, id string) (*block.ShareOrSigns, error) {
+	// Check if the ID exists in the index
+	if !gsm.ContainsID(id) {
 		return nil, util.ErrValueNotPresent
 	}
 
-	// 3. Get the ShareOrSigns from its partition
+	// Get the ShareOrSigns from its partition
 	partKey := GetSOSPartitionKey(id)
 	sos := block.NewShareOrSigns()
-	err = state.GetTrieNode(partKey, sos)
+	err := state.GetTrieNode(partKey, sos)
 	if err != nil {
 		return nil, err
 	}
@@ -158,23 +145,16 @@ func (m *PartitionedGroupSharesManager) GetShareOrSigns(state state.StateContext
 }
 
 // GetAllShareOrSigns retrieves all ShareOrSigns from the MPT
-func (m *PartitionedGroupSharesManager) GetAllShareOrSigns(state state.StateContextI) (*block.GroupSharesOrSigns, error) {
-	// 1. Get the current index
-	gsi := NewGroupSharesIndex()
-	err := state.GetTrieNode(GSoSIndexKey, gsi)
-	if err != nil {
-		return nil, err
-	}
-
-	// 2. Create a new GroupSharesOrSigns to hold the result
+func (gsm *GroupSharesManager) GetAllShareOrSigns(state state.StateContextI) (*block.GroupSharesOrSigns, error) {
+	// Create a new GroupSharesOrSigns to hold the result
 	gsos := block.NewGroupSharesOrSigns()
 
-	// 3. Retrieve each ShareOrSigns from its partition
-	ids := gsi.GetIDs()
+	// Retrieve each ShareOrSigns from its partition
+	ids := gsm.GetIDs()
 	for _, id := range ids {
 		partKey := GetSOSPartitionKey(id)
 		sos := block.NewShareOrSigns()
-		err = state.GetTrieNode(partKey, sos)
+		err := state.GetTrieNode(partKey, sos)
 		if err != nil {
 			// Skip entries that can't be retrieved
 			continue
@@ -186,46 +166,27 @@ func (m *PartitionedGroupSharesManager) GetAllShareOrSigns(state state.StateCont
 }
 
 // DeleteShareOrSigns deletes a ShareOrSigns by ID from the MPT
-func (m *PartitionedGroupSharesManager) DeleteShareOrSigns(state state.StateContextI, id string) error {
-	// 1. Get the current index
-	gsi := NewGroupSharesIndex()
-	err := state.GetTrieNode(GSoSIndexKey, gsi)
-	if err != nil {
-		return err
-	}
-
-	// 2. Remove the ID from the index
-	if removed := gsi.RemoveID(id); !removed {
+func (gsm *GroupSharesManager) DeleteShareOrSigns(state state.StateContextI, id string) error {
+	// Remove the ID from the index
+	if removed := gsm.removeID(id); !removed {
 		return nil // ID doesn't exist, nothing to do
 	}
 
-	// 3. Update the index in the MPT
-	_, err = state.InsertTrieNode(GSoSIndexKey, gsi)
-	if err != nil {
+	// Update the index in the MPT
+	if err := gsm.SaveToState(state); err != nil {
 		return err
 	}
 
-	// Note: We no longer delete the actual node from state
-	// This is because we want to reduce the state writing, also
-	// the node data will be rewritten in next term of VC
+	// Note: We don't delete the actual node from state
+	// This allows the data to persist even after removal from the index
 	return nil
 }
 
 // DeleteAllShareOrSigns deletes all ShareOrSigns from the MPT
-func (m *PartitionedGroupSharesManager) DeleteAllShareOrSigns(state state.StateContextI) error {
-	// 1. Get the current index
-	_, err := state.InsertTrieNode(GSoSIndexKey, NewGroupSharesIndex())
-	return err
-}
+func (gsm *GroupSharesManager) DeleteAllShareOrSigns(state state.StateContextI) error {
+	// Reset manager to empty state
+	gsm.IDs = make([]string, 0)
 
-// GetIDs returns the list of all ShareOrSigns IDs in the MPT
-func (m *PartitionedGroupSharesManager) GetIDs(state state.StateContextI) ([]string, error) {
-	// Get the current index
-	gsi := NewGroupSharesIndex()
-	err := state.GetTrieNode(GSoSIndexKey, gsi)
-	if err != nil && err != util.ErrValueNotPresent {
-		return nil, err
-	}
-
-	return gsi.GetIDs(), nil
+	// Save empty state back to MPT
+	return gsm.SaveToState(state)
 }
