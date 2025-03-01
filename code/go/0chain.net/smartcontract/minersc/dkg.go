@@ -7,7 +7,6 @@ import (
 	"sort"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
@@ -911,16 +910,17 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
-	if err := state.WithActivation(balances, "vc_hardfork", func() error {
-		resp, err = msc.shareSignsOrSharesV1(t, inputData, gn, balances)
-		return err
-	}, func() error {
-		resp, err = msc.shareSignsOrSharesV2(t, inputData, gn, balances)
-		return err
-	}); err != nil {
-		return "", err
-	}
+	// if err := state.WithActivation(balances, "vc_hardfork", func() error {
+	// 	resp, err = msc.shareSignsOrSharesV1(t, inputData, gn, balances)
+	// 	return err
+	// }, func() error {
+	// resp, err = msc.shareSignsOrSharesV2(t, inputData, gn, balances)
+	// 	return err
+	// }); err != nil {
+	// 	return "", err
+	// }
 
+	resp, err = msc.shareSignsOrSharesV2(t, inputData, gn, balances)
 	return
 }
 
