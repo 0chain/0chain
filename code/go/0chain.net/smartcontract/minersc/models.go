@@ -600,19 +600,18 @@ func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) 
 	return err
 }
 
-func getGroupShareOrSigns(state cstate.CommonStateContextI) (*block.GroupSharesOrSigns, error) {
-	var gsos = block.NewGroupSharesOrSigns()
-	err := state.GetTrieNode(GroupShareOrSignsKey, gsos)
+func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
+	gsos := NewGroupSharesOrSignsV2()
+	if err := gsos.Load(state); err != nil {
+		return nil, err
+	}
+
+	gsosn, err := gsos.GetAllShareOrSigns(state)
 	if err != nil {
 		return nil, err
 	}
 
-	return gsos, nil
-}
-
-func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupSharesOrSigns) error {
-	_, err := state.InsertTrieNode(GroupShareOrSignsKey, gsos)
-	return err
+	return gsosn, nil
 }
 
 // getShardersKeepList returns the sharder list

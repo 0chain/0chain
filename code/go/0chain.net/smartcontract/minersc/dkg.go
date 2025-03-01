@@ -724,15 +724,26 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
-	gsos, err := getGroupShareOrSigns(balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		// gsos = block.NewGroupSharesOrSigns()
+	// use gsos_v2
+	gsos := GroupSharesOrSignsV2{}
+	if err := gsos.Load(balances); err != nil {
 		return common.NewErrorf("created_magic_block_failed", "see no group shares or signs")
-	default:
-		return err
 	}
+
+	gsosIDsMap := make(map[string]struct{}, len(gsos.GetIDs()))
+	for _, id := range gsos.GetIDs() {
+		gsosIDsMap[id] = struct{}{}
+	}
+
+	// gsos, err := getGroupShareOrSigns(balances)
+	// switch err {
+	// case nil:
+	// case util.ErrValueNotPresent:
+	// 	// gsos = block.NewGroupSharesOrSigns()
+	// 	return common.NewErrorf("created_magic_block_failed", "see no group shares or signs")
+	// default:
+	// 	return err
+	// }
 
 	mpks, err := getMinersMPKs(balances)
 	if err != nil {
@@ -741,7 +752,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	noGsos := make([]string, 0, len(mpks.Mpks))
 	for key := range mpks.Mpks {
-		if _, ok := gsos.Shares[key]; !ok {
+		if _, ok := gsosIDsMap[key]; !ok {
 			noGsos = append(noGsos, key)
 		}
 	}
@@ -803,7 +814,12 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	logging.Logger.Debug("[mvc] sharder keep list", zap.Int("num", len(keepSharders.Nodes)))
 
-	magicBlock, err := msc.createMagicBlock(balances, keepSharders, dkgMinersList, gsos, mpks, pn, gn)
+	gsosn, err := gsos.GetAllShareOrSigns(balances)
+	if err != nil {
+		return err
+	}
+
+	magicBlock, err := msc.createMagicBlock(balances, keepSharders, dkgMinersList, gsosn, mpks, pn, gn)
 	if err != nil {
 		return err
 	}
@@ -819,8 +835,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	logging.Logger.Debug("create_mpks in createMagicBlockForWait", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
 
-	gsos = block.NewGroupSharesOrSigns()
-	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
+	if err := gsos.DeleteAllShareOrSigns(balances); err != nil {
 		return err
 	}
 
@@ -910,134 +925,8 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
-	// if err := state.WithActivation(balances, "vc_hardfork", func() error {
-	// 	resp, err = msc.shareSignsOrSharesV1(t, inputData, gn, balances)
-	// 	return err
-	// }, func() error {
-	// resp, err = msc.shareSignsOrSharesV2(t, inputData, gn, balances)
-	// 	return err
-	// }); err != nil {
-	// 	return "", err
-	// }
-
 	resp, err = msc.shareSignsOrSharesV2(t, inputData, gn, balances)
 	return
-}
-
-func (msc *MinerSmartContract) shareSignsOrSharesV1(t *transaction.Transaction,
-	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
-	resp string, err error) {
-
-	var pn *PhaseNode
-	if pn, err = GetPhaseNode(balances); err != nil {
-		logging.Logger.Error("[mvc] shareSignsOrShares, can't get phase node",
-			zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"can't get phase node: %v", err)
-	}
-
-	if pn.Phase != Publish {
-		logging.Logger.Error("[mvc] shareSignsOrShares, not in publish phase",
-			zap.String("phase", pn.Phase.String()))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"this is not the correct phase to publish signs or shares, phase node: %v",
-			string(pn.Encode()))
-	}
-
-	var gsos *block.GroupSharesOrSigns
-	gsos, err = getGroupShareOrSigns(balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		gsos = block.NewGroupSharesOrSigns()
-	default:
-		logging.Logger.Error("[mvc] failed to get group share or signs",
-			zap.Error(err))
-		return "", common.NewError("share_signs_or_shares_failed", err.Error())
-	}
-
-	var ok bool
-	if _, ok = gsos.Shares[t.ClientID]; ok {
-		logging.Logger.Error("[mvc] shareSignsOrShares, already have share or signs for miner",
-			zap.String("miner", t.ClientID))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"already have share or signs for miner %v", t.ClientID)
-	}
-
-	var dmn *DKGMinerNodes
-	if dmn, err = getDKGMinersList(balances); err != nil {
-		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get miners DKG list",
-			zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"getting miners DKG list %v", err)
-	}
-
-	var sos = block.NewShareOrSigns()
-	if err = sos.Decode(inputData); err != nil {
-		logging.Logger.Error("[mvc] shareSignsOrShares, failed to decode sc input", zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares", "decoding input %v", err)
-	}
-
-	if len(sos.ShareOrSigns) < dmn.K-1 {
-		logging.Logger.Debug("[mvc] shareSignsOrShares, not enough share or signs for this dkg",
-			zap.Int("l_sos", len(sos.ShareOrSigns)),
-			zap.Int("K", dmn.K-1))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
-			len(sos.ShareOrSigns), dmn.K-1)
-	}
-
-	msc.mutexMinerMPK.Lock()
-	defer msc.mutexMinerMPK.Unlock()
-
-	var mpks *block.Mpks
-	mpks, err = getMinersMPKs(balances)
-	if err != nil {
-		logging.Logger.Error("[mvc] shareSignsOrShares, getting miners MPKs",
-			zap.Error(err))
-		return "", common.NewError("share_signs_or_shares_failed", err.Error())
-	}
-
-	var publicKeys = make(map[string]string)
-	for key, miner := range dmn.SimpleNodes {
-		publicKeys[key] = miner.PublicKey
-	}
-
-	var shares []string
-	shares, ok = sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
-	if !ok {
-		logging.Logger.Error("[mvc] shareSignsOrShares, validation failed")
-		return "", common.NewError("share_signs_or_shares", "share or signs failed validation")
-	}
-
-	for _, share := range shares {
-		dmn.RevealedShares[share]++
-	}
-
-	sos.ID = t.ClientID
-	gsos.Shares[t.ClientID] = sos
-
-	err = updateGroupShareOrSigns(balances, gsos)
-	if err != nil {
-		logging.Logger.Error("[mvc] miner sc: shareSignsOrShares, failed to save group share of signs",
-			zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"saving group share of signs: %v", err)
-	}
-
-	if err := updateDKGMinersList(balances, dmn); err != nil {
-		logging.Logger.Error("[mvc] miner sc: shareSignsOrShares, failed to save DKG miners",
-			zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"saving DKG miners: %v", err)
-	}
-
-	logging.Logger.Debug("[mvc] miner sc: shareSignsOrShares, update gsos",
-		zap.String("miner", t.ClientID),
-		zap.Int("gsos shares len", len(gsos.Shares)),
-		zap.Int64("gn.LastRound", gn.MustBase().LastRound))
-
-	return string(sos.Encode()), nil
 }
 
 func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
@@ -1262,8 +1151,14 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		return err
 	}
 
-	gsos := block.NewGroupSharesOrSigns()
-	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
+	// use gsos_v2
+	gsos := NewGroupSharesOrSignsV2()
+	if err := gsos.Load(balances); err != nil {
+		logging.Logger.Error("failed to restart dkg", zap.Error(err))
+		return err
+	}
+
+	if err := gsos.DeleteAllShareOrSigns(balances); err != nil {
 		logging.Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
