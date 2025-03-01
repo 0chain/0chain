@@ -195,3 +195,112 @@ func (sos *ShareOrSigns) Clone() *ShareOrSigns {
 	}
 	return clone
 }
+
+func (sos *ShareOrSigns) ValidateV2(publicKeys map[string]string, scheme encryption.SignatureScheme) ([]string, bool) {
+	if len(sos.ShareOrSigns) == 0 {
+		return nil, true
+	}
+
+	type validationResult struct {
+		key     string
+		valid   bool
+		isShare bool
+	}
+
+	type job struct {
+		key   string
+		share *bls.DKGKeyShare
+	}
+
+	// Number of concurrent workers
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(sos.ShareOrSigns) {
+		numWorkers = len(sos.ShareOrSigns)
+	}
+
+	// Create work and result channels
+	jobs := make(chan job, len(sos.ShareOrSigns))
+	results := make(chan validationResult, len(sos.ShareOrSigns))
+
+	// Start worker goroutines
+	var wg sync.WaitGroup
+	for w := 0; w < numWorkers; w++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range jobs {
+				key := job.key
+				share := job.share
+
+				if share == nil {
+					continue
+				}
+
+				result := validationResult{key: key, valid: false, isShare: false}
+
+				if share.Sign != "" {
+					// Create a new signature scheme instance to avoid concurrent access issues
+					// We need to use the same type as the input scheme
+					signatureScheme := scheme
+					pk, ok := publicKeys[key]
+					if !ok {
+						results <- result
+						continue
+					}
+					if err := signatureScheme.SetPublicKey(pk); err != nil {
+						logging.Logger.Error("failed to validate share or signs",
+							zap.Any("share", share),
+							zap.String("message", share.Message),
+							zap.String("sign", share.Sign))
+						results <- result
+						continue
+					}
+					sigOK, err := signatureScheme.Verify(share.Sign, share.Message)
+					if !sigOK || err != nil {
+						logging.Logger.Error("failed to validate share or signs",
+							zap.Any("share", share),
+							zap.String("message", share.Message),
+							zap.String("sign", share.Sign))
+						results <- result
+						continue
+					}
+					result.valid = true
+				}
+				results <- result
+			}
+		}()
+	}
+
+	// Send jobs to workers
+	for key, share := range sos.ShareOrSigns {
+		jobs <- job{key, share}
+	}
+	close(jobs)
+
+	// Wait for all workers to finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Process results
+	var keys []string
+	validShareCount := 0
+	for result := range results {
+		if !result.valid {
+			// If any validation fails, abort and return false
+			return nil, false
+		}
+		if result.isShare {
+			keys = append(keys, result.key)
+		}
+		validShareCount++
+	}
+
+	// Make sure all validations were successful
+	if validShareCount != len(sos.ShareOrSigns) {
+		return nil, false
+	}
+
+	return keys, true
+}

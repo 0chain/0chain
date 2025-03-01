@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/threshold/bls"
@@ -907,8 +908,23 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 
 	return string(mpk.Encode()), nil
 }
-
 func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+	if err := state.WithActivation(balances, "vc_hardfork", func() error {
+		resp, err = msc.shareSignsOrSharesV1(t, inputData, gn, balances)
+		return err
+	}, func() error {
+		resp, err = msc.shareSignsOrSharesV2(t, inputData, gn, balances)
+		return err
+	}); err != nil {
+		return "", err
+	}
+
+	return
+}
+
+func (msc *MinerSmartContract) shareSignsOrSharesV1(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
@@ -1022,6 +1038,91 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 		zap.Int64("gn.LastRound", gn.MustBase().LastRound))
 
 	return string(sos.Encode()), nil
+}
+
+func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+
+	var pn *PhaseNode
+	if pn, err = GetPhaseNode(balances); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, can't get phase node",
+			zap.Error(err))
+		return "", common.NewErrorf("share_signs_or_shares",
+			"can't get phase node: %v", err)
+	}
+
+	if pn.Phase != Publish {
+		logging.Logger.Error("[mvc] shareSignsOrShares, not in publish phase",
+			zap.String("phase", pn.Phase.String()))
+		return "", common.NewErrorf("share_signs_or_shares",
+			"this is not the correct phase to publish signs or shares, phase node: %v",
+			string(pn.Encode()))
+	}
+
+	sos := block.NewShareOrSigns()
+	if err = sos.Decode(inputData); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to decode sc input", zap.Error(err))
+		return "", common.NewErrorf("share_signs_or_shares", "decoding input %v", err)
+	}
+
+	// use gsos_v2
+	gsos := NewGroupSharesOrSignsV2()
+	if err := gsos.Load(balances); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to load gsos_v2", zap.Error(err))
+		return "", common.NewError("share_signs_or_shares_failed", err.Error())
+	}
+
+	if gsos.ContainsID(t.ClientID) {
+		logging.Logger.Error("[mvc] shareSignsOrShares, already have share or signs for miner", zap.String("miner", t.ClientID))
+		return "", common.NewErrorf("share_signs_or_shares",
+			"already have share or signs for miner %v", t.ClientID)
+	}
+
+	// TODO: refactor the DKGMinersList to store simple nodes in different MPT nodes
+	// that stores the public keys in the head for validation use below
+	dmn, err := getDKGMinersList(balances)
+	if err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get miners DKG list",
+			zap.Error(err))
+		return "", common.NewErrorf("share_signs_or_shares",
+			"getting miners DKG list %v", err)
+	}
+
+	if len(sos.ShareOrSigns) < dmn.K-1 {
+		logging.Logger.Debug("[mvc] shareSignsOrShares, not enough share or signs for this dkg",
+			zap.Int("l_sos", len(sos.ShareOrSigns)),
+			zap.Int("K", dmn.K-1))
+		return "", common.NewErrorf("share_signs_or_shares",
+			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
+			len(sos.ShareOrSigns), dmn.K-1)
+	}
+
+	var publicKeys = make(map[string]string)
+	for key, miner := range dmn.SimpleNodes {
+		publicKeys[key] = miner.PublicKey
+	}
+
+	_, ok := sos.ValidateV2(publicKeys, balances.GetSignatureScheme())
+	if !ok {
+		logging.Logger.Error("[mvc] shareSignsOrShares, validation failed")
+		return "", common.NewError("share_signs_or_shares", "share or signs failed validation")
+	}
+
+	sos.ID = t.ClientID
+	if err := gsos.AddShareOrSigns(balances, sos); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to add share or signs",
+			zap.Error(err),
+			zap.String("miner", t.ClientID))
+		return "", common.NewError("share_signs_or_shares", "failed to add share or signs")
+	}
+
+	logging.Logger.Debug("[mvc] miner sc: shareSignsOrShares, update gsos",
+		zap.String("miner", t.ClientID),
+		zap.Int("gsos shares len", len(gsos.GetIDs())),
+		zap.Int64("gn.LastRound", gn.MustBase().LastRound))
+
+	return "success", nil
 }
 
 // Wait used to notify SC that DKG summary and magic block data saved by

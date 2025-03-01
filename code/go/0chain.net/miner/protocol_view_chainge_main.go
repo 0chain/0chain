@@ -124,34 +124,34 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		selfNodeKey = selfNode.GetKey()
 	)
 
-	var mpks *block.Mpks
-	if mpks, err = mc.getMinersMpks(ctx, lfb, mb); err != nil {
-		logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners mpks", zap.Error(err))
-		return nil, err
-	}
-	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
-		logging.Logger.Error("[mvc] publishShareOrSigns, miner not part of mpks", zap.String("miner", selfNodeKey))
-		return nil, nil
-	}
+	// var mpks *block.Mpks
+	// if mpks, err = mc.getMinersMpks(ctx, lfb, mb); err != nil {
+	// 	logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners mpks", zap.Error(err))
+	// 	return nil, err
+	// }
+	// if _, ok := mpks.Mpks[selfNodeKey]; !ok {
+	// 	logging.Logger.Error("[mvc] publishShareOrSigns, miner not part of mpks", zap.String("miner", selfNodeKey))
+	// 	return nil, nil
+	// }
 
 	var sos = mc.viewChangeProcess.shareOrSigns // local reference
 
-	for k := range mpks.Mpks {
-		if k == selfNodeKey {
-			continue
-		}
+	// for k := range mpks.Mpks {
+	// 	if k == selfNodeKey {
+	// 		continue
+	// 	}
 
-		if _, ok := sos.ShareOrSigns[k]; !ok {
-			share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
-			if share != nil {
-				sos.ShareOrSigns[k] = share
-			}
-		}
-	}
+	// 	if _, ok := sos.ShareOrSigns[k]; !ok {
+	// 		share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
+	// 		if share != nil {
+	// 			sos.ShareOrSigns[k] = share
+	// 		}
+	// 	}
+	// }
 
-	logging.Logger.Debug("[mvc] create sos",
-		zap.Any("sos", sos),
-		zap.Any("mpks", mpks.Mpks))
+	// logging.Logger.Debug("[mvc] create sos",
+	// 	zap.Any("sos", sos),
+	// 	zap.Any("mpks", mpks.Mpks))
 
 	var dmn *minersc.DKGMinerNodes
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
@@ -168,12 +168,15 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	for _, n := range dmn.SimpleNodes {
 		publicKeys[n.ID] = n.PublicKey
 	}
+	// Note: Remove the valiate code here perhaps as we have validated
+	// every share or sign when after requesting for sign
+	// See it in the sendDKGShare function
 
-	_, ok := sos.Validate(mpks, publicKeys, chain.GetServerChain().GetSignatureScheme())
-	if !ok {
-		logging.Logger.Error("[mvc] failed to verify share or signs", zap.Any("mpks", mpks))
-		return nil, common.NewError("publish_sos", "failed to verify share or signs")
-	}
+	// _, ok := sos.ValidateV2(publicKeys, chain.GetServerChain().GetSignatureScheme())
+	// if !ok {
+	// 	logging.Logger.Error("[mvc] failed to verify share or signs", zap.Any("pks", publicKeys))
+	// 	return nil, common.NewError("publish_sos", "failed to verify share or signs")
+	// }
 
 	var data = &httpclientutil.SmartContractTxnData{}
 	data.Name = scNamePublishShares
