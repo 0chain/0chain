@@ -76,17 +76,6 @@ func GetSOSPartitionKey(id string) string {
 	return GSoSPartitionKey + "_" + id
 }
 
-// GetHash computes a hash of the IDs to detect changes
-func (gsm *GroupSharesOrSignsV2) GetHash() string {
-	// Simple implementation - concatenate all IDs and compute a hash
-	// For a real implementation, consider using a cryptographic hash function
-	combined := ""
-	for _, id := range gsm.IDs {
-		combined += id
-	}
-	return combined
-}
-
 // LoadFromState loads the GroupSharesManager from state
 func (gsm *GroupSharesOrSignsV2) Load(state state.StateContextI) error {
 	err := state.GetTrieNode(GSoSIndexKey, gsm)
