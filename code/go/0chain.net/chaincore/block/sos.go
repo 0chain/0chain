@@ -10,7 +10,6 @@ import (
 
 	"go.uber.org/zap"
 
-	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/encryption"
 )
@@ -197,7 +196,7 @@ func (sos *ShareOrSigns) Clone() *ShareOrSigns {
 	return clone
 }
 
-func (sos *ShareOrSigns) ValidateV2(balances state.StateContextI, publicKeys map[string]string) ([]string, bool) {
+func (sos *ShareOrSigns) ValidateV2(publicKeys map[string]string) ([]string, bool) {
 	if len(sos.ShareOrSigns) == 0 {
 		return nil, true
 	}
@@ -242,7 +241,7 @@ func (sos *ShareOrSigns) ValidateV2(balances state.StateContextI, publicKeys map
 				if share.Sign != "" {
 					// Create a new signature scheme instance to avoid concurrent access issues
 					// We need to use the same type as the input scheme
-					signatureScheme := balances.GetSignatureScheme()
+					signatureScheme := encryption.GetSignatureScheme(encryption.SignatureSchemeBls0chain)
 					pk, ok := publicKeys[key]
 					if !ok {
 						logging.Logger.Error("could not find public key in public keys map", zap.String("key", key))

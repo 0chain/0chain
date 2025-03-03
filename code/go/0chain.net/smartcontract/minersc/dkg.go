@@ -992,7 +992,7 @@ func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
 		publicKeys[key] = miner.PublicKey
 	}
 
-	_, ok := sos.ValidateV2(balances, publicKeys)
+	_, ok := sos.ValidateV2(publicKeys)
 	if !ok {
 		logging.Logger.Error("[mvc] shareSignsOrShares, validation failed")
 		return "", common.NewError("share_signs_or_shares", "share or signs failed validation")
