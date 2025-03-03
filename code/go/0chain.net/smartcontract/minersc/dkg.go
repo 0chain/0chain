@@ -730,8 +730,12 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return common.NewErrorf("created_magic_block_failed", "see no group shares or signs")
 	}
 
-	gsosIDsMap := make(map[string]struct{}, len(gsos.GetIDs()))
-	for _, id := range gsos.GetIDs() {
+
+  ids := gsos.GetIDs()
+	logging.Logger.Debug("[mvc] create magic block for wait, gsos ids", zap.Any("ids", ids)
+
+	gsosIDsMap := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
 		gsosIDsMap[id] = struct{}{}
 	}
 
@@ -756,6 +760,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 			noGsos = append(noGsos, key)
 		}
 	}
+  logging.Logger.Debug("[mvc] create magic block for wait, no gsos", zap.Any("noGsos", noGsos))
 
 	if len(noGsos) > 0 {
 		logging.Logger.Error("create magic block for wait failed, not all miners send shares or signs",
