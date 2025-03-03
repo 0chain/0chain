@@ -287,6 +287,9 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 
 	for _, key := range sendTo {
 		if err := mc.sendDKGShare(ctx, key); err != nil {
+			logging.Logger.Error("[mvc] sendSijs, failed to send dkg share",
+				zap.String("miner", key),
+				zap.Error(err))
 			sendFail = append(sendFail, fmt.Sprintf("%s(%v);", key, err))
 		}
 	}
