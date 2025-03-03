@@ -985,7 +985,8 @@ func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
 	if len(sos.ShareOrSigns) < dmn.K-1 {
 		logging.Logger.Debug("[mvc] shareSignsOrShares, not enough share or signs for this dkg",
 			zap.Int("l_sos", len(sos.ShareOrSigns)),
-			zap.Int("K", dmn.K-1))
+			zap.Int("K", dmn.K-1),
+			zap.String("miner", t.ClientID))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
 			len(sos.ShareOrSigns), dmn.K-1)

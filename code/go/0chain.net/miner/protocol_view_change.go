@@ -427,6 +427,10 @@ func (mc *Chain) setSecretShares(shareOrSignSuccess map[string]*bls.DKGKeyShare)
 			mc.viewChangeProcess.shareOrSigns.ShareOrSigns[id] = share
 		}
 	}
+
+	logging.Logger.Debug("[mvc] set secret shares",
+		zap.Any("shareOrSignSuccess", shareOrSignSuccess),
+		zap.Int32("len", int32(len(mc.viewChangeProcess.shareOrSigns.ShareOrSigns))))
 }
 
 func (mc *Chain) GetMagicBlockFromSC(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (

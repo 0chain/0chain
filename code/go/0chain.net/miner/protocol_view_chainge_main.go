@@ -95,7 +95,8 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 	}
 
 	mc.setSecretShares(shareOrSignSuccess)
-	logging.Logger.Debug("[mvc] sed dkg share", zap.Any("shareOrSignSuccess", shareOrSignSuccess))
+	logging.Logger.Debug("[mvc] set dkg share",
+		zap.Any("shareOrSignSuccess", shareOrSignSuccess))
 	return
 }
 
@@ -135,6 +136,10 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	// }
 
 	var sos = mc.viewChangeProcess.shareOrSigns // local reference
+	if len(sos.ShareOrSigns) < mb.K-1 {
+		logging.Logger.Error("[mvc] publishShareOrSigns, not enough share or signs", zap.Int("len", len(sos.ShareOrSigns)), zap.Int("K - 1", mb.K-1))
+		return nil, common.NewError("publish_sos", "not enough share or signs")
+	}
 
 	// for k := range mpks.Mpks {
 	// 	if k == selfNodeKey {
@@ -172,7 +177,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	// every share or sign when after requesting for sign
 	// See it in the sendDKGShare function
 
-	// _, ok := sos.ValidateV2(publicKeys, chain.GetServerChain().GetSignatureScheme())
+	// _, ok := sos.ValidateV2(publicKeys)
 	// if !ok {
 	// 	logging.Logger.Error("[mvc] failed to verify share or signs", zap.Any("pks", publicKeys))
 	// 	return nil, common.NewError("publish_sos", "failed to verify share or signs")
