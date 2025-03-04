@@ -83,7 +83,7 @@ func (m *MpksV2) GetAllMpks(balances cstate.StateContextI) (*block.Mpks, error) 
 	return &block.Mpks{Mpks: mpks}, nil
 }
 
-func getMinersMPKs(balances cstate.StateContextI) (*MpksV2, error) {
+func GetMinersMPKs(balances cstate.StateContextI) (*MpksV2, error) {
 	mpks := &MpksV2{}
 	err := balances.GetTrieNode(MinersMPKKey, mpks)
 	if err != nil {

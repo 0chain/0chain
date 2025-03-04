@@ -125,7 +125,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 			"failed to get miners DKG, phase: %v, err: %v", pn.Phase, err)
 	}
 
-	mpks, err := getMinersMPKs(balances)
+	mpks, err := GetMinersMPKs(balances)
 	if err != nil {
 		return common.NewErrorf("move_to_share_or_publish_failed",
 			"phase: %v, err: %v", pn.Phase, err)
@@ -759,7 +759,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 	// 	return err
 	// }
 
-	mpks, err := getMinersMPKs(balances)
+	mpks, err := GetMinersMPKs(balances)
 	if err != nil {
 		return common.NewError("create_magic_block_failed", err.Error())
 	}
@@ -909,7 +909,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 			"mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T)
 	}
 
-	mpks, err := getMinersMPKs(balances)
+	mpks, err := GetMinersMPKs(balances)
 	switch err {
 	case util.ErrValueNotPresent:
 		// the mpks could be empty when the first time to contribute mpks

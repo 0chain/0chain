@@ -247,13 +247,14 @@ func (vcp *viewChangeProcess) isNeedCreateSijs() (ok bool) {
 }
 
 func (mc *Chain) getMinersMpks(lfb *block.Block) (mpks *block.Mpks, err error) {
-	mpks = block.NewMpks()
-	err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
+	// mpks = minersc.GetMinersMPKs(mc.GetStateContext())
+	mpksv2 := minersc.NewMpksV2()
+	err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpksv2)
 	if err != nil {
 		return
 	}
 
-	return mpks, nil
+	return mpksv2.GetAllMpks(mc.GetStateContext())
 }
 
 func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (
