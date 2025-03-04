@@ -100,5 +100,12 @@ func (m *LightMinerNode) CopyFrom(v interface{}) bool {
 		*m.SimpleNode = *mn.SimpleNode
 		return true
 	}
+
+	// try to copy from MinerNode in cache
+	if mn, ok := v.(*MinerNode); ok {
+		*m.SimpleNode = *mn.SimpleNode
+		return true
+	}
+
 	return false
 }
