@@ -201,9 +201,9 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	}
 
 	var waited int
-	for k := range dmn.SimpleNodes {
-		if !dmn.Waited[k] {
-			delete(dmn.SimpleNodes, k)
+	for _, miner := range dmn.Nodes {
+		if !dmn.Waited[miner.Key] {
+			dmn.DeleteNode(miner.Key)
 			continue
 		}
 		waited++
@@ -211,20 +211,21 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	if err := cstate.WithActivation(balances, "hermes",
 		func() error {
-			err = dmn.reduceNodes(true, gn, balances)
-			if err == nil && waited < dmn.K {
-				err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
-					waited, dmn.K)
-			}
-			if err != nil {
-				var prev = gn.prevMagicBlock(balances)
-				gn.MustUpdateBase(func(gnb *globalNodeBase) error {
-					gnb.ViewChange = prev.StartingRound
-					return nil
-				})
-				err = nil
-			}
-			return err
+			// err = dmn.reduceNodes(true, gn, balances)
+			// if err == nil && waited < dmn.K {
+			// 	err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
+			// 		waited, dmn.K)
+			// }
+			// if err != nil {
+			// 	var prev = gn.prevMagicBlock(balances)
+			// 	gn.MustUpdateBase(func(gnb *globalNodeBase) error {
+			// 		gnb.ViewChange = prev.StartingRound
+			// 		return nil
+			// 	})
+			// 	err = nil
+			// }
+			// return err
+			return nil
 		}, func() error {
 			mb, err := getMagicBlock(balances)
 			if err != nil {
@@ -362,7 +363,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	}
 
 	// clear DKG miners list
-	dmn = NewDKGMinerNodes()
+	dmn = NewDKGMinerNodesV2()
 	logging.Logger.Debug("[mvc] adjust_view_change: clear dkg miners list", zap.Int64("round", b.Round))
 	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return common.NewErrorf("adjust_view_change",

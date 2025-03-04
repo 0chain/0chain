@@ -422,12 +422,12 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 		return
 	}
 	if pn.Phase != Wait {
-		var dkgMiners *DKGMinerNodes
+		var dkgMiners *DKGMinerNodesV2
 		if dkgMiners, err = getDKGMinersList(balances); err != nil {
 			return
 		}
-		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
-			delete(dkgMiners.SimpleNodes, mn.ID)
+		if dkgMiners.HasNode(mn.ID) {
+			dkgMiners.DeleteNode(mn.ID)
 			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 			if err != nil {
 				return

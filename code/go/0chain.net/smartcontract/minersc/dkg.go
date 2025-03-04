@@ -34,7 +34,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 
 	var (
 		allMinersList *MinerNodes
-		dkgMinersList *DKGMinerNodes
+		dkgMinersList *DKGMinerNodesV2
 
 		allShardersList *MinerNodes
 
@@ -84,9 +84,9 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		allMap[n.ID] = struct{}{}
 	}
 
-	dkgMinerKeys := make([]string, 0, len(dkgMinersList.SimpleNodes))
-	for key := range dkgMinersList.SimpleNodes {
-		dkgMinerKeys = append(dkgMinerKeys, key)
+	dkgMinerKeys := make([]string, 0, len(dkgMinersList.Nodes))
+	for _, nd := range dkgMinersList.Nodes {
+		dkgMinerKeys = append(dkgMinerKeys, nd.Key)
 	}
 
 	// sort the dkgMinersKeys
@@ -136,10 +136,10 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 	}
 
 	// requires all dkg miners have contributed the mpks
-	noMpks := make([]string, 0, len(dkgMinersList.SimpleNodes))
-	for k := range dkgMinersList.SimpleNodes {
-		if _, ok := mpks.Mpks[k]; !ok {
-			noMpks = append(noMpks, k)
+	noMpks := make([]string, 0, len(dkgMinersList.Nodes))
+	for _, nd := range dkgMinersList.Nodes {
+		if _, ok := mpks.Mpks[nd.Key]; !ok {
+			noMpks = append(noMpks, nd.Key)
 		}
 	}
 
@@ -357,7 +357,7 @@ func getToDeleteMinerIDs(balances cstate.StateContextI,
 }
 
 func filterOutInvalidRegisterMiners(balances cstate.StateContextI,
-	dkgMiners *DKGMinerNodes,
+	dkgMiners *DKGMinerNodesV2,
 	regIDs []string,
 	allMinersMap map[string]*MinerNode) error {
 	logging.Logger.Info("Jayash_debug filterOutInvalidRegisterMiners", zap.Any("regIDs", regIDs), zap.Any("allMinersMap", allMinersMap))
@@ -381,7 +381,10 @@ func filterOutInvalidRegisterMiners(balances cstate.StateContextI,
 		// see if to add is in the all miners map, if not remove it from the register list and try next one
 		if n, ok := allMinersMap[mid]; ok {
 			logging.Logger.Debug("Jayash [mvc] createDKGMinersForContribute, add register node to dkg miners", zap.String("node", mid))
-			dkgMiners.SimpleNodes[mid] = n.SimpleNode
+			dkgMiners.Nodes = append(dkgMiners.Nodes, LightNode{
+				Key:       mid,
+				PublicKey: n.SimpleNode.PublicKey,
+			})
 			break
 		} else {
 			logging.Logger.Info("Jayash_debug [mvc] createDKGMinersForContribute, remove invalid register node", zap.String("node", mid))
@@ -499,7 +502,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 
 	var (
 		allMinersMap = make(map[string]*MinerNode, len(allMinersList.Nodes))
-		dkgMiners    = NewDKGMinerNodes()
+		dkgMiners    = NewDKGMinerNodesV2()
 		gnb          = gn.MustBase()
 	)
 
@@ -528,7 +531,10 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 				"miner in prev MB is not in the all miners list: %s", mid)
 		}
 
-		dkgMiners.SimpleNodes[mid] = n.SimpleNode
+		dkgMiners.Nodes = append(dkgMiners.Nodes, LightNode{
+			Key:       mid,
+			PublicKey: n.SimpleNode.PublicKey,
+		})
 	}
 
 	// get register miner list
@@ -542,7 +548,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	dkgMinersNum := len(dkgMiners.SimpleNodes)
+	dkgMinersNum := len(dkgMiners.Nodes)
 	if dkgMinersNum < gnb.MinN {
 		return common.NewErrorf("failed to create dkg miners", "miners num: %d < gn.Min: %c", dkgMinersNum, gnb.MinN)
 	}
@@ -553,7 +559,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		zap.Int("T", dkgMiners.T),
 		zap.Int("K", dkgMiners.K),
 		zap.Int("N", dkgMiners.N),
-		zap.Int("all count", len(dkgMiners.SimpleNodes)),
+		zap.Int("all count", len(dkgMiners.Nodes)),
 		zap.Int64("start round", dkgMiners.StartRound))
 	if err := updateDKGMinersList(balances, dkgMiners); err != nil {
 		logging.Logger.Error("[mvc] createDKGMinersForContribute, failed to update dkg miners list")
@@ -875,7 +881,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 		return "", err
 	}
 
-	if _, ok := dmn.SimpleNodes[t.ClientID]; !ok {
+	if !dmn.HasNode(t.ClientID) {
 		logging.Logger.Error("[mvc] contribute mpk miner not part of dkg set", zap.String("miner", t.ClientID))
 		return "", common.NewError("contribute_mpk_failed",
 			"miner not part of dkg set")
@@ -993,8 +999,8 @@ func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
 	}
 
 	var publicKeys = make(map[string]string)
-	for key, miner := range dmn.SimpleNodes {
-		publicKeys[key] = miner.PublicKey
+	for _, miner := range dmn.Nodes {
+		publicKeys[miner.Key] = miner.PublicKey
 	}
 
 	_, ok := sos.ValidateV2(publicKeys)
@@ -1038,7 +1044,7 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 			" correct phase to wait: %s", pn.Phase)
 	}
 
-	var dmn *DKGMinerNodes
+	var dmn *DKGMinerNodesV2
 	if dmn, err = getDKGMinersList(balances); err != nil {
 		return "", common.NewErrorf("msc - wait", "can't get DKG miners: %v", err)
 	}
@@ -1048,7 +1054,7 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 	}
 
 	dmn.Waited[t.ClientID] = true
-	logging.Logger.Debug("[mvc] wait", zap.Int("dkg miners num", len(dmn.SimpleNodes)))
+	logging.Logger.Debug("[mvc] wait", zap.Int("dkg miners num", len(dmn.Nodes)))
 
 	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return "", common.NewErrorf("msc - wait", "saving DKG miners: %v", err)
@@ -1060,7 +1066,7 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 func (msc *MinerSmartContract) createMagicBlock(
 	balances cstate.StateContextI,
 	sharders *MinerNodes,
-	dkgMinersList *DKGMinerNodes,
+	dkgMinersList *DKGMinerNodesV2,
 	gsos *block.GroupSharesOrSigns,
 	mpks *block.Mpks,
 	pn *PhaseNode,
@@ -1089,7 +1095,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 
 	logging.Logger.Debug("create magic block",
 		zap.Int64("view change", magicBlock.StartingRound),
-		zap.Int("dkg miners num", len(dkgMinersList.SimpleNodes)),
+		zap.Int("dkg miners num", len(dkgMinersList.Nodes)),
 		zap.String("mb miners pool type", magicBlock.Miners.Type.String()),
 		zap.String("mb sharders pool type", magicBlock.Sharders.Type.String()))
 
@@ -1168,7 +1174,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		return err
 	}
 
-	dkgMinersList := NewDKGMinerNodes()
+	dkgMinersList := NewDKGMinerNodesV2()
 	dkgMinersList.StartRound = pn.CurrentRound
 	if err := updateDKGMinersList(balances, dkgMinersList); err != nil {
 		logging.Logger.Error("failed to restart dkg", zap.Error(err))
