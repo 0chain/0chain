@@ -750,11 +750,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("sign_share", "DKG is not set")
 	}
 
-	var (
-		mpks        = mc.viewChangeProcess.mpks.GetMpks()
-		lmpks, dkgt = len(mpks), mc.viewChangeProcess.viewChangeDKG.T
-	)
-
+	mpks := mc.viewChangeProcess.mpks.GetMpks()
 	if len(mpks) == 0 {
 		mpkss, err := mc.getMinersMpks(mc.GetLatestFinalizedBlock())
 		if err != nil {
@@ -763,6 +759,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		mpks = mpkss.GetMpks()
 	}
 
+	lmpks, dkgt := len(mpks), mc.viewChangeProcess.viewChangeDKG.T
 	if lmpks < dkgt {
 		logging.Logger.Error("[mvc] sign share failed, not enough mpks yet",
 			zap.Int("mpks num", lmpks), zap.Int("dkg t", dkgt))
