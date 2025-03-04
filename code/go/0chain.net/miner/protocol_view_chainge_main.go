@@ -158,20 +158,20 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	// 	zap.Any("sos", sos),
 	// 	zap.Any("mpks", mpks.Mpks))
 
-	var dmn *minersc.DKGMinerNodes
+	var dmn *minersc.DKGMinerNodesV2
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners DKG", zap.Error(err))
 		return nil, err
 	}
 
-	if len(dmn.SimpleNodes) == 0 {
+	if len(dmn.Nodes) == 0 {
 		logging.Logger.Error("[mvc] publishShareOrSigns, no miners in DKG")
 		return nil, common.NewError("publish_sos", "no miners in DKG")
 	}
 
 	var publicKeys = make(map[string]string)
-	for _, n := range dmn.SimpleNodes {
-		publicKeys[n.ID] = n.PublicKey
+	for _, n := range dmn.Nodes {
+		publicKeys[n.Key] = n.PublicKey
 	}
 	// Note: Remove the valiate code here perhaps as we have validated
 	// every share or sign when after requesting for sign
@@ -189,10 +189,10 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
 	var minerUrls []string
-	for id := range dmn.SimpleNodes {
-		var nodeSend = node.GetNode(id)
+	for _, v := range dmn.Nodes {
+		var nodeSend = node.GetNode(v.Key)
 		if nodeSend == nil {
-			logging.Logger.Warn("failed to get node", zap.String("id", id))
+			logging.Logger.Warn("failed to get node", zap.String("id", v.Key))
 			continue
 		}
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
@@ -215,7 +215,7 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 		return nil, nil
 	}
 
-	var dmn *minersc.DKGMinerNodes
+	var dmn *minersc.DKGMinerNodesV2
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("can't contribute", zap.Error(err))
 		return
