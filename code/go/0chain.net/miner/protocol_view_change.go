@@ -246,8 +246,7 @@ func (vcp *viewChangeProcess) isNeedCreateSijs() (ok bool) {
 		vcp.viewChangeDKG.GetSijLen() < vcp.viewChangeDKG.T
 }
 
-func (mc *Chain) getMinersMpks(ctx context.Context, lfb *block.Block, mb *block.MagicBlock,
-) (mpks *block.Mpks, err error) {
+func (mc *Chain) getMinersMpks(lfb *block.Block) (mpks *block.Mpks, err error) {
 	mpks = block.NewMpks()
 	err = mc.GetBlockStateNode(lfb, minersc.MinersMPKKey, mpks)
 	if err != nil {
@@ -278,7 +277,7 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 	}
 
 	var mpks *block.Mpks
-	if mpks, err = mc.getMinersMpks(ctx, lfb, mb); err != nil {
+	if mpks, err = mc.getMinersMpks(lfb); err != nil {
 		logging.Logger.Error("can't share", zap.Error(err))
 		return
 	}
@@ -757,12 +756,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 	)
 
 	if len(mpks) == 0 {
-		var (
-			lfb = mc.GetLatestFinalizedBlock()
-			mb  = mc.GetLatestFinalizedMagicBlock(ctx)
-		)
-
-		mpkss, err := mc.getMinersMpks(ctx, lfb, mb.MagicBlock)
+		mpkss, err := mc.getMinersMpks(mc.GetLatestFinalizedBlock())
 		if err != nil {
 			return nil, err
 		}
