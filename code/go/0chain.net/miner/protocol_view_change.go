@@ -257,8 +257,8 @@ func (mc *Chain) getMinersMpks(lfb *block.Block) (mpks *block.Mpks, err error) {
 }
 
 func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (
-	dmn *minersc.DKGMinerNodes, err error) {
-	dmn = minersc.NewDKGMinerNodes()
+	dmn *minersc.DKGMinerNodesV2, err error) {
+	dmn = minersc.NewDKGMinerNodesV2()
 	err = mc.GetBlockStateNode(lfb, minersc.DKGMinersKey, dmn)
 	if err != nil {
 		return
@@ -282,19 +282,35 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		return
 	}
 
-	var dmn *minersc.DKGMinerNodes
+	var dmn *minersc.DKGMinerNodesV2
 	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		logging.Logger.Error("can't share", zap.Error(err))
 		return
 	}
 
-	logging.Logger.Debug("[mvc] createSijs", zap.Int("mpks num", len(mpks.Mpks)))
+	ids := make([]string, 0, len(dmn.Nodes))
+	for _, v := range dmn.Nodes {
+		ids = append(ids, v.Key)
+	}
 
+	dkgSimpleNodes, err := minersc.GetDKGSimpleNodes(ids, mc.GetStateContext())
+	if err != nil {
+		logging.Logger.Error("could not get dkg simple nodes", zap.Error(err))
+		return
+	}
+
+	// get simple nodes map
+	simpleNodes := make(map[string]*minersc.MinerNode)
+	for _, v := range dkgSimpleNodes.Nodes {
+		simpleNodes[v.ID] = v
+	}
+
+	logging.Logger.Debug("[mvc] createSijs", zap.Int("mpks num", len(mpks.Mpks)))
 	for k := range mpks.Mpks {
 		if node.GetNode(k) != nil {
 			continue // already registered
 		}
-		v := dmn.SimpleNodes[k]
+		v := simpleNodes[k]
 		n := node.Provider()
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -367,15 +383,20 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block, mb *bloc
 		return nil, common.NewError("dkg_not_set", "send_sijs: DKG is not set")
 	}
 
-	var dkgMiners *minersc.DKGMinerNodes
+	var dkgMiners *minersc.DKGMinerNodesV2
 	if dkgMiners, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
 		return // error
 	}
 
-	var selfNodeKey = node.Self.Underlying().GetKey()
-	if _, ok := dkgMiners.SimpleNodes[selfNodeKey]; !mc.isDKGSet() || !ok {
-		logging.Logger.Error("[mvc] failed to send sijs", zap.Bool("dkg_set", mc.isDKGSet()),
-			zap.Bool("ok", ok))
+	var (
+		selfNodeKey = node.Self.Underlying().GetKey()
+		selfExist   = dkgMiners.HasNode(selfNodeKey)
+	)
+
+	if !selfExist || !mc.isDKGSet() {
+		logging.Logger.Error("[mvc] failed to send sijs",
+			zap.Bool("dkg_set", mc.isDKGSet()),
+			zap.Bool("node_exists", selfExist))
 		return // (nil, nil)
 	}
 
@@ -388,12 +409,12 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block, mb *bloc
 	// createSijs registers them; and after a restart ('deregister')
 	// we have to restart DKG for this miner, since secret key is lost
 
-	for key := range dkgMiners.SimpleNodes {
-		if key == selfNodeKey {
+	for _, v := range dkgMiners.Nodes {
+		if v.Key == selfNodeKey {
 			continue // don't send to self
 		}
-		if _, ok := mc.viewChangeProcess.shareOrSigns.ShareOrSigns[key]; !ok {
-			sendTo = append(sendTo, key)
+		if _, ok := mc.viewChangeProcess.shareOrSigns.ShareOrSigns[v.Key]; !ok {
+			sendTo = append(sendTo, v.Key)
 		}
 	}
 

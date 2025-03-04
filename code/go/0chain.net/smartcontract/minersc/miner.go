@@ -546,8 +546,8 @@ func getMinerSimpleNode(id string, state cstate.StateContextI) (*MinerNode, erro
 	}, nil
 }
 
-// getDKGSimpleNodes return simple nodes of given ids
-func getDKGSimpleNodes(ids []string, state cstate.StateContextI) (*MinerNodes, error) {
+// GetDKGSimpleNodes return simple nodes of given ids
+func GetDKGSimpleNodes(ids []string, state cstate.StateContextI) (*MinerNodes, error) {
 	minerNodes, err := cstate.GetItemsByIDs(ids, getMinerSimpleNode, state)
 	if err != nil {
 		if err != util.ErrValueNotPresent {

@@ -902,7 +902,7 @@ type dkgInfo struct {
 	Phase        *minersc.PhaseNode
 	AllMiners    *minersc.MinerNodes
 	AllSharders  *minersc.MinerNodes
-	DKGMiners    *minersc.DKGMinerNodes
+	DKGMiners    *minersc.DKGMinerNodesV2
 	ShardersKeep *minersc.MinerNodes
 	MPKs         *block.Mpks
 	GSoS         *block.GroupSharesOrSigns //
@@ -918,11 +918,11 @@ func boolString(t bool) string {
 }
 
 func (dkgi *dkgInfo) HasMPKs(id string) string {
-	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
+	if dkgi.DKGMiners == nil || dkgi.DKGMiners.Nodes == nil ||
 		dkgi.MPKs == nil || dkgi.MPKs.Mpks == nil {
 		return boolString(false)
 	}
-	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
+	if !dkgi.DKGMiners.HasNode(id) {
 		return boolString(false)
 	}
 	if _, ok := dkgi.MPKs.Mpks[id]; !ok {
@@ -932,11 +932,11 @@ func (dkgi *dkgInfo) HasMPKs(id string) string {
 }
 
 func (dkgi *dkgInfo) HasGSoS(id string) string {
-	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
+	if dkgi.DKGMiners == nil || dkgi.DKGMiners.Nodes == nil ||
 		dkgi.GSoS == nil || dkgi.GSoS.Shares == nil {
 		return boolString(false)
 	}
-	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
+	if !dkgi.DKGMiners.HasNode(id) {
 		return boolString(false)
 	}
 	if _, ok := dkgi.GSoS.Shares[id]; !ok {
@@ -946,11 +946,11 @@ func (dkgi *dkgInfo) HasGSoS(id string) string {
 }
 
 func (dkgi *dkgInfo) HasWait(id string) string {
-	if dkgi.DKGMiners == nil || dkgi.DKGMiners.SimpleNodes == nil ||
+	if dkgi.DKGMiners == nil || dkgi.DKGMiners.Nodes == nil ||
 		dkgi.DKGMiners.Waited == nil {
 		return boolString(false)
 	}
-	if _, ok := dkgi.DKGMiners.SimpleNodes[id]; !ok {
+	if !dkgi.DKGMiners.HasNode(id) {
 		return boolString(false)
 	}
 	return boolString(dkgi.DKGMiners.Waited[id])
@@ -973,7 +973,7 @@ func (c *Chain) dkgInfo(cmb *block.MagicBlock) (dkgi *dkgInfo, err error) {
 	dkgi.Phase = new(minersc.PhaseNode)
 	dkgi.AllMiners = new(minersc.MinerNodes)
 	dkgi.AllSharders = new(minersc.MinerNodes)
-	dkgi.DKGMiners = new(minersc.DKGMinerNodes)
+	dkgi.DKGMiners = new(minersc.DKGMinerNodesV2)
 	dkgi.ShardersKeep = new(minersc.MinerNodes)
 	dkgi.MPKs = new(block.Mpks)
 	dkgi.GSoS = new(block.GroupSharesOrSigns)

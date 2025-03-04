@@ -1104,7 +1104,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		ids = append(ids, v.Key)
 	}
 
-	minerNodes, err := getDKGSimpleNodes(ids, balances)
+	minerNodes, err := GetDKGSimpleNodes(ids, balances)
 	if err != nil {
 		return nil, err
 	}
