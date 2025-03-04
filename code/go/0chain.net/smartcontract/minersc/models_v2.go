@@ -94,3 +94,11 @@ func NewLightMinerNode() *LightMinerNode {
 		SimpleNode: &SimpleNode{},
 	}
 }
+
+func (m *LightMinerNode) CopyFrom(v interface{}) bool {
+	if mn, ok := v.(*LightMinerNode); ok {
+		*m.SimpleNode = *mn.SimpleNode
+		return true
+	}
+	return false
+}
