@@ -567,20 +567,20 @@ func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodesV2)
 	return err
 }
 
-func getMinersMPKs(state cstate.CommonStateContextI) (*block.Mpks, error) {
-	mpks := block.NewMpks()
-	err := state.GetTrieNode(MinersMPKKey, mpks)
-	if err != nil {
-		return nil, err
-	}
+// func getMinersMPKs(state cstate.CommonStateContextI) (*block.Mpks, error) {
+// 	mpks := block.NewMpks()
+// 	err := state.GetTrieNode(MinersMPKKey, mpks)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return mpks, nil
-}
+// 	return mpks, nil
+// }
 
-func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
-	_, err := state.InsertTrieNode(MinersMPKKey, mpks)
-	return err
-}
+// func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
+// 	_, err := state.InsertTrieNode(MinersMPKKey, mpks)
+// 	return err
+// }
 
 func getMagicBlock(state cstate.CommonStateContextI) (*block.MagicBlock, error) {
 	magicBlock := block.NewMagicBlock()

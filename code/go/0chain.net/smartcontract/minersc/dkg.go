@@ -131,14 +131,19 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 			"phase: %v, err: %v", pn.Phase, err)
 	}
 
-	if len(mpks.Mpks) == 0 {
+	if len(mpks.IDs) == 0 {
 		return common.NewError("move_to_share_or_publish_failed", "empty miners mpks keys")
+	}
+
+	mpksMap := make(map[string]struct{})
+	for _, id := range mpks.IDs {
+		mpksMap[id] = struct{}{}
 	}
 
 	// requires all dkg miners have contributed the mpks
 	noMpks := make([]string, 0, len(dkgMinersList.Nodes))
 	for _, nd := range dkgMinersList.Nodes {
-		if _, ok := mpks.Mpks[nd.Key]; !ok {
+		if _, ok := mpksMap[nd.Key]; !ok {
 			noMpks = append(noMpks, nd.Key)
 		}
 	}
@@ -146,7 +151,7 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 	if len(noMpks) == 0 {
 		// all good, every one has contributed
 		logging.Logger.Debug("[mvc] move phase to share or publish",
-			zap.Int("mpks", len(mpks.Mpks)),
+			zap.Int("mpks", len(mpks.IDs)),
 			zap.Int("K", dkgMinersList.K))
 		return nil
 	}
@@ -759,12 +764,13 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return common.NewError("create_magic_block_failed", err.Error())
 	}
 
-	noGsos := make([]string, 0, len(mpks.Mpks))
-	for key := range mpks.Mpks {
-		if _, ok := gsosIDsMap[key]; !ok {
-			noGsos = append(noGsos, key)
+	noGsos := make([]string, 0, len(mpks.IDs))
+	for _, id := range mpks.IDs {
+		if _, ok := gsosIDsMap[id]; !ok {
+			noGsos = append(noGsos, id)
 		}
 	}
+
 	logging.Logger.Debug("[mvc] create magic block for wait, no gsos", zap.Any("noGsos", noGsos))
 
 	if len(noGsos) > 0 {
@@ -838,7 +844,7 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		gnb.ViewChange = magicBlock.StartingRound
 		return nil
 	})
-	mpks = block.NewMpks()
+	mpks = NewMpksV2()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		return err
 	}
@@ -908,17 +914,21 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	case util.ErrValueNotPresent:
 		// the mpks could be empty when the first time to contribute mpks
 		logging.Logger.Debug("[mvc] contribute create new mpks")
-		mpks = block.NewMpks()
+		mpks = NewMpksV2()
 	case nil:
 	default:
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
 
-	if _, ok := mpks.Mpks[mpk.ID]; ok {
-		return "", common.NewError("contribute_mpk_failed", "already have mpk for miner")
+	// if _, ok := mpks.Mpks[mpk.ID]; ok {
+	// 	return "", common.NewError("contribute_mpk_failed", "already have mpk for miner")
+	// }
+
+	// mpks.Mpks[mpk.ID] = mpk
+	if err := mpks.AddMpk(mpk, balances); err != nil {
+		return "", err
 	}
 
-	mpks.Mpks[mpk.ID] = mpk
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
@@ -926,11 +936,11 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	logging.Logger.Debug("[mvc] contribute_mpk success",
 		zap.Int64("DB version", int64(balances.GetState().GetVersion())),
 		zap.String("mpk id", mpk.ID),
-		zap.Int("len", len(mpks.Mpks)),
+		zap.Int("len", len(mpks.IDs)),
 		zap.Int64("pn_start_round", pn.StartRound),
 		zap.String("phase", pn.Phase.String()))
 
-	return string(mpk.Encode()), nil
+	return "success", nil
 }
 func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
@@ -978,8 +988,6 @@ func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
 			"already have share or signs for miner %v", t.ClientID)
 	}
 
-	// TODO: refactor the DKGMinersList to store simple nodes in different MPT nodes
-	// that stores the public keys in the head for validation use below
 	dmn, err := getDKGMinersList(balances)
 	if err != nil {
 		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get miners DKG list",
@@ -1068,7 +1076,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 	sharders *MinerNodes,
 	dkgMinersList *DKGMinerNodesV2,
 	gsos *block.GroupSharesOrSigns,
-	mpks *block.Mpks,
+	mpks *MpksV2,
 	pn *PhaseNode,
 	gn *GlobalNode,
 ) (*block.MagicBlock, error) {
@@ -1084,7 +1092,12 @@ func (msc *MinerSmartContract) createMagicBlock(
 	magicBlock.Miners = node.NewPool(node.NodeTypeMiner)
 	magicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
 	magicBlock.SetShareOrSigns(gsos)
-	magicBlock.Mpks = mpks
+	bMPKS, err := mpks.GetAllMpks(balances)
+	if err != nil {
+		return nil, err
+	}
+
+	magicBlock.Mpks = bMPKS
 	magicBlock.T = dkgMinersList.T
 	magicBlock.K = dkgMinersList.K
 	magicBlock.N = dkgMinersList.N
@@ -1166,7 +1179,7 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		zap.String("phase", pn.Phase.String()))
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
-	mpks := block.NewMpks()
+	mpks := NewMpksV2()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		logging.Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
