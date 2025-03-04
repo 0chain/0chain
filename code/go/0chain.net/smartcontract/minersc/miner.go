@@ -530,6 +530,36 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 	})
 }
 
+// getMinerSimpleNode return sthe simple node part of the miner node only from state
+func getMinerSimpleNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+	mn := &LightMinerNode{
+		SimpleNode: &SimpleNode{},
+	}
+	mn.ID = id
+	err := state.GetTrieNode(mn.GetKey(), mn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MinerNode{
+		SimpleNode: mn.SimpleNode,
+	}, nil
+}
+
+// getDKGSimpleNodes return simple nodes of given ids
+func getDKGSimpleNodes(ids []string, state cstate.StateContextI) (*MinerNodes, error) {
+	minerNodes, err := cstate.GetItemsByIDs(ids, getMinerSimpleNode, state)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
+		return &MinerNodes{}, nil
+	}
+
+	return &MinerNodes{minerNodes}, nil
+}
+
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
 	if node.Settings.ServiceChargeRatio < 0 {
 		return common.NewErrorf(opcode,

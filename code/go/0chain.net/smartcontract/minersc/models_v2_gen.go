@@ -295,6 +295,82 @@ func (z *DKGMinerNodesV2) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z *LightMinerNode) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	// map header, size 1
+	// string "SimpleNode"
+	o = append(o, 0x81, 0xaa, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x4e, 0x6f, 0x64, 0x65)
+	if z.SimpleNode == nil {
+		o = msgp.AppendNil(o)
+	} else {
+		o, err = z.SimpleNode.MarshalMsg(o)
+		if err != nil {
+			err = msgp.WrapError(err, "SimpleNode")
+			return
+		}
+	}
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *LightMinerNode) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	var field []byte
+	_ = field
+	var zb0001 uint32
+	zb0001, bts, err = msgp.ReadMapHeaderBytes(bts)
+	if err != nil {
+		err = msgp.WrapError(err)
+		return
+	}
+	for zb0001 > 0 {
+		zb0001--
+		field, bts, err = msgp.ReadMapKeyZC(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		switch msgp.UnsafeString(field) {
+		case "SimpleNode":
+			if msgp.IsNil(bts) {
+				bts, err = msgp.ReadNilBytes(bts)
+				if err != nil {
+					return
+				}
+				z.SimpleNode = nil
+			} else {
+				if z.SimpleNode == nil {
+					z.SimpleNode = new(SimpleNode)
+				}
+				bts, err = z.SimpleNode.UnmarshalMsg(bts)
+				if err != nil {
+					err = msgp.WrapError(err, "SimpleNode")
+					return
+				}
+			}
+		default:
+			bts, err = msgp.Skip(bts)
+			if err != nil {
+				err = msgp.WrapError(err)
+				return
+			}
+		}
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z *LightMinerNode) Msgsize() (s int) {
+	s = 1 + 11
+	if z.SimpleNode == nil {
+		s += msgp.NilSize
+	} else {
+		s += z.SimpleNode.Msgsize()
+	}
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z LightNode) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 2

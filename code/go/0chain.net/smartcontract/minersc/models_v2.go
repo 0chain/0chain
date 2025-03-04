@@ -2,6 +2,9 @@ package minersc
 
 import (
 	"math"
+
+	"0chain.net/core/datastore"
+	"0chain.net/smartcontract/provider"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -75,5 +78,19 @@ func (dkgmn *DKGMinerNodesV2) DeleteNode(key string) {
 			dkgmn.Nodes = append(dkgmn.Nodes[:i], dkgmn.Nodes[i+1:]...)
 			return
 		}
+	}
+}
+
+type LightMinerNode struct {
+	*SimpleNode `json:"simple_miner"`
+}
+
+func (lmn *LightMinerNode) GetKey() datastore.Key {
+	return provider.GetKey(lmn.ID)
+}
+
+func NewLightMinerNode() *LightMinerNode {
+	return &LightMinerNode{
+		SimpleNode: &SimpleNode{},
 	}
 }

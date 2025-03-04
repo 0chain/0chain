@@ -1099,7 +1099,17 @@ func (msc *MinerSmartContract) createMagicBlock(
 		zap.String("mb miners pool type", magicBlock.Miners.Type.String()),
 		zap.String("mb sharders pool type", magicBlock.Sharders.Type.String()))
 
-	for _, v := range dkgMinersList.SimpleNodes {
+	ids := make([]string, 0, len(dkgMinersList.Nodes))
+	for _, v := range dkgMinersList.Nodes {
+		ids = append(ids, v.Key)
+	}
+
+	minerNodes, err := getDKGSimpleNodes(ids, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range minerNodes.Nodes {
 		n := node.Provider()
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -1117,7 +1127,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		}
 
 		mn := NewMinerNode()
-		mn.SimpleNode = v
+		mn.SimpleNode = v.SimpleNode
 		mn.Status = n.Status
 		// TODO: should not emit add miner for existing miner
 		// emitAddMiner(mn, balances)
