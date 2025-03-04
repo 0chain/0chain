@@ -755,6 +755,20 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		mpks        = mc.viewChangeProcess.mpks.GetMpks()
 		lmpks, dkgt = len(mpks), mc.viewChangeProcess.viewChangeDKG.T
 	)
+
+	if len(mpks) == 0 {
+		var (
+			lfb = mc.GetLatestFinalizedBlock()
+			mb  = mc.GetLatestFinalizedMagicBlock(ctx)
+		)
+
+		mpkss, err := mc.getMinersMpks(ctx, lfb, mb.MagicBlock)
+		if err != nil {
+			return nil, err
+		}
+		mpks = mpkss.GetMpks()
+	}
+
 	if lmpks < dkgt {
 		logging.Logger.Error("[mvc] sign share failed, not enough mpks yet",
 			zap.Int("mpks num", lmpks), zap.Int("dkg t", dkgt))
