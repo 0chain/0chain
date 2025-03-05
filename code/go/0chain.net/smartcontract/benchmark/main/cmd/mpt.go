@@ -194,11 +194,11 @@ func openMpt(loadPath string) (*util.MerklePatriciaTrie, util.Key, *benchmark.Be
 func setUpMpt(
 	dbPath string,
 ) (*util.MerklePatriciaTrie, util.Key, *benchmark.BenchData) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("Recovered in setUpMpt", r)
-		}
-	}()
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		log.Println("Recovered in setUpMpt", r)
+	// 	}
+	// }()
 
 	log.Println("starting building blockchain")
 	mptGenTime := time.Now()

@@ -749,16 +749,6 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		gsosIDsMap[id] = struct{}{}
 	}
 
-	// gsos, err := getGroupShareOrSigns(balances)
-	// switch err {
-	// case nil:
-	// case util.ErrValueNotPresent:
-	// 	// gsos = block.NewGroupSharesOrSigns()
-	// 	return common.NewErrorf("created_magic_block_failed", "see no group shares or signs")
-	// default:
-	// 	return err
-	// }
-
 	mpks, err := GetMinersMPKs(balances)
 	if err != nil {
 		return common.NewError("create_magic_block_failed", err.Error())

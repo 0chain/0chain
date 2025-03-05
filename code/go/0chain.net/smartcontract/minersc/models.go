@@ -552,7 +552,7 @@ func getDKGMinersList(state cstate.CommonStateContextI) (*DKGMinerNodesV2, error
 			return nil, err
 		}
 
-		logging.Logger.Debug("VC: no dkg miners list found, create one")
+		logging.Logger.Debug("[mvc] no dkg miners list found, create one")
 
 		return NewDKGMinerNodesV2(), nil
 	}
@@ -594,7 +594,7 @@ func getMagicBlock(state cstate.CommonStateContextI) (*block.MagicBlock, error) 
 }
 
 func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) error {
-	logging.Logger.Debug("save magic block", zap.Any("magic block", magicBlock))
+	logging.Logger.Debug("save magic block", zap.Int64("magic block", magicBlock.MagicBlockNumber))
 	_, err := state.InsertTrieNode(MagicBlockKey, magicBlock)
 	return err
 }
