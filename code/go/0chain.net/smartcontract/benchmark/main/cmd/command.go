@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"runtime/debug"
 	"sort"
 	"strings"
 	"time"
@@ -69,6 +70,7 @@ var rootCmd = &cobra.Command{
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("Recovered in benchmark function", r)
+				fmt.Println("Stack trace:", string(debug.Stack()))
 			}
 		}()
 		totalTimer := time.Now()
