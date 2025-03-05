@@ -113,8 +113,9 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		zap.Int("miners num", len(mb.Miners.CopyNodesMap())),
 		zap.Int("T", mb.T),
 		zap.Int("N", mb.N),
-		zap.Any("mb", mb),
-		zap.Any("summary", summary))
+		zap.Int64("mb", mb.MagicBlockNumber),
+		zap.Int64("sr", mb.StartingRound),
+	)
 
 	for k := range mb.Miners.CopyNodesMap() {
 		logging.Logger.Debug("[mvc] set dkg key", zap.String("key", ComputeBlsID(k)))
