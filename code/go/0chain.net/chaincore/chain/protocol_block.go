@@ -42,9 +42,13 @@ func (c *Chain) VerifyTickets(ctx context.Context,
 					verifier = bmb.Miners.GetNode(bvt.VerifierID)
 				}
 
+				logging.Logger.Debug("block magic block:", zap.Any("bmb.Miners", bmb.Miners))
 				if verifier == nil {
-					errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
-					return
+					// TODO: check if the verifier is in the pool
+					continue
+
+					// errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
+					// return
 				}
 
 				if verifier.SigScheme == nil {
