@@ -551,6 +551,11 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 				return "", common.NewErrorf("pay_fees/pay_sharders",
 					"saving sharder node: %v", err)
 			}
+
+			logging.Logger.Debug("pay_fees after pay sharders and delegates",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.String("mpt root", util.ToHex(balances.GetState().GetRoot())))
 		}
 	} else {
 		logging.Logger.Info("pay_fee could not find sharder to reward", zap.Int64("round", b.Round))
