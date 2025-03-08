@@ -42,7 +42,12 @@ func (c *Chain) VerifyTickets(ctx context.Context,
 					verifier = bmb.Miners.GetNode(bvt.VerifierID)
 				}
 
-				logging.Logger.Debug("block magic block:", zap.Any("bmb.Miners", bmb.Miners))
+				if bmb != nil {
+					logging.Logger.Debug("block magic block:", zap.Any("bmb.Miners", bmb.Miners))
+				} else {
+					logging.Logger.Debug("block has no magic block", zap.String("block", blockHash), zap.Int64("round", round))
+				}
+
 				if verifier == nil {
 					// TODO: check if the verifier is in the pool
 					continue
