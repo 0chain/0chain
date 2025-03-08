@@ -30,11 +30,6 @@ func (c *Chain) StoreLFBRound(round, magicBlockNum int64, blockHash string) erro
 		}
 	}
 
-	// TO REMOVE: remove this debug code
-	if magicBlockNum == 1 {
-		magicBlockNum = 9138
-	}
-
 	logging.Logger.Debug("[mvc] store lfb",
 		zap.Int64("round", round),
 		zap.String("block", blockHash),
