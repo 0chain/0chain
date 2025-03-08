@@ -61,7 +61,7 @@ func (fp *fundedPools) Decode(p []byte) error {
 	return json.Unmarshal(p, fp)
 }
 
-// getReadPool of current client
+// getFundedPools of current client
 //nolint:unused
 func (ssc *StorageSmartContract) getFundedPools(
 	clientID datastore.Key,
