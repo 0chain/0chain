@@ -347,8 +347,14 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (
 		return gnb.PrevMagicBlock
 	}
 
-	return nil
-	// return balances.GetChainCurrentMagicBlock()
+	// get current magic block
+	mb, err := getMagicBlock(balances)
+	if err != nil {
+		logging.Logger.Error("failed to get current magic block", zap.Error(err))
+		return nil
+	}
+
+	return mb
 }
 
 // has previous miner in all miners list
