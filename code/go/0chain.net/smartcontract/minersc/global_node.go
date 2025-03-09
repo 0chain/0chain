@@ -351,7 +351,13 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (
 	mb, err := getMagicBlock(balances)
 	if err != nil {
 		logging.Logger.Error("failed to get current magic block", zap.Error(err))
-		return nil
+
+		// use genesis magic block
+		mb = balances.GetChainCurrentMagicBlock().Clone()
+		if mb.MagicBlockNumber > 1 {
+			logging.Logger.Panic("should not none genesis magic block from local")
+			return nil
+		}
 	}
 
 	return mb
