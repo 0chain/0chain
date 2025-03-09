@@ -397,11 +397,10 @@ func ToN2NSendEntityHandler(handler common.JSONResponderF) common.ReqRespHandler
 		nodeID := r.Header.Get(HeaderNodeID)
 		sender := GetNode(nodeID)
 		// if sender == nil && !vcAddNodesList.Contains(nodeID) {
-		if sender == nil {
-			logging.N2n.Error("message received - request from unrecognized node", zap.String("from", nodeID),
-				zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI))
-			return
-		}
+		// 	logging.N2n.Error("message received - request from unrecognized node", zap.String("from", nodeID),
+		// 		zap.String("to", Self.Underlying().GetPseudoName()), zap.String("handler", r.RequestURI))
+		// 	return
+		// }
 
 		if sender != nil {
 			if !validateRequest(sender, r) {
