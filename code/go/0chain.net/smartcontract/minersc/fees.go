@@ -246,7 +246,11 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 			// restart DKG if any of the miner in new MB is not waited
 			if err != nil {
-				var prev = gn.prevMagicBlock(balances)
+				prev, err := gn.prevMagicBlock(balances)
+				if err != nil {
+					return err
+				}
+
 				gn.MustUpdateBase(func(gnb *globalNodeBase) error {
 					gnb.ViewChange = prev.StartingRound
 					return nil
@@ -516,7 +520,15 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if len(shardersIDs) > 0 {
 		seed := b.GetRoundRandomSeed()
 		randS := rand.New(rand.NewSource(seed))
-		mbShardersIDs := getRegisterShardersInMagicBlock(balances, shardersIDs)
+		mbShardersIDs, err := getRegisterShardersInMagicBlock(balances, gn, shardersIDs)
+		if err != nil {
+			if err != util.ErrValueNotPresent {
+				return "", err
+			}
+
+			// Should never happen
+			logging.Logger.Panic("pay_fees, failed to get register sharders in magic block", zap.Error(err))
+		}
 
 		randS.Shuffle(len(mbShardersIDs), func(i, j int) {
 			mbShardersIDs[i], mbShardersIDs[j] = mbShardersIDs[j], mbShardersIDs[i]
@@ -555,6 +567,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			logging.Logger.Debug("pay_fees after pay sharders and delegates",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
+				zap.String("shareder id:", sh.GetKey()),
 				zap.String("mpt root", util.ToHex(balances.GetState().GetRoot())))
 		}
 	} else {
@@ -656,24 +669,32 @@ func getLiveSharderIds(balances cstate.StateContextI) ([]string, error) {
 	return ids, nil
 }
 
-func getRegisterShardersInMagicBlock(balances cstate.StateContextI, shardersIDs []string) []string {
+func getRegisterShardersInMagicBlock(balances cstate.StateContextI, gn *GlobalNode, shardersIDs []string) ([]string, error) {
+	mb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		logging.Logger.Error("failed to get previous magic block", zap.Error(err))
+		// TODO: check if the node not found is checked before state hash mismatch error
+		return nil, err
+	}
+
 	var (
-		shardersKeysInMB = getMagicBlockSharders(balances)
-		smap             = make(map[string]struct{}, len(shardersKeysInMB))
+		shardersKeysInMB = mb.Sharders.CopyNodes()
+		smap             = make(map[string]struct{}, len(mb.Sharders.Nodes))
 	)
 
 	for _, key := range shardersKeysInMB {
-		smap[key] = struct{}{}
+		// k := GetSharderKey(key.GetKey())
+		smap[key.GetKey()] = struct{}{}
 	}
 
 	retSharders := make([]string, 0, len(shardersKeysInMB))
 	for _, id := range shardersIDs {
-		if _, ok := smap[GetSharderKey(id)]; ok {
+		if _, ok := smap[id]; ok {
 			retSharders = append(retSharders, id)
 			continue
 		}
 	}
-	return retSharders
+	return retSharders, nil
 }
 
 // getMagicBlockSharders - list the sharders in magic block

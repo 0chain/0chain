@@ -62,13 +62,27 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 			len(allShardersList.Nodes), gnb.MinS)
 	}
 
-	if !gn.hasPrevShader(allShardersList, balances) {
+	hasPrevShader, err := gn.hasPrevShader(allShardersList, balances)
+	if err != nil {
+		return common.NewErrorf("move_to_contribute_failed",
+			"invalid state: all sharders list hasn't a sharder from previous VC set, "+
+				"all: %d, min_s: %d, err: %v", len(allShardersList.Nodes), gnb.MinS, err)
+	}
+
+	if !hasPrevShader {
 		return common.NewErrorf("move_to_contribute_failed",
 			"invalid state: all sharders list hasn't a sharder from previous VC set, "+
 				"all: %d, min_s: %d", len(allShardersList.Nodes), gnb.MinS)
 	}
 
-	if !gn.hasPrevMiner(allMinersList, balances) {
+	hasPrevMiner, err := gn.hasPrevMiner(allMinersList, balances)
+	if err != nil {
+		return common.NewErrorf("move_to_contribute_failed",
+			"invalid state: all miners list hasn't a miner from previous VC set, "+
+				"all: %d, min_n: %d, err: %v", len(allMinersList.Nodes), gnb.MinN, err)
+	}
+
+	if !hasPrevMiner {
 		return common.NewErrorf("move_to_contribute_failed",
 			"invalid state: all miners list hasn't a miner from previous VC set, "+
 				"all: %d, min_n: %d", len(allMinersList.Nodes), gnb.MinN)
@@ -500,7 +514,11 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	lmb := gn.prevMagicBlock(balances)
+	lmb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		return err
+	}
+
 	if lmb == nil {
 		return common.NewErrorf("failed to create dkg miners", "empty magic block")
 	}
@@ -1072,7 +1090,11 @@ func (msc *MinerSmartContract) createMagicBlock(
 ) (*block.MagicBlock, error) {
 
 	// pmb := balances.GetChainCurrentMagicBlock()
-	pmb := gn.prevMagicBlock(balances)
+	pmb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		return nil, err
+	}
+
 	logging.Logger.Debug("create magic block - prev magic block",
 		zap.Int64("number", pmb.MagicBlockNumber),
 		zap.String("hash", pmb.Hash))

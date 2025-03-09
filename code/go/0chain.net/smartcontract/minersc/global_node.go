@@ -339,39 +339,44 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 
 // The prevMagicBlock from the global node (saved on previous VC) or LFMB of
 // the balances if missing (genesis case);
-func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (
-	pmb *block.MagicBlock) {
+func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (pmb *block.MagicBlock, err error) {
 	gnb := gn.MustBase()
 
 	if gnb.PrevMagicBlock != nil {
-		return gnb.PrevMagicBlock
+		return gnb.PrevMagicBlock, nil
 	}
 
 	// get current magic block
 	mb, err := getMagicBlock(balances)
 	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
 		logging.Logger.Error("failed to get current magic block", zap.Error(err))
 
 		// use genesis magic block
 		mb = balances.GetChainCurrentMagicBlock().Clone()
 		if mb.MagicBlockNumber > 1 {
 			logging.Logger.Panic("should not none genesis magic block from local")
-			return nil
+			return nil, nil
 		}
 	}
 
-	return mb
+	return mb, nil
 }
 
 // has previous miner in all miners list
 func (gn *GlobalNode) hasPrevMiner(miners *MinerNodes,
-	balances cstate.StateContextI) (has bool) {
-
-	var pmb = gn.prevMagicBlock(balances)
+	balances cstate.StateContextI) (has bool, err error) {
+	pmb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		return false, err
+	}
 
 	for _, mn := range miners.Nodes {
 		if pmb.Miners.HasNode(mn.ID) {
-			return true
+			return true, nil
 		}
 	}
 
@@ -379,64 +384,64 @@ func (gn *GlobalNode) hasPrevMiner(miners *MinerNodes,
 }
 
 // has previous miner in given MPKs
-func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
-	balances cstate.StateContextI) (has bool) {
+// func (gn *GlobalNode) hasPrevMinerInMPKs(mpks *block.Mpks,
+// 	balances cstate.StateContextI) (has bool) {
 
-	if len(mpks.Mpks) == 0 {
-		logging.Logger.Error("empty miners mpks keys")
-		return
-	}
+// 	if len(mpks.Mpks) == 0 {
+// 		logging.Logger.Error("empty miners mpks keys")
+// 		return
+// 	}
 
-	var pmb = gn.prevMagicBlock(balances)
+// 	var pmb = gn.prevMagicBlock(balances)
 
-	for id := range mpks.Mpks {
-		if pmb.Miners.HasNode(id) {
-			return true
-		}
-	}
+// 	for id := range mpks.Mpks {
+// 		if pmb.Miners.HasNode(id) {
+// 			return true
+// 		}
+// 	}
 
-	logging.Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
-	return // false, hasn't
-}
+// 	logging.Logger.Debug("has no prev miner in MPKs", zap.Int64("prev_mb_round", pmb.StartingRound))
+// 	return // false, hasn't
+// }
 
 // has previous miner in given GSoS
-func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
-	balances cstate.StateContextI) (has bool) {
+// func (gn *GlobalNode) hasPrevMinerInGSoS(gsos *block.GroupSharesOrSigns,
+// 	balances cstate.StateContextI) (has bool) {
 
-	if len(gsos.Shares) == 0 {
-		logging.Logger.Error("empty sharder or sign keys")
-		return
-	}
+// 	if len(gsos.Shares) == 0 {
+// 		logging.Logger.Error("empty sharder or sign keys")
+// 		return
+// 	}
 
-	var pmb = gn.prevMagicBlock(balances)
+// 	var pmb = gn.prevMagicBlock(balances)
 
-	for id := range gsos.Shares {
-		if pmb.Miners.HasNode(id) {
-			return true
-		}
-	}
+// 	for id := range gsos.Shares {
+// 		if pmb.Miners.HasNode(id) {
+// 			return true
+// 		}
+// 	}
 
-	logging.Logger.Debug("has no prev miner in GSoS",
-		zap.Int64("prev_mb_round", pmb.StartingRound),
-		zap.Int("mb miner len", len(pmb.Miners.Nodes)),
-	)
-	return // false, hasn't
-}
+// 	logging.Logger.Debug("has no prev miner in GSoS",
+// 		zap.Int64("prev_mb_round", pmb.StartingRound),
+// 		zap.Int("mb miner len", len(pmb.Miners.Nodes)),
+// 	)
+// 	return // false, hasn't
+// }
 
 // of DKG miners
-func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
-	balances cstate.StateContextI) (has bool) {
+// func (gn *GlobalNode) hasPrevDKGMiner(dkgmns SimpleNodes,
+// 	balances cstate.StateContextI) (has bool) {
 
-	var pmb = gn.prevMagicBlock(balances)
+// 	var pmb = gn.prevMagicBlock(balances)
 
-	for id := range dkgmns {
-		if pmb.Miners.HasNode(id) {
-			return true
-		}
-	}
+// 	for id := range dkgmns {
+// 		if pmb.Miners.HasNode(id) {
+// 			return true
+// 		}
+// 	}
 
-	return // false, hasn't
-}
+// 	return // false, hasn't
+// }
 
 // hasPrevSharderInList checks if there are nodes in previous magic block sharder list
 func hasPrevSharderInList(prevMB *block.MagicBlock, nodes []*MinerNode) bool {
@@ -465,17 +470,20 @@ func rankedPrevSharders(prevMB *block.MagicBlock, list []*MinerNode) []*MinerNod
 
 // has previous sharder in sharders keep list
 func (gn *GlobalNode) hasPrevShader(sharders *MinerNodes,
-	balances cstate.StateContextI) (has bool) {
+	balances cstate.StateContextI) (has bool, err error) {
 
-	var pmb = gn.prevMagicBlock(balances)
+	pmb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		return false, err
+	}
 
 	for _, sn := range sharders.Nodes {
 		if pmb.Sharders.HasNode(sn.ID) {
-			return true
+			return true, nil
 		}
 	}
 
-	return // false, hasn't
+	return false, nil
 }
 
 func (gn *GlobalNode) epochDecline() {

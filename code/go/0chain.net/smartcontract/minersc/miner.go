@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -107,10 +108,17 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 		return "", common.NewError("register_node", "invalid register node SC data")
 	}
 
-	var (
-		mb   = gn.prevMagicBlock(balances)
-		inMB bool
-	)
+	var mb *block.MagicBlock
+	mb, err = gn.prevMagicBlock(balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", common.NewErrorf("vc_add", "failed to get previous magic block: %v", err)
+		}
+
+		logging.Logger.Panic("vc_add, failed to get previous magic block", zap.Error(err))
+	}
+
+	var inMB bool
 	switch rnr.Type {
 	case spenum.Miner:
 		inMB = mb.Miners.HasNode(rnr.ID)
