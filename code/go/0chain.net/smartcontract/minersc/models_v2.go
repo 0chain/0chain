@@ -97,13 +97,13 @@ func NewLightMinerNode() *LightMinerNode {
 
 func (m *LightMinerNode) CopyFrom(v interface{}) bool {
 	if mn, ok := v.(*LightMinerNode); ok {
-		*m.SimpleNode = *mn.SimpleNode
+		*m.SimpleNode = *mn.SimpleNode.Clone()
 		return true
 	}
 
 	// try to copy from MinerNode in cache
 	if mn, ok := v.(*MinerNode); ok {
-		*m.SimpleNode = *mn.SimpleNode
+		*m.SimpleNode = *mn.SimpleNode.Clone()
 		return true
 	}
 

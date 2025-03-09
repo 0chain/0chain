@@ -299,6 +299,25 @@ type SimpleNode struct {
 	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
 }
 
+func (smn *SimpleNode) Clone() *SimpleNode {
+	return &SimpleNode{
+		Provider:               smn.Provider,
+		N2NHost:                smn.N2NHost,
+		Host:                   smn.Host,
+		Port:                   smn.Port,
+		Path:                   smn.Path,
+		PublicKey:              smn.PublicKey,
+		ShortName:              smn.ShortName,
+		BuildTag:               smn.BuildTag,
+		TotalStaked:            smn.TotalStaked,
+		Delete:                 smn.Delete,
+		NodeType:               smn.NodeType,
+		LastHealthCheck:        smn.LastHealthCheck,
+		Status:                 smn.Status,
+		LastSettingUpdateRound: smn.LastSettingUpdateRound,
+	}
+}
+
 func (smn *SimpleNode) Encode() []byte {
 	buff, _ := json.Marshal(smn)
 	return buff
