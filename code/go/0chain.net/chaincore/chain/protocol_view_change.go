@@ -365,9 +365,10 @@ func (c *Chain) GetCurrentSelfNonce(minerId datastore.Key, bState util.MerklePat
 	return node.Self.GetNextNonce(), nil
 }
 
-func (c *Chain) GetCurrentMinerNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
+func (c *Chain) GetCurrentMinerNonce(b *block.Block, bState util.MerklePatriciaTrieI) (int64, error) {
+	minerId := b.MinerID
 	logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.String("minerId", minerId))
-	sc := state.NewStateContext(nil, bState, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	sc := state.NewStateContext(b, bState, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	var nonce int64
 	if err := state.WithActivation(sc, "vc_hardfork", func() error {
