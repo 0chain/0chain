@@ -375,7 +375,7 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 }
 
 func getNamespaceNoncePath(clientID string, namespace NonceNameSpace) util.Path {
-	return util.Path(fmt.Sprintf("namespace_nonce_%d_%s", namespace, clientID))
+	return util.Path(encryption.Hash(fmt.Sprintf("namespace_nonce_%d_%s", namespace, clientID)))
 }
 
 func GetNamespaceNonce(clientState util.MerklePatriciaTrieI, clientID string, namespace NonceNameSpace) (*state.NamespaceNonce, error) {
