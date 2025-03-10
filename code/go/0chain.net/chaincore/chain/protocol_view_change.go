@@ -387,7 +387,7 @@ func (c *Chain) GetCurrentMinerNonce(b *block.Block, bState util.MerklePatriciaT
 			nonce = ns.Nonce + 1
 		}
 
-		logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.Int64("nonce", ns.Nonce))
+		logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.Int64("nonce", nonce))
 		return nil
 	}); err != nil {
 		return 0, err
