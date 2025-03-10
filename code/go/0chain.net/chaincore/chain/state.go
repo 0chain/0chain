@@ -916,7 +916,7 @@ func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.
 	if err := cstate.WithActivation(sctx, "vc_hardfork", func() error {
 		return nil
 	}, func() error {
-		if isBuildInTxn(txnName) {
+		if !isBuildInTxn(txnName) {
 			return nil
 		}
 
