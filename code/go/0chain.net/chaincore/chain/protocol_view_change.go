@@ -365,6 +365,36 @@ func (c *Chain) GetCurrentSelfNonce(minerId datastore.Key, bState util.MerklePat
 	return node.Self.GetNextNonce(), nil
 }
 
+func (c *Chain) GetCurrentMinerNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
+	logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.String("minerId", minerId))
+	sc := state.NewStateContext(nil, bState, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	var nonce int64
+	if err := state.WithActivation(sc, "vc_hardfork", func() error {
+		var er error
+		nonce, er = c.GetCurrentSelfNonce(minerId, bState)
+		return er
+	}, func() error {
+		ns, er := state.GetNamespaceNonce(bState, minerId, state.NonceNameSpaceMiner)
+		if er != nil && er != util.ErrValueNotPresent {
+			return er
+		}
+
+		if er == util.ErrValueNotPresent {
+			nonce = 1
+		} else {
+			nonce = ns.Nonce + 1
+		}
+
+		logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.Int64("nonce", ns.Nonce))
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	return nonce, nil
+}
+
 func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {
 	selfNode := node.Self.Underlying()
 	if selfNode.Type != node.NodeTypeSharder {

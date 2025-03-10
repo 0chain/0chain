@@ -44,6 +44,12 @@ const (
 	MinterZcn
 )
 
+type NonceNameSpace int8
+
+const (
+	NonceNameSpaceMiner NonceNameSpace = 0
+)
+
 var (
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
@@ -105,6 +111,8 @@ type StateContextI interface {
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientState(clientID datastore.Key) (*state.State, error)
 	SetClientState(clientID datastore.Key, s *state.State) (util.Key, error)
+	GetMinerNonce(minerID datastore.Key) (int64, error)
+	SetMinerNonce(minerID datastore.Key, nonce int64) error
 	GetClientBalance(clientID datastore.Key) (currency.Coin, error)
 	SetStateContext(st *state.State) error // cannot use in smart contracts or REST endpoints
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
@@ -364,6 +372,47 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 	//TODO: should we apply the pending transfers?
 	sc.clientStates[clientID] = s.Clone()
 	return s, nil
+}
+
+func getNamespaceNoncePath(clientID string, namespace NonceNameSpace) util.Path {
+	return util.Path(fmt.Sprintf("namespace_nonce_%d_%s", namespace, clientID))
+}
+
+func GetNamespaceNonce(clientState util.MerklePatriciaTrieI, clientID string, namespace NonceNameSpace) (*state.NamespaceNonce, error) {
+	ns := &state.NamespaceNonce{}
+	path := getNamespaceNoncePath(clientID, namespace)
+	err := clientState.GetNodeValue(path, ns)
+	if err != nil {
+		return nil, err
+	}
+	return ns, nil
+}
+
+func (sc *StateContext) GetMinerNonce(minerID datastore.Key) (int64, error) {
+	ns, err := GetNamespaceNonce(sc.GetState(), minerID, NonceNameSpaceMiner)
+	if err != nil && err != util.ErrValueNotPresent {
+		return 0, err
+	}
+
+	if err == util.ErrValueNotPresent {
+		return 0, nil
+	}
+
+	if ns.Namespace != int8(NonceNameSpaceMiner) {
+		return 0, fmt.Errorf("invalid namespace: %d", ns.Namespace)
+	}
+
+	return ns.Nonce, nil
+}
+
+func (sc *StateContext) SetMinerNonce(minerID datastore.Key, nonce int64) error {
+	ns := &state.NamespaceNonce{
+		Namespace: int8(NonceNameSpaceMiner),
+		Nonce:     nonce,
+	}
+
+	_, err := sc.state.Insert(getNamespaceNoncePath(minerID, NonceNameSpaceMiner), ns)
+	return err
 }
 
 func (sc *StateContext) SetClientState(clientID string, s *state.State) (util.Key, error) {

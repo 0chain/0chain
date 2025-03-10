@@ -1216,7 +1216,7 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 
 l:
 	for _, biTxn := range buildInTxns {
-		biTxn.Nonce, err = mc.GetCurrentSelfNonce(b.MinerID, blockState)
+		biTxn.Nonce, err = mc.GetCurrentMinerNonce(b.MinerID, blockState)
 		if err != nil {
 			logging.Logger.Error("generate block - could not get miner nonce",
 				zap.Error(err),

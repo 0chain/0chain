@@ -26,17 +26,17 @@ type State struct {
 	*/
 
 	// Latest transaction run by the client wallet.
-	TxnHash      string        `json:"txn" msgpack:"-"`
-	TxnHashBytes []byte        `json:"-" msgpack:"t"`
+	TxnHash      string `json:"txn" msgpack:"-"`
+	TxnHashBytes []byte `json:"-" msgpack:"t"`
 
 	// Latest round when the latest txn happened.
-	Round        int64         `json:"round" msgpack:"r"`
+	Round int64 `json:"round" msgpack:"r"`
 
 	// Amount of coins in the client wallet, in SAS (1 ZCN = 10^10 SAS).
-	Balance      currency.Coin `json:"balance" msgpack:"b"`
+	Balance currency.Coin `json:"balance" msgpack:"b"`
 
 	// Latest nonce used by the client wallet.
-	Nonce        int64         `json:"nonce" msgpack:"n"`
+	Nonce int64 `json:"nonce" msgpack:"n"`
 }
 
 /*GetHash - implement SecureSerializableValueI interface */
@@ -136,4 +136,9 @@ func (s *State) SetTxnHash(txnHash string) error {
 	s.TxnHash = txnHash
 	s.TxnHashBytes = hashBytes
 	return nil
+}
+
+type NamespaceNonce struct {
+	Namespace int8  `json:"namespace" msgpack:"ns"`
+	Nonce     int64 `json:"nonce" msgpack:"n"`
 }
