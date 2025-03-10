@@ -1484,6 +1484,9 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 			return nil, err
 		}
 
+		str := fmt.Sprintf("Balance: %d", s.Balance)
+		str1 := fmt.Sprintf(" Trans Fee: %d", txn.Fee)
+
 		if nonce+1 == txn.Nonce && s.Balance < txn.Fee {
 			logging.Logger.Error("insufficient balance",
 				zap.String("txn", txn.Hash),
@@ -1493,7 +1496,7 @@ func PutTransaction(ctx context.Context, entity datastore.Entity) (interface{}, 
 				zap.Any("fee", txn.Fee),
 				zap.Int64("lfb round", lfb.Round),
 				zap.String("lfb", lfb.Hash))
-			return nil, errors.New("insufficient balance to pay fee")
+			return nil, errors.New("insufficient balance to pay fee " + str + str1)
 		}
 	}
 
