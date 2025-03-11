@@ -189,14 +189,16 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
 	var minerUrls []string
-	for _, v := range dmn.Nodes {
-		var nodeSend = node.GetNode(v.Key)
-		if nodeSend == nil {
-			logging.Logger.Warn("failed to get node", zap.String("id", v.Key))
-			continue
-		}
-		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
-	}
+	// DEBUG: only send VC transaction to self node
+	minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
+	// for _, v := range dmn.Nodes {
+	// 	var nodeSend = node.GetNode(v.Key)
+	// 	if nodeSend == nil {
+	// 		logging.Logger.Warn("failed to get node", zap.String("id", v.Key))
+	// 		continue
+	// 	}
+	// 	minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
+	// }
 
 	err = mc.SendSmartContractTxn(tx, data, minerUrls, mb.Sharders.N2NURLs())
 	return
@@ -258,7 +260,9 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	data.InputArgs = mpk
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
-	err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
+	minersUrls := []string{selfNode.GetN2NURLBase()}
+	err = mc.SendSmartContractTxn(tx, data, minersUrls, mb.Sharders.N2NURLs())
+	// err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	logging.Logger.Info("[vc] contribute mpk", zap.Any("tx", tx), zap.Any("err", err))
 	return
 }
