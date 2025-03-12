@@ -195,7 +195,7 @@ func CollectInvalidFutureTxns(ctx context.Context, creationDate common.Timestamp
 				return true, nil
 			}
 
-			if (txn.CreationDate >= creationDate || (nonce > 0 && txn.Nonce >= nonce)) && txn.ClientID == clientID {
+			if (txn.CreationDate >= creationDate || (nonce > 0 && txn.Nonce > nonce+1)) && txn.ClientID == clientID {
 				futureTxns = append(futureTxns, txn)
 				txnHashes = append(txnHashes, txn.Hash)
 			}
