@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/url"
 
 	"0chain.net/chaincore/block"
@@ -190,18 +191,49 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
 	var minerUrls []string
 	// DEBUG: only send VC transaction to self node
-	minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
-	// for _, v := range dmn.Nodes {
-	// 	var nodeSend = node.GetNode(v.Key)
-	// 	if nodeSend == nil {
-	// 		logging.Logger.Warn("failed to get node", zap.String("id", v.Key))
-	// 		continue
-	// 	}
-	// 	minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
-	// }
+	for _, v := range dmn.Nodes {
+		var nodeSend = node.GetNode(v.Key)
+		if nodeSend == nil {
+			logging.Logger.Warn("failed to get node", zap.String("id", v.Key))
+			continue
+		}
+		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
+	}
 
+	minerUrls = getRandomMinerURLs(minerUrls, 10)
+	minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
 	err = mc.SendSmartContractTxn(tx, data, minerUrls, mb.Sharders.N2NURLs())
 	return
+}
+
+// getRandomMinerURLs returns a random subset of miner URLs.
+// It selects percent of the total miners, with a maximum cap of 10 miners.
+// If the calculated number is less than 1, at least 1 miner URL is returned.
+func getRandomMinerURLs(minerUrls []string, percent int) []string {
+	numMiners := len(minerUrls)
+	if numMiners == 0 {
+		return []string{}
+	}
+
+	// Calculate the number to send - 10% of total with a maximum of 10
+	numToSend := numMiners * percent / 100
+	if numToSend > 10 {
+		numToSend = 10
+	}
+	if numToSend < 1 {
+		numToSend = 1 // Ensure at least one miner is selected
+	}
+
+	// Create a copy of the original slice to avoid modifying it
+	urlsCopy := make([]string, numMiners)
+	copy(urlsCopy, minerUrls)
+
+	rand.Shuffle(numMiners, func(i, j int) {
+		urlsCopy[i], urlsCopy[j] = urlsCopy[j], urlsCopy[i]
+	})
+
+	// Return the first numToSend elements
+	return urlsCopy[:numToSend]
 }
 
 //
@@ -260,7 +292,9 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 	data.InputArgs = mpk
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
-	minersUrls := []string{selfNode.GetN2NURLBase()}
+
+	minersUrls := getRandomMinerURLs(mb.Miners.N2NURLs(), 10)
+	minersUrls = append(minersUrls, selfNode.GetN2NURLBase())
 	err = mc.SendSmartContractTxn(tx, data, minersUrls, mb.Sharders.N2NURLs())
 	// err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	logging.Logger.Info("[vc] contribute mpk", zap.Any("tx", tx), zap.Any("err", err))
