@@ -240,10 +240,19 @@ func GetTransactionStatus(txnHash string, sharders []string, sf int) (*Transacti
 				response.Body.Close()
 				continue
 			}
+
+			if *objmap["error"] != nil {
+				e := "No transaction information. Only block summary."
+				logging.Logger.Error(e)
+				errString = errString + urlString + ":" + e
+				continue
+			}
+
 			if *objmap["txn"] == nil {
 				e := "No transaction information. Only block summary."
 				logging.Logger.Error(e)
 				errString = errString + urlString + ":" + e
+				continue
 			}
 			txn := &Transaction{}
 			err = json.Unmarshal(*objmap["txn"], &txn)
