@@ -330,21 +330,22 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 		txn.Fee = int64(fee)
 	}
 
-	nextNonce := node.Self.GetNextNonce()
-	if nextNonce == 0 {
-		// try get nonce from LFB
-		lfb := c.GetLatestFinalizedBlock()
-		if lfb != nil {
-			var err error
-			nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
-			if err != nil && state.ErrInvalidState(err) {
-				return err
-			}
+	// nextNonce := node.Self.GetNextNonce()
+	// if nextNonce == 0 {
+	// try get nonce from LFB
+	var nextNonce int64
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb != nil {
+		var err error
+		nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
+		if err != nil && state.ErrInvalidState(err) {
+			return err
 		}
-
-		logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
 	}
-	logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
+
+	// logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
+	// }
+	// logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
 	txn.Nonce = nextNonce
 
 	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
