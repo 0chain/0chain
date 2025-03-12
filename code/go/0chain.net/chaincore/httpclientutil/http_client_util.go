@@ -244,14 +244,6 @@ func GetTransactionStatus(txnHash string, sharders []string, sf int) (*Transacti
 				continue
 			}
 
-			if *objmap["error"] != nil {
-				e := fmt.Errorf("%v", *objmap["error"])
-				logging.Logger.Error("Error getting transaction", zap.Error(e))
-				errString = errString + urlString + ":" + e.Error()
-				numErrs++
-				continue
-			}
-
 			if *objmap["txn"] == nil {
 				e := "No transaction information. Only block summary."
 				logging.Logger.Error(e)
