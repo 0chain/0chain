@@ -331,19 +331,19 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	}
 
 	nextNonce := node.Self.GetNextNonce()
-	if nextNonce == 0 {
-		// try get nonce from LFB
-		lfb := c.GetLatestFinalizedBlock()
-		if lfb != nil {
-			var err error
-			nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
-			if err != nil && state.ErrInvalidState(err) {
-				return err
-			}
-		}
+	// if nextNonce == 0 {
+	// try get nonce from LFB
+	// lfb := c.GetLatestFinalizedBlock()
+	// if lfb != nil {
+	// 	var err error
+	// 	nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
+	// 	if err != nil && state.ErrInvalidState(err) {
+	// 		return err
+	// 	}
+	// }
 
-		logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
-	}
+	// logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
+	// }
 	logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
 	txn.Nonce = nextNonce
 
