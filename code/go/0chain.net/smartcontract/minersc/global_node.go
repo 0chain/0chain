@@ -362,6 +362,7 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (pmb *block.
 	}
 
 	// get current mpt magic block
+	var isLocalMB bool
 	mb, err := getMagicBlock(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -376,17 +377,21 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (pmb *block.
 			logging.Logger.Panic("should not get none genesis magic block from local")
 			return nil, nil
 		}
+		isLocalMB = true
 	}
 
-	// set mb to local store to avoid future reading from state
-	logging.Logger.Debug("set magic block to local store",
-		zap.Int64("starting round", mb.StartingRound),
-		zap.Int64("magic block number", mb.MagicBlockNumber),
-		zap.String("hash", mb.Hash),
-	)
+	if !isLocalMB {
+		// set mb to local store to avoid future reading from state
+		logging.Logger.Debug("set magic block to local store",
+			zap.Int64("starting round", mb.StartingRound),
+			zap.Int64("magic block number", mb.MagicBlockNumber),
+			zap.String("hash", mb.Hash),
+		)
 
-	// store the mb to local store
-	balances.SetMagicBlock(mb)
+		// store the mb to local store
+		balances.SetMagicBlock(mb)
+	}
+
 	return mb, nil
 }
 
