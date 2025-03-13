@@ -466,7 +466,11 @@ func runEventDatabaseBenchmark(
 		nil,
 		nil,
 		nil,
-		nil, nil, cloneEdb,
+		nil,
+		nil,
+		nil,
+		nil,
+		cloneEdb,
 	)
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0

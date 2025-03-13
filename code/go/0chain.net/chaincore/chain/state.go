@@ -399,6 +399,8 @@ func (c *Chain) NewStateContext(
 ) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, txn,
 		c.GetMagicBlock,
+		c.GetMagicBlockNoOffset,
+		c.SetMagicBlock,
 		func() *block.Block {
 			return c.GetLatestFinalizedMagicBlock(context.Background())
 		},

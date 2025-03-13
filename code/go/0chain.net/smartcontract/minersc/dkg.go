@@ -1237,7 +1237,15 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 	// keep the magic block to track previous nodes list next view change
 	// (deny VC leaving for at least 1 miner and 1 sharder of previous set)
 	gn.MustUpdateBase(func(gnb *globalNodeBase) error {
-		gnb.PrevMagicBlock = magicBlock
+		// we only save the basic info of the magic block in the global node
+		// the full magic block is saved in the MPT
+		// this is to avoid the global node to be too large
+		gnb.PrevMagicBlock = &block.MagicBlock{
+			MagicBlockNumber:       magicBlock.MagicBlockNumber,
+			StartingRound:          magicBlock.StartingRound,
+			PreviousMagicBlockHash: magicBlock.PreviousMagicBlockHash,
+		}
+		gnb.PrevMagicBlock.Hash = magicBlock.Hash
 		return nil
 	})
 
@@ -1248,7 +1256,7 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 		zap.String("sharders pool type", magicBlock.Sharders.Type.String()),
 		zap.Int("miners num", magicBlock.Miners.Size()),
 		zap.Int("sharders num", magicBlock.Sharders.Size()))
-	balances.SetMagicBlock(magicBlock)
+	balances.SetBlockMagicBlock(magicBlock)
 	return nil
 }
 

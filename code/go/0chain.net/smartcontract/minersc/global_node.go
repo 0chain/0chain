@@ -341,12 +341,27 @@ func (gn *GlobalNode) Get(key Setting) (interface{}, error) {
 // the balances if missing (genesis case);
 func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (pmb *block.MagicBlock, err error) {
 	gnb := gn.MustBase()
-
 	if gnb.PrevMagicBlock != nil {
-		return gnb.PrevMagicBlock, nil
+		// load the magic block from local store
+		pmb = balances.GetMagicBlockNoOffset(gnb.PrevMagicBlock.StartingRound)
+		if pmb != nil {
+			if pmb.Hash == gnb.PrevMagicBlock.Hash {
+				return pmb, nil
+			}
+
+			logging.Logger.Error("prev magic block not found, try to get from state",
+				zap.Int64("gn_mb_starting_round", gnb.PrevMagicBlock.StartingRound),
+				zap.Int64("gn_mb_magic_block_number", gnb.PrevMagicBlock.MagicBlockNumber),
+				zap.String("gn_mb_hash", gnb.PrevMagicBlock.Hash),
+				zap.Int64("pmb_starting_round", pmb.StartingRound),
+				zap.Int64("pmb_magic_block_number", pmb.MagicBlockNumber),
+				zap.String("pmb_hash", pmb.Hash),
+				zap.String("prev_hash", gnb.PrevMagicBlock.Hash),
+			)
+		}
 	}
 
-	// get current magic block
+	// get current mpt magic block
 	mb, err := getMagicBlock(balances)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
@@ -358,11 +373,20 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (pmb *block.
 		// use genesis magic block
 		mb = balances.GetChainCurrentMagicBlock().Clone()
 		if mb.MagicBlockNumber > 1 {
-			logging.Logger.Panic("should not none genesis magic block from local")
+			logging.Logger.Panic("should not get none genesis magic block from local")
 			return nil, nil
 		}
 	}
 
+	// set mb to local store to avoid future reading from state
+	logging.Logger.Debug("set magic block to local store",
+		zap.Int64("starting round", mb.StartingRound),
+		zap.Int64("magic block number", mb.MagicBlockNumber),
+		zap.String("hash", mb.Hash),
+	)
+
+	// store the mb to local store
+	balances.SetMagicBlock(mb)
 	return mb, nil
 }
 

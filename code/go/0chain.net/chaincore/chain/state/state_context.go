@@ -104,8 +104,10 @@ type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
 	GetMagicBlock(round int64) *block.MagicBlock
+	GetMagicBlockNoOffset(round int64) *block.MagicBlock
 	LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error)
 	SetMagicBlock(block *block.MagicBlock) // cannot use in smart contracts or REST endpoints
+	SetBlockMagicBlock(block *block.MagicBlock)
 	SetDKG(dkg *bls.DKG) error
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
@@ -144,13 +146,14 @@ type StateContext struct {
 	getLastestFinalizedMagicBlock func() *block.Block
 	getLatestFinalizedBlock       func() *block.Block
 	getMagicBlock                 func(round int64) *block.MagicBlock
+	getMagicBlockNoOffset         func(round int64) *block.MagicBlock
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getDKGSummary                 func(magicBlockNum int64) (*bls.DKGSummary, error)
 	setDKG                        func(dkg *bls.DKG) error
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
-	setMagicBlock                 func(mb *block.MagicBlock) error
+	setMagicBlock                 func(mb *block.MagicBlock)
 }
 
 type GetNow func() common.Timestamp
@@ -177,6 +180,8 @@ func NewStateContext(
 	s util.MerklePatriciaTrieI,
 	t *transaction.Transaction,
 	getMagicBlock func(int64) *block.MagicBlock,
+	getMagicBlockNoOffset func(int64) *block.MagicBlock,
+	setMagicBlock func(mb *block.MagicBlock),
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
@@ -193,12 +198,14 @@ func NewStateContext(
 		state:                         s,
 		txn:                           t,
 		getMagicBlock:                 getMagicBlock,
+		getMagicBlockNoOffset:         getMagicBlockNoOffset,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getLatestFinalizedBlock:       getLatestFinalizedBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 		getDKGSummary:                 getDKGSummary,
 		setDKG:                        setDKG,
+		setMagicBlock:                 setMagicBlock,
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
@@ -210,8 +217,16 @@ func (sc *StateContext) GetBlock() *block.Block {
 	return sc.block
 }
 
-func (sc *StateContext) SetMagicBlock(block *block.MagicBlock) {
+func (sc *StateContext) SetBlockMagicBlock(block *block.MagicBlock) {
 	sc.block.MagicBlock = block
+}
+
+func (sc *StateContext) SetMagicBlock(block *block.MagicBlock) {
+	sc.setMagicBlock(block)
+}
+
+func (sc *StateContext) GetMagicBlockNoOffset(round int64) *block.MagicBlock {
+	return sc.getMagicBlockNoOffset(round)
 }
 
 // GetState - get the state MPT associated with this state context

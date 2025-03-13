@@ -113,6 +113,10 @@ func getBalances(
 		mpt,
 		txn,
 		func(int64) *block.MagicBlock { return magicBlock },
+		func(int64) *block.MagicBlock { return magicBlock },
+		func(mb *block.MagicBlock) {
+			magicBlock = mb
+		},
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
@@ -240,6 +244,10 @@ func setUpMpt(
 			CreationDate: benchmarkTime,
 		},
 		func(int64) *block.MagicBlock { return magicBlock },
+		func(int64) *block.MagicBlock { return magicBlock },
+		func(mb *block.MagicBlock) {
+			magicBlock = mb
+		},
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },
