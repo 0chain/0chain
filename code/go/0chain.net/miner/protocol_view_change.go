@@ -833,6 +833,7 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewErrorf("sign_share",
 			"signing DKG share message: %v", err)
 	}
+	// message.Share = secShare
 
 	logging.Logger.Debug("[mvc] sign share request success",
 		zap.String("share", secShare),

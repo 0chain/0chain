@@ -456,9 +456,14 @@ func (dkg *DKG) GetDKGSummary() *DKGSummary {
 	}
 	dkg.secretSharesMutex.RLock()
 	defer dkg.secretSharesMutex.RUnlock()
+	ids := make([]string, 0, len(dkg.receivedSecretShares))
 	for k, v := range dkg.receivedSecretShares {
 		dkgSummary.SecretShares[k.GetHexString()] = v.GetHexString()
+		ids = append(ids, k.GetHexString())
 	}
 	dkgSummary.ID = strconv.FormatInt(dkg.MagicBlockNumber, 10)
+	logging.Logger.Debug("[dkg] get dkg summary",
+		zap.Int("dkg received ss", len(dkg.receivedSecretShares)),
+		zap.Strings("ids", ids))
 	return dkgSummary
 }
