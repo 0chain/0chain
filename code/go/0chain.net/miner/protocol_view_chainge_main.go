@@ -200,8 +200,8 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		minerUrls = append(minerUrls, nodeSend.GetN2NURLBase())
 	}
 
-	minerUrls = getRandomMinerURLs(minerUrls, 10)
-	minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
+	// minerUrls = getRandomMinerURLs(minerUrls, 10)
+	// minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
 	err = mc.SendSmartContractTxn(tx, data, minerUrls, mb.Sharders.N2NURLs())
 	return
 }
@@ -293,9 +293,9 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
 
-	minersUrls := getRandomMinerURLs(mb.Miners.N2NURLs(), 10)
-	minersUrls = append(minersUrls, selfNode.GetN2NURLBase())
-	err = mc.SendSmartContractTxn(tx, data, minersUrls, mb.Sharders.N2NURLs())
+	// minersUrls := getRandomMinerURLs(mb.Miners.N2NURLs(), 10)
+	// minersUrls = append(minersUrls, selfNode.GetN2NURLBase())
+	err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	// err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
 	logging.Logger.Info("[vc] contribute mpk", zap.Any("tx", tx), zap.Any("err", err))
 	return

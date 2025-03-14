@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand/v2"
 	"reflect"
 	"sort"
 	"sync"
@@ -288,7 +289,7 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to",
-		zap.Strings("urls", minerUrls),
+		zap.Int("urls", len(minerUrls)),
 		zap.String("id", mn.ID))
 	err := c.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
@@ -341,6 +342,11 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	// }
 	// logging.Logger.Debug("[mvc] acquire txn lock")
 	// incTxnSendCount(1)
+	minerUrls = getRandomMinerURLs(minerUrls, 10)
+	selfNode := node.Self.Underlying()
+	if selfNode != nil && selfNode.Type == node.NodeTypeMiner {
+		minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
+	}
 
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	if txn.Fee == 0 {
@@ -358,7 +364,7 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 		txn.Fee = int64(fee)
 	}
 
-	nextNonce := node.Self.GetNextNonce()
+	// nextNonce := node.Self.GetNextNonce()
 	// if nextNonce == 0 {
 	// try get nonce from LFB
 	// lfb := c.GetLatestFinalizedBlock()
@@ -372,10 +378,37 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 
 	// logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
 	// }
-	logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
-	txn.Nonce = nextNonce
+	// logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
+	// txn.Nonce = nextNonce
 
 	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
+}
+
+func getRandomMinerURLs(minerUrls []string, percent int) []string {
+	numMiners := len(minerUrls)
+	if numMiners == 0 {
+		return []string{}
+	}
+
+	// Calculate the number to send - 10% of total with a maximum of 10
+	numToSend := numMiners * percent / 100
+	if numToSend > 10 {
+		numToSend = 10
+	}
+	if numToSend < 1 {
+		numToSend = 1 // Ensure at least one miner is selected
+	}
+
+	// Create a copy of the original slice to avoid modifying it
+	urlsCopy := make([]string, numMiners)
+	copy(urlsCopy, minerUrls)
+
+	rand.Shuffle(numMiners, func(i, j int) {
+		urlsCopy[i], urlsCopy[j] = urlsCopy[j], urlsCopy[i]
+	})
+
+	// Return the first numToSend elements
+	return urlsCopy[:numToSend]
 }
 
 func (c *Chain) GetCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
