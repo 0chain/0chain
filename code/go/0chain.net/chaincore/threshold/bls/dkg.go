@@ -356,6 +356,9 @@ func (dkg *DKG) DeleteFromSet(nodes []string) {
 	for _, id := range nodes {
 		delete(dkg.receivedSecretShares, ComputeIDdkg(id))
 	}
+	logging.Logger.Debug("[mvc] dkg_ss, delete from dkg set",
+		zap.Int("deleted", len(nodes)),
+		zap.Int("dkg received ss", len(dkg.receivedSecretShares)))
 }
 
 // ValidateShare - validate Sij using Pj coefficients
@@ -462,8 +465,6 @@ func (dkg *DKG) GetDKGSummary() *DKGSummary {
 		ids = append(ids, k.GetHexString())
 	}
 	dkgSummary.ID = strconv.FormatInt(dkg.MagicBlockNumber, 10)
-	logging.Logger.Debug("[dkg] get dkg summary",
-		zap.Int("dkg received ss", len(dkg.receivedSecretShares)),
-		zap.Strings("ids", ids))
+	logging.Logger.Debug("[dkg] dkg_ss, get dkg summary", zap.Int("size", len(dkg.receivedSecretShares)))
 	return dkgSummary
 }

@@ -407,6 +407,7 @@ func (mc *Chain) Wait(ctx context.Context,
 		selfNodeKey = node.Self.Underlying().GetKey()
 	)
 
+	logging.Logger.Debug("[mvc] dkg wait, dkg_ss size", zap.Int("size", vcdkg.GetSecretSharesSize()))
 	for key, share := range magicBlock.GetShareOrSigns().GetShares() {
 		if key == selfNodeKey {
 			continue // skip self
