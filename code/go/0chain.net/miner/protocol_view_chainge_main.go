@@ -445,12 +445,16 @@ func (mc *Chain) Wait(ctx context.Context,
 	vcdkg.DeleteFromSet(miners)
 	mpkMap, err := magicBlock.Mpks.GetMpkMap()
 	if err != nil {
+		logging.Logger.Error("[mvc] dkg_ss, dkg wait, failed to get mpk map", zap.Error(err))
 		return nil, err
 	}
+	logging.Logger.Debug("[mvc] dkg_ss, aggregate pub key shares")
 	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
+		logging.Logger.Error("[mvc] dkg_ss, dkg wait, failed to aggregate pub key shares", zap.Error(err))
 		return nil, err
 	}
 
+	logging.Logger.Debug("[mvc] dkg_ss, aggregate secret key shares")
 	vcdkg.AggregateSecretKeyShares()
 	vcdkg.StartingRound = magicBlock.StartingRound
 	vcdkg.MagicBlockNumber = magicBlock.MagicBlockNumber
@@ -459,7 +463,9 @@ func (mc *Chain) Wait(ctx context.Context,
 	vcdkg.N = magicBlock.N
 
 	// save DKG and MB
+	logging.Logger.Debug("[mvc] dkg_ss, get dkg summary")
 	dkgSum := vcdkg.GetDKGSummary()
+	logging.Logger.Debug("[mvc] dkg_ss, store dkg summary")
 	if err = StoreDKGSummary(ctx, dkgSum); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
 	}
@@ -470,6 +476,7 @@ func (mc *Chain) Wait(ctx context.Context,
 		zap.String("mb_hash", magicBlock.Hash),
 	)
 
+	logging.Logger.Debug("[mvc] dkg_ss, store dkg summary")
 	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
 		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
 	}

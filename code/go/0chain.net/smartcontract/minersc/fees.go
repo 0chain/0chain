@@ -266,6 +266,10 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 				return nil
 			}
 
+			logging.Logger.Debug("[mvc] dkg_ss, adjust view change, waited all",
+				zap.Int("waited", len(dmn.Waited)),
+				zap.Int("nodes", len(mb.Miners.Nodes)))
+
 			// set magic block when all good
 			if err := msc.SetMagicBlock(gn, balances); err != nil {
 				return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v",
