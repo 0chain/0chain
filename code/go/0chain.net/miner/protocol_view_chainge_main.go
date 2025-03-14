@@ -443,19 +443,19 @@ func (mc *Chain) Wait(ctx context.Context,
 		}
 	}
 	vcdkg.DeleteFromSet(miners)
-	mpkMap, err := magicBlock.Mpks.GetMpkMap()
-	if err != nil {
-		logging.Logger.Error("[mvc] dkg_ss, dkg wait, failed to get mpk map", zap.Error(err))
-		return nil, err
-	}
-	logging.Logger.Debug("[mvc] dkg_ss, aggregate pub key shares")
-	if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
-		logging.Logger.Error("[mvc] dkg_ss, dkg wait, failed to aggregate pub key shares", zap.Error(err))
-		return nil, err
-	}
+	// mpkMap, err := magicBlock.Mpks.GetMpkMap()
+	// if err != nil {
+	// 	logging.Logger.Error("[mvc] dkg_ss, dkg wait, failed to get mpk map", zap.Error(err))
+	// 	return nil, err
+	// }
+	// logging.Logger.Debug("[mvc] dkg_ss, aggregate pub key shares")
+	// if err := vcdkg.AggregatePublicKeyShares(mpkMap); err != nil {
+	// 	logging.Logger.Error("[mvc] dkg_ss, dkg wait, failed to aggregate pub key shares", zap.Error(err))
+	// 	return nil, err
+	// }
 
-	logging.Logger.Debug("[mvc] dkg_ss, aggregate secret key shares")
-	vcdkg.AggregateSecretKeyShares()
+	// logging.Logger.Debug("[mvc] dkg_ss, aggregate secret key shares")
+	// vcdkg.AggregateSecretKeyShares()
 	vcdkg.StartingRound = magicBlock.StartingRound
 	vcdkg.MagicBlockNumber = magicBlock.MagicBlockNumber
 	// set T and N from the magic block
