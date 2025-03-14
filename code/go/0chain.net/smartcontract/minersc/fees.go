@@ -256,7 +256,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 					return nil
 				})
 
-				logging.Logger.Warn("[mvc] adjust_view_change no new magic block, restart DKG", zap.Error(err))
+				logging.Logger.Warn("[mvc] dkg_ss adjust_view_change no new magic block, restart DKG", zap.Error(err))
 				if err := msc.RestartDKG(pn, balances); err != nil {
 					logging.Logger.Error("adjust_view_change restart DKG failed", zap.Error(err))
 					return err
