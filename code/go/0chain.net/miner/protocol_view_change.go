@@ -776,11 +776,15 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 
 	mpks := mc.viewChangeProcess.mpks.GetMpks()
 	if len(mpks) == 0 {
-		mpkss, err := mc.getMinersMpks(mc.GetLatestFinalizedBlock())
-		if err != nil {
-			return nil, err
-		}
-		mpks = mpkss.GetMpks()
+		logging.Logger.Error("[mvc] sign share failed, local mpks are not set",
+			zap.Int64("round", mc.GetCurrentRound()),
+			zap.Int64("lfb", mc.GetLatestFinalizedBlock().Round))
+		return nil, common.NewError("sign_share", "local mpks are not set")
+		// mpkss, err := mc.getMinersMpks(mc.GetLatestFinalizedBlock())
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// mpks = mpkss.GetMpks()
 	}
 
 	lmpks, dkgt := len(mpks), mc.viewChangeProcess.viewChangeDKG.T
@@ -809,7 +813,10 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 
 	if !mc.viewChangeProcess.viewChangeDKG.ValidateShare(mpk, share) {
 		logging.Logger.Error("[mvc] failed to verify dkg share",
-			zap.String("share", secShare), zap.String("node_id", nodeID))
+			zap.String("share", secShare),
+			zap.Int("mpk len", len(mpks[nodeID].Mpk)),
+			zap.Strings("mpk", mpks[nodeID].Mpk),
+			zap.String("node_id", nodeID))
 		return nil, common.NewError("sign_share", "failed to verify DKG share")
 	}
 
