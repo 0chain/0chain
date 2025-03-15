@@ -196,7 +196,7 @@ func (sos *ShareOrSigns) Clone() *ShareOrSigns {
 	return clone
 }
 
-func (sos *ShareOrSigns) ValidateV2(publicKeys map[string]string) ([]string, bool) {
+func (sos *ShareOrSigns) ValidateV2(mpks *Mpks, publicKeys map[string]string) ([]string, bool) {
 	if len(sos.ShareOrSigns) == 0 {
 		return nil, true
 	}
@@ -266,6 +266,30 @@ func (sos *ShareOrSigns) ValidateV2(publicKeys map[string]string) ([]string, boo
 						continue
 					}
 					result.valid = true
+				} else if share.Share != "" {
+					var sij bls.Key
+					if err := sij.SetHexString(share.Share); err != nil {
+						results <- result
+						continue
+					}
+
+					// Slightly inefficient to convert MPK for each worker, but safer than concurrent access
+					pks, err := bls.ConvertStringToMpk(mpks.Mpks[sos.ID].Mpk)
+					if err != nil {
+						logging.Logger.Error("failed to convert mpks", zap.Error(err))
+						results <- result
+						continue
+					}
+
+					if !bls.ValidateShare(pks, sij, bls.ComputeIDdkg(key)) {
+						logging.Logger.Error("failed to validate share or signs",
+							zap.Any("share", share),
+							zap.String("sij.pi", sij.GetPublicKey().GetHexString()))
+						results <- result
+						continue
+					}
+					result.valid = true
+					result.isShare = true
 				}
 				results <- result
 			}

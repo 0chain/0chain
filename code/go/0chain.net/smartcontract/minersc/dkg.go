@@ -1019,7 +1019,19 @@ func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
 		publicKeys[miner.Key] = miner.PublicKey
 	}
 
-	_, ok := sos.ValidateV2(publicKeys)
+	mpks, err := GetMinersMPKs(balances)
+	if err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get miners MPKs", zap.Error(err))
+		return "", common.NewError("share_signs_or_shares", "failed to get miners MPKs")
+	}
+
+	bmpks, err := mpks.GetAllMpks(balances)
+	if err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get all miners MPKs", zap.Error(err))
+		return "", common.NewError("share_signs_or_shares", "failed to get all miners MPKs")
+	}
+
+	_, ok := sos.ValidateV2(bmpks, publicKeys)
 	if !ok {
 		logging.Logger.Error("[mvc] shareSignsOrShares, validation failed")
 		return "", common.NewError("share_signs_or_shares", "share or signs failed validation")
