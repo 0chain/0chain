@@ -607,7 +607,10 @@ func getMagicBlock(state cstate.CommonStateContextI) (*block.MagicBlock, error) 
 	if err != nil {
 		return nil, err
 	}
-	logging.Logger.Debug("get magic block", zap.Any("magic block", magicBlock))
+	logging.Logger.Debug("get magic block",
+		zap.Int64("magic block", magicBlock.MagicBlockNumber),
+		zap.Int64("starting round", magicBlock.StartingRound),
+		zap.String("hash", magicBlock.Hash))
 
 	return magicBlock, nil
 }
