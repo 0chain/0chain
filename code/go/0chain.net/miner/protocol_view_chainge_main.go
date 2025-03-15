@@ -81,7 +81,8 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 		}
 
 		// share.ID = nodeID.GetHexString()
-		// share.Share = secShare.GetHexString()
+		// DEBUG: change back
+		share.Share = secShare.GetHexString()
 		shareOrSignSuccess[n.ID] = share
 
 		return
@@ -415,8 +416,11 @@ func (mc *Chain) Wait(ctx context.Context,
 		if key == selfNodeKey {
 			continue // skip self
 		}
+
 		var myShare, ok = share.ShareOrSigns[selfNodeKey]
 		if ok && myShare.Share != "" {
+			logging.Logger.Debug("[mvc] dkg wait, add share from magic block",
+				zap.String("miner", key), zap.String("share", myShare.Share))
 			var share bls.Key
 			if err := share.SetHexString(myShare.Share); err != nil {
 				return nil, err
