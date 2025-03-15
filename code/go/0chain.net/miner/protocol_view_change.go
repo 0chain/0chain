@@ -267,7 +267,7 @@ func (mc *Chain) getDKGMiners(ctx context.Context, lfb *block.Block, mb *block.M
 	return dmn, nil
 }
 
-func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.MagicBlock) (err error) {
+func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, dmn *minersc.DKGMinerNodesV2) (err error) {
 
 	if !mc.viewChangeProcess.isDKGSet() {
 		return common.NewError("createSijs", "DKG is not set")
@@ -283,11 +283,11 @@ func (mc *Chain) createSijs(ctx context.Context, lfb *block.Block, mb *block.Mag
 		return
 	}
 
-	var dmn *minersc.DKGMinerNodesV2
-	if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
-		logging.Logger.Error("can't share", zap.Error(err))
-		return
-	}
+	// var dmn *minersc.DKGMinerNodesV2
+	// if dmn, err = mc.getDKGMiners(ctx, lfb, mb); err != nil {
+	// 	logging.Logger.Error("can't share", zap.Error(err))
+	// 	return
+	// }
 
 	ids := make([]string, 0, len(dmn.Nodes))
 	for _, v := range dmn.Nodes {
@@ -401,7 +401,7 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block, mb *bloc
 		return // (nil, nil)
 	}
 
-	if err = mc.createSijs(ctx, lfb, mb); err != nil {
+	if err = mc.createSijs(ctx, lfb, dkgMiners); err != nil {
 		logging.Logger.Error("[mvc] failed to create sijs", zap.Error(err))
 		return // error
 	}

@@ -340,7 +340,10 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	totalSentNum := len(sendTo)
 	failNum := len(sendFail)
 	successNum := totalSentNum - failNum
-	if failNum > 0 && totalSentNum > mb.K && successNum < mb.K {
+	// require to get sijs share from all
+	// DEBUG: require to get shares from all dkg miners
+	// if failNum > 0 && totalSentNum > mb.K && successNum < mb.K {
+	if failNum > 0 {
 		logging.Logger.Error("[mvc] failed to send sijs",
 			zap.Int("total sent num", totalSentNum),
 			zap.Int("fail num", failNum),
