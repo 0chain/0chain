@@ -43,7 +43,7 @@ func (c *Chain) VerifyTickets(ctx context.Context,
 				}
 
 				if bmb != nil {
-					logging.Logger.Debug("block magic block:", zap.Any("bmb.Miners", bmb.Miners))
+					// logging.Logger.Debug("block magic block:", zap.Any("bmb.Miners", bmb.Miners))
 				}
 				// else {
 				// logging.Logger.Debug("block has no magic block", zap.String("block", blockHash), zap.Int64("round", round))
