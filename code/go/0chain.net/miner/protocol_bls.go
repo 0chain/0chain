@@ -119,15 +119,16 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 
 	for k := range mb.Miners.CopyNodesMap() {
 		logging.Logger.Debug("[mvc] set dkg key", zap.String("key", ComputeBlsID(k)))
-		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
-			logging.Logger.Debug("[mvc] add secret share from dkg summary",
-				zap.String("key", k), zap.String("share", savedShare))
-			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, true); err != nil {
-				logging.Logger.Error("[mvc] failed to add secret share",
-					zap.Error(err), zap.String("share", savedShare))
-				return err
-			}
-		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
+		// if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
+		// 	logging.Logger.Debug("[mvc] add secret share from dkg summary",
+		// 		zap.String("key", k), zap.String("share", savedShare))
+		// 	if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, true); err != nil {
+		// 		logging.Logger.Error("[mvc] failed to add secret share",
+		// 			zap.Error(err), zap.String("share", savedShare))
+		// 		return err
+		// 	}
+		// } else if v, ok := mb.GetShareOrSigns().Get(k); ok {
+		if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			logging.Logger.Debug("[mvc] get key from mb", zap.String("key", ComputeBlsID(k)))
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
 				logging.Logger.Debug("[mvc] add secret share from mb",
@@ -155,6 +156,15 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 
 	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
 		return err
+	}
+
+	// DEBUG: verify local signature, if success, but remote failed,
+	// means the gmpk is not set correctly in remote node
+	ss := newDKG.Sign("msgtest")
+	localPartyID := bls.ComputeIDdkg(node.Self.Underlying().GetKey())
+	logging.Logger.Debug("dkg local sign", zap.String("local party id", localPartyID.GetHexString()))
+	if !newDKG.VerifySignature(ss, "msgtest", localPartyID) {
+		Logger.Error("failed to verify local signature")
 	}
 
 	if err = mc.SetDKG(newDKG); err != nil {
@@ -254,7 +264,8 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 		zap.Int("rtc", r.GetTimeoutCount()),
 		zap.String("dkg_pi", dkg.Si.GetPublicKey().GetHexString()),
 		zap.Int64("dkg_sr", dkg.StartingRound),
-		zap.Int64("mb_sr", mb.StartingRound))
+		zap.Int64("mb_sr", mb.StartingRound),
+		zap.String("share", sigShare.GetHexString()))
 
 	return sigShare.GetHexString(), nil
 }

@@ -269,7 +269,9 @@ func (dkg *DKG) GetSecretShare(key string) (Key, bool) {
 
 // Sign - sign using the group secret key share
 func (dkg *DKG) Sign(msg string) *Sign {
-	logging.Logger.Debug("dkg sign", zap.String("key", dkg.Si.GetHexString()))
+	logging.Logger.Debug("dkg sign",
+		zap.String("key", dkg.Si.GetHexString()),
+		zap.String("pi", dkg.Pi.GetHexString()))
 	return dkg.Si.Sign(msg)
 }
 
@@ -278,6 +280,11 @@ func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 	dkg.gmpkMutex.RLock()
 	defer dkg.gmpkMutex.RUnlock()
 	key := dkg.gmpk[id]
+	logging.Logger.Debug("dkg verify",
+		zap.String("id", id.GetHexString()),
+		zap.String("key", key.GetHexString()),
+		zap.String("msg", msg),
+		zap.String("sig", sig.GetHexString()))
 	return sig.Verify(&key, msg)
 }
 
