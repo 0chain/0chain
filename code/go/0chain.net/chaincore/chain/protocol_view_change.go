@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/rand/v2"
+	"math/rand"
 	"reflect"
 	"sort"
 	"sync"
