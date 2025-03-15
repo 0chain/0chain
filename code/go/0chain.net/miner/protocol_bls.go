@@ -117,26 +117,31 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		zap.Int64("sr", mb.StartingRound),
 	)
 
+	isGenesisMB := mb.StartingRound == 0 && mb.MagicBlockNumber == 1
+
 	for k := range mb.Miners.CopyNodesMap() {
 		logging.Logger.Debug("[mvc] set dkg key", zap.String("key", ComputeBlsID(k)))
-		// if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
-		// 	logging.Logger.Debug("[mvc] add secret share from dkg summary",
-		// 		zap.String("key", k), zap.String("share", savedShare))
-		// 	if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, true); err != nil {
-		// 		logging.Logger.Error("[mvc] failed to add secret share",
-		// 			zap.Error(err), zap.String("share", savedShare))
-		// 		return err
-		// 	}
-		// } else if v, ok := mb.GetShareOrSigns().Get(k); ok {
-		if v, ok := mb.GetShareOrSigns().Get(k); ok {
-			logging.Logger.Debug("[mvc] get key from mb", zap.String("key", ComputeBlsID(k)))
-			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				logging.Logger.Debug("[mvc] add secret share from mb",
-					zap.String("key", k), zap.String("share", share.Share))
-				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, true); err != nil {
-					logging.Logger.Debug("[mvc] failed to add secret share 2",
-						zap.Error(err), zap.String("share", share.Share))
+		if isGenesisMB {
+			if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
+				logging.Logger.Debug("[mvc] add secret share from dkg summary",
+					zap.String("key", k), zap.String("share", savedShare))
+				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, true); err != nil {
+					logging.Logger.Error("[mvc] failed to add secret share",
+						zap.Error(err), zap.String("share", savedShare))
 					return err
+				}
+			}
+		} else {
+			if v, ok := mb.GetShareOrSigns().Get(k); ok {
+				logging.Logger.Debug("[mvc] get key from mb", zap.String("key", ComputeBlsID(k)))
+				if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
+					logging.Logger.Debug("[mvc] add secret share from mb",
+						zap.String("key", k), zap.String("share", share.Share))
+					if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, true); err != nil {
+						logging.Logger.Debug("[mvc] failed to add secret share 2",
+							zap.Error(err), zap.String("share", share.Share))
+						return err
+					}
 				}
 			}
 		}
@@ -153,15 +158,19 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	if err != nil {
 		return err
 	}
-
 	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
 		return err
 	}
 
+	localPartyID := bls.ComputeIDdkg(node.Self.Underlying().GetKey())
+	gPubkey := newDKG.GetPublicKeyByID(localPartyID)
+	logging.Logger.Debug("[mvc] local gPubkey",
+		zap.String("gpk", gPubkey.GetHexString()),
+		zap.String("pi", newDKG.Pi.GetHexString()))
+
 	// DEBUG: verify local signature, if success, but remote failed,
 	// means the gmpk is not set correctly in remote node
 	ss := newDKG.Sign("msgtest")
-	localPartyID := bls.ComputeIDdkg(node.Self.Underlying().GetKey())
 	logging.Logger.Debug("dkg local sign", zap.String("local party id", localPartyID.GetHexString()))
 	if !newDKG.VerifySignature(ss, "msgtest", localPartyID) {
 		Logger.Error("failed to verify local signature")
