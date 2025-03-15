@@ -152,6 +152,12 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		return err
 	}
 
+	ss := newDKG.Sign("msgtest")
+	localPartyID := bls.ComputeIDdkg(node.Self.Underlying().GetKey())
+	if !newDKG.VerifySignature(ss, "msgtest", localPartyID) {
+		Logger.Error("[mvc] failed to verify signature")
+	}
+
 	if err = mc.SetDKG(newDKG); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
 		return // error
