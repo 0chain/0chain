@@ -143,18 +143,18 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		return nil, common.NewError("publish_sos", "not enough share or signs")
 	}
 
-	// for k := range mpks.Mpks {
-	// 	if k == selfNodeKey {
-	// 		continue
-	// 	}
+	for k := range mc.viewChangeProcess.mpks.GetMpks() {
+		if k == selfNodeKey {
+			continue
+		}
 
-	// 	if _, ok := sos.ShareOrSigns[k]; !ok {
-	// 		share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
-	// 		if share != nil {
-	// 			sos.ShareOrSigns[k] = share
-	// 		}
-	// 	}
-	// }
+		if _, ok := sos.ShareOrSigns[k]; !ok {
+			share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
+			if share != nil {
+				sos.ShareOrSigns[k] = share
+			}
+		}
+	}
 
 	// logging.Logger.Debug("[mvc] create sos",
 	// 	zap.Any("sos", sos),
