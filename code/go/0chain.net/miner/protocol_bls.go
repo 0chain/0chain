@@ -120,7 +120,9 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 	for k := range mb.Miners.CopyNodesMap() {
 		logging.Logger.Debug("[mvc] set dkg key", zap.String("key", ComputeBlsID(k)))
 		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
-			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
+			logging.Logger.Debug("[mvc] add secret share from dkg summary",
+				zap.String("key", k), zap.String("share", savedShare))
+			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, true); err != nil {
 				logging.Logger.Error("[mvc] failed to add secret share",
 					zap.Error(err), zap.String("share", savedShare))
 				return err
@@ -128,7 +130,9 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
 			logging.Logger.Debug("[mvc] get key from mb", zap.String("key", ComputeBlsID(k)))
 			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
+				logging.Logger.Debug("[mvc] add secret share from mb",
+					zap.String("key", k), zap.String("share", share.Share))
+				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, true); err != nil {
 					logging.Logger.Debug("[mvc] failed to add secret share 2",
 						zap.Error(err), zap.String("share", share.Share))
 					return err
