@@ -359,8 +359,8 @@ func getToDeleteMinerIDs(balances cstate.StateContextI,
 		toDeleteMinerIDs := make(map[string]struct{}, len(deleteMinersIDs))
 		toDeleteMinersNum := len(deleteMinersIDs)
 		if toDeleteMinersNum > 0 {
-			if lmb.N-toDeleteMinersNum < lmb.T {
-				toDeleteMinersNum = lmb.N - lmb.T
+			if lmb.N-toDeleteMinersNum < lmb.K {
+				toDeleteMinersNum = lmb.N - lmb.K
 			}
 			for _, did := range deleteMinersIDs[:toDeleteMinersNum] {
 				toDeleteMinerIDs[did] = struct{}{}
@@ -534,12 +534,15 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	logging.Logger.Debug("create dkg miners, all miners list",
-		zap.Any("miners", allMinersMap))
+		zap.Int("miners", len(allMinersMap)))
 
 	toDeleteMinerIDs, err := getToDeleteMinerIDs(balances, lmb, gnb)
 	if err != nil {
 		return err
 	}
+
+	logging.Logger.Debug("create dkg miners, to delete miner ids",
+		zap.Any("miners", toDeleteMinerIDs))
 
 	for _, m := range lmb.Miners.CopyNodes() {
 		mid := m.GetKey()
