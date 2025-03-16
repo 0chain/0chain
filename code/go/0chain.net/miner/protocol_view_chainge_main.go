@@ -127,15 +127,16 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		selfNodeKey = selfNode.GetKey()
 	)
 
-	// var mpks *block.Mpks
-	// if mpks, err = mc.getMinersMpks(ctx, lfb, mb); err != nil {
-	// 	logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners mpks", zap.Error(err))
-	// 	return nil, err
-	// }
-	// if _, ok := mpks.Mpks[selfNodeKey]; !ok {
-	// 	logging.Logger.Error("[mvc] publishShareOrSigns, miner not part of mpks", zap.String("miner", selfNodeKey))
-	// 	return nil, nil
-	// }
+	var mpks *block.Mpks
+	if mpks, err = mc.getMinersMpks(lfb); err != nil {
+		logging.Logger.Error("[mvc] publishShareOrSigns, failed to get miners mpks", zap.Error(err))
+		return nil, err
+	}
+
+	if _, ok := mpks.Mpks[selfNodeKey]; !ok {
+		logging.Logger.Error("[mvc] publishShareOrSigns, miner not part of mpks", zap.String("miner", selfNodeKey))
+		return nil, nil
+	}
 
 	var sos = mc.viewChangeProcess.shareOrSigns // local reference
 	if len(sos.ShareOrSigns) < mb.K-1 {
@@ -143,12 +144,13 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 		return nil, common.NewError("publish_sos", "not enough share or signs")
 	}
 
-	for k := range mc.viewChangeProcess.mpks.GetMpks() {
+	for k := range mpks.Mpks {
 		if k == selfNodeKey {
 			continue
 		}
 
 		if _, ok := sos.ShareOrSigns[k]; !ok {
+			logging.Logger.Debug("[mvc] publishShareOrSigns, add share", zap.String("miner", k))
 			share := mc.viewChangeDKG.GetDKGKeyShare(bls.ComputeIDdkg(k))
 			if share != nil {
 				sos.ShareOrSigns[k] = share
