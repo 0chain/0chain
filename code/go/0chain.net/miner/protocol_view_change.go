@@ -423,6 +423,13 @@ func (mc *Chain) sendSijsPrepare(ctx context.Context, lfb *block.Block, mb *bloc
 	return
 }
 
+func (mc *Chain) getShareOrSignsNum() int {
+	mc.viewChangeProcess.Lock()
+	defer mc.viewChangeProcess.Unlock()
+
+	return len(mc.viewChangeProcess.shareOrSigns.ShareOrSigns)
+}
+
 func (mc *Chain) getNodeSij(nodeID hbls.ID) (*hbls.SecretKey, bool) {
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()

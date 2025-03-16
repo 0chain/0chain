@@ -345,15 +345,17 @@ func (mc *Chain) SendSijs(ctx context.Context, lfb *block.Block,
 	successNum := totalSentNum - failNum
 	// require to get sijs share from all
 	// DEBUG: require to get shares from all dkg miners
-	if failNum > 0 && successNum < mb.K {
-		// if failNum > 0 {
-		logging.Logger.Error("[mvc] failed to send sijs",
+	sharesNum := mc.getShareOrSignsNum()
+	if sharesNum+successNum < mb.K {
+		// return error to continue share
+		logging.Logger.Error("[mvc] not shared enough shares or signs",
 			zap.Int("total sent num", totalSentNum),
 			zap.Int("fail num", failNum),
-			zap.Int("K", mb.K),
+			zap.Int("shared num", sharesNum+successNum),
 			zap.Strings("fail to miners", sendFail))
-		return nil, errors.New("failed to send sijs")
+		return nil, errors.New("not shared enough shares or signs")
 	}
+
 	logging.Logger.Debug("[mvc] send sijs success", zap.Int("total sent num", totalSentNum),
 		zap.Int("success num", successNum))
 
