@@ -356,6 +356,10 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		}
 	}
 
+	var (
+		sameLFBTicketCount int
+	)
+
 	for {
 		if isSharder {
 			rebroadcast.Reset(rebroadcastTimeout)
@@ -383,12 +387,21 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			ticket = prev // the latest in the channel
 
 			if ticket.Round <= latest.Round {
+				sameLFBTicketCount++
+
+				if sameLFBTicketCount >= 10 {
+					go c.BumpLFBTicket(ctx)
+					sameLFBTicketCount = 0
+					continue // not updated
+				}
+
 				logging.Logger.Debug("update lfb ticket -  ticket.Round <= latest.Round",
 					zap.Int64("ticket.Round", ticket.Round),
 					zap.Int64("latest.Round", latest.Round))
 				continue // not updated
 			}
 
+			sameLFBTicketCount = 0
 			// for self updating case (kick itself)
 			if ticket.Sign == "" {
 				latest = ticket
