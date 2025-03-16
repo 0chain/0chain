@@ -155,6 +155,7 @@ func (c *Chain) FinalizeRoundWorker(ctx context.Context) {
 					case <-cctx.Done():
 						logging.Logger.Warn("FinalizeRoundWorker finalize round timeout",
 							zap.Int64("round", r.GetRoundNumber()))
+						r.ResetFinalizingStateIfNotFinalized()
 					case <-doneC:
 					}
 				}()
