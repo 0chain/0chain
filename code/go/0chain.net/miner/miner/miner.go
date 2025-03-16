@@ -325,7 +325,7 @@ func main() {
 			logging.Logger.Panic(fmt.Sprintf("Failed to store genesis dkg: ERROR: %v", err.Error()))
 		}
 
-		if err := miner.SetDKG(ctx, mb); err != nil {
+		if err := miner.SetDKG(ctx, mb, dkgShare); err != nil {
 			logging.Logger.Panic(fmt.Sprintf("Failed to set DKG for genesis MB"))
 		}
 	}

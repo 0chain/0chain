@@ -36,14 +36,14 @@ func init() {
 }
 
 // SetDKG - starts the DKG process
-func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
+func SetDKG(ctx context.Context, mb *block.MagicBlock, dkgSum ...*bls.DKGSummary) error {
 	mc := GetMinerChain()
 	if !mc.ChainConfig.IsDkgEnabled() {
 		Logger.Info("DKG is disabled. So, starting protocol")
 		return nil
 	}
 
-	if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
+	if err := mc.SetDKGSFromStore(ctx, mb, dkgSum...); err != nil {
 		return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
 			" may be damaged or permissions may not be available?",
 			err.Error())
@@ -77,7 +77,7 @@ func SetDKGFromMagicBlocksChainPrev(ctx context.Context, mb *block.MagicBlock) e
 	return nil
 }
 
-func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkgSum ...*bls.DKGSummary) (
 	err error) {
 
 	var (
@@ -87,8 +87,13 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		summary *bls.DKGSummary
 	)
 
-	if summary, err = LoadDKGSummary(ctx, id); err != nil {
-		return
+	if len(dkgSum) > 0 {
+		summary = dkgSum[0]
+	} else {
+		summary, err = LoadDKGSummary(ctx, id)
+		if err != nil {
+			return
+		}
 	}
 
 	if mb.StartingRound > 0 && !summary.IsFinalized {

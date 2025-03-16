@@ -409,7 +409,7 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return err
 	}
 
-	if err := SetDKG(ctx, mb); err != nil {
+	if err := SetDKG(ctx, mb, dkgSum); err != nil {
 		logging.Logger.Error("[mvc] view change set dkg failed",
 			zap.Int64("mb number", mb.MagicBlockNumber),
 			zap.Int64("mb sr", mb.StartingRound),
