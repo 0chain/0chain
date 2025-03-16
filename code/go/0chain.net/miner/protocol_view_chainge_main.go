@@ -82,7 +82,7 @@ func (mc *Chain) sendDKGShare(ctx context.Context, to string) (err error) {
 
 		// share.ID = nodeID.GetHexString()
 		// DEBUG: change back
-		share.Share = secShare.GetHexString()
+		// share.Share = secShare.GetHexString()
 		shareOrSignSuccess[n.ID] = share
 
 		return

@@ -156,20 +156,6 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 		return err
 	}
 
-	localPartyID := bls.ComputeIDdkg(node.Self.Underlying().GetKey())
-	gPubkey := newDKG.GetPublicKeyByID(localPartyID)
-	logging.Logger.Debug("[mvc] local gPubkey",
-		zap.String("gpk", gPubkey.GetHexString()),
-		zap.String("pi", newDKG.Pi.GetHexString()))
-
-	// DEBUG: verify local signature, if success, but remote failed,
-	// means the gmpk is not set correctly in remote node
-	ss := newDKG.Sign("msgtest")
-	logging.Logger.Debug("dkg local sign", zap.String("local party id", localPartyID.GetHexString()))
-	if !newDKG.VerifySignature(ss, "msgtest", localPartyID) {
-		Logger.Error("failed to verify local signature")
-	}
-
 	if err = mc.SetDKG(newDKG); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
 		return // error
