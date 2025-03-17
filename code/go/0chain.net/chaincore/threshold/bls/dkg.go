@@ -91,6 +91,7 @@ func MakeDKG(t, n int, id string) *DKG {
 	dkg.msk = secKey.GetMasterSecretKey(t)
 	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
 	dkg.mpksMap = make(map[PartyID][]PublicKey)
+	dkg.gmpk = make(map[PartyID]PublicKey)
 	return dkg
 }
 
