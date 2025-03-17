@@ -348,8 +348,8 @@ func (dkg *DKG) Sign(msg string) *Sign {
 
 // VerifySignature - verify the signature using the group public key share
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
-	dkg.gmpkMutex.RLock()
-	defer dkg.gmpkMutex.RUnlock()
+	dkg.gmpkMutex.Lock()
+	defer dkg.gmpkMutex.Unlock()
 	key, ok := dkg.gmpk[id]
 	if !ok {
 		var err error
