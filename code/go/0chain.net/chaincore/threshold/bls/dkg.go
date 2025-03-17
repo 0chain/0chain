@@ -240,19 +240,30 @@ func (dkg *DKG) AggregateSecretKeyShares() {
 		shares = append(shares, share)
 	}
 
+	// Calculate optimal chunk size to avoid empty slices
 	chunkSize := (len(shares) + numWorkers - 1) / numWorkers
 	results := make(chan Key, numWorkers)
 	var wg sync.WaitGroup
 
 	// Process chunks in parallel
 	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
 		start := i * chunkSize
+		// Skip if we're past the end of the slice
+		if start >= len(shares) {
+			continue
+		}
+
 		end := start + chunkSize
 		if end > len(shares) {
 			end = len(shares)
 		}
 
+		// Don't create empty chunks
+		if start >= end {
+			continue
+		}
+
+		wg.Add(1)
 		go func(chunk []Key) {
 			defer wg.Done()
 			var partialSum Key
@@ -455,13 +466,23 @@ func aggregatePublicKeysForID(mpks map[PartyID][]PublicKey, k PartyID) (PublicKe
 
 	// Process chunks in parallel
 	for i := 0; i < numWorkers; i++ {
-		wg.Add(1)
 		start := i * chunkSize
+		// Skip if we're past the end of the slice
+		if start >= len(mpkKeys) {
+			continue
+		}
+
 		end := start + chunkSize
 		if end > len(mpkKeys) {
 			end = len(mpkKeys)
 		}
 
+		// Don't create empty chunks
+		if start >= end {
+			continue
+		}
+
+		wg.Add(1)
 		go func(chunk []PartyID) {
 			defer wg.Done()
 			var partialSum PublicKey
