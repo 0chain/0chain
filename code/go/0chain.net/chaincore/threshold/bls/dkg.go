@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -329,10 +331,17 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 	return dkg.RecoverGroupSig(idVec, signVec)
 }
 
-// AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
+// Original sequential version
 func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
+	startTime := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Sequential public key shares aggregation",
+			zap.Duration("duration", time.Since(startTime)))
+	}()
+
 	dkg.gmpkMutex.Lock()
 	defer dkg.gmpkMutex.Unlock()
+
 	dkg.gmpk = make(map[PartyID]PublicKey)
 	for k := range mpks {
 		var pk PublicKey
@@ -345,7 +354,81 @@ func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
 		}
 		dkg.gmpk[k] = pk
 	}
+	return nil
+}
 
+// Helper function for parallel processing
+func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (map[PartyID]PublicKey, error) {
+	var (
+		numWorkers = runtime.NumCPU()
+		wg         sync.WaitGroup
+		mu         sync.Mutex
+		result     = make(map[PartyID]PublicKey)
+		errChan    = make(chan error, 1)
+	)
+
+	// Create work channel
+	workChan := make(chan PartyID, len(mpks))
+	for k := range mpks {
+		workChan <- k
+	}
+	close(workChan)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for k := range workChan {
+				var pk PublicKey
+				for _, mpk := range mpks {
+					var pkj PublicKey
+					if err := pkj.Set(mpk, &k); err != nil {
+						select {
+						case errChan <- err:
+						default:
+						}
+						return
+					}
+					pk.Add(&pkj)
+				}
+
+				mu.Lock()
+				result[k] = pk
+				mu.Unlock()
+			}
+		}()
+	}
+
+	// Wait for completion
+	wg.Wait()
+	close(errChan)
+
+	// Check for errors
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// Parallel version
+func (dkg *DKG) AggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) error {
+	startTime := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Parallel public key shares aggregation",
+			zap.Duration("duration", time.Since(startTime)))
+	}()
+
+	dkg.gmpkMutex.Lock()
+	defer dkg.gmpkMutex.Unlock()
+
+	result, err := dkg.aggregatePublicKeySharesParallel(mpks)
+	if err != nil {
+		return err
+	}
+
+	dkg.gmpk = result
 	return nil
 }
 
