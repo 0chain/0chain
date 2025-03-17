@@ -199,13 +199,80 @@ func (dkg *DKG) GetSijLen() int {
 
 // AggregateSecretKeyShares - Each party aggregates the received shares from other party which is calculated for that party
 func (dkg *DKG) AggregateSecretKeyShares() {
-	var sk Key
 	dkg.secretSharesMutex.RLock()
 	defer dkg.secretSharesMutex.RUnlock()
-	for _, Sij := range dkg.receivedSecretShares {
-		sk.Add(&Sij)
+
+	aggStart := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Aggregate secret key shares",
+			zap.Duration("duration", time.Since(aggStart)))
+	}()
+
+	if len(dkg.receivedSecretShares) == 0 {
+		dkg.Si = Key{}
+		dkg.Pi = nil
+		return
 	}
-	dkg.Si = sk
+
+	// For small numbers of shares, use sequential processing
+	if len(dkg.receivedSecretShares) < 8 {
+		var sk Key
+		for _, Sij := range dkg.receivedSecretShares {
+			sk.Add(&Sij)
+		}
+		dkg.Si = sk
+		dkg.Pi = dkg.Si.GetPublicKey()
+		return
+	}
+
+	// For larger numbers, use parallel processing
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(dkg.receivedSecretShares) {
+		numWorkers = len(dkg.receivedSecretShares)
+	}
+
+	// Split work into chunks
+	shares := make([]Key, 0, len(dkg.receivedSecretShares))
+	for _, share := range dkg.receivedSecretShares {
+		shares = append(shares, share)
+	}
+
+	chunkSize := (len(shares) + numWorkers - 1) / numWorkers
+	results := make(chan Key, numWorkers)
+	var wg sync.WaitGroup
+
+	// Process chunks in parallel
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		start := i * chunkSize
+		end := start + chunkSize
+		if end > len(shares) {
+			end = len(shares)
+		}
+
+		go func(chunk []Key) {
+			defer wg.Done()
+			var partialSum Key
+			for _, share := range chunk {
+				partialSum.Add(&share)
+			}
+			results <- partialSum
+		}(shares[start:end])
+	}
+
+	// Close results channel after all workers finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Combine partial results
+	var finalSum Key
+	for partialSum := range results {
+		finalSum.Add(&partialSum)
+	}
+
+	dkg.Si = finalSum
 	dkg.Pi = dkg.Si.GetPublicKey()
 }
 
