@@ -424,6 +424,90 @@ func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
 	return nil
 }
 
+// Helper function to parallelize the inner loop of public key aggregation for a given PartyID
+func aggregatePublicKeysForID(mpks map[PartyID][]PublicKey, k PartyID) (PublicKey, error) {
+	// For small numbers of mpks, use sequential processing
+	aggStart := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Aggregate public key shares for id",
+			zap.Duration("duration", time.Since(aggStart)))
+	}()
+	if len(mpks) < 8 {
+		var pk PublicKey
+		for _, mpk := range mpks {
+			var pkj PublicKey
+			if err := pkj.Set(mpk, &k); err != nil {
+				return PublicKey{}, err
+			}
+			pk.Add(&pkj)
+		}
+		return pk, nil
+	}
+
+	// For larger numbers, use parallel processing
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(mpks) {
+		numWorkers = len(mpks)
+	}
+
+	type result struct {
+		pk  PublicKey
+		err error
+	}
+
+	// Prepare the mpk keys for chunking
+	mpkKeys := make([]PartyID, 0, len(mpks))
+	for mpkKey := range mpks {
+		mpkKeys = append(mpkKeys, mpkKey)
+	}
+
+	chunkSize := (len(mpkKeys) + numWorkers - 1) / numWorkers
+	results := make(chan result, numWorkers)
+	var wg sync.WaitGroup
+
+	// Process chunks in parallel
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		start := i * chunkSize
+		end := start + chunkSize
+		if end > len(mpkKeys) {
+			end = len(mpkKeys)
+		}
+
+		go func(chunk []PartyID) {
+			defer wg.Done()
+			var partialSum PublicKey
+			for _, mpkKey := range chunk {
+				mpk := mpks[mpkKey]
+				var pkj PublicKey
+				if err := pkj.Set(mpk, &k); err != nil {
+					results <- result{err: err}
+					return
+				}
+				partialSum.Add(&pkj)
+			}
+			results <- result{pk: partialSum}
+		}(mpkKeys[start:end])
+	}
+
+	// Close results channel after all workers finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Combine partial results
+	var finalSum PublicKey
+	for r := range results {
+		if r.err != nil {
+			return PublicKey{}, r.err
+		}
+		finalSum.Add(&r.pk)
+	}
+
+	return finalSum, nil
+}
+
 // Helper function for parallel processing
 func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (map[PartyID]PublicKey, error) {
 	var (
@@ -447,17 +531,14 @@ func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (
 		go func() {
 			defer wg.Done()
 			for k := range workChan {
-				var pk PublicKey
-				for _, mpk := range mpks {
-					var pkj PublicKey
-					if err := pkj.Set(mpk, &k); err != nil {
-						select {
-						case errChan <- err:
-						default:
-						}
-						return
+				// Use the helper function for parallelized inner processing
+				pk, err := aggregatePublicKeysForID(mpks, k)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
 					}
-					pk.Add(&pkj)
+					return
 				}
 
 				mu.Lock()
