@@ -188,15 +188,23 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	// Time key aggregation
 	startAgg := time.Now()
 	newDKG.AggregateSecretKeyShares()
+	logging.Logger.Debug("[dkg_timing] sec key aggregation",
+		zap.Duration("duration", time.Since(startAgg)))
+
+	startAgg = time.Now()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
-	mpks, err := mb.Mpks.GetMpkMap()
+	mpks, err := mb.Mpks.GetMpkMapParallel()
 	if err != nil {
 		return err
 	}
-	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
+	logging.Logger.Debug("[dkg_timing] convert mpks",
+		zap.Duration("duration", time.Since(startAgg)))
+
+	startAgg = time.Now()
+	if err := newDKG.AggregatePublicKeySharesParallel(mpks); err != nil {
 		return err
 	}
-	logging.Logger.Debug("[dkg_timing] Key aggregation",
+	logging.Logger.Debug("[dkg_timing] pub key aggregation",
 		zap.Duration("duration", time.Since(startAgg)))
 
 	// Time final DKG setting

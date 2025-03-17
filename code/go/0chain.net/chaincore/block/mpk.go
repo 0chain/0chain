@@ -2,10 +2,15 @@ package block
 
 import (
 	"encoding/json"
+	"runtime"
+	"sync"
+	"time"
 
 	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/encryption"
+	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
+	"go.uber.org/zap"
 )
 
 //go:generate msgp -io=false -tests=false -v
@@ -60,6 +65,76 @@ func (mpks *Mpks) GetMpkMap() (map[bls.PartyID][]bls.PublicKey, error) {
 		mpkMap[bls.ComputeIDdkg(k)] = mpk
 	}
 	return mpkMap, nil
+}
+
+func (mpks *Mpks) GetMpkMapParallel() (map[bls.PartyID][]bls.PublicKey, error) {
+	startTime := time.Now()
+	defer func() {
+		logging.Logger.Debug("[mpk_timing] Parallel MPK map conversion",
+			zap.Duration("duration", time.Since(startTime)))
+	}()
+
+	result := make(map[bls.PartyID][]bls.PublicKey)
+	var (
+		numWorkers = runtime.NumCPU()
+		wg         sync.WaitGroup
+		mu         sync.Mutex
+		errChan    = make(chan error, 1)
+	)
+
+	// Create work channel
+	workChan := make(chan struct {
+		key string
+		mpk *MPK
+	}, len(mpks.Mpks))
+
+	// Feed work channel
+	for k, v := range mpks.Mpks {
+		workChan <- struct {
+			key string
+			mpk *MPK
+		}{k, v}
+	}
+	close(workChan)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for work := range workChan {
+				// Convert string array to PublicKey array
+				pks, err := bls.ConvertStringToMpk(work.mpk.Mpk)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					return
+				}
+
+				// Convert key to PartyID
+				id := bls.ComputeIDdkg(work.key)
+				// Safely store result
+				mu.Lock()
+				result[id] = pks
+				mu.Unlock()
+			}
+		}()
+	}
+
+	// Wait in a separate goroutine
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	// Check for errors
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func (mpks *Mpks) GetMpks() map[string]*MPK {

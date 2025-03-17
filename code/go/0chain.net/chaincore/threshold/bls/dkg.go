@@ -467,14 +467,60 @@ func ValidateShare(jpk []PublicKey, sij bls.SecretKey, id PartyID) bool {
 }
 
 func ConvertStringToMpk(strMpk []string) ([]PublicKey, error) {
-	var mpk []PublicKey
-	for _, str := range strMpk {
-		var pk PublicKey
-		if err := pk.SetHexString(str); err != nil {
-			return nil, err
-		}
-		mpk = append(mpk, pk)
+	if len(strMpk) == 0 {
+		return nil, nil
 	}
+
+	// Create channels for work distribution and result collection
+	type result struct {
+		index int
+		pk    PublicKey
+		err   error
+	}
+
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(strMpk) {
+		numWorkers = len(strMpk)
+	}
+
+	jobs := make(chan int, len(strMpk))
+	results := make(chan result, len(strMpk))
+
+	// Start worker pool
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for idx := range jobs {
+				var pk PublicKey
+				err := pk.SetHexString(strMpk[idx])
+				results <- result{index: idx, pk: pk, err: err}
+			}
+		}()
+	}
+
+	// Send jobs
+	for i := range strMpk {
+		jobs <- i
+	}
+	close(jobs)
+
+	// Wait for all workers to complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect results
+	mpk := make([]PublicKey, len(strMpk))
+	for r := range results {
+		if r.err != nil {
+			return nil, r.err
+		}
+		mpk[r.index] = r.pk
+	}
+
 	return mpk, nil
 }
 
