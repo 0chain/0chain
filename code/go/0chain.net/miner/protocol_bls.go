@@ -197,15 +197,16 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	if err != nil {
 		return err
 	}
+	newDKG.SetMpksMap(mpks)
 	logging.Logger.Debug("[dkg_timing] convert mpks",
 		zap.Duration("duration", time.Since(startAgg)))
 
 	startAgg = time.Now()
-	if err := newDKG.AggregatePublicKeySharesParallel(mpks); err != nil {
-		return err
-	}
-	logging.Logger.Debug("[dkg_timing] pub key aggregation",
-		zap.Duration("duration", time.Since(startAgg)))
+	// if err := newDKG.AggregatePublicKeySharesParallel(mpks); err != nil {
+	// 	return err
+	// }
+	// logging.Logger.Debug("[dkg_timing] pub key aggregation",
+	// 	zap.Duration("duration", time.Since(startAgg)))
 
 	// Time final DKG setting
 	startSet := time.Now()

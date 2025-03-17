@@ -39,6 +39,7 @@ type DKG struct {
 
 	mpksMutex *sync.Mutex
 	mpks      []PublicKey
+	mpksMap   map[PartyID][]PublicKey
 
 	gmpkMutex *sync.RWMutex
 	gmpk      map[PartyID]PublicKey
@@ -89,6 +90,7 @@ func MakeDKG(t, n int, id string) *DKG {
 	dkg.ID = ComputeIDdkg(id)
 	dkg.msk = secKey.GetMasterSecretKey(t)
 	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
+	dkg.mpksMap = make(map[PartyID][]PublicKey)
 	return dkg
 }
 
@@ -348,7 +350,18 @@ func (dkg *DKG) Sign(msg string) *Sign {
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 	dkg.gmpkMutex.RLock()
 	defer dkg.gmpkMutex.RUnlock()
-	key := dkg.gmpk[id]
+	key, ok := dkg.gmpk[id]
+	if !ok {
+		var err error
+		key, err = aggregatePublicKeysForID(dkg.mpksMap, id)
+		if err != nil {
+			logging.Logger.Error("dkg verify signature, failed to aggregate public key shares",
+				zap.Error(err))
+			return false
+		}
+
+		dkg.gmpk[id] = key
+	}
 	logging.Logger.Debug("dkg verify",
 		zap.String("id", id.GetHexString()),
 		zap.String("key", key.GetHexString()),
@@ -369,9 +382,9 @@ func (dkg *DKG) RecoverGroupSig(from []PartyID, shares []Sign) (Sign, error) {
 
 // CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
 func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
-	logging.Logger.Debug("dkg recover",
-		zap.Strings("recSig", recSig),
-		zap.Strings("recIDs", recIDs))
+	// logging.Logger.Debug("dkg recover",
+	// 	zap.Strings("recSig", recSig),
+	// 	zap.Strings("recIDs", recIDs))
 
 	signVec := make([]Sign, 0)
 	var signShare Sign
@@ -396,32 +409,6 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 		return Sign{}, errors.New("empty id or share")
 	}
 	return dkg.RecoverGroupSig(idVec, signVec)
-}
-
-// Original sequential version
-func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
-	startTime := time.Now()
-	defer func() {
-		logging.Logger.Debug("[dkg_timing] Sequential public key shares aggregation",
-			zap.Duration("duration", time.Since(startTime)))
-	}()
-
-	dkg.gmpkMutex.Lock()
-	defer dkg.gmpkMutex.Unlock()
-
-	dkg.gmpk = make(map[PartyID]PublicKey)
-	for k := range mpks {
-		var pk PublicKey
-		for _, mpk := range mpks {
-			var pkj PublicKey
-			if err := pkj.Set(mpk, &k); err != nil {
-				return err
-			}
-			pk.Add(&pkj)
-		}
-		dkg.gmpk[k] = pk
-	}
-	return nil
 }
 
 // Helper function to parallelize the inner loop of public key aggregation for a given PartyID
@@ -560,8 +547,14 @@ func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (
 	return result, nil
 }
 
+func (dkg *DKG) SetMpksMap(mpks map[PartyID][]PublicKey) {
+	dkg.gmpkMutex.Lock()
+	dkg.mpksMap = mpks
+	dkg.gmpkMutex.Unlock()
+}
+
 // Parallel version
-func (dkg *DKG) AggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) error {
+func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
 	startTime := time.Now()
 	defer func() {
 		logging.Logger.Debug("[dkg_timing] Parallel public key shares aggregation",
