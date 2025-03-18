@@ -67,6 +67,15 @@ func (mpks *Mpks) GetMpkMap() (map[bls.PartyID][]bls.PublicKey, error) {
 	return mpkMap, nil
 }
 
+func (mpks *Mpks) GetMpkMapStrings() map[bls.PartyID][]string {
+	result := make(map[bls.PartyID][]string, len(mpks.Mpks))
+	for k, v := range mpks.Mpks {
+		id := bls.ComputeIDdkg(k)
+		result[id] = v.Mpk
+	}
+	return result
+}
+
 func (mpks *Mpks) GetMpkMapParallel() (map[bls.PartyID][]bls.PublicKey, error) {
 	startTime := time.Now()
 	defer func() {

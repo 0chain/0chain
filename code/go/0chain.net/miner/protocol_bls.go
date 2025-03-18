@@ -193,10 +193,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 
 	startAgg = time.Now()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
-	mpks, err := mb.Mpks.GetMpkMapParallel()
-	if err != nil {
-		return err
-	}
+	mpks := mb.Mpks.GetMpkMapStrings()
 	newDKG.SetMpksMap(mpks)
 	logging.Logger.Debug("[dkg_timing] convert mpks",
 		zap.Duration("duration", time.Since(startAgg)))

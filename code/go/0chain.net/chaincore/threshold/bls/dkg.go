@@ -39,7 +39,8 @@ type DKG struct {
 
 	mpksMutex *sync.Mutex
 	mpks      []PublicKey
-	mpksMap   map[PartyID][]PublicKey
+	// mpksMap   map[PartyID][]PublicKey
+	mpksMap map[PartyID][]string
 
 	gmpkMutex *sync.RWMutex
 	gmpk      map[PartyID]PublicKey
@@ -90,7 +91,7 @@ func MakeDKG(t, n int, id string) *DKG {
 	dkg.ID = ComputeIDdkg(id)
 	dkg.msk = secKey.GetMasterSecretKey(t)
 	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
-	dkg.mpksMap = make(map[PartyID][]PublicKey)
+	dkg.mpksMap = make(map[PartyID][]string)
 	dkg.gmpk = make(map[PartyID]PublicKey)
 	return dkg
 }
@@ -362,10 +363,24 @@ func (dkg *DKG) Sign(msg string) *Sign {
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 	dkg.gmpkMutex.Lock()
 	defer dkg.gmpkMutex.Unlock()
+	verifyStart := time.Now()
+	defer func() {
+		if time.Since(verifyStart) > 200*time.Millisecond {
+			logging.Logger.Debug("[dkg_timing] Verify signature slow",
+				zap.Duration("duration", time.Since(verifyStart)))
+		}
+	}()
+
 	key, ok := dkg.gmpk[id]
 	if !ok {
-		var err error
-		key, err = aggregatePublicKeysForID(dkg.mpksMap, id)
+		mpks, err := dkg.getMpkMap()
+		if err != nil {
+			logging.Logger.Error("dkg verify signature, failed to get mpk map",
+				zap.Error(err))
+			return false
+		}
+
+		key, err = aggregatePublicKeysForID(mpks, id)
 		if err != nil {
 			logging.Logger.Error("dkg verify signature, failed to aggregate public key shares",
 				zap.Error(err))
@@ -380,6 +395,75 @@ func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 		zap.String("msg", msg),
 		zap.String("sig", sig.GetHexString()))
 	return sig.Verify(&key, msg)
+}
+
+func (dkg *DKG) getMpkMap() (map[PartyID][]PublicKey, error) {
+	startTime := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Parallel MPK map conversion",
+			zap.Duration("duration", time.Since(startTime)))
+	}()
+
+	result := make(map[PartyID][]PublicKey)
+	var (
+		numWorkers = runtime.NumCPU()
+		wg         sync.WaitGroup
+		mu         sync.Mutex
+		errChan    = make(chan error, 1)
+	)
+
+	// Create work channel
+	workChan := make(chan struct {
+		key PartyID
+		mpk []string
+	}, len(dkg.mpksMap))
+
+	// Feed work channel
+	for k, v := range dkg.mpksMap {
+		workChan <- struct {
+			key PartyID
+			mpk []string
+		}{k, v}
+	}
+	close(workChan)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for work := range workChan {
+				// Convert string array to PublicKey array
+				pks, err := ConvertStringToMpk(work.mpk)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					return
+				}
+
+				// Convert key to PartyID
+				// Safely store result
+				mu.Lock()
+				result[work.key] = pks
+				mu.Unlock()
+			}
+		}()
+	}
+
+	// Wait in a separate goroutine
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	// Check for errors
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /*RecoverGroupSig - To compute the Gp sign with any k number of BLS sig shares */
@@ -569,7 +653,7 @@ func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (
 	return result, nil
 }
 
-func (dkg *DKG) SetMpksMap(mpks map[PartyID][]PublicKey) {
+func (dkg *DKG) SetMpksMap(mpks map[string][]string) {
 	dkg.gmpkMutex.Lock()
 	dkg.mpksMap = mpks
 	dkg.gmpkMutex.Unlock()
