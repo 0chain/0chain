@@ -657,7 +657,7 @@ func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (
 	return result, nil
 }
 
-func (dkg *DKG) SetMpksMap(mpks map[string][]string) {
+func (dkg *DKG) SetMpksMap(mpks map[PartyID][]string) {
 	dkg.gmpkMutex.Lock()
 	dkg.mpksMapStr = mpks
 	dkg.gmpkMutex.Unlock()
