@@ -37,10 +37,10 @@ type DKG struct {
 	Si Key
 	Pi *PublicKey
 
-	mpksMutex *sync.Mutex
-	mpks      []PublicKey
-	// mpksMap   map[PartyID][]PublicKey
-	mpksMap map[PartyID][]string
+	mpksMutex  *sync.Mutex
+	mpks       []PublicKey
+	mpksMap    map[PartyID][]PublicKey
+	mpksMapStr map[PartyID][]string
 
 	gmpkMutex *sync.RWMutex
 	gmpk      map[PartyID]PublicKey
@@ -91,7 +91,7 @@ func MakeDKG(t, n int, id string) *DKG {
 	dkg.ID = ComputeIDdkg(id)
 	dkg.msk = secKey.GetMasterSecretKey(t)
 	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
-	dkg.mpksMap = make(map[PartyID][]string)
+	dkg.mpksMapStr = make(map[PartyID][]string)
 	dkg.gmpk = make(map[PartyID]PublicKey)
 	return dkg
 }
@@ -373,14 +373,18 @@ func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
 
 	key, ok := dkg.gmpk[id]
 	if !ok {
-		mpks, err := dkg.getMpkMap()
-		if err != nil {
-			logging.Logger.Error("dkg verify signature, failed to get mpk map",
-				zap.Error(err))
-			return false
+		if dkg.mpksMap == nil {
+			mpks, err := dkg.getMpkMap()
+			if err != nil {
+				logging.Logger.Error("dkg verify signature, failed to get mpk map",
+					zap.Error(err))
+				return false
+			}
+			dkg.mpksMap = mpks
 		}
 
-		key, err = aggregatePublicKeysForID(mpks, id)
+		var err error
+		key, err = aggregatePublicKeysForID(dkg.mpksMap, id)
 		if err != nil {
 			logging.Logger.Error("dkg verify signature, failed to aggregate public key shares",
 				zap.Error(err))
@@ -416,10 +420,10 @@ func (dkg *DKG) getMpkMap() (map[PartyID][]PublicKey, error) {
 	workChan := make(chan struct {
 		key PartyID
 		mpk []string
-	}, len(dkg.mpksMap))
+	}, len(dkg.mpksMapStr))
 
 	// Feed work channel
-	for k, v := range dkg.mpksMap {
+	for k, v := range dkg.mpksMapStr {
 		workChan <- struct {
 			key PartyID
 			mpk []string
@@ -655,7 +659,7 @@ func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (
 
 func (dkg *DKG) SetMpksMap(mpks map[string][]string) {
 	dkg.gmpkMutex.Lock()
-	dkg.mpksMap = mpks
+	dkg.mpksMapStr = mpks
 	dkg.gmpkMutex.Unlock()
 }
 
