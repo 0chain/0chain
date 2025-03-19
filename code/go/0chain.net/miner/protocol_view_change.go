@@ -555,12 +555,12 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 		return
 	}
 
-	logging.Logger.Debug("[mvc] load mb", zap.Int64("mb number from data", mbd.MagicBlockNumber))
 	var inMB block.MagicBlock
 	if _, err := inMB.UnmarshalMsg(mbd.Data); err != nil {
 		logging.Logger.Error("[mvc] failed to unmarshal magic block", zap.Error(err))
 		return nil, fmt.Errorf("could not decode magic block: %v", err)
 	}
+	logging.Logger.Debug("[mvc] load mb", zap.Int64("mb number from data", mbd.MagicBlockNumber))
 	return &inMB, nil
 }
 
