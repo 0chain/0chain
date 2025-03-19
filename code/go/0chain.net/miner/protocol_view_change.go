@@ -544,8 +544,18 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 	if err = mbd.Read(dctx, mbd.GetKey()); err != nil {
 		return
 	}
-	mb = mbd.MagicBlock
-	return
+
+	if mbd.MagicBlock != nil {
+		mb = mbd.MagicBlock
+		return
+	}
+
+	var inMB block.MagicBlock
+	if _, err := inMB.UnmarshalMsg(mbd.Data); err != nil {
+		logging.Logger.Error("[mvc] failed to unmarshal magic block", zap.Error(err))
+		return nil, fmt.Errorf("could not decode magic block: %v", err)
+	}
+	return &inMB, nil
 }
 
 // DKG save / load

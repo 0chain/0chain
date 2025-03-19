@@ -2,6 +2,7 @@ package block
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strconv"
 
@@ -16,6 +17,7 @@ import (
 type MagicBlockData struct {
 	datastore.IDField
 	*MagicBlock
+	Data []byte
 }
 
 var magicBlockMetadata *datastore.EntityMetadataImpl
@@ -60,7 +62,13 @@ func (m *MagicBlockData) Delete(ctx context.Context) error {
 func NewMagicBlockData(mb *MagicBlock) *MagicBlockData {
 	mbData := datastore.GetEntityMetadata("magicblockdata").Instance().(*MagicBlockData)
 	mbData.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
-	mbData.MagicBlock = mb
+
+	d, err := mb.MarshalMsg(nil)
+	if err != nil {
+		logging.Logger.Panic(fmt.Sprintf("[mvc] failed to marshal magic block: %v", err))
+	}
+
+	mbData.Data = d
 	return mbData
 }
 
