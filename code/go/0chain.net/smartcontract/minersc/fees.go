@@ -406,9 +406,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			return common.NewErrorf("pay_fees", "can't set magic b round=%d viewChange=%d, %v", b.Round, gnb.ViewChange, err)
 		}
 
-		logging.Logger.Debug("pay_fees in hermes", zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("mpt root", util.ToHex(balances.GetState().GetRoot())))
 		return nil
 	}, func() error {
 		if !isViewChange {
@@ -434,10 +431,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			return common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
 		}
 
-		logging.Logger.Debug("pay_fees after hermes",
-			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("mpt root", util.ToHex(balances.GetState().GetRoot())))
 		return nil
 	})
 
@@ -487,8 +480,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 		logging.Logger.Debug("pay_fees, got miner id successfully",
 			zap.String("miner id", mn.ID),
 			zap.Int64("round", b.Round),
-			zap.String("block", b.Hash),
-			zap.String("mpt root", util.ToHex(balances.GetState().GetRoot())))
+			zap.String("block", b.Hash))
 		if err := mn.StakePool.DistributeRewardsRandN(
 			minerRewards,
 			mn.ID,
@@ -567,12 +559,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 				return "", common.NewErrorf("pay_fees/pay_sharders",
 					"saving sharder node: %v", err)
 			}
-
-			logging.Logger.Debug("pay_fees after pay sharders and delegates",
-				zap.Int64("round", b.Round),
-				zap.String("block", b.Hash),
-				zap.String("shareder id:", sh.GetKey()),
-				zap.String("mpt root", util.ToHex(balances.GetState().GetRoot())))
 		}
 	} else {
 		logging.Logger.Info("pay_fee could not find sharder to reward", zap.Int64("round", b.Round))
@@ -609,10 +595,6 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	}
 
 	gn.setLastRound(b.Round)
-	logging.Logger.Debug("pay_fees before gn save",
-		zap.Int64("round", b.Round),
-		zap.String("block", b.Hash),
-		zap.String("mpt root", util.ToHex(balances.GetState().GetRoot())))
 	if err = gn.save(balances); err != nil {
 		return "", common.NewErrorf("pay_fees",
 			"saving global node: %v", err)
