@@ -99,7 +99,7 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *MagicBlock,
 		return nil, fmt.Errorf("could not decode magic block: %v", err)
 	}
 
-	logging.Logger.Debug("[mvc] load mb", zap.Int64("mb number from data", mbd.MagicBlockNumber))
+	logging.Logger.Debug("[mvc] load mb", zap.Int64("mb number from data", inMB.MagicBlockNumber))
 	mb = &inMB
 	return
 }
