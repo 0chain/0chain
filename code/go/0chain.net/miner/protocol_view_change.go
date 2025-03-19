@@ -512,7 +512,7 @@ func (vcp *viewChangeProcess) SetNextViewChange(round int64) {
 
 func StoreMagicBlock(ctx context.Context, magicBlock *block.MagicBlock) (
 	err error) {
-
+	logging.Logger.Debug("[mvc] store mb start", zap.Int64("mb number", magicBlock.MagicBlockNumber))
 	var (
 		data = block.NewMagicBlockData(magicBlock)
 		emd  = data.GetEntityMetadata()
@@ -784,15 +784,15 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 
 	mpks := mc.viewChangeProcess.mpks.GetMpks()
 	if len(mpks) == 0 {
-		logging.Logger.Error("[mvc] sign share failed, local mpks are not set",
-			zap.Int64("round", mc.GetCurrentRound()),
-			zap.Int64("lfb", mc.GetLatestFinalizedBlock().Round))
-		return nil, common.NewError("sign_share", "local mpks are not set")
-		// mpkss, err := mc.getMinersMpks(mc.GetLatestFinalizedBlock())
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// mpks = mpkss.GetMpks()
+		// logging.Logger.Error("[mvc] sign share failed, local mpks are not set",
+		// 	zap.Int64("round", mc.GetCurrentRound()),
+		// 	zap.Int64("lfb", mc.GetLatestFinalizedBlock().Round))
+		// return nil, common.NewError("sign_share", "local mpks are not set")
+		mpkss, err := mc.getMinersMpks(mc.GetLatestFinalizedBlock())
+		if err != nil {
+			return nil, err
+		}
+		mpks = mpkss.GetMpks()
 	}
 
 	lmpks, dkgt := len(mpks), mc.viewChangeProcess.viewChangeDKG.T
