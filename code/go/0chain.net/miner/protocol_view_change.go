@@ -519,7 +519,7 @@ func StoreMagicBlock(ctx context.Context, magicBlock *block.MagicBlock) (
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
 	var cancel func()
-	dctx, cancel = context.WithTimeout(dctx, 30*time.Second)
+	dctx, cancel = context.WithTimeout(dctx, 7*time.Second)
 	defer func() {
 		cancel()
 		ememorystore.Close(dctx, emd)
