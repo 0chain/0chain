@@ -61,7 +61,7 @@ func (sc *Chain) GetTransactionConfirmation(ctx context.Context, hash string) (*
 	if err != nil {
 		bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 		bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
-		defer ememorystore.CloseEntityConnection(bctx, bSummaryEntityMetadata)
+		defer ememorystore.Close(bctx, bSummaryEntityMetadata)
 		bs, err := sc.GetBlockSummary(bctx, bhash)
 		if err != nil {
 			return nil, err
@@ -163,7 +163,7 @@ func (sc *Chain) StoreTransactions(b *block.Block) error {
 func (sc *Chain) storeTransactions(sTxns []datastore.Entity, roundNumber int64) error {
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := ememorystore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
-	defer ememorystore.Close(tctx)
+	defer ememorystore.Close(tctx, txnSummaryMetadata)
 
 	rtcKey := transaction.BuildSummaryRoundKey(roundNumber)
 	rtcDelta := transaction.RoundTxnsCount{
@@ -198,7 +198,7 @@ func (sc *Chain) storeTransactions(sTxns []datastore.Entity, roundNumber int64) 
 func (sc *Chain) getTxnCountForRound(ctx context.Context, r int64) (int, error) {
 	txnSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := ememorystore.WithEntityConnection(common.GetRootContext(), txnSummaryMetadata)
-	defer ememorystore.Close(tctx)
+	defer ememorystore.Close(tctx, txnSummaryMetadata)
 
 	// Read the count of txns_per_round for this round
 	rtcKey := transaction.BuildSummaryRoundKey(r)

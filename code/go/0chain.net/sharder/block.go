@@ -106,7 +106,7 @@ func (sc *Chain) StoreBlockSummaryFromBlock(b *block.Block) error {
 	bs := b.GetSummary()
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), bSummaryEntityMetadata)
-	defer ememorystore.Close(bctx)
+	defer ememorystore.Close(bctx, bSummaryEntityMetadata)
 	if len(bs.Hash) < 64 {
 		Logger.Error("Writing block summary - block hash less than 64", zap.String("hash", bs.Hash))
 	}
@@ -122,7 +122,7 @@ func (sc *Chain) StoreBlockSummaryFromBlock(b *block.Block) error {
 func (sc *Chain) StoreBlockSummary(ctx context.Context, bs *block.BlockSummary) error {
 	bSummaryEntityMetadata := bs.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
-	defer ememorystore.Close(bctx)
+	defer ememorystore.Close(bctx, bSummaryEntityMetadata)
 	if len(bs.Hash) < 64 {
 		Logger.Error("Writing block summary - block hash less than 64", zap.String("hash", bs.Hash))
 	}
@@ -142,7 +142,7 @@ func (sc *Chain) StoreBlockSummary(ctx context.Context, bs *block.BlockSummary) 
 func (sc *Chain) StoreMagicBlockMapFromBlock(mbm *block.MagicBlockMap) error {
 	mbMapEntityMetadata := mbm.GetEntityMetadata()
 	mctx := ememorystore.WithEntityConnection(common.GetRootContext(), mbMapEntityMetadata)
-	defer ememorystore.Close(mctx)
+	defer ememorystore.Close(mctx, mbMapEntityMetadata)
 	if len(mbm.Hash) < 64 {
 		Logger.Error("Writing block summary - block hash less than 64", zap.String("hash", mbm.Hash), zap.String("magic_block_number", mbm.ID))
 	}
@@ -159,7 +159,7 @@ func (sc *Chain) GetMagicBlockMap(ctx context.Context, magicBlockNumber string) 
 	magicBlockMapEntityMetadata := datastore.GetEntityMetadata("magic_block_map")
 	magicBlockMap := magicBlockMapEntityMetadata.Instance().(*block.MagicBlockMap)
 	mctx := ememorystore.WithEntityConnection(ctx, magicBlockMapEntityMetadata)
-	defer ememorystore.Close(mctx)
+	defer ememorystore.Close(mctx, magicBlockMapEntityMetadata)
 	err := magicBlockMapEntityMetadata.GetStore().Read(mctx, datastore.ToKey(magicBlockNumber), magicBlockMap)
 	if err != nil {
 		return nil, err
@@ -176,7 +176,7 @@ func (sc *Chain) GetHighestMagicBlockMap(ctx context.Context) (
 	mbm = mbmemd.Instance().(*block.MagicBlockMap)
 
 	var mctx = ememorystore.WithEntityConnection(ctx, mbmemd)
-	defer ememorystore.Close(mctx)
+	defer ememorystore.Close(mctx, mbmemd)
 
 	con := ememorystore.GetEntityCon(mctx, mbmemd)
 	if con == nil {

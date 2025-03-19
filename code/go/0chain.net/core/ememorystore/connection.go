@@ -255,7 +255,7 @@ func GetEntityCon(ctx context.Context, entityMetadata datastore.EntityMetadata) 
 }
 
 // CloseConnection closes a specific connection by ID
-func CloseEntityConnection(ctx context.Context, entityMetadata datastore.EntityMetadata) {
+func Close(ctx context.Context, entityMetadata datastore.EntityMetadata) {
 	if ctx == nil {
 		return
 	}
@@ -298,8 +298,8 @@ func CloseEntityConnection(ctx context.Context, entityMetadata datastore.EntityM
 	return
 }
 
-// CloseAllConnections closes all connections in the given context
-func Close(ctx context.Context) {
+// CloseAll closes all connections in the given context
+func CloseAll(ctx context.Context) {
 	mapValue := ctx.Value(CONNECTION_MAP)
 	if mapValue == nil {
 		return // No connections

@@ -518,7 +518,7 @@ func StoreMagicBlock(ctx context.Context, magicBlock *block.MagicBlock) (
 		emd  = data.GetEntityMetadata()
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, emd)
 
 	if err = data.Write(dctx); err != nil {
 		return
@@ -539,7 +539,7 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *block.MagicBlock,
 		emd  = mbd.GetEntityMetadata()
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, emd)
 
 	if err = mbd.Read(dctx, mbd.GetKey()); err != nil {
 		return
@@ -568,7 +568,7 @@ func StoreDKGKey(ctx context.Context, dkgKey *block.DKGKey) error {
 		dctx           = ememorystore.WithEntityConnection(ctx, dkgKeyMetadata)
 	)
 
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, dkgKeyMetadata)
 
 	if err := dkgKeyData.Write(dctx); err != nil {
 		return err
@@ -587,7 +587,7 @@ func LoadDKGKey(ctx context.Context, mbNum int64) (dkgKey *block.DKGKey, err err
 		emd  = dkgKeyData.GetEntityMetadata()
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, emd)
 
 	if err = dkgKeyData.Read(dctx, dkgKeyData.GetKey()); err != nil {
 		return
@@ -603,7 +603,7 @@ func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
 		dctx               = ememorystore.WithEntityConnection(ctx,
 			dkgSummaryMetadata)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, dkgSummaryMetadata)
 
 	if err = summary.Write(dctx); err != nil {
 		return
@@ -624,7 +624,7 @@ func LoadDKGSummary(ctx context.Context, id string) (dkgs *bls.DKGSummary,
 		dctx               = ememorystore.WithEntityConnection(ctx,
 			dkgSummaryMetadata)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, dkgSummaryMetadata)
 	err = dkgs.Read(dctx, dkgs.GetKey())
 	return
 }

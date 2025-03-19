@@ -50,7 +50,7 @@ func TestStoreTransactions(t *testing.T) {
 
 	transactionSummaryMetadata := datastore.GetEntityMetadata("txn_summary")
 	ctx := ememorystore.WithEntityConnection(common.GetRootContext(), transactionSummaryMetadata)
-	defer ememorystore.Close(ctx)
+	defer ememorystore.Close(ctx, transactionSummaryMetadata)
 
 	// Read from rocksdb and make sure those transactions are saved
 	for _, txn := range txns {

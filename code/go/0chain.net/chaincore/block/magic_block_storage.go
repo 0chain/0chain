@@ -82,7 +82,7 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *MagicBlock,
 		emd  = mbd.GetEntityMetadata()
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, emd)
 
 	if err = mbd.Read(dctx, mbd.GetKey()); err != nil {
 		return
@@ -121,7 +121,7 @@ func LoadLatestMB(ctx context.Context, lfbRound, mbNumber int64) (mb *MagicBlock
 		rctx  = ememorystore.WithEntityConnection(ctx, mbemd)
 		conn  = ememorystore.GetEntityCon(rctx, mbemd)
 	)
-	defer ememorystore.Close(rctx)
+	defer ememorystore.Close(rctx, mbemd)
 
 	iter := conn.Conn.NewIterator(conn.ReadOptions)
 	defer iter.Close()

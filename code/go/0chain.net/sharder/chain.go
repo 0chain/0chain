@@ -122,7 +122,7 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	r.Number = roundNum
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
-	defer ememorystore.CloseEntityConnection(rctx, roundEntityMetadata)
+	defer ememorystore.Close(rctx, roundEntityMetadata)
 	err := r.Read(rctx, r.GetKey())
 	return r, err
 }
@@ -612,7 +612,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	)
 
 	defer func() {
-		ememorystore.Close(rctx)
+		ememorystore.Close(rctx, remd)
 		iter.Close()
 	}()
 
