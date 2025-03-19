@@ -518,7 +518,12 @@ func StoreMagicBlock(ctx context.Context, magicBlock *block.MagicBlock) (
 		emd  = data.GetEntityMetadata()
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
-	defer ememorystore.Close(dctx, emd)
+	var cancel func()
+	dctx, cancel = context.WithTimeout(dctx, 30*time.Second)
+	defer func() {
+		cancel()
+		ememorystore.Close(dctx, emd)
+	}()
 
 	if err = data.Write(dctx); err != nil {
 		return
