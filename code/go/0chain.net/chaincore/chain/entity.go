@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -269,6 +270,13 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 			defer cancel()
 			b, err := c.GetNotarizedBlockFromSharders(cctx, "", r)
 			if err != nil {
+				if strings.Contains(err.Error(), "push to block fetch channel failed") {
+					logging.Logger.Error("request block failed",
+						zap.Int64("round", r),
+						zap.Error(err))
+					return
+				}
+
 				// fetch from miners
 				b, err = c.GetNotarizedBlock(cctx, "", r)
 				if err != nil {
