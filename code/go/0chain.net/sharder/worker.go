@@ -53,7 +53,7 @@ func (sc *Chain) hasRoundSummary(ctx context.Context, rNum int64) (*round.Round,
 func (sc *Chain) hasBlockSummary(ctx context.Context, bHash string) (*block.BlockSummary, bool) {
 	bSummaryEntityMetadata := datastore.GetEntityMetadata("block_summary")
 	bctx := ememorystore.WithEntityConnection(ctx, bSummaryEntityMetadata)
-	defer ememorystore.Close(bctx)
+	defer ememorystore.Close(bctx, bSummaryEntityMetadata)
 	bs, err := sc.GetBlockSummary(bctx, bHash)
 	if err == nil {
 		return bs, true
@@ -72,7 +72,7 @@ func (sc *Chain) hasBlock(bHash string, rNum int64) (*block.Block, bool) {
 func (sc *Chain) hasBlockTransactions(ctx context.Context, b *block.Block) bool { //nolint
 	txnSummaryEntityMetadata := datastore.GetEntityMetadata("txn_summary")
 	tctx := ememorystore.WithEntityConnection(ctx, txnSummaryEntityMetadata)
-	defer ememorystore.Close(tctx)
+	defer ememorystore.Close(tctx, txnSummaryEntityMetadata)
 	for _, txn := range b.Txns {
 		_, err := sc.GetTransactionSummary(tctx, txn.Hash)
 		if err != nil {

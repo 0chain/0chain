@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	c_state "0chain.net/chaincore/chain/state"
+	cstate "0chain.net/chaincore/chain/state"
 	sci "0chain.net/chaincore/smartcontractinterface"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
@@ -47,7 +47,7 @@ func GetSmartContract(scAddress string) sci.SmartContractInterface {
 	return getSmartContract(scAddress)
 }
 
-func ExecuteWithStats(smcoi sci.SmartContractInterface, txn *transaction.Transaction, balances c_state.StateContextI) (string, error) {
+func ExecuteWithStats(smcoi sci.SmartContractInterface, txn *transaction.Transaction, balances cstate.StateContextI) (string, error) {
 	ts := time.Now()
 	inter, err := smcoi.Execute(txn.Clone(), txn.FunctionName, txn.InputData, balances)
 	if err == nil {
@@ -61,7 +61,7 @@ func ExecuteWithStats(smcoi sci.SmartContractInterface, txn *transaction.Transac
 }
 
 // ExecuteSmartContract - executes the smart contract in the context of the given transaction
-func ExecuteSmartContract(txn *transaction.Transaction, balances c_state.StateContextI) (string, error) {
+func ExecuteSmartContract(txn *transaction.Transaction, balances cstate.StateContextI) (string, error) {
 	contractObj := getSmartContract(txn.ToClientID)
 	if contractObj != nil {
 		transactionOutput, err := ExecuteWithStats(contractObj, txn, balances)
@@ -73,7 +73,7 @@ func ExecuteSmartContract(txn *transaction.Transaction, balances c_state.StateCo
 	return "", common.NewError("invalid_smart_contract_address", "Invalid Smart Contract address")
 }
 
-func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances c_state.StateContextI) (int, error) {
+func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContractTransactionData, balances cstate.StateContextI) (int, error) {
 	contractObj := getSmartContract(t.ToClientID)
 	if contractObj == nil {
 		return 0, errors.New("estimate transaction cost - invalid to client id")
@@ -92,7 +92,7 @@ func EstimateTransactionCost(t *transaction.Transaction, scData sci.SmartContrac
 	return cost, nil
 }
 
-func GetTransactionCostTable(balances c_state.StateContextI) map[string]map[string]int {
+func GetTransactionCostTable(balances cstate.StateContextI) map[string]map[string]int {
 	res := make(map[string]map[string]int)
 	for addr, sc := range ContractMap {
 		table, err := sc.GetCostTable(balances)

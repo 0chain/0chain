@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"strconv"
 	"strings"
@@ -182,6 +183,7 @@ func runReadOnlySuite(
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Println("Recovered in benchmark test", bm.Name(), "message", r)
+					fmt.Println("Stack trace:", string(debug.Stack()))
 				}
 			}()
 			timer := time.Now()
@@ -234,6 +236,7 @@ func runSuite(
 			defer func() {
 				if r := recover(); r != nil {
 					fmt.Println("Recovered in benchmark test", bm.Name(), "message", r)
+					fmt.Println("Stack trace:", string(debug.Stack()))
 				}
 			}()
 			timer := time.Now()
@@ -463,7 +466,11 @@ func runEventDatabaseBenchmark(
 		nil,
 		nil,
 		nil,
-		nil, nil, cloneEdb,
+		nil,
+		nil,
+		nil,
+		nil,
+		cloneEdb,
 	)
 	timedBalance := cstate.NewTimedQueryStateContext(balances, func() common.Timestamp {
 		return 0

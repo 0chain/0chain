@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -269,6 +270,13 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 			defer cancel()
 			b, err := c.GetNotarizedBlockFromSharders(cctx, "", r)
 			if err != nil {
+				if strings.Contains(err.Error(), "push to block fetch channel failed") {
+					logging.Logger.Error("request block failed",
+						zap.Int64("round", r),
+						zap.Error(err))
+					return
+				}
+
 				// fetch from miners
 				b, err = c.GetNotarizedBlock(cctx, "", r)
 				if err != nil {
@@ -745,7 +753,7 @@ func (c *Chain) StoreRound(r *round.Round) error {
 	logging.Logger.Debug("store round", zap.Int64("round", r.GetRoundNumber()))
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
-	defer ememorystore.Close(rctx)
+	defer ememorystore.Close(rctx, roundEntityMetadata)
 	err := r.Write(rctx)
 	if err != nil {
 		return err
@@ -830,7 +838,7 @@ func (c *Chain) getBlockEvents(round int64) (int64, []event.Event, error) {
 	key := strconv.FormatInt(round%int64(block.EventsRingSize), 10)
 
 	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
-	defer ememorystore.Close(bctx)
+	defer ememorystore.Close(bctx, meta)
 
 	err := meta.GetStore().Read(bctx, datastore.ToKey(key), blockEvents)
 	if err != nil {
@@ -1240,7 +1248,7 @@ func (c *Chain) setupInitialState(initStates *state.InitStates, gb *block.Block)
 	txnStateCache := statecache.NewTransactionCache(blockStateCache)
 	pmt := util.NewMerklePatriciaTrie(memMPT, util.Sequence(0), nil, txnStateCache)
 	txn := transaction.Transaction{HashIDField: datastore.HashIDField{Hash: encryption.Hash(c.OwnerID())}, ClientID: c.OwnerID()}
-	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, nil, nil, c.GetEventDb())
+	stateCtx := cstate.NewStateContext(gb, pmt, &txn, nil, nil, nil, nil, nil, nil, nil, nil, nil, c.GetEventDb())
 	mustInitPartitions(stateCtx)
 
 	c.mustInitGBState(initStates, stateCtx)
@@ -1356,7 +1364,7 @@ func (c *Chain) storeLastNEvents(es event.BlockEvents) error {
 func (c *Chain) storeBlockEvents(b datastore.Entity) error {
 	meta := b.GetEntityMetadata()
 	bctx := ememorystore.WithEntityConnection(common.GetRootContext(), meta)
-	defer ememorystore.Close(bctx)
+	defer ememorystore.Close(bctx, meta)
 
 	if err := b.Write(bctx); err != nil {
 		return err

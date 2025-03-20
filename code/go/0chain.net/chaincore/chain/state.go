@@ -33,6 +33,18 @@ import (
 	"github.com/0chain/common/core/util"
 )
 
+var BuildInTxns = map[string]struct{}{
+	"payFees":                 {},
+	"generate_challenge":      {},
+	"commit_settings_changes": {},
+	"blobber_block_rewards":   {},
+}
+
+func isBuildInTxn(txnName string) bool {
+	_, ok := BuildInTxns[txnName]
+	return ok
+}
+
 // SmartContractExecutionTimer - a metric that tracks the time it takes to execute a smart contract txn
 var SmartContractExecutionTimer metrics.Timer
 var StateComputationTimer metrics.Histogram
@@ -387,6 +399,8 @@ func (c *Chain) NewStateContext(
 ) (balances *bcstate.StateContext) {
 	return bcstate.NewStateContext(b, s, txn,
 		c.GetMagicBlock,
+		c.GetMagicBlockNoOffset,
+		c.SetMagicBlock,
 		func() *block.Block {
 			return c.GetLatestFinalizedMagicBlock(context.Background())
 		},
@@ -439,7 +453,7 @@ func (c *Chain) updateState(ctx context.Context,
 		}
 	}()
 
-	if err = c.validateNonce(sctx, txn.ClientID, txn.Nonce); err != nil {
+	if err = c.validateNonce(sctx, txn.ClientID, txn.Nonce, txn.FunctionName); err != nil {
 		return nil, err
 	}
 
@@ -603,7 +617,7 @@ func (c *Chain) updateState(ctx context.Context,
 		}
 	}
 
-	u, err := c.incrementNonce(sctx, txn.ClientID)
+	u, err := c.incrementNonce(sctx, txn.ClientID, txn.FunctionName)
 	if err != nil {
 		logging.Logger.Error("update nonce error", zap.Error(err),
 			zap.Any("transaction", txn),
@@ -852,7 +866,34 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 	return stateToUser(toClient, ts), nil
 }
 
-func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64) error {
+func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64, txnName string) error {
+	var buildInTxnNonce bool
+	if err := cstate.WithActivation(sctx, "vc_hardfork", func() error {
+		return nil
+	}, func() error {
+		if !isBuildInTxn(txnName) {
+			return nil
+		}
+		buildInTxnNonce = true
+		minerNonce, err := sctx.GetMinerNonce(fromClient)
+		if err != nil {
+			return err
+		}
+
+		if minerNonce+1 != txnNonce {
+			return ErrWrongNonce
+		}
+
+		return nil
+
+	}); err != nil {
+		return err
+	}
+
+	if buildInTxnNonce {
+		return nil
+	}
+
 	s, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		return err
@@ -872,7 +913,31 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 	return nil
 }
 
-func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key) (*event.User, error) {
+func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnName string) (*event.User, error) {
+	var useMinerNonce bool
+	if err := cstate.WithActivation(sctx, "vc_hardfork", func() error {
+		return nil
+	}, func() error {
+		if !isBuildInTxn(txnName) {
+			return nil
+		}
+
+		useMinerNonce = true
+		nonce, err := sctx.GetMinerNonce(fromClient)
+		if err != nil {
+			return err
+		}
+
+		nonce += 1
+		return sctx.SetMinerNonce(fromClient, nonce)
+	}); err != nil {
+		return nil, err
+	}
+
+	if useMinerNonce {
+		return nil, nil
+	}
+
 	s, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		return nil, err

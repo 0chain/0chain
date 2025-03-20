@@ -18,7 +18,6 @@ import (
 
 	"0chain.net/chaincore/block"
 	cstate "0chain.net/chaincore/chain/state"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/transaction"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -300,6 +299,25 @@ type SimpleNode struct {
 	LastSettingUpdateRound int64 `json:"last_setting_update_round"`
 }
 
+func (smn *SimpleNode) Clone() *SimpleNode {
+	return &SimpleNode{
+		Provider:               smn.Provider,
+		N2NHost:                smn.N2NHost,
+		Host:                   smn.Host,
+		Port:                   smn.Port,
+		Path:                   smn.Path,
+		PublicKey:              smn.PublicKey,
+		ShortName:              smn.ShortName,
+		BuildTag:               smn.BuildTag,
+		TotalStaked:            smn.TotalStaked,
+		Delete:                 smn.Delete,
+		NodeType:               smn.NodeType,
+		LastHealthCheck:        smn.LastHealthCheck,
+		Status:                 smn.Status,
+		LastSettingUpdateRound: smn.LastSettingUpdateRound,
+	}
+}
+
 func (smn *SimpleNode) Encode() []byte {
 	buff, _ := json.Marshal(smn)
 	return buff
@@ -397,32 +415,32 @@ func (pn *PhaseNode) Decode(input []byte) error {
 }
 
 // swagger:model DKGMinerNodes
-type DKGMinerNodes struct {
-	MinN     int     `json:"min_n"`
-	MaxN     int     `json:"max_n"`
-	TPercent float64 `json:"t_percent"`
-	KPercent float64 `json:"k_percent"`
+// type DKGMinerNodes struct {
+// 	MinN     int     `json:"min_n"`
+// 	MaxN     int     `json:"max_n"`
+// 	TPercent float64 `json:"t_percent"`
+// 	KPercent float64 `json:"k_percent"`
 
-	SimpleNodes    `json:"simple_nodes"`
-	T              int             `json:"t"`
-	K              int             `json:"k"`
-	N              int             `json:"n"`
-	XPercent       float64         `json:"x_percent"`
-	RevealedShares map[string]int  `json:"revealed_shares"`
-	Waited         map[string]bool `json:"waited"`
+// 	SimpleNodes    `json:"simple_nodes"`
+// 	T              int             `json:"t"`
+// 	K              int             `json:"k"`
+// 	N              int             `json:"n"`
+// 	XPercent       float64         `json:"x_percent"`
+// 	RevealedShares map[string]int  `json:"revealed_shares"`
+// 	Waited         map[string]bool `json:"waited"`
 
-	// StartRound used to filter responses from old MB where sharders comes up.
-	StartRound int64 `json:"start_round"`
-}
+// 	// StartRound used to filter responses from old MB where sharders comes up.
+// 	StartRound int64 `json:"start_round"`
+// }
 
-func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
-	gnb := gn.MustBase()
-	dkgmn.MinN = gnb.MinN
-	dkgmn.MaxN = gnb.MaxN
-	dkgmn.TPercent = gnb.TPercent
-	dkgmn.KPercent = gnb.KPercent
-	dkgmn.XPercent = gnb.XPercent
-}
+// func (dkgmn *DKGMinerNodes) setConfigs(gn *GlobalNode) {
+// 	gnb := gn.MustBase()
+// 	dkgmn.MinN = gnb.MinN
+// 	dkgmn.MaxN = gnb.MaxN
+// 	dkgmn.TPercent = gnb.TPercent
+// 	dkgmn.KPercent = gnb.KPercent
+// 	dkgmn.XPercent = gnb.XPercent
+// }
 
 func min(a, b int) int {
 	if a > b {
@@ -433,13 +451,13 @@ func min(a, b int) int {
 
 // The min_n is checked before the calculateTKN call, so, the n >= min_n.
 // The calculateTKN used to set initial T, K, and N.
-func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
-	dkgmn.setConfigs(gn)
-	var m = min(dkgmn.MaxN, n)
-	dkgmn.N = m
-	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
-	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
-}
+// func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
+// 	dkgmn.setConfigs(gn)
+// 	var m = min(dkgmn.MaxN, n)
+// 	dkgmn.N = m
+// 	dkgmn.K = int(math.Ceil(dkgmn.KPercent * float64(m)))
+// 	dkgmn.T = int(math.Ceil(dkgmn.TPercent * float64(m)))
+// }
 
 func simpleNodesKeys(sns SimpleNodes) (ks []string) {
 	ks = make([]string, 0, len(sns))
@@ -451,72 +469,72 @@ func simpleNodesKeys(sns SimpleNodes) (ks []string) {
 
 // reduce method checks boundaries and if final, reduces the
 // list to adhere to the limits (min_n, max_n) and conditions
-func (dkgmn *DKGMinerNodes) reduceNodes(
-	final bool,
-	gn *GlobalNode,
-	balances cstate.StateContextI) (err error) {
+// func (dkgmn *DKGMinerNodes) reduceNodes(
+// 	final bool,
+// 	gn *GlobalNode,
+// 	balances cstate.StateContextI) (err error) {
 
-	var n = len(dkgmn.SimpleNodes)
+// 	var n = len(dkgmn.SimpleNodes)
 
-	if n < dkgmn.MinN {
-		return fmt.Errorf("too few miners: %d, want at least: %d", n, dkgmn.MinN)
-	}
+// 	if n < dkgmn.MinN {
+// 		return fmt.Errorf("too few miners: %d, want at least: %d", n, dkgmn.MinN)
+// 	}
 
-	if !gn.hasPrevDKGMiner(dkgmn.SimpleNodes, balances) {
-		return fmt.Errorf("missing miner from previous set, n: %d, list: %s",
-			n, simpleNodesKeys(dkgmn.SimpleNodes))
-	}
+// 	if !gn.hasPrevDKGMiner(dkgmn.SimpleNodes, balances) {
+// 		return fmt.Errorf("missing miner from previous set, n: %d, list: %s",
+// 			n, simpleNodesKeys(dkgmn.SimpleNodes))
+// 	}
 
-	if final {
-		simpleNodes := make(SimpleNodes)
-		for k, v := range dkgmn.SimpleNodes {
-			simpleNodes[k] = v
-		}
-		var pmbrss int64
-		var pmbnp *node.Pool
-		pmb := balances.GetLastestFinalizedMagicBlock()
-		if pmb != nil {
-			pmbrss = pmb.RoundRandomSeed
-			if pmb.MagicBlock != nil {
-				pmbnp = pmb.MagicBlock.Miners
-			}
-		}
-		gnb := gn.MustBase()
-		simpleNodes.reduce(gnb.MaxN, gnb.XPercent, pmbrss, pmbnp)
-		dkgmn.SimpleNodes = simpleNodes
-	}
+// 	if final {
+// 		simpleNodes := make(SimpleNodes)
+// 		for k, v := range dkgmn.SimpleNodes {
+// 			simpleNodes[k] = v
+// 		}
+// 		var pmbrss int64
+// 		var pmbnp *node.Pool
+// 		pmb := balances.GetLastestFinalizedMagicBlock()
+// 		if pmb != nil {
+// 			pmbrss = pmb.RoundRandomSeed
+// 			if pmb.MagicBlock != nil {
+// 				pmbnp = pmb.MagicBlock.Miners
+// 			}
+// 		}
+// 		gnb := gn.MustBase()
+// 		simpleNodes.reduce(gnb.MaxN, gnb.XPercent, pmbrss, pmbnp)
+// 		dkgmn.SimpleNodes = simpleNodes
+// 	}
 
-	return
-}
+// 	return
+// }
 
-func NewDKGMinerNodes() *DKGMinerNodes {
-	return &DKGMinerNodes{
-		SimpleNodes:    NewSimpleNodes(),
-		RevealedShares: make(map[string]int),
-		Waited:         make(map[string]bool),
-	}
-}
+// func NewDKGMinerNodes() *DKGMinerNodes {
+// 	return &DKGMinerNodes{
+// 		SimpleNodes:    NewSimpleNodes(),
+// 		RevealedShares: make(map[string]int),
+// 		Waited:         make(map[string]bool),
+// 	}
+// }
 
-func (dmn *DKGMinerNodes) Encode() []byte {
-	buff, _ := json.Marshal(dmn)
-	return buff
-}
+// func (dmn *DKGMinerNodes) Encode() []byte {
+// 	buff, _ := json.Marshal(dmn)
+// 	return buff
+// }
 
-func (dmn *DKGMinerNodes) Decode(input []byte) error {
-	err := json.Unmarshal(input, dmn)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// func (dmn *DKGMinerNodes) Decode(input []byte) error {
+// 	err := json.Unmarshal(input, dmn)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
-func (dmn *DKGMinerNodes) GetHash() string {
-	return util.ToHex(dmn.GetHashBytes())
-}
+// func (dmn *DKGMinerNodes) GetHash() string {
+// 	return util.ToHex(dmn.GetHashBytes())
+// }
 
-func (dmn *DKGMinerNodes) GetHashBytes() []byte {
-	return encryption.RawHash(dmn.Encode())
-}
+// func (dmn *DKGMinerNodes) GetHashBytes() []byte {
+// 	return encryption.RawHash(dmn.Encode())
+// }
 
 // getMinersList returns miners list
 func getMinersList(state cstate.StateContextI) (*MinerNodes, error) {
@@ -545,43 +563,43 @@ func updateMinersList(state cstate.StateContextI, miners *MinerNodes) error {
 }
 
 // getDKGMinersList gets dkg miners list
-func getDKGMinersList(state cstate.CommonStateContextI) (*DKGMinerNodes, error) {
-	dkgMiners := NewDKGMinerNodes()
+func getDKGMinersList(state cstate.CommonStateContextI) (*DKGMinerNodesV2, error) {
+	dkgMiners := NewDKGMinerNodesV2()
 	err := state.GetTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
 		}
 
-		logging.Logger.Debug("VC: no dkg miners list found, create one")
+		logging.Logger.Debug("[mvc] no dkg miners list found, create one")
 
-		return NewDKGMinerNodes(), nil
+		return NewDKGMinerNodesV2(), nil
 	}
 
 	return dkgMiners, nil
 }
 
 // updateDKGMinersList update the dkg miners list
-func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodes) error {
-	logging.Logger.Info("update dkg miners list", zap.Int("len", len(dkgMiners.SimpleNodes)))
+func updateDKGMinersList(state cstate.StateContextI, dkgMiners *DKGMinerNodesV2) error {
+	logging.Logger.Info("update dkg miners list", zap.Int("len", len(dkgMiners.Nodes)))
 	_, err := state.InsertTrieNode(DKGMinersKey, dkgMiners)
 	return err
 }
 
-func getMinersMPKs(state cstate.CommonStateContextI) (*block.Mpks, error) {
-	mpks := block.NewMpks()
-	err := state.GetTrieNode(MinersMPKKey, mpks)
-	if err != nil {
-		return nil, err
-	}
+// func getMinersMPKs(state cstate.CommonStateContextI) (*block.Mpks, error) {
+// 	mpks := block.NewMpks()
+// 	err := state.GetTrieNode(MinersMPKKey, mpks)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	return mpks, nil
-}
+// 	return mpks, nil
+// }
 
-func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
-	_, err := state.InsertTrieNode(MinersMPKKey, mpks)
-	return err
-}
+// func updateMinersMPKs(state cstate.StateContextI, mpks *block.Mpks) error {
+// 	_, err := state.InsertTrieNode(MinersMPKKey, mpks)
+// 	return err
+// }
 
 func getMagicBlock(state cstate.CommonStateContextI) (*block.MagicBlock, error) {
 	magicBlock := block.NewMagicBlock()
@@ -589,30 +607,32 @@ func getMagicBlock(state cstate.CommonStateContextI) (*block.MagicBlock, error) 
 	if err != nil {
 		return nil, err
 	}
-	logging.Logger.Debug("get magic block", zap.Any("magic block", magicBlock))
+	logging.Logger.Debug("get magic block",
+		zap.Int64("magic block", magicBlock.MagicBlockNumber),
+		zap.Int64("starting round", magicBlock.StartingRound),
+		zap.String("hash", magicBlock.Hash))
 
 	return magicBlock, nil
 }
 
 func updateMagicBlock(state cstate.StateContextI, magicBlock *block.MagicBlock) error {
-	logging.Logger.Debug("save magic block", zap.Any("magic block", magicBlock))
+	logging.Logger.Debug("save magic block", zap.Int64("magic block", magicBlock.MagicBlockNumber))
 	_, err := state.InsertTrieNode(MagicBlockKey, magicBlock)
 	return err
 }
 
-func getGroupShareOrSigns(state cstate.CommonStateContextI) (*block.GroupSharesOrSigns, error) {
-	var gsos = block.NewGroupSharesOrSigns()
-	err := state.GetTrieNode(GroupShareOrSignsKey, gsos)
+func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns, error) {
+	gsos := NewGroupSharesOrSignsV2()
+	if err := gsos.Load(state); err != nil {
+		return nil, err
+	}
+
+	gsosn, err := gsos.GetAllShareOrSigns(state)
 	if err != nil {
 		return nil, err
 	}
 
-	return gsos, nil
-}
-
-func updateGroupShareOrSigns(state cstate.StateContextI, gsos *block.GroupSharesOrSigns) error {
-	_, err := state.InsertTrieNode(GroupShareOrSignsKey, gsos)
-	return err
+	return gsosn, nil
 }
 
 // getShardersKeepList returns the sharder list

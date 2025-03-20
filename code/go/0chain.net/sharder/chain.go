@@ -122,7 +122,7 @@ func (sc *Chain) GetRoundFromStore(ctx context.Context, roundNum int64) (*round.
 	r.Number = roundNum
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(ctx, roundEntityMetadata)
-	defer ememorystore.CloseEntityConnection(rctx, roundEntityMetadata)
+	defer ememorystore.Close(rctx, roundEntityMetadata)
 	err := r.Read(rctx, r.GetKey())
 	return r, err
 }
@@ -348,7 +348,22 @@ func (sc *Chain) LoadLatestMBs(ctx context.Context, fromMBNumber int64) (mbs []*
 				zap.Int64("mb number", i),
 				zap.Int64("round", mb.BlockRound),
 				zap.String("hash", mb.Hash))
-			continue
+
+			// try to fetch from remote
+			b, err = sc.GetNotarizedBlockFromSharders(ctx, mb.Hash, mb.BlockRound)
+			if err != nil {
+				logging.Logger.Error("load_latest_mb failed to load block from remote",
+					zap.Error(err),
+					zap.Int64("mb number", i),
+					zap.Int64("round", mb.BlockRound),
+					zap.String("hash", mb.Hash))
+				continue
+			}
+
+			logging.Logger.Info("load_latest_mb loaded block from remote",
+				zap.Int64("mb number", i),
+				zap.Int64("round", mb.BlockRound),
+				zap.String("hash", mb.Hash))
 		}
 		mbs = append(mbs, b)
 	}
@@ -597,7 +612,7 @@ func (sc *Chain) iterateRoundsLookingForLFB(ctx context.Context) *blocksLoaded {
 	)
 
 	defer func() {
-		ememorystore.Close(rctx)
+		ememorystore.Close(rctx, remd)
 		iter.Close()
 	}()
 

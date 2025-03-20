@@ -224,12 +224,14 @@ func GetTransactionStatus(txnHash string, sharders []string, sf int) (*Transacti
 			if response.StatusCode != 200 {
 				// logging.Logger.Error("transaction confirmation response code",
 				// 	zap.Any("code", response.StatusCode))
+				numErrs++
 				response.Body.Close()
 				continue
 			}
 			if err != nil {
 				logging.Logger.Error("Error reading response from transaction confirmation", zap.Error(err))
 				response.Body.Close()
+				numErrs++
 				continue
 			}
 			var objmap map[string]*json.RawMessage
@@ -238,18 +240,24 @@ func GetTransactionStatus(txnHash string, sharders []string, sf int) (*Transacti
 				logging.Logger.Error("Error unmarshalling response", zap.Error(err))
 				errString = errString + urlString + ":" + err.Error()
 				response.Body.Close()
+				numErrs++
 				continue
 			}
+
 			if *objmap["txn"] == nil {
 				e := "No transaction information. Only block summary."
 				logging.Logger.Error(e)
 				errString = errString + urlString + ":" + e
+				numErrs++
+				continue
 			}
 			txn := &Transaction{}
 			err = json.Unmarshal(*objmap["txn"], &txn)
 			if err != nil {
 				logging.Logger.Error("Error unmarshalling to get transaction response", zap.Error(err))
 				errString = errString + urlString + ":" + err.Error()
+				numErrs++
+				continue
 			}
 			if len(txn.Signature) > 0 {
 				retTxn = txn

@@ -44,6 +44,12 @@ const (
 	MinterZcn
 )
 
+type NonceNameSpace int8
+
+const (
+	NonceNameSpaceMiner NonceNameSpace = 0
+)
+
 var (
 	approvedMinters = []string{
 		"6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712d9", // miner SC
@@ -98,13 +104,17 @@ type StateContextI interface {
 	GetLastestFinalizedMagicBlock() *block.Block
 	GetChainCurrentMagicBlock() *block.MagicBlock
 	GetMagicBlock(round int64) *block.MagicBlock
+	GetMagicBlockNoOffset(round int64) *block.MagicBlock
 	LoadDKGSummary(magicBlockNum int64) (*bls.DKGSummary, error)
 	SetMagicBlock(block *block.MagicBlock) // cannot use in smart contracts or REST endpoints
+	SetBlockMagicBlock(block *block.MagicBlock)
 	SetDKG(dkg *bls.DKG) error
 	GetState() util.MerklePatriciaTrieI       // cannot use in smart contracts or REST endpoints
 	GetTransaction() *transaction.Transaction // cannot use in smart contracts or REST endpoints
 	GetClientState(clientID datastore.Key) (*state.State, error)
 	SetClientState(clientID datastore.Key, s *state.State) (util.Key, error)
+	GetMinerNonce(minerID datastore.Key) (int64, error)
+	SetMinerNonce(minerID datastore.Key, nonce int64) error
 	GetClientBalance(clientID datastore.Key) (currency.Coin, error)
 	SetStateContext(st *state.State) error // cannot use in smart contracts or REST endpoints
 	DeleteTrieNode(key datastore.Key) (datastore.Key, error)
@@ -136,13 +146,14 @@ type StateContext struct {
 	getLastestFinalizedMagicBlock func() *block.Block
 	getLatestFinalizedBlock       func() *block.Block
 	getMagicBlock                 func(round int64) *block.MagicBlock
+	getMagicBlockNoOffset         func(round int64) *block.MagicBlock
 	getChainCurrentMagicBlock     func() *block.MagicBlock
 	getDKGSummary                 func(magicBlockNum int64) (*bls.DKGSummary, error)
 	setDKG                        func(dkg *bls.DKG) error
 	getSignature                  func() encryption.SignatureScheme
 	eventDb                       *event.EventDb
 	mutex                         *sync.Mutex
-	setMagicBlock                 func(mb *block.MagicBlock) error
+	setMagicBlock                 func(mb *block.MagicBlock)
 }
 
 type GetNow func() common.Timestamp
@@ -169,6 +180,8 @@ func NewStateContext(
 	s util.MerklePatriciaTrieI,
 	t *transaction.Transaction,
 	getMagicBlock func(int64) *block.MagicBlock,
+	getMagicBlockNoOffset func(int64) *block.MagicBlock,
+	setMagicBlock func(mb *block.MagicBlock),
 	getLastestFinalizedMagicBlock func() *block.Block,
 	getChainCurrentMagicBlock func() *block.MagicBlock,
 	getChainSignature func() encryption.SignatureScheme,
@@ -185,12 +198,14 @@ func NewStateContext(
 		state:                         s,
 		txn:                           t,
 		getMagicBlock:                 getMagicBlock,
+		getMagicBlockNoOffset:         getMagicBlockNoOffset,
 		getLastestFinalizedMagicBlock: getLastestFinalizedMagicBlock,
 		getLatestFinalizedBlock:       getLatestFinalizedBlock,
 		getChainCurrentMagicBlock:     getChainCurrentMagicBlock,
 		getSignature:                  getChainSignature,
 		getDKGSummary:                 getDKGSummary,
 		setDKG:                        setDKG,
+		setMagicBlock:                 setMagicBlock,
 		eventDb:                       eventDb,
 		clientStates:                  make(map[string]*state.State),
 		mutex:                         new(sync.Mutex),
@@ -202,8 +217,16 @@ func (sc *StateContext) GetBlock() *block.Block {
 	return sc.block
 }
 
-func (sc *StateContext) SetMagicBlock(block *block.MagicBlock) {
+func (sc *StateContext) SetBlockMagicBlock(block *block.MagicBlock) {
 	sc.block.MagicBlock = block
+}
+
+func (sc *StateContext) SetMagicBlock(block *block.MagicBlock) {
+	sc.setMagicBlock(block)
+}
+
+func (sc *StateContext) GetMagicBlockNoOffset(round int64) *block.MagicBlock {
+	return sc.getMagicBlockNoOffset(round)
 }
 
 // GetState - get the state MPT associated with this state context
@@ -364,6 +387,47 @@ func (sc *StateContext) GetClientState(clientID string) (*state.State, error) {
 	//TODO: should we apply the pending transfers?
 	sc.clientStates[clientID] = s.Clone()
 	return s, nil
+}
+
+func getNamespaceNoncePath(clientID string, namespace NonceNameSpace) util.Path {
+	return util.Path(encryption.Hash(fmt.Sprintf("namespace_nonce_%d_%s", namespace, clientID)))
+}
+
+func GetNamespaceNonce(clientState util.MerklePatriciaTrieI, clientID string, namespace NonceNameSpace) (*state.NamespaceNonce, error) {
+	ns := &state.NamespaceNonce{}
+	path := getNamespaceNoncePath(clientID, namespace)
+	err := clientState.GetNodeValue(path, ns)
+	if err != nil {
+		return nil, err
+	}
+	return ns, nil
+}
+
+func (sc *StateContext) GetMinerNonce(minerID datastore.Key) (int64, error) {
+	ns, err := GetNamespaceNonce(sc.GetState(), minerID, NonceNameSpaceMiner)
+	if err != nil && err != util.ErrValueNotPresent {
+		return 0, err
+	}
+
+	if err == util.ErrValueNotPresent {
+		return 0, nil
+	}
+
+	if ns.Namespace != int8(NonceNameSpaceMiner) {
+		return 0, fmt.Errorf("invalid namespace: %d", ns.Namespace)
+	}
+
+	return ns.Nonce, nil
+}
+
+func (sc *StateContext) SetMinerNonce(minerID datastore.Key, nonce int64) error {
+	ns := &state.NamespaceNonce{
+		Namespace: int8(NonceNameSpaceMiner),
+		Nonce:     nonce,
+	}
+
+	_, err := sc.state.Insert(getNamespaceNoncePath(minerID, NonceNameSpaceMiner), ns)
+	return err
 }
 
 func (sc *StateContext) SetClientState(clientID string, s *state.State) (util.Key, error) {

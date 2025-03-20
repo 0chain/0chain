@@ -34,7 +34,7 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 
 	var (
 		allMinersList *MinerNodes
-		dkgMinersList *DKGMinerNodes
+		dkgMinersList *DKGMinerNodesV2
 
 		allShardersList *MinerNodes
 
@@ -62,13 +62,27 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 			len(allShardersList.Nodes), gnb.MinS)
 	}
 
-	if !gn.hasPrevShader(allShardersList, balances) {
+	hasPrevShader, err := gn.hasPrevShader(allShardersList, balances)
+	if err != nil {
+		return common.NewErrorf("move_to_contribute_failed",
+			"invalid state: all sharders list hasn't a sharder from previous VC set, "+
+				"all: %d, min_s: %d, err: %v", len(allShardersList.Nodes), gnb.MinS, err)
+	}
+
+	if !hasPrevShader {
 		return common.NewErrorf("move_to_contribute_failed",
 			"invalid state: all sharders list hasn't a sharder from previous VC set, "+
 				"all: %d, min_s: %d", len(allShardersList.Nodes), gnb.MinS)
 	}
 
-	if !gn.hasPrevMiner(allMinersList, balances) {
+	hasPrevMiner, err := gn.hasPrevMiner(allMinersList, balances)
+	if err != nil {
+		return common.NewErrorf("move_to_contribute_failed",
+			"invalid state: all miners list hasn't a miner from previous VC set, "+
+				"all: %d, min_n: %d, err: %v", len(allMinersList.Nodes), gnb.MinN, err)
+	}
+
+	if !hasPrevMiner {
 		return common.NewErrorf("move_to_contribute_failed",
 			"invalid state: all miners list hasn't a miner from previous VC set, "+
 				"all: %d, min_n: %d", len(allMinersList.Nodes), gnb.MinN)
@@ -84,9 +98,9 @@ func (msc *MinerSmartContract) moveToContribute(balances cstate.StateContextI,
 		allMap[n.ID] = struct{}{}
 	}
 
-	dkgMinerKeys := make([]string, 0, len(dkgMinersList.SimpleNodes))
-	for key := range dkgMinersList.SimpleNodes {
-		dkgMinerKeys = append(dkgMinerKeys, key)
+	dkgMinerKeys := make([]string, 0, len(dkgMinersList.Nodes))
+	for _, nd := range dkgMinersList.Nodes {
+		dkgMinerKeys = append(dkgMinerKeys, nd.Key)
 	}
 
 	// sort the dkgMinersKeys
@@ -125,28 +139,33 @@ func (msc *MinerSmartContract) moveToShareOrPublish(
 			"failed to get miners DKG, phase: %v, err: %v", pn.Phase, err)
 	}
 
-	mpks, err := getMinersMPKs(balances)
+	mpks, err := GetMinersMPKs(balances)
 	if err != nil {
 		return common.NewErrorf("move_to_share_or_publish_failed",
 			"phase: %v, err: %v", pn.Phase, err)
 	}
 
-	if len(mpks.Mpks) == 0 {
+	if len(mpks.IDs) == 0 {
 		return common.NewError("move_to_share_or_publish_failed", "empty miners mpks keys")
 	}
 
+	mpksMap := make(map[string]struct{})
+	for _, id := range mpks.IDs {
+		mpksMap[id] = struct{}{}
+	}
+
 	// requires all dkg miners have contributed the mpks
-	noMpks := make([]string, 0, len(dkgMinersList.SimpleNodes))
-	for k := range dkgMinersList.SimpleNodes {
-		if _, ok := mpks.Mpks[k]; !ok {
-			noMpks = append(noMpks, k)
+	noMpks := make([]string, 0, len(dkgMinersList.Nodes))
+	for _, nd := range dkgMinersList.Nodes {
+		if _, ok := mpksMap[nd.Key]; !ok {
+			noMpks = append(noMpks, nd.Key)
 		}
 	}
 
 	if len(noMpks) == 0 {
 		// all good, every one has contributed
 		logging.Logger.Debug("[mvc] move phase to share or publish",
-			zap.Int("mpks", len(mpks.Mpks)),
+			zap.Int("mpks", len(mpks.IDs)),
 			zap.Int("K", dkgMinersList.K))
 		return nil
 	}
@@ -340,8 +359,8 @@ func getToDeleteMinerIDs(balances cstate.StateContextI,
 		toDeleteMinerIDs := make(map[string]struct{}, len(deleteMinersIDs))
 		toDeleteMinersNum := len(deleteMinersIDs)
 		if toDeleteMinersNum > 0 {
-			if lmb.N-toDeleteMinersNum < lmb.T {
-				toDeleteMinersNum = lmb.N - lmb.T
+			if lmb.N-toDeleteMinersNum < lmb.K {
+				toDeleteMinersNum = lmb.N - lmb.K
 			}
 			for _, did := range deleteMinersIDs[:toDeleteMinersNum] {
 				toDeleteMinerIDs[did] = struct{}{}
@@ -357,7 +376,7 @@ func getToDeleteMinerIDs(balances cstate.StateContextI,
 }
 
 func filterOutInvalidRegisterMiners(balances cstate.StateContextI,
-	dkgMiners *DKGMinerNodes,
+	dkgMiners *DKGMinerNodesV2,
 	regIDs []string,
 	allMinersMap map[string]*MinerNode) error {
 	logging.Logger.Info("Jayash_debug filterOutInvalidRegisterMiners", zap.Any("regIDs", regIDs), zap.Any("allMinersMap", allMinersMap))
@@ -381,7 +400,10 @@ func filterOutInvalidRegisterMiners(balances cstate.StateContextI,
 		// see if to add is in the all miners map, if not remove it from the register list and try next one
 		if n, ok := allMinersMap[mid]; ok {
 			logging.Logger.Debug("Jayash [mvc] createDKGMinersForContribute, add register node to dkg miners", zap.String("node", mid))
-			dkgMiners.SimpleNodes[mid] = n.SimpleNode
+			dkgMiners.Nodes = append(dkgMiners.Nodes, LightNode{
+				Key:       mid,
+				PublicKey: n.SimpleNode.PublicKey,
+			})
 			break
 		} else {
 			logging.Logger.Info("Jayash_debug [mvc] createDKGMinersForContribute, remove invalid register node", zap.String("node", mid))
@@ -492,14 +514,18 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	lmb := gn.prevMagicBlock(balances)
+	lmb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		return err
+	}
+
 	if lmb == nil {
 		return common.NewErrorf("failed to create dkg miners", "empty magic block")
 	}
 
 	var (
 		allMinersMap = make(map[string]*MinerNode, len(allMinersList.Nodes))
-		dkgMiners    = NewDKGMinerNodes()
+		dkgMiners    = NewDKGMinerNodesV2()
 		gnb          = gn.MustBase()
 	)
 
@@ -508,12 +534,15 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 	}
 
 	logging.Logger.Debug("create dkg miners, all miners list",
-		zap.Any("miners", allMinersMap))
+		zap.Int("miners", len(allMinersMap)))
 
 	toDeleteMinerIDs, err := getToDeleteMinerIDs(balances, lmb, gnb)
 	if err != nil {
 		return err
 	}
+
+	logging.Logger.Debug("create dkg miners, to delete miner ids",
+		zap.Any("miners", toDeleteMinerIDs))
 
 	for _, m := range lmb.Miners.CopyNodes() {
 		mid := m.GetKey()
@@ -528,7 +557,10 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 				"miner in prev MB is not in the all miners list: %s", mid)
 		}
 
-		dkgMiners.SimpleNodes[mid] = n.SimpleNode
+		dkgMiners.Nodes = append(dkgMiners.Nodes, LightNode{
+			Key:       mid,
+			PublicKey: n.SimpleNode.PublicKey,
+		})
 	}
 
 	// get register miner list
@@ -542,7 +574,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		return err
 	}
 
-	dkgMinersNum := len(dkgMiners.SimpleNodes)
+	dkgMinersNum := len(dkgMiners.Nodes)
 	if dkgMinersNum < gnb.MinN {
 		return common.NewErrorf("failed to create dkg miners", "miners num: %d < gn.Min: %c", dkgMinersNum, gnb.MinN)
 	}
@@ -553,7 +585,7 @@ func (msc *MinerSmartContract) createDKGMinersForContribute(
 		zap.Int("T", dkgMiners.T),
 		zap.Int("K", dkgMiners.K),
 		zap.Int("N", dkgMiners.N),
-		zap.Int("all count", len(dkgMiners.SimpleNodes)),
+		zap.Int("all count", len(dkgMiners.Nodes)),
 		zap.Int64("start round", dkgMiners.StartRound))
 	if err := updateDKGMinersList(balances, dkgMiners); err != nil {
 		logging.Logger.Error("[mvc] createDKGMinersForContribute, failed to update dkg miners list")
@@ -724,27 +756,33 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		return err
 	}
 
-	gsos, err := getGroupShareOrSigns(balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		// gsos = block.NewGroupSharesOrSigns()
+	// use gsos_v2
+	gsos := GroupSharesOrSignsV2{}
+	if err := gsos.Load(balances); err != nil {
 		return common.NewErrorf("created_magic_block_failed", "see no group shares or signs")
-	default:
-		return err
 	}
 
-	mpks, err := getMinersMPKs(balances)
+	ids := gsos.GetIDs()
+	logging.Logger.Debug("[mvc] create magic block for wait, gsos ids", zap.Any("ids", ids))
+
+	gsosIDsMap := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		gsosIDsMap[id] = struct{}{}
+	}
+
+	mpks, err := GetMinersMPKs(balances)
 	if err != nil {
 		return common.NewError("create_magic_block_failed", err.Error())
 	}
 
-	noGsos := make([]string, 0, len(mpks.Mpks))
-	for key := range mpks.Mpks {
-		if _, ok := gsos.Shares[key]; !ok {
-			noGsos = append(noGsos, key)
+	noGsos := make([]string, 0, len(mpks.IDs))
+	for _, id := range mpks.IDs {
+		if _, ok := gsosIDsMap[id]; !ok {
+			noGsos = append(noGsos, id)
 		}
 	}
+
+	logging.Logger.Debug("[mvc] create magic block for wait, no gsos", zap.Any("noGsos", noGsos))
 
 	if len(noGsos) > 0 {
 		logging.Logger.Error("create magic block for wait failed, not all miners send shares or signs",
@@ -803,7 +841,12 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 
 	logging.Logger.Debug("[mvc] sharder keep list", zap.Int("num", len(keepSharders.Nodes)))
 
-	magicBlock, err := msc.createMagicBlock(balances, keepSharders, dkgMinersList, gsos, mpks, pn, gn)
+	gsosn, err := gsos.GetAllShareOrSigns(balances)
+	if err != nil {
+		return err
+	}
+
+	magicBlock, err := msc.createMagicBlock(balances, keepSharders, dkgMinersList, gsosn, mpks, pn, gn)
 	if err != nil {
 		return err
 	}
@@ -812,15 +855,14 @@ func (msc *MinerSmartContract) createMagicBlockForWait(
 		gnb.ViewChange = magicBlock.StartingRound
 		return nil
 	})
-	mpks = block.NewMpks()
+	mpks = NewMpksV2()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		return err
 	}
 
 	logging.Logger.Debug("create_mpks in createMagicBlockForWait", zap.Int64("DB version", int64(balances.GetState().GetVersion())))
 
-	gsos = block.NewGroupSharesOrSigns()
-	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
+	if err := gsos.DeleteAllShareOrSigns(balances); err != nil {
 		return err
 	}
 
@@ -856,7 +898,7 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 		return "", err
 	}
 
-	if _, ok := dmn.SimpleNodes[t.ClientID]; !ok {
+	if !dmn.HasNode(t.ClientID) {
 		logging.Logger.Error("[mvc] contribute mpk miner not part of dkg set", zap.String("miner", t.ClientID))
 		return "", common.NewError("contribute_mpk_failed",
 			"miner not part of dkg set")
@@ -878,22 +920,26 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 			"mpk sent (size: %v) is not correct size: %v", len(mpk.Mpk), dmn.T)
 	}
 
-	mpks, err := getMinersMPKs(balances)
+	mpks, err := GetMinersMPKs(balances)
 	switch err {
 	case util.ErrValueNotPresent:
 		// the mpks could be empty when the first time to contribute mpks
 		logging.Logger.Debug("[mvc] contribute create new mpks")
-		mpks = block.NewMpks()
+		mpks = NewMpksV2()
 	case nil:
 	default:
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
 
-	if _, ok := mpks.Mpks[mpk.ID]; ok {
-		return "", common.NewError("contribute_mpk_failed", "already have mpk for miner")
+	// if _, ok := mpks.Mpks[mpk.ID]; ok {
+	// 	return "", common.NewError("contribute_mpk_failed", "already have mpk for miner")
+	// }
+
+	// mpks.Mpks[mpk.ID] = mpk
+	if err := mpks.AddMpk(mpk, balances); err != nil {
+		return "", err
 	}
 
-	mpks.Mpks[mpk.ID] = mpk
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		return "", common.NewError("contribute_mpk_failed", err.Error())
 	}
@@ -901,14 +947,20 @@ func (msc *MinerSmartContract) contributeMpk(t *transaction.Transaction,
 	logging.Logger.Debug("[mvc] contribute_mpk success",
 		zap.Int64("DB version", int64(balances.GetState().GetVersion())),
 		zap.String("mpk id", mpk.ID),
-		zap.Int("len", len(mpks.Mpks)),
+		zap.Int("len", len(mpks.IDs)),
 		zap.Int64("pn_start_round", pn.StartRound),
 		zap.String("phase", pn.Phase.String()))
 
-	return string(mpk.Encode()), nil
+	return "success", nil
+}
+func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
+	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
+	resp string, err error) {
+	resp, err = msc.shareSignsOrSharesV2(t, inputData, gn, balances)
+	return
 }
 
-func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
+func (msc *MinerSmartContract) shareSignsOrSharesV2(t *transaction.Transaction,
 	inputData []byte, gn *GlobalNode, balances cstate.StateContextI) (
 	resp string, err error) {
 
@@ -928,100 +980,80 @@ func (msc *MinerSmartContract) shareSignsOrShares(t *transaction.Transaction,
 			string(pn.Encode()))
 	}
 
-	var gsos *block.GroupSharesOrSigns
-	gsos, err = getGroupShareOrSigns(balances)
-	switch err {
-	case nil:
-	case util.ErrValueNotPresent:
-		gsos = block.NewGroupSharesOrSigns()
-	default:
-		logging.Logger.Error("[mvc] failed to get group share or signs",
-			zap.Error(err))
+	sos := block.NewShareOrSigns()
+	if err = sos.Decode(inputData); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to decode sc input", zap.Error(err))
+		return "", common.NewErrorf("share_signs_or_shares", "decoding input %v", err)
+	}
+
+	// use gsos_v2
+	gsos := NewGroupSharesOrSignsV2()
+	if err := gsos.Load(balances); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to load gsos_v2", zap.Error(err))
 		return "", common.NewError("share_signs_or_shares_failed", err.Error())
 	}
 
-	var ok bool
-	if _, ok = gsos.Shares[t.ClientID]; ok {
-		logging.Logger.Error("[mvc] shareSignsOrShares, already have share or signs for miner",
-			zap.String("miner", t.ClientID))
+	if gsos.ContainsID(t.ClientID) {
+		logging.Logger.Error("[mvc] shareSignsOrShares, already have share or signs for miner", zap.String("miner", t.ClientID))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"already have share or signs for miner %v", t.ClientID)
 	}
 
-	var dmn *DKGMinerNodes
-	if dmn, err = getDKGMinersList(balances); err != nil {
+	dmn, err := getDKGMinersList(balances)
+	if err != nil {
 		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get miners DKG list",
 			zap.Error(err))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"getting miners DKG list %v", err)
 	}
 
-	var sos = block.NewShareOrSigns()
-	if err = sos.Decode(inputData); err != nil {
-		logging.Logger.Error("[mvc] shareSignsOrShares, failed to decode sc input", zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares", "decoding input %v", err)
-	}
-
 	if len(sos.ShareOrSigns) < dmn.K-1 {
 		logging.Logger.Debug("[mvc] shareSignsOrShares, not enough share or signs for this dkg",
 			zap.Int("l_sos", len(sos.ShareOrSigns)),
-			zap.Int("K", dmn.K-1))
+			zap.Int("K", dmn.K-1),
+			zap.String("miner", t.ClientID))
 		return "", common.NewErrorf("share_signs_or_shares",
 			"not enough share or signs for this dkg, l_sos: %d, K - 1: %d",
 			len(sos.ShareOrSigns), dmn.K-1)
 	}
 
-	msc.mutexMinerMPK.Lock()
-	defer msc.mutexMinerMPK.Unlock()
-
-	var mpks *block.Mpks
-	mpks, err = getMinersMPKs(balances)
-	if err != nil {
-		logging.Logger.Error("[mvc] shareSignsOrShares, getting miners MPKs",
-			zap.Error(err))
-		return "", common.NewError("share_signs_or_shares_failed", err.Error())
-	}
-
 	var publicKeys = make(map[string]string)
-	for key, miner := range dmn.SimpleNodes {
-		publicKeys[key] = miner.PublicKey
+	for _, miner := range dmn.Nodes {
+		publicKeys[miner.Key] = miner.PublicKey
 	}
 
-	var shares []string
-	shares, ok = sos.Validate(mpks, publicKeys, balances.GetSignatureScheme())
+	mpks, err := GetMinersMPKs(balances)
+	if err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get miners MPKs", zap.Error(err))
+		return "", common.NewError("share_signs_or_shares", "failed to get miners MPKs")
+	}
+
+	bmpks, err := mpks.GetAllMpks(balances)
+	if err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to get all miners MPKs", zap.Error(err))
+		return "", common.NewError("share_signs_or_shares", "failed to get all miners MPKs")
+	}
+
+	_, ok := sos.ValidateV2(bmpks, publicKeys)
 	if !ok {
 		logging.Logger.Error("[mvc] shareSignsOrShares, validation failed")
 		return "", common.NewError("share_signs_or_shares", "share or signs failed validation")
 	}
 
-	for _, share := range shares {
-		dmn.RevealedShares[share]++
-	}
-
 	sos.ID = t.ClientID
-	gsos.Shares[t.ClientID] = sos
-
-	err = updateGroupShareOrSigns(balances, gsos)
-	if err != nil {
-		logging.Logger.Error("[mvc] miner sc: shareSignsOrShares, failed to save group share of signs",
-			zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"saving group share of signs: %v", err)
-	}
-
-	if err := updateDKGMinersList(balances, dmn); err != nil {
-		logging.Logger.Error("[mvc] miner sc: shareSignsOrShares, failed to save DKG miners",
-			zap.Error(err))
-		return "", common.NewErrorf("share_signs_or_shares",
-			"saving DKG miners: %v", err)
+	if err := gsos.AddShareOrSigns(balances, sos); err != nil {
+		logging.Logger.Error("[mvc] shareSignsOrShares, failed to add share or signs",
+			zap.Error(err),
+			zap.String("miner", t.ClientID))
+		return "", common.NewError("share_signs_or_shares", "failed to add share or signs")
 	}
 
 	logging.Logger.Debug("[mvc] miner sc: shareSignsOrShares, update gsos",
 		zap.String("miner", t.ClientID),
-		zap.Int("gsos shares len", len(gsos.Shares)),
+		zap.Int("gsos shares len", len(gsos.GetIDs())),
 		zap.Int64("gn.LastRound", gn.MustBase().LastRound))
 
-	return string(sos.Encode()), nil
+	return "success", nil
 }
 
 // Wait used to notify SC that DKG summary and magic block data saved by
@@ -1043,7 +1075,7 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 			" correct phase to wait: %s", pn.Phase)
 	}
 
-	var dmn *DKGMinerNodes
+	var dmn *DKGMinerNodesV2
 	if dmn, err = getDKGMinersList(balances); err != nil {
 		return "", common.NewErrorf("msc - wait", "can't get DKG miners: %v", err)
 	}
@@ -1053,7 +1085,8 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 	}
 
 	dmn.Waited[t.ClientID] = true
-	logging.Logger.Debug("[mvc] wait", zap.Int("dkg miners num", len(dmn.SimpleNodes)))
+	logging.Logger.Debug("[mvc] wait", zap.Int("dkg miners num", len(dmn.Nodes)),
+		zap.Int("waited num", len(dmn.Waited)))
 
 	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return "", common.NewErrorf("msc - wait", "saving DKG miners: %v", err)
@@ -1065,15 +1098,19 @@ func (msc *MinerSmartContract) wait(t *transaction.Transaction,
 func (msc *MinerSmartContract) createMagicBlock(
 	balances cstate.StateContextI,
 	sharders *MinerNodes,
-	dkgMinersList *DKGMinerNodes,
+	dkgMinersList *DKGMinerNodesV2,
 	gsos *block.GroupSharesOrSigns,
-	mpks *block.Mpks,
+	mpks *MpksV2,
 	pn *PhaseNode,
 	gn *GlobalNode,
 ) (*block.MagicBlock, error) {
 
 	// pmb := balances.GetChainCurrentMagicBlock()
-	pmb := gn.prevMagicBlock(balances)
+	pmb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		return nil, err
+	}
+
 	logging.Logger.Debug("create magic block - prev magic block",
 		zap.Int64("number", pmb.MagicBlockNumber),
 		zap.String("hash", pmb.Hash))
@@ -1083,7 +1120,12 @@ func (msc *MinerSmartContract) createMagicBlock(
 	magicBlock.Miners = node.NewPool(node.NodeTypeMiner)
 	magicBlock.Sharders = node.NewPool(node.NodeTypeSharder)
 	magicBlock.SetShareOrSigns(gsos)
-	magicBlock.Mpks = mpks
+	bMPKS, err := mpks.GetAllMpks(balances)
+	if err != nil {
+		return nil, err
+	}
+
+	magicBlock.Mpks = bMPKS
 	magicBlock.T = dkgMinersList.T
 	magicBlock.K = dkgMinersList.K
 	magicBlock.N = dkgMinersList.N
@@ -1094,11 +1136,21 @@ func (msc *MinerSmartContract) createMagicBlock(
 
 	logging.Logger.Debug("create magic block",
 		zap.Int64("view change", magicBlock.StartingRound),
-		zap.Int("dkg miners num", len(dkgMinersList.SimpleNodes)),
+		zap.Int("dkg miners num", len(dkgMinersList.Nodes)),
 		zap.String("mb miners pool type", magicBlock.Miners.Type.String()),
 		zap.String("mb sharders pool type", magicBlock.Sharders.Type.String()))
 
-	for _, v := range dkgMinersList.SimpleNodes {
+	ids := make([]string, 0, len(dkgMinersList.Nodes))
+	for _, v := range dkgMinersList.Nodes {
+		ids = append(ids, v.Key)
+	}
+
+	minerNodes, err := GetDKGSimpleNodes(ids, balances)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range minerNodes.Nodes {
 		n := node.Provider()
 		n.ID = v.ID
 		n.N2NHost = v.N2NHost
@@ -1116,7 +1168,7 @@ func (msc *MinerSmartContract) createMagicBlock(
 		}
 
 		mn := NewMinerNode()
-		mn.SimpleNode = v
+		mn.SimpleNode = v.SimpleNode
 		mn.Status = n.Status
 		// TODO: should not emit add miner for existing miner
 		// emitAddMiner(mn, balances)
@@ -1155,19 +1207,25 @@ func (msc *MinerSmartContract) RestartDKG(pn *PhaseNode,
 		zap.String("phase", pn.Phase.String()))
 	msc.mutexMinerMPK.Lock()
 	defer msc.mutexMinerMPK.Unlock()
-	mpks := block.NewMpks()
+	mpks := NewMpksV2()
 	if err := updateMinersMPKs(balances, mpks); err != nil {
 		logging.Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
 
-	gsos := block.NewGroupSharesOrSigns()
-	if err := updateGroupShareOrSigns(balances, gsos); err != nil {
+	// use gsos_v2
+	gsos := NewGroupSharesOrSignsV2()
+	if err := gsos.Load(balances); err != nil {
 		logging.Logger.Error("failed to restart dkg", zap.Error(err))
 		return err
 	}
 
-	dkgMinersList := NewDKGMinerNodes()
+	if err := gsos.DeleteAllShareOrSigns(balances); err != nil {
+		logging.Logger.Error("failed to restart dkg", zap.Error(err))
+		return err
+	}
+
+	dkgMinersList := NewDKGMinerNodesV2()
 	dkgMinersList.StartRound = pn.CurrentRound
 	if err := updateDKGMinersList(balances, dkgMinersList); err != nil {
 		logging.Logger.Error("failed to restart dkg", zap.Error(err))
@@ -1195,7 +1253,15 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 	// keep the magic block to track previous nodes list next view change
 	// (deny VC leaving for at least 1 miner and 1 sharder of previous set)
 	gn.MustUpdateBase(func(gnb *globalNodeBase) error {
-		gnb.PrevMagicBlock = magicBlock
+		// we only save the basic info of the magic block in the global node
+		// the full magic block is saved in the MPT
+		// this is to avoid the global node to be too large
+		gnb.PrevMagicBlock = &block.MagicBlock{
+			MagicBlockNumber:       magicBlock.MagicBlockNumber,
+			StartingRound:          magicBlock.StartingRound,
+			PreviousMagicBlockHash: magicBlock.PreviousMagicBlockHash,
+		}
+		gnb.PrevMagicBlock.Hash = magicBlock.Hash
 		return nil
 	})
 
@@ -1206,7 +1272,7 @@ func (msc *MinerSmartContract) SetMagicBlock(gn *GlobalNode,
 		zap.String("sharders pool type", magicBlock.Sharders.Type.String()),
 		zap.Int("miners num", magicBlock.Miners.Size()),
 		zap.Int("sharders num", magicBlock.Sharders.Size()))
-	balances.SetMagicBlock(magicBlock)
+	balances.SetBlockMagicBlock(magicBlock)
 	return nil
 }
 

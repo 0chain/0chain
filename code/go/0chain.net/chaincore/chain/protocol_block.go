@@ -10,7 +10,6 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
-	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
 	"0chain.net/core/maths"
 	"0chain.net/core/util/waitgroup"
@@ -22,7 +21,8 @@ import (
 
 // VerifyTickets verifies tickets aggregately
 // Note: this only works for BLS scheme keys
-func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*block.VerificationTicket, round int64) error {
+func (c *Chain) VerifyTickets(ctx context.Context,
+	blockHash string, bvts []*block.VerificationTicket, round int64, bmb *block.MagicBlock) error {
 	return c.verifyTicketsWithContext.Run(ctx, func() error {
 		aggScheme := encryption.GetAggregateSignatureScheme(c.ClientSignatureScheme(),
 			len(bvts), len(bvts))
@@ -38,9 +38,23 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 			for i, bvt := range bvts {
 				pl := c.GetMiners(round)
 				verifier := pl.GetNode(bvt.VerifierID)
+				if verifier == nil && bmb != nil {
+					verifier = bmb.Miners.GetNode(bvt.VerifierID)
+				}
+
+				if bmb != nil {
+					// logging.Logger.Debug("block magic block:", zap.Any("bmb.Miners", bmb.Miners))
+				}
+				// else {
+				// logging.Logger.Debug("block has no magic block", zap.String("block", blockHash), zap.Int64("round", round))
+				// }
+
 				if verifier == nil {
-					errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
-					return
+					// TODO: check if the verifier is in the pool
+					continue
+
+					// errC <- common.InvalidRequest(fmt.Sprintf("Verifier unknown or not authorized at this time: %v, pool size: %d", bvt.VerifierID, pl.Size()))
+					// return
 				}
 
 				if verifier.SigScheme == nil {
@@ -74,7 +88,7 @@ func (c *Chain) VerifyTickets(ctx context.Context, blockHash string, bvts []*blo
 }
 
 func (c *Chain) VerifyBlockNotarization(ctx context.Context, b *block.Block, skipTicketsVerify ...bool) error {
-	if err := c.VerifyNotarization(ctx, b.Hash, b.GetVerificationTickets(), b.Round, b.LatestFinalizedMagicBlockRound); err != nil {
+	if err := c.VerifyNotarization(ctx, b, b.GetVerificationTickets()); err != nil {
 		return err
 	}
 
@@ -92,9 +106,17 @@ func (c *Chain) InViewChangeWindow(round int64) bool {
 	return round-ViewChangeOffset > lfb.Round
 }
 
-// VerifyNotarization - verify that the notarization is correct.
-func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
-	bvt []*block.VerificationTicket, round, mbRound int64) (err error) {
+func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*block.VerificationTicket) (err error) {
+	var (
+		hash    = b.Hash
+		round   = b.Round
+		mbRound = b.LatestFinalizedMagicBlockRound
+	)
+
+	if len(bvt) == 0 {
+		bvt = b.GetVerificationTickets()
+	}
+
 	if bvt == nil {
 		return common.NewError("no_verification_tickets",
 			"No verification tickets for this block")
@@ -119,7 +141,7 @@ func (c *Chain) VerifyNotarization(ctx context.Context, hash datastore.Key,
 			"Verification tickets not sufficient to reach notarization")
 	}
 
-	if err := c.VerifyTickets(ctx, hash, bvt, round); err != nil {
+	if err := c.VerifyTickets(ctx, hash, bvt, round, b.MagicBlock); err != nil {
 		return err
 	}
 

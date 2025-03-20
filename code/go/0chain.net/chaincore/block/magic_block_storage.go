@@ -2,6 +2,7 @@ package block
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"strconv"
 
@@ -16,6 +17,7 @@ import (
 type MagicBlockData struct {
 	datastore.IDField
 	*MagicBlock
+	Data []byte
 }
 
 var magicBlockMetadata *datastore.EntityMetadataImpl
@@ -60,7 +62,13 @@ func (m *MagicBlockData) Delete(ctx context.Context) error {
 func NewMagicBlockData(mb *MagicBlock) *MagicBlockData {
 	mbData := datastore.GetEntityMetadata("magicblockdata").Instance().(*MagicBlockData)
 	mbData.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
-	mbData.MagicBlock = mb
+
+	d, err := mb.MarshalMsg(nil)
+	if err != nil {
+		logging.Logger.Panic(fmt.Sprintf("[mvc] failed to marshal magic block: %v", err))
+	}
+
+	mbData.Data = d
 	return mbData
 }
 
@@ -74,12 +82,25 @@ func LoadMagicBlock(ctx context.Context, id string) (mb *MagicBlock,
 		emd  = mbd.GetEntityMetadata()
 		dctx = ememorystore.WithEntityConnection(ctx, emd)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, emd)
 
 	if err = mbd.Read(dctx, mbd.GetKey()); err != nil {
 		return
 	}
-	mb = mbd.MagicBlock
+
+	if len(mbd.Data) == 0 && mbd.MagicBlock != nil {
+		mb = mbd.MagicBlock
+		return
+	}
+
+	var inMB MagicBlock
+	if _, err := inMB.UnmarshalMsg(mbd.Data); err != nil {
+		logging.Logger.Error("[mvc] failed to unmarshal magic block", zap.Error(err))
+		return nil, fmt.Errorf("could not decode magic block: %v", err)
+	}
+
+	logging.Logger.Debug("[mvc] load mb", zap.Int64("mb number from data", inMB.MagicBlockNumber))
+	mb = &inMB
 	return
 }
 
@@ -100,7 +121,7 @@ func LoadLatestMB(ctx context.Context, lfbRound, mbNumber int64) (mb *MagicBlock
 		rctx  = ememorystore.WithEntityConnection(ctx, mbemd)
 		conn  = ememorystore.GetEntityCon(rctx, mbemd)
 	)
-	defer ememorystore.Close(rctx)
+	defer ememorystore.Close(rctx, mbemd)
 
 	iter := conn.Conn.NewIterator(conn.ReadOptions)
 	defer iter.Close()

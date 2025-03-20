@@ -24,6 +24,12 @@ type LfbRound struct {
 
 // StoreLFBRound stores LFB round to state DB
 func (c *Chain) StoreLFBRound(round, magicBlockNum int64, blockHash string) error {
+	if mbr, _ := c.LoadLFBRound(); mbr != nil {
+		if mbr.MagicBlockNumber > magicBlockNum {
+			magicBlockNum = mbr.MagicBlockNumber
+		}
+	}
+
 	logging.Logger.Debug("[mvc] store lfb",
 		zap.Int64("round", round),
 		zap.String("block", blockHash),

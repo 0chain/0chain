@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"math/rand"
 	"reflect"
 	"sort"
 	"sync"
@@ -137,10 +138,11 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 		active = c.IsActiveInChain()
 		mb     = c.GetCurrentMagicBlock()
 
-		found, pastTime, notPendingTxn bool
-		urls                           []string
-		minerUrls                      = make([]string, 0, mb.Miners.Size())
-		cctx, cancel                   = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
+		// found, pastTime, notPendingTxn bool
+		found, pastTime bool
+		urls            []string
+		minerUrls       = make([]string, 0, mb.Miners.Size())
+		cctx, cancel    = context.WithTimeout(ctx, time.Duration(timeoutSec)*time.Second)
 	)
 
 	defer func() {
@@ -165,66 +167,93 @@ func (c *Chain) ConfirmTransaction(ctx context.Context, t *httpclientutil.Transa
 	}
 
 	txnPoolCheckingTime := time.NewTicker(3 * time.Second)
-	for !found && !pastTime {
+	for {
 		select {
 		case <-cctx.Done():
 			return false
 		case <-txnPoolCheckingTime.C:
-			if !node.Self.IsSharder() {
-				txn, err := transaction.GetTransactionByHash(ctx, t.Hash)
-				if err != nil {
-					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
-					notPendingTxn = true
-				} else {
-					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
-				}
+			txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
+			if active {
+				lfb := c.GetLatestFinalizedBlock()
+				pastTime = lfb != nil &&
+					!common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 			} else {
-				txn, err := httpclientutil.GetTransactionPendingStatus(t.Hash, minerUrls)
+				blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
 				if err != nil {
-					logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
-					notPendingTxn = true
-				} else {
-					logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+					logging.Logger.Info("could not get block summary", zap.Error(err))
+					continue
+					// return false
 				}
+				pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 			}
-			// default:
-		}
 
-		if !notPendingTxn {
-			// in the txn pool, pending
-			continue
-		}
+			found = err == nil && txn != nil
+			if found {
+				return true
+			}
 
-		txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
-		if active {
-			lfb := c.GetLatestFinalizedBlock()
-			pastTime = lfb != nil &&
-				!common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
-		} else {
-			blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
-			if err != nil {
-				logging.Logger.Info("confirm transaction", zap.Bool("confirmation", false))
+			if pastTime {
+				logging.Logger.Error("[mvc] txn expired", zap.String("txn", t.Hash))
 				return false
 			}
-			pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
 		}
 
-		found = err == nil && txn != nil
-		if found {
-			return true
-		}
+		// case <-txnPoolCheckingTime.C:
+		// 	if !node.Self.IsSharder() {
+		// 		txn, err := transaction.GetTransactionByHash(ctx, t.Hash)
+		// 		if err != nil {
+		// 			logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+		// 			notPendingTxn = true
+		// 		} else {
+		// 			logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+		// 		}
+		// 	} else {
+		// 		txn, err := httpclientutil.GetTransactionPendingStatus(t.Hash, minerUrls)
+		// 		if err != nil {
+		// 			logging.Logger.Error("[mvc] txn pool checking", zap.Error(err))
+		// 			notPendingTxn = true
+		// 		} else {
+		// 			logging.Logger.Debug("[mvc] txn in pool", zap.Any("txn", txn))
+		// 		}
+		// 	}
+		// 	// default:
+		// }
 
-		if notPendingTxn {
-			logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
-			// reset the local nonce, set to -1 so that next will be 0 and hence cause nonce sync
-			node.Self.SetNonce(-1)
-			logging.Logger.Debug("[mvc] nonce, reset nonce after confirming invalid txn", zap.String("txn", t.Hash))
-			return false
-		}
+		// if !notPendingTxn {
+		// 	// in the txn pool, pending
+		// 	continue
+		// }
+
+		// txn, err := httpclientutil.GetTransactionStatus(t.Hash, urls, 1)
+		// if active {
+		// 	lfb := c.GetLatestFinalizedBlock()
+		// 	pastTime = lfb != nil &&
+		// 		!common.WithinTime(int64(lfb.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
+		// } else {
+		// 	blockSummary, err := httpclientutil.GetBlockSummaryCall(urls, 1, false)
+		// 	if err != nil {
+		// 		logging.Logger.Info("confirm transaction", zap.Bool("confirmation", false))
+		// 		return false
+		// 	}
+		// 	pastTime = blockSummary != nil && !common.WithinTime(int64(blockSummary.CreationDate), int64(t.CreationDate), transaction.TXN_TIME_TOLERANCE)
+		// }
+
+		// found = err == nil && txn != nil
+		// if found {
+		// 	return true
+		// }
+
+		// if notPendingTxn {
+		// 	logging.Logger.Error("[mvc] confirm invalid transaction", zap.String("txn", t.Hash))
+		// 	// reset the local nonce, set to -1 so that next will be 0 and hence cause nonce sync
+		// 	node.Self.SetNonce(-1)
+		// 	logging.Logger.Debug("[mvc] nonce, reset nonce after confirming invalid txn", zap.String("txn", t.Hash))
+		// 	return false
+		// }
 	}
 
-	logging.Logger.Debug("[mvc] confirm txn", zap.Bool("success", found), zap.Bool("timeout", pastTime))
-	return found
+	// logging.Logger.Debug("[mvc] confirm txn", zap.Bool("success", found), zap.Bool("timeout", pastTime))
+	// return found
 }
 
 func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
@@ -260,7 +289,7 @@ func (c *Chain) RegisterNode() (*httpclientutil.Transaction, error) {
 	mb := c.GetCurrentMagicBlock()
 	var minerUrls = mb.Miners.N2NURLs()
 	logging.Logger.Debug("Register nodes to",
-		zap.Strings("urls", minerUrls),
+		zap.Int("urls", len(minerUrls)),
 		zap.String("id", mn.ID))
 	err := c.SendSmartContractTxn(txn, scData, minerUrls, mb.Sharders.N2NURLs())
 	return txn, err
@@ -313,6 +342,11 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	// }
 	// logging.Logger.Debug("[mvc] acquire txn lock")
 	// incTxnSendCount(1)
+	minerUrls = getRandomMinerURLs(minerUrls, 10)
+	selfNode := node.Self.Underlying()
+	if selfNode != nil && selfNode.Type == node.NodeTypeMiner {
+		minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
+	}
 
 	txn.TransactionType = httpclientutil.TxnTypeSmartContract
 	if txn.Fee == 0 {
@@ -330,24 +364,51 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 		txn.Fee = int64(fee)
 	}
 
-	nextNonce := node.Self.GetNextNonce()
-	if nextNonce == 0 {
-		// try get nonce from LFB
-		lfb := c.GetLatestFinalizedBlock()
-		if lfb != nil {
-			var err error
-			nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
-			if err != nil && state.ErrInvalidState(err) {
-				return err
-			}
-		}
+	// nextNonce := node.Self.GetNextNonce()
+	// if nextNonce == 0 {
+	// try get nonce from LFB
+	// lfb := c.GetLatestFinalizedBlock()
+	// if lfb != nil {
+	// 	var err error
+	// 	nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
+	// 	if err != nil && state.ErrInvalidState(err) {
+	// 		return err
+	// 	}
+	// }
 
-		logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
-	}
-	logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
-	txn.Nonce = nextNonce
+	// logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
+	// }
+	// logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
+	// txn.Nonce = nextNonce
 
 	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
+}
+
+func getRandomMinerURLs(minerUrls []string, percent int) []string {
+	numMiners := len(minerUrls)
+	if numMiners == 0 {
+		return []string{}
+	}
+
+	// Calculate the number to send - 10% of total with a maximum of 10
+	numToSend := numMiners * percent / 100
+	if numToSend > 10 {
+		numToSend = 10
+	}
+	if numToSend < 1 {
+		numToSend = 1 // Ensure at least one miner is selected
+	}
+
+	// Create a copy of the original slice to avoid modifying it
+	urlsCopy := make([]string, numMiners)
+	copy(urlsCopy, minerUrls)
+
+	rand.Shuffle(numMiners, func(i, j int) {
+		urlsCopy[i], urlsCopy[j] = urlsCopy[j], urlsCopy[i]
+	})
+
+	// Return the first numToSend elements
+	return urlsCopy[:numToSend]
 }
 
 func (c *Chain) GetCurrentSelfNonce(minerId datastore.Key, bState util.MerklePatriciaTrieI) (int64, error) {
@@ -363,6 +424,37 @@ func (c *Chain) GetCurrentSelfNonce(minerId datastore.Key, bState util.MerklePat
 	logging.Logger.Debug("[mvc] nonce, set nonce in getCurrentSelfNonce", zap.Int64("nonce", s.Nonce))
 	node.Self.SetNonce(s.Nonce)
 	return node.Self.GetNextNonce(), nil
+}
+
+func (c *Chain) GetCurrentMinerNonce(b *block.Block, bState util.MerklePatriciaTrieI) (int64, error) {
+	minerId := b.MinerID
+	logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.String("minerId", minerId))
+	sc := state.NewStateContext(b, bState, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	var nonce int64
+	if err := state.WithActivation(sc, "vc_hardfork", func() error {
+		var er error
+		nonce, er = c.GetCurrentSelfNonce(minerId, bState)
+		return er
+	}, func() error {
+		ns, er := state.GetNamespaceNonce(bState, minerId, state.NonceNameSpaceMiner)
+		if er != nil && er != util.ErrValueNotPresent {
+			return er
+		}
+
+		if er == util.ErrValueNotPresent {
+			nonce = 1
+		} else {
+			nonce = ns.Nonce + 1
+		}
+
+		logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.Int64("nonce", nonce))
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	return nonce, nil
 }
 
 func (c *Chain) RegisterSharderKeep() (result *httpclientutil.Transaction, err2 error) {

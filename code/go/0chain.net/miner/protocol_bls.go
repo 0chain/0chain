@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -36,14 +38,14 @@ func init() {
 }
 
 // SetDKG - starts the DKG process
-func SetDKG(ctx context.Context, mb *block.MagicBlock) error {
+func SetDKG(ctx context.Context, mb *block.MagicBlock, dkgSum ...*bls.DKGSummary) error {
 	mc := GetMinerChain()
 	if !mc.ChainConfig.IsDkgEnabled() {
 		Logger.Info("DKG is disabled. So, starting protocol")
 		return nil
 	}
 
-	if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
+	if err := mc.SetDKGSFromStore(ctx, mb, dkgSum...); err != nil {
 		return fmt.Errorf("error while setting dkg from store: %v\nstorage"+
 			" may be damaged or permissions may not be available?",
 			err.Error())
@@ -77,19 +79,33 @@ func SetDKGFromMagicBlocksChainPrev(ctx context.Context, mb *block.MagicBlock) e
 	return nil
 }
 
-func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
+func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkgSum ...*bls.DKGSummary) (
 	err error) {
+
+	startTotal := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] SetDKGSFromStore total time",
+			zap.Duration("total_duration", time.Since(startTotal)))
+	}()
 
 	var (
 		selfNodeKey = node.Self.Underlying().GetKey()
 		id          = strconv.FormatInt(mb.MagicBlockNumber, 10)
-
-		summary *bls.DKGSummary
+		summary     *bls.DKGSummary
 	)
 
-	if summary, err = LoadDKGSummary(ctx, id); err != nil {
-		return
+	// Time loading DKG summary
+	startLoad := time.Now()
+	if len(dkgSum) > 0 {
+		summary = dkgSum[0]
+	} else {
+		summary, err = LoadDKGSummary(ctx, id)
+		if err != nil {
+			return
+		}
 	}
+	logging.Logger.Debug("[dkg_timing] Loading DKG summary",
+		zap.Duration("duration", time.Since(startLoad)))
 
 	if mb.StartingRound > 0 && !summary.IsFinalized {
 		return errors.New("DKG summary is not finalized")
@@ -100,64 +116,105 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock) (
 			"no saved shares for dkg")
 	}
 
+	// Time DKG creation
+	startDKG := time.Now()
 	var newDKG = bls.MakeDKG(mb.T, mb.N, selfNodeKey)
 	newDKG.MagicBlockNumber = mb.MagicBlockNumber
 	newDKG.StartingRound = mb.StartingRound
+	logging.Logger.Debug("[dkg_timing] DKG creation",
+		zap.Duration("duration", time.Since(startDKG)))
 
 	if mb.Miners == nil {
 		return common.NewError("failed to set dkg from store", "miners pool is not initialized in magic block")
 	}
 
-	logging.Logger.Debug("[mvc] dkg summary",
-		zap.Int("secrets shares", len(summary.SecretShares)),
-		zap.Int("miners num", len(mb.Miners.CopyNodesMap())),
-		zap.Int("T", mb.T),
-		zap.Int("N", mb.N),
-		zap.Any("mb", mb),
-		zap.Any("summary", summary))
+	// Time secret shares processing - Parallelized version
+	startShares := time.Now()
 
-	for k := range mb.Miners.CopyNodesMap() {
-		logging.Logger.Debug("[mvc] set dkg key", zap.String("key", ComputeBlsID(k)))
-		if savedShare, ok := summary.SecretShares[ComputeBlsID(k)]; ok {
-			if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), savedShare, false); err != nil {
-				logging.Logger.Error("[mvc] failed to add secret share",
-					zap.Error(err), zap.String("share", savedShare))
-				return err
-			}
-		} else if v, ok := mb.GetShareOrSigns().Get(k); ok {
-			logging.Logger.Debug("[mvc] get key from mb", zap.String("key", ComputeBlsID(k)))
-			if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
-				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, false); err != nil {
-					logging.Logger.Debug("[mvc] failed to add secret share 2",
-						zap.Error(err), zap.String("share", share.Share))
-					return err
+	// Create channels for parallel processing
+	errChan := make(chan error, 1)
+	semaphore := make(chan struct{}, runtime.NumCPU()) // Limit concurrent goroutines
+	var wg sync.WaitGroup
+
+	miners := mb.Miners.CopyNodesMap()
+	for k := range miners {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+
+			// Acquire semaphore
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
+
+			if savedShare, ok := summary.SecretShares[ComputeBlsID(key)]; ok {
+				if err := newDKG.AddSecretShare(bls.ComputeIDdkg(key), savedShare, true); err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+				}
+			} else if v, ok := mb.GetShareOrSigns().Get(key); ok {
+				if share, ok := v.ShareOrSigns[node.Self.Underlying().GetKey()]; ok && share.Share != "" {
+					if err := newDKG.AddSecretShare(bls.ComputeIDdkg(key), share.Share, true); err != nil {
+						select {
+						case errChan <- err:
+						default:
+						}
+					}
 				}
 			}
-		}
+		}(k)
 	}
+
+	// Wait in a separate goroutine
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	// Check for errors
+	if err := <-errChan; err != nil {
+		return err
+	}
+
+	logging.Logger.Debug("[dkg_timing] Secret shares processing",
+		zap.Duration("duration", time.Since(startShares)))
 
 	if !newDKG.HasAllSecretShares() {
 		return common.NewError("failed to set dkg from store",
 			"not enough secret shares for dkg")
 	}
 
+	// Time key aggregation
+	startAgg := time.Now()
 	newDKG.AggregateSecretKeyShares()
+	logging.Logger.Debug("[dkg_timing] sec key aggregation",
+		zap.Duration("duration", time.Since(startAgg)))
+
+	startAgg = time.Now()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
-	mpks, err := mb.Mpks.GetMpkMap()
-	if err != nil {
-		return err
-	}
+	mpks := mb.Mpks.GetMpkMapStrings()
+	newDKG.SetMpksMap(mpks)
+	logging.Logger.Debug("[dkg_timing] convert mpks",
+		zap.Duration("duration", time.Since(startAgg)))
 
-	if err := newDKG.AggregatePublicKeyShares(mpks); err != nil {
-		return err
-	}
+	startAgg = time.Now()
+	// if err := newDKG.AggregatePublicKeySharesParallel(mpks); err != nil {
+	// 	return err
+	// }
+	// logging.Logger.Debug("[dkg_timing] pub key aggregation",
+	// 	zap.Duration("duration", time.Since(startAgg)))
 
+	// Time final DKG setting
+	startSet := time.Now()
 	if err = mc.SetDKG(newDKG); err != nil {
 		Logger.Error("failed to set dkg", zap.Error(err))
-		return // error
+		return
 	}
+	logging.Logger.Debug("[dkg_timing] Final DKG setting",
+		zap.Duration("duration", time.Since(startSet)))
 
-	return // ok, set
+	return
 }
 
 // VerifySigShares - Verify the bls sig share is correct
@@ -249,7 +306,8 @@ func (mc *Chain) GetBlsShare(ctx context.Context, r *round.Round) (string, error
 		zap.Int("rtc", r.GetTimeoutCount()),
 		zap.String("dkg_pi", dkg.Si.GetPublicKey().GetHexString()),
 		zap.Int64("dkg_sr", dkg.StartingRound),
-		zap.Int64("mb_sr", mb.StartingRound))
+		zap.Int64("mb_sr", mb.StartingRound),
+		zap.String("share", sigShare.GetHexString()))
 
 	return sigShare.GetHexString(), nil
 }

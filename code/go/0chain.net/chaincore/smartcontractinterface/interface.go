@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"net/url"
 
-	c_state "0chain.net/chaincore/chain/state"
+	"0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
 )
 
 const Seperator = ":"
 
-type SmartContractRestHandler func(ctx context.Context, params url.Values, balances c_state.StateContextI) (interface{}, error)
+type SmartContractRestHandler func(ctx context.Context, params url.Values, balances state.StateContextI) (interface{}, error)
 
 type SmartContract struct {
 	ID                          string
@@ -32,12 +32,12 @@ type SmartContractTransactionData struct {
 }
 
 type SmartContractInterface interface {
-	Execute(t *transaction.Transaction, funcName string, input []byte, balances c_state.StateContextI) (string, error)
+	Execute(t *transaction.Transaction, funcName string, input []byte, balances state.StateContextI) (string, error)
 	GetHandlerStats(ctx context.Context, params url.Values) (interface{}, error)
 	GetExecutionStats() map[string]interface{}
 	GetName() string
 	GetAddress() string
-	GetCostTable(balances c_state.StateContextI) (map[string]int, error)
+	GetCostTable(balances state.StateContextI) (map[string]int, error)
 }
 
 /*

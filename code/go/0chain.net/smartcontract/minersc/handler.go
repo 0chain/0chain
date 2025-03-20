@@ -525,7 +525,7 @@ func (mrh *MinerRestHandler) getMagicBlock(w http.ResponseWriter, r *http.Reques
 //	200: GroupSharesOrSigns
 //	400:
 func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http.Request) {
-	sos, err := getGroupShareOrSigns(mrh.GetQueryStateContext())
+	sos, err := getGroupShareOrSigns(mrh.GetStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
 		return
@@ -543,7 +543,7 @@ func (mrh *MinerRestHandler) getGroupShareOrSigns(w http.ResponseWriter, r *http
 //	200: Mpks
 //	400:
 func (mrh *MinerRestHandler) getMpksList(w http.ResponseWriter, r *http.Request) {
-	mpks, err := getMinersMPKs(mrh.GetQueryStateContext())
+	mpks, err := GetMinersMPKs(mrh.GetStateContext())
 	if err != nil {
 		common.Respond(w, r, nil, sc.NewErrNoResourceOrErrInternal(err, true))
 		return

@@ -201,9 +201,9 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	}
 
 	var waited int
-	for k := range dmn.SimpleNodes {
-		if !dmn.Waited[k] {
-			delete(dmn.SimpleNodes, k)
+	for _, miner := range dmn.Nodes {
+		if !dmn.Waited[miner.Key] {
+			dmn.DeleteNode(miner.Key)
 			continue
 		}
 		waited++
@@ -211,20 +211,21 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 	if err := cstate.WithActivation(balances, "hermes",
 		func() error {
-			err = dmn.reduceNodes(true, gn, balances)
-			if err == nil && waited < dmn.K {
-				err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
-					waited, dmn.K)
-			}
-			if err != nil {
-				var prev = gn.prevMagicBlock(balances)
-				gn.MustUpdateBase(func(gnb *globalNodeBase) error {
-					gnb.ViewChange = prev.StartingRound
-					return nil
-				})
-				err = nil
-			}
-			return err
+			// err = dmn.reduceNodes(true, gn, balances)
+			// if err == nil && waited < dmn.K {
+			// 	err = fmt.Errorf("< K miners succeed 'wait' phase: %d < %d",
+			// 		waited, dmn.K)
+			// }
+			// if err != nil {
+			// 	var prev = gn.prevMagicBlock(balances)
+			// 	gn.MustUpdateBase(func(gnb *globalNodeBase) error {
+			// 		gnb.ViewChange = prev.StartingRound
+			// 		return nil
+			// 	})
+			// 	err = nil
+			// }
+			// return err
+			return nil
 		}, func() error {
 			mb, err := getMagicBlock(balances)
 			if err != nil {
@@ -245,13 +246,17 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 
 			// restart DKG if any of the miner in new MB is not waited
 			if err != nil {
-				var prev = gn.prevMagicBlock(balances)
+				prev, err := gn.prevMagicBlock(balances)
+				if err != nil {
+					return err
+				}
+
 				gn.MustUpdateBase(func(gnb *globalNodeBase) error {
 					gnb.ViewChange = prev.StartingRound
 					return nil
 				})
 
-				logging.Logger.Warn("[mvc] adjust_view_change no new magic block, restart DKG", zap.Error(err))
+				logging.Logger.Warn("[mvc] dkg_ss adjust_view_change no new magic block, restart DKG", zap.Error(err))
 				if err := msc.RestartDKG(pn, balances); err != nil {
 					logging.Logger.Error("adjust_view_change restart DKG failed", zap.Error(err))
 					return err
@@ -260,6 +265,10 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 				// save phase node
 				return nil
 			}
+
+			logging.Logger.Debug("[mvc] dkg_ss, adjust view change, waited all",
+				zap.Int("waited", len(dmn.Waited)),
+				zap.Int("nodes", len(mb.Miners.Nodes)))
 
 			// set magic block when all good
 			if err := msc.SetMagicBlock(gn, balances); err != nil {
@@ -362,7 +371,7 @@ func (msc *MinerSmartContract) adjustViewChange(gn *GlobalNode,
 	}
 
 	// clear DKG miners list
-	dmn = NewDKGMinerNodes()
+	dmn = NewDKGMinerNodesV2()
 	logging.Logger.Debug("[mvc] adjust_view_change: clear dkg miners list", zap.Int64("round", b.Round))
 	if err := updateDKGMinersList(balances, dmn); err != nil {
 		return common.NewErrorf("adjust_view_change",
@@ -421,6 +430,7 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 			logging.Logger.Error("pay_fees failed to save phase node", zap.Error(err))
 			return common.NewErrorf("pay_fees", "failed to save phase node: %v", err)
 		}
+
 		return nil
 	})
 
@@ -506,7 +516,15 @@ func (msc *MinerSmartContract) payFees(t *transaction.Transaction,
 	if len(shardersIDs) > 0 {
 		seed := b.GetRoundRandomSeed()
 		randS := rand.New(rand.NewSource(seed))
-		mbShardersIDs := getRegisterShardersInMagicBlock(balances, shardersIDs)
+		mbShardersIDs, err := getRegisterShardersInMagicBlock(balances, gn, shardersIDs)
+		if err != nil {
+			if err != util.ErrValueNotPresent {
+				return "", err
+			}
+
+			// Should never happen
+			logging.Logger.Panic("pay_fees, failed to get register sharders in magic block", zap.Error(err))
+		}
 
 		randS.Shuffle(len(mbShardersIDs), func(i, j int) {
 			mbShardersIDs[i], mbShardersIDs[j] = mbShardersIDs[j], mbShardersIDs[i]
@@ -637,24 +655,32 @@ func getLiveSharderIds(balances cstate.StateContextI) ([]string, error) {
 	return ids, nil
 }
 
-func getRegisterShardersInMagicBlock(balances cstate.StateContextI, shardersIDs []string) []string {
+func getRegisterShardersInMagicBlock(balances cstate.StateContextI, gn *GlobalNode, shardersIDs []string) ([]string, error) {
+	mb, err := gn.prevMagicBlock(balances)
+	if err != nil {
+		logging.Logger.Error("failed to get previous magic block", zap.Error(err))
+		// TODO: check if the node not found is checked before state hash mismatch error
+		return nil, err
+	}
+
 	var (
-		shardersKeysInMB = getMagicBlockSharders(balances)
-		smap             = make(map[string]struct{}, len(shardersKeysInMB))
+		shardersKeysInMB = mb.Sharders.CopyNodes()
+		smap             = make(map[string]struct{}, len(mb.Sharders.Nodes))
 	)
 
 	for _, key := range shardersKeysInMB {
-		smap[key] = struct{}{}
+		// k := GetSharderKey(key.GetKey())
+		smap[key.GetKey()] = struct{}{}
 	}
 
 	retSharders := make([]string, 0, len(shardersKeysInMB))
 	for _, id := range shardersIDs {
-		if _, ok := smap[GetSharderKey(id)]; ok {
+		if _, ok := smap[id]; ok {
 			retSharders = append(retSharders, id)
 			continue
 		}
 	}
-	return retSharders
+	return retSharders, nil
 }
 
 // getMagicBlockSharders - list the sharders in magic block

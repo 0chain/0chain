@@ -49,7 +49,7 @@ func LoadDKGSummary(ctx context.Context, id int64) (dkgs *bls.DKGSummary, err er
 		dctx               = ememorystore.WithEntityConnection(ctx,
 			dkgSummaryMetadata)
 	)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, dkgSummaryMetadata)
 	err = dkgs.Read(dctx, dkgs.GetKey())
 	return
 }
@@ -58,7 +58,7 @@ func StoreDKGSummary(ctx context.Context, dkgSummary *bls.DKGSummary) error {
 	dkgs := datastore.GetEntity("dkgsummary").(*bls.DKGSummary)
 	dkgSummaryMetadata := dkgs.GetEntityMetadata()
 	dctx := ememorystore.WithEntityConnection(ctx, dkgSummaryMetadata)
-	defer ememorystore.Close(dctx)
+	defer ememorystore.Close(dctx, dkgSummaryMetadata)
 	return dkgSummary.Write(dctx)
 }
 

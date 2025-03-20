@@ -95,7 +95,7 @@ func (mrf SharderRoundFactory) CreateRoundF(roundNum int64) round.RoundI {
 func (sc *Chain) StoreRoundNoCommit(r *round.Round) (func() error, error) {
 	roundEntityMetadata := r.GetEntityMetadata()
 	rctx := ememorystore.WithEntityConnection(common.GetRootContext(), roundEntityMetadata)
-	defer ememorystore.Close(rctx)
+	defer ememorystore.Close(rctx, roundEntityMetadata)
 	err := r.Write(rctx)
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (sc *Chain) ReadHealthyRound(ctx context.Context) (*HealthyRound, error) {
 	healthyRoundEntityMetadata := hr.GetEntityMetadata()
 	hrStore := healthyRoundEntityMetadata.GetStore()
 	hrctx := ememorystore.WithEntityConnection(ctx, healthyRoundEntityMetadata)
-	defer ememorystore.Close(hrctx)
+	defer ememorystore.Close(hrctx, healthyRoundEntityMetadata)
 	err := hrStore.Read(hrctx, hr.GetKey(), hr)
 	return hr, err
 }
@@ -123,7 +123,7 @@ func (sc *Chain) WriteHealthyRound(ctx context.Context, hr *HealthyRound) error 
 	healthyRoundEntityMetadata := hr.GetEntityMetadata()
 	hrStore := healthyRoundEntityMetadata.GetStore()
 	hrctx := ememorystore.WithEntityConnection(ctx, healthyRoundEntityMetadata)
-	defer ememorystore.Close(hrctx)
+	defer ememorystore.Close(hrctx, healthyRoundEntityMetadata)
 	err := hrStore.Write(hrctx, hr)
 	if err != nil {
 		return err

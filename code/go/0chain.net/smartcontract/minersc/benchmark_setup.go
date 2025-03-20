@@ -159,8 +159,13 @@ func AddMockMiners(
 		}
 	}
 
-	dkgMiners := NewDKGMinerNodes()
-	dkgMiners.SimpleNodes = nodeMap
+	dkgMiners := NewDKGMinerNodesV2()
+	for _, v := range nodeMap {
+		dkgMiners.Nodes = append(dkgMiners.Nodes, LightNode{
+			Key:       v.ID,
+			PublicKey: v.PublicKey,
+		})
+	}
 	dkgMiners.T = viper.GetInt(benchmark.InternalT)
 	_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 	if err != nil {

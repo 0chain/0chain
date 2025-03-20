@@ -8,8 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
+	"time"
 
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -35,8 +37,10 @@ type DKG struct {
 	Si Key
 	Pi *PublicKey
 
-	mpksMutex *sync.Mutex
-	mpks      []PublicKey
+	mpksMutex  *sync.Mutex
+	mpks       []PublicKey
+	mpksMap    map[PartyID][]PublicKey
+	mpksMapStr map[PartyID][]string
 
 	gmpkMutex *sync.RWMutex
 	gmpk      map[PartyID]PublicKey
@@ -87,6 +91,8 @@ func MakeDKG(t, n int, id string) *DKG {
 	dkg.ID = ComputeIDdkg(id)
 	dkg.msk = secKey.GetMasterSecretKey(t)
 	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
+	dkg.mpksMapStr = make(map[PartyID][]string)
+	dkg.gmpk = make(map[PartyID]PublicKey)
 	return dkg
 }
 
@@ -197,13 +203,91 @@ func (dkg *DKG) GetSijLen() int {
 
 // AggregateSecretKeyShares - Each party aggregates the received shares from other party which is calculated for that party
 func (dkg *DKG) AggregateSecretKeyShares() {
-	var sk Key
 	dkg.secretSharesMutex.RLock()
 	defer dkg.secretSharesMutex.RUnlock()
-	for _, Sij := range dkg.receivedSecretShares {
-		sk.Add(&Sij)
+
+	aggStart := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Aggregate secret key shares",
+			zap.Duration("duration", time.Since(aggStart)))
+	}()
+
+	if len(dkg.receivedSecretShares) == 0 {
+		dkg.Si = Key{}
+		dkg.Pi = nil
+		return
 	}
-	dkg.Si = sk
+
+	// For small numbers of shares, use sequential processing
+	if len(dkg.receivedSecretShares) < 8 {
+		var sk Key
+		for _, Sij := range dkg.receivedSecretShares {
+			sk.Add(&Sij)
+		}
+		dkg.Si = sk
+		dkg.Pi = dkg.Si.GetPublicKey()
+		return
+	}
+
+	// For larger numbers, use parallel processing
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(dkg.receivedSecretShares) {
+		numWorkers = len(dkg.receivedSecretShares)
+	}
+
+	// Split work into chunks
+	shares := make([]Key, 0, len(dkg.receivedSecretShares))
+	for _, share := range dkg.receivedSecretShares {
+		shares = append(shares, share)
+	}
+
+	// Calculate optimal chunk size to avoid empty slices
+	chunkSize := (len(shares) + numWorkers - 1) / numWorkers
+	results := make(chan Key, numWorkers)
+	var wg sync.WaitGroup
+
+	// Process chunks in parallel
+	for i := 0; i < numWorkers; i++ {
+		start := i * chunkSize
+		// Skip if we're past the end of the slice
+		if start >= len(shares) {
+			continue
+		}
+
+		end := start + chunkSize
+		if end > len(shares) {
+			end = len(shares)
+		}
+
+		// Don't create empty chunks
+		if start >= end {
+			continue
+		}
+
+		wg.Add(1)
+		go func(chunk []Key) {
+			defer wg.Done()
+			var partialSum Key
+			for _, share := range chunk {
+				partialSum.Add(&share)
+			}
+			results <- partialSum
+		}(shares[start:end])
+	}
+
+	// Close results channel after all workers finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Combine partial results
+	var finalSum Key
+	for partialSum := range results {
+		finalSum.Add(&partialSum)
+	}
+
+	dkg.Si = finalSum
 	dkg.Pi = dkg.Si.GetPublicKey()
 }
 
@@ -269,16 +353,121 @@ func (dkg *DKG) GetSecretShare(key string) (Key, bool) {
 
 // Sign - sign using the group secret key share
 func (dkg *DKG) Sign(msg string) *Sign {
-	logging.Logger.Debug("dkg sign", zap.String("key", dkg.Si.GetHexString()))
+	logging.Logger.Debug("dkg sign",
+		zap.String("key", dkg.Si.GetHexString()),
+		zap.String("pi", dkg.Pi.GetHexString()))
 	return dkg.Si.Sign(msg)
 }
 
 // VerifySignature - verify the signature using the group public key share
 func (dkg *DKG) VerifySignature(sig *Sign, msg string, id PartyID) bool {
-	dkg.gmpkMutex.RLock()
-	defer dkg.gmpkMutex.RUnlock()
-	key := dkg.gmpk[id]
+	dkg.gmpkMutex.Lock()
+	defer dkg.gmpkMutex.Unlock()
+	verifyStart := time.Now()
+	defer func() {
+		if time.Since(verifyStart) > 200*time.Millisecond {
+			logging.Logger.Debug("[dkg_timing] Verify signature slow",
+				zap.Duration("duration", time.Since(verifyStart)))
+		}
+	}()
+
+	key, ok := dkg.gmpk[id]
+	if !ok {
+		if dkg.mpksMap == nil {
+			mpks, err := dkg.getMpkMap()
+			if err != nil {
+				logging.Logger.Error("dkg verify signature, failed to get mpk map",
+					zap.Error(err))
+				return false
+			}
+			dkg.mpksMap = mpks
+		}
+
+		var err error
+		key, err = aggregatePublicKeysForID(dkg.mpksMap, id)
+		if err != nil {
+			logging.Logger.Error("dkg verify signature, failed to aggregate public key shares",
+				zap.Error(err))
+			return false
+		}
+
+		dkg.gmpk[id] = key
+	}
+	logging.Logger.Debug("dkg verify",
+		zap.String("id", id.GetHexString()),
+		zap.String("key", key.GetHexString()),
+		zap.String("msg", msg),
+		zap.String("sig", sig.GetHexString()))
 	return sig.Verify(&key, msg)
+}
+
+func (dkg *DKG) getMpkMap() (map[PartyID][]PublicKey, error) {
+	startTime := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Parallel MPK map conversion",
+			zap.Duration("duration", time.Since(startTime)))
+	}()
+
+	result := make(map[PartyID][]PublicKey)
+	var (
+		numWorkers = runtime.NumCPU()
+		wg         sync.WaitGroup
+		mu         sync.Mutex
+		errChan    = make(chan error, 1)
+	)
+
+	// Create work channel
+	workChan := make(chan struct {
+		key PartyID
+		mpk []string
+	}, len(dkg.mpksMapStr))
+
+	// Feed work channel
+	for k, v := range dkg.mpksMapStr {
+		workChan <- struct {
+			key PartyID
+			mpk []string
+		}{k, v}
+	}
+	close(workChan)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for work := range workChan {
+				// Convert string array to PublicKey array
+				pks, err := ConvertStringToMpk(work.mpk)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					return
+				}
+
+				// Convert key to PartyID
+				// Safely store result
+				mu.Lock()
+				result[work.key] = pks
+				mu.Unlock()
+			}
+		}()
+	}
+
+	// Wait in a separate goroutine
+	go func() {
+		wg.Wait()
+		close(errChan)
+	}()
+
+	// Check for errors
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 /*RecoverGroupSig - To compute the Gp sign with any k number of BLS sig shares */
@@ -293,9 +482,9 @@ func (dkg *DKG) RecoverGroupSig(from []PartyID, shares []Sign) (Sign, error) {
 
 // CalBlsGpSign - The function calls the RecoverGroupSig function which calculates the Gp Sign
 func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
-	logging.Logger.Debug("dkg recover",
-		zap.Strings("recSig", recSig),
-		zap.Strings("recIDs", recIDs))
+	// logging.Logger.Debug("dkg recover",
+	// 	zap.Strings("recSig", recSig),
+	// 	zap.Strings("recIDs", recIDs))
 
 	signVec := make([]Sign, 0)
 	var signShare Sign
@@ -322,23 +511,175 @@ func (dkg *DKG) CalBlsGpSign(recSig []string, recIDs []string) (Sign, error) {
 	return dkg.RecoverGroupSig(idVec, signVec)
 }
 
-// AggregatePublicKeyShares - compute Sigma(Aik, i in qual)
-func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
-	dkg.gmpkMutex.Lock()
-	defer dkg.gmpkMutex.Unlock()
-	dkg.gmpk = make(map[PartyID]PublicKey)
-	for k := range mpks {
+// Helper function to parallelize the inner loop of public key aggregation for a given PartyID
+func aggregatePublicKeysForID(mpks map[PartyID][]PublicKey, k PartyID) (PublicKey, error) {
+	// For small numbers of mpks, use sequential processing
+	aggStart := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Aggregate public key shares for id",
+			zap.Duration("duration", time.Since(aggStart)))
+	}()
+	if len(mpks) < 8 {
 		var pk PublicKey
 		for _, mpk := range mpks {
 			var pkj PublicKey
 			if err := pkj.Set(mpk, &k); err != nil {
-				return err
+				return PublicKey{}, err
 			}
 			pk.Add(&pkj)
 		}
-		dkg.gmpk[k] = pk
+		return pk, nil
 	}
 
+	// For larger numbers, use parallel processing
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(mpks) {
+		numWorkers = len(mpks)
+	}
+
+	type result struct {
+		pk  PublicKey
+		err error
+	}
+
+	// Prepare the mpk keys for chunking
+	mpkKeys := make([]PartyID, 0, len(mpks))
+	for mpkKey := range mpks {
+		mpkKeys = append(mpkKeys, mpkKey)
+	}
+
+	chunkSize := (len(mpkKeys) + numWorkers - 1) / numWorkers
+	results := make(chan result, numWorkers)
+	var wg sync.WaitGroup
+
+	// Process chunks in parallel
+	for i := 0; i < numWorkers; i++ {
+		start := i * chunkSize
+		// Skip if we're past the end of the slice
+		if start >= len(mpkKeys) {
+			continue
+		}
+
+		end := start + chunkSize
+		if end > len(mpkKeys) {
+			end = len(mpkKeys)
+		}
+
+		// Don't create empty chunks
+		if start >= end {
+			continue
+		}
+
+		wg.Add(1)
+		go func(chunk []PartyID) {
+			defer wg.Done()
+			var partialSum PublicKey
+			for _, mpkKey := range chunk {
+				mpk := mpks[mpkKey]
+				var pkj PublicKey
+				if err := pkj.Set(mpk, &k); err != nil {
+					results <- result{err: err}
+					return
+				}
+				partialSum.Add(&pkj)
+			}
+			results <- result{pk: partialSum}
+		}(mpkKeys[start:end])
+	}
+
+	// Close results channel after all workers finish
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Combine partial results
+	var finalSum PublicKey
+	for r := range results {
+		if r.err != nil {
+			return PublicKey{}, r.err
+		}
+		finalSum.Add(&r.pk)
+	}
+
+	return finalSum, nil
+}
+
+// Helper function for parallel processing
+func (dkg *DKG) aggregatePublicKeySharesParallel(mpks map[PartyID][]PublicKey) (map[PartyID]PublicKey, error) {
+	var (
+		numWorkers = runtime.NumCPU()
+		wg         sync.WaitGroup
+		mu         sync.Mutex
+		result     = make(map[PartyID]PublicKey)
+		errChan    = make(chan error, 1)
+	)
+
+	// Create work channel
+	workChan := make(chan PartyID, len(mpks))
+	for k := range mpks {
+		workChan <- k
+	}
+	close(workChan)
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for k := range workChan {
+				// Use the helper function for parallelized inner processing
+				pk, err := aggregatePublicKeysForID(mpks, k)
+				if err != nil {
+					select {
+					case errChan <- err:
+					default:
+					}
+					return
+				}
+
+				mu.Lock()
+				result[k] = pk
+				mu.Unlock()
+			}
+		}()
+	}
+
+	// Wait for completion
+	wg.Wait()
+	close(errChan)
+
+	// Check for errors
+	if err := <-errChan; err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (dkg *DKG) SetMpksMap(mpks map[PartyID][]string) {
+	dkg.gmpkMutex.Lock()
+	dkg.mpksMapStr = mpks
+	dkg.gmpkMutex.Unlock()
+}
+
+// Parallel version
+func (dkg *DKG) AggregatePublicKeyShares(mpks map[PartyID][]PublicKey) error {
+	startTime := time.Now()
+	defer func() {
+		logging.Logger.Debug("[dkg_timing] Parallel public key shares aggregation",
+			zap.Duration("duration", time.Since(startTime)))
+	}()
+
+	dkg.gmpkMutex.Lock()
+	defer dkg.gmpkMutex.Unlock()
+
+	result, err := dkg.aggregatePublicKeySharesParallel(mpks)
+	if err != nil {
+		return err
+	}
+
+	dkg.gmpk = result
 	return nil
 }
 
@@ -356,6 +697,9 @@ func (dkg *DKG) DeleteFromSet(nodes []string) {
 	for _, id := range nodes {
 		delete(dkg.receivedSecretShares, ComputeIDdkg(id))
 	}
+	logging.Logger.Debug("[mvc] dkg_ss, delete from dkg set",
+		zap.Int("deleted", len(nodes)),
+		zap.Int("dkg received ss", len(dkg.receivedSecretShares)))
 }
 
 // ValidateShare - validate Sij using Pj coefficients
@@ -374,14 +718,60 @@ func ValidateShare(jpk []PublicKey, sij bls.SecretKey, id PartyID) bool {
 }
 
 func ConvertStringToMpk(strMpk []string) ([]PublicKey, error) {
-	var mpk []PublicKey
-	for _, str := range strMpk {
-		var pk PublicKey
-		if err := pk.SetHexString(str); err != nil {
-			return nil, err
-		}
-		mpk = append(mpk, pk)
+	if len(strMpk) == 0 {
+		return nil, nil
 	}
+
+	// Create channels for work distribution and result collection
+	type result struct {
+		index int
+		pk    PublicKey
+		err   error
+	}
+
+	numWorkers := runtime.NumCPU()
+	if numWorkers > len(strMpk) {
+		numWorkers = len(strMpk)
+	}
+
+	jobs := make(chan int, len(strMpk))
+	results := make(chan result, len(strMpk))
+
+	// Start worker pool
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for idx := range jobs {
+				var pk PublicKey
+				err := pk.SetHexString(strMpk[idx])
+				results <- result{index: idx, pk: pk, err: err}
+			}
+		}()
+	}
+
+	// Send jobs
+	for i := range strMpk {
+		jobs <- i
+	}
+	close(jobs)
+
+	// Wait for all workers to complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect results
+	mpk := make([]PublicKey, len(strMpk))
+	for r := range results {
+		if r.err != nil {
+			return nil, r.err
+		}
+		mpk[r.index] = r.pk
+	}
+
 	return mpk, nil
 }
 
@@ -456,9 +846,12 @@ func (dkg *DKG) GetDKGSummary() *DKGSummary {
 	}
 	dkg.secretSharesMutex.RLock()
 	defer dkg.secretSharesMutex.RUnlock()
+	ids := make([]string, 0, len(dkg.receivedSecretShares))
 	for k, v := range dkg.receivedSecretShares {
 		dkgSummary.SecretShares[k.GetHexString()] = v.GetHexString()
+		ids = append(ids, k.GetHexString())
 	}
 	dkgSummary.ID = strconv.FormatInt(dkg.MagicBlockNumber, 10)
+	logging.Logger.Debug("[dkg] dkg_ss, get dkg summary", zap.Int("size", len(dkg.receivedSecretShares)))
 	return dkgSummary
 }

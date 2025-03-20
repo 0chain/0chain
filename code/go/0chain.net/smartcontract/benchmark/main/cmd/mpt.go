@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -112,6 +113,10 @@ func getBalances(
 		mpt,
 		txn,
 		func(int64) *block.MagicBlock { return magicBlock },
+		func(int64) *block.MagicBlock { return magicBlock },
+		func(mb *block.MagicBlock) {
+			magicBlock = mb
+		},
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return &encryption.BLS0ChainScheme{} },
@@ -197,6 +202,7 @@ func setUpMpt(
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("Recovered in setUpMpt", r)
+			log.Println("Stack trace:", string(debug.Stack()))
 		}
 	}()
 
@@ -238,6 +244,10 @@ func setUpMpt(
 			CreationDate: benchmarkTime,
 		},
 		func(int64) *block.MagicBlock { return magicBlock },
+		func(int64) *block.MagicBlock { return magicBlock },
+		func(mb *block.MagicBlock) {
+			magicBlock = mb
+		},
 		func() *block.Block { return bk },
 		func() *block.MagicBlock { return magicBlock },
 		func() encryption.SignatureScheme { return signatureScheme },

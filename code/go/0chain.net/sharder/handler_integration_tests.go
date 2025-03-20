@@ -46,7 +46,7 @@ func TransactionConfirmationHandler(ctx context.Context, r *http.Request) (
 
 	var transactionSummaryEntity = datastore.GetEntityMetadata("txn_summary")
 	ctx = ememorystore.WithEntityConnection(ctx, transactionSummaryEntity)
-	defer ememorystore.Close(ctx)
+	defer ememorystore.Close(ctx, transactionSummaryEntity)
 
 	var (
 		state             = crpc.Client().State()

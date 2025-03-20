@@ -9,6 +9,7 @@ import (
 
 	"0chain.net/smartcontract/stakepool/spenum"
 
+	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain/state"
 	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/smartcontractinterface"
@@ -107,10 +108,17 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 		return "", common.NewError("register_node", "invalid register node SC data")
 	}
 
-	var (
-		mb   = gn.prevMagicBlock(balances)
-		inMB bool
-	)
+	var mb *block.MagicBlock
+	mb, err = gn.prevMagicBlock(balances)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return "", common.NewErrorf("vc_add", "failed to get previous magic block: %v", err)
+		}
+
+		logging.Logger.Panic("vc_add, failed to get previous magic block", zap.Error(err))
+	}
+
+	var inMB bool
 	switch rnr.Type {
 	case spenum.Miner:
 		inMB = mb.Miners.HasNode(rnr.ID)
@@ -422,12 +430,12 @@ func (msc *MinerSmartContract) deleteMinerFromViewChange(mn *MinerNode, balances
 		return
 	}
 	if pn.Phase != Wait {
-		var dkgMiners *DKGMinerNodes
+		var dkgMiners *DKGMinerNodesV2
 		if dkgMiners, err = getDKGMinersList(balances); err != nil {
 			return
 		}
-		if _, ok := dkgMiners.SimpleNodes[mn.ID]; ok {
-			delete(dkgMiners.SimpleNodes, mn.ID)
+		if dkgMiners.HasNode(mn.ID) {
+			dkgMiners.DeleteNode(mn.ID)
 			_, err = balances.InsertTrieNode(DKGMinersKey, dkgMiners)
 			if err != nil {
 				return
@@ -528,6 +536,36 @@ func getMinerNode(id string, state cstate.StateContextI) (*MinerNode, error) {
 	}, func() error {
 		return common.NewErrorf(ErrWrongProviderTypeCode, "provider is %s should be %s", mn.ProviderType, spenum.Miner)
 	})
+}
+
+// getMinerSimpleNode return sthe simple node part of the miner node only from state
+func getMinerSimpleNode(id string, state cstate.StateContextI) (*MinerNode, error) {
+	mn := &LightMinerNode{
+		SimpleNode: &SimpleNode{},
+	}
+	mn.ID = id
+	err := state.GetTrieNode(mn.GetKey(), mn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &MinerNode{
+		SimpleNode: mn.SimpleNode,
+	}, nil
+}
+
+// GetDKGSimpleNodes return simple nodes of given ids
+func GetDKGSimpleNodes(ids []string, state cstate.StateContextI) (*MinerNodes, error) {
+	minerNodes, err := cstate.GetItemsByIDs(ids, getMinerSimpleNode, state)
+	if err != nil {
+		if err != util.ErrValueNotPresent {
+			return nil, err
+		}
+
+		return &MinerNodes{}, nil
+	}
+
+	return &MinerNodes{minerNodes}, nil
 }
 
 func validateNodeSettings(node *MinerNode, gn *GlobalNode, opcode string) error {
