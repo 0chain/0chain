@@ -432,7 +432,7 @@ func (c *Chain) GetCurrentMinerNonce(b *block.Block, bState util.MerklePatriciaT
 	sc := state.NewStateContext(b, bState, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 
 	var nonce int64
-	if err := state.WithActivation(sc, "vc_hardfork", func() error {
+	if err := state.WithActivation(sc, "Medea", func() error {
 		var er error
 		nonce, er = c.GetCurrentSelfNonce(minerId, bState)
 		return er

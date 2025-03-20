@@ -868,7 +868,7 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64, txnName string) error {
 	var buildInTxnNonce bool
-	if err := cstate.WithActivation(sctx, "vc_hardfork", func() error {
+	if err := cstate.WithActivation(sctx, "Medea", func() error {
 		return nil
 	}, func() error {
 		if !isBuildInTxn(txnName) {
@@ -915,7 +915,7 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 
 func (c *Chain) incrementNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnName string) (*event.User, error) {
 	var useMinerNonce bool
-	if err := cstate.WithActivation(sctx, "vc_hardfork", func() error {
+	if err := cstate.WithActivation(sctx, "Medea", func() error {
 		return nil
 	}, func() error {
 		if !isBuildInTxn(txnName) {
