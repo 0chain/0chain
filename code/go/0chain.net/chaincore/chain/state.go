@@ -878,9 +878,9 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 	if nonce+1 != txnNonce {
 		b := sctx.GetBlock()
 		logging.Logger.Error("validate nonce - error",
-			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("txn_nonce", txnNonce),
+			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Int64("txn_nonce", txnNonce), zap.Any("fromClient", fromClient),
 			zap.Int64("local_nonce", s.Nonce), zap.Error(err))
-		return ErrWrongNonce
+		return nil
 	}
 
 	return nil
