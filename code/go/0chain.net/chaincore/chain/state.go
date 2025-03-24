@@ -867,34 +867,6 @@ func (c *Chain) mintAmount(sctx bcstate.StateContextI, toClient datastore.Key, a
 }
 
 func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.Key, txnNonce int64, txnName string) error {
-	var buildInTxnNonce bool
-	if err := cstate.WithActivation(sctx, "vc_hardfork", func() error {
-		return nil
-	}, func() error {
-		if !isBuildInTxn(txnName) {
-			return nil
-		}
-		buildInTxnNonce = true
-		minerNonce, err := sctx.GetMinerNonce(fromClient)
-		if err != nil {
-			return err
-		}
-
-		if minerNonce+1 != txnNonce {
-			logging.Logger.Error("Jayash miner nonce mismatch", zap.Any("txn", txnName), zap.Any("txn_nonce", txnNonce), zap.Any("miner_nonce", minerNonce), zap.Any("fromClient", fromClient))
-			return ErrWrongNonce
-		}
-
-		return nil
-
-	}); err != nil {
-		return err
-	}
-
-	if buildInTxnNonce {
-		return nil
-	}
-
 	s, err := sctx.GetClientState(fromClient)
 	if !isValid(err) {
 		return err
