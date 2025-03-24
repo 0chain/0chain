@@ -881,6 +881,7 @@ func (c *Chain) validateNonce(sctx bcstate.StateContextI, fromClient datastore.K
 		}
 
 		if minerNonce+1 != txnNonce {
+			logging.Logger.Info("Jayash miner nonce mismatch", zap.Any("txn", txnName), zap.Any("txn_nonce", txnNonce), zap.Any("miner_nonce", minerNonce), zap.Any("fromClient", fromClient))
 			return ErrWrongNonce
 		}
 
