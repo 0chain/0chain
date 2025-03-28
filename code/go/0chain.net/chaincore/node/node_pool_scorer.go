@@ -96,13 +96,6 @@ func (n *Node) IsInTopWithNodes(nodeScores []*Score, topN int) (bool, []*Node) {
 	return inTop, nodes
 }
 
-func min(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
-}
-
 // GetTopNNodes - get the top n nodes from the sorted scores.
 func GetTopNNodes(scores []*Score, topN int) (nodes []*Node) {
 
