@@ -645,7 +645,7 @@ func (msc *MinerSmartContract) refreshRemoveProviders(txn *transaction.Transacti
 	}
 
 	if err := updateDeleteNodeIDs(balances, spenum.Sharder, []string{}); err != nil {
-		return "", common.NewErrorf("pay_fees", "can't update delete miners: %v", err)
+		return "", common.NewErrorf("pay_fees", "can't update delete sharders: %v", err)
 	}
 
 	return "refresh successful", nil
