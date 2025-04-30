@@ -132,6 +132,17 @@ func (msc *MinerSmartContract) Execute(t *transaction.Transaction,
 		return "", actErr
 	}
 
+	if actErr := cstate.WithActivation(balances, "odysseus", func() error {
+		if funcName == "refresh_remove_providers" {
+			return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName)
+		}
+		return nil
+	}, func() error {
+		return nil
+	}); actErr != nil {
+		return "", actErr
+	}
+
 	scFunc, found := msc.smartContractFunctions[funcName]
 	if !found {
 		return common.NewErrorf("failed execution", "no miner smart contract method with name: %v", funcName).Error(), nil
