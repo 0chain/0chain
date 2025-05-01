@@ -1266,10 +1266,22 @@ func (sab *storageAllocationBase) replaceBlobber(blobberID string, sc *StorageSm
 				}
 			}
 
-			if d.Stats.UsedSize > 0 {
-				if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
-					return err
+			if actErr := cstate.WithActivation(balances, "odysseus", func() error {
+				if d.Stats.UsedSize > 0 {
+					if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
+						return err
+					}
 				}
+				return nil
+			}, func() error {
+				if sab.MovedToChallenge > 0 {
+					if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
+						return err
+					}
+				}
+				return nil
+			}); actErr != nil {
+				return actErr
 			}
 
 			if blobberIsKilled {

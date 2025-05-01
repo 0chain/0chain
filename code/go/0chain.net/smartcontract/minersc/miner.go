@@ -627,3 +627,26 @@ func validateNodeUpdateSettings(update *dto.MinerDtoNode, gn *GlobalNode, opcode
 
 	return nil
 }
+
+func (msc *MinerSmartContract) refreshRemoveProviders(txn *transaction.Transaction,
+	input []byte,
+	gn *GlobalNode,
+	balances cstate.StateContextI) (string, error) {
+
+	if err := smartcontractinterface.AuthorizeWithOwner("refresh_remove_providers", func() bool {
+		get, _ := gn.Get(OwnerId)
+		return get == txn.ClientID
+	}); err != nil {
+		return "", err
+	}
+
+	if err := updateDeleteNodeIDs(balances, spenum.Miner, []string{}); err != nil {
+		return "", common.NewErrorf("pay_fees", "can't update delete miners: %v", err)
+	}
+
+	if err := updateDeleteNodeIDs(balances, spenum.Sharder, []string{}); err != nil {
+		return "", common.NewErrorf("pay_fees", "can't update delete sharders: %v", err)
+	}
+
+	return "refresh successful", nil
+}

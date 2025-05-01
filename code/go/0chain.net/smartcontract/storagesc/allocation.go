@@ -1850,10 +1850,23 @@ func (sc *StorageSmartContract) finishAllocation(
 		}
 
 		for i, d := range alloc.BlobberAllocs {
-			if d.Stats.UsedSize > 0 {
-				if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
-					return err
+			if actErr := chainstate.WithActivation(balances, "odysseus", func() error {
+				if d.Stats.UsedSize > 0 {
+					if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
+						return err
+					}
 				}
+				return nil
+			}, func() error {
+				if alloc.MovedToChallenge > 0 {
+					if err := removeAllocationFromBlobberPartitions(balances, d.BlobberID, d.AllocationID); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}); actErr != nil {
+				return actErr
 			}
 
 			blobber, err := sc.getBlobber(d.BlobberID, balances)
