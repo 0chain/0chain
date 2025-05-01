@@ -633,7 +633,7 @@ func (msc *MinerSmartContract) refreshRemoveProviders(txn *transaction.Transacti
 	gn *GlobalNode,
 	balances cstate.StateContextI) (string, error) {
 
-	if err := smartcontractinterface.AuthorizeWithOwner("add_hardfork", func() bool {
+	if err := smartcontractinterface.AuthorizeWithOwner("refresh_remove_providers", func() bool {
 		get, _ := gn.Get(OwnerId)
 		return get == txn.ClientID
 	}); err != nil {
