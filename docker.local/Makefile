@@ -33,7 +33,7 @@ cleanup: ## Cleanup
 miner: ## Run miner num (=miner number)
 	@cd miner$(num) && ../bin/start.b0miner.sh
 
-sharder: ## Run sharder num (=miner number)
+sharder: ## Run sharder num (=sharder number)
 	@cd sharder$(num) && ../bin/start.b0sharder.sh
 
 build_miner_it: ## 4.Build miners (integration tests)
