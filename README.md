@@ -65,141 +65,53 @@ Docker, Go, and Make must be installed to run the testnet containers. Get Docker
 
 ### Prerequisites
 
-#### Installing Make
+- [Go](https://go.dev/doc/install) must be installed
+- [mockery](https://github.com/vektra/mockery) must be installed (`go install github.com/vektra/mockery/v2@latest`)
 
-The Makefile commands require the `make` utility to be installed on your system:
+## Host Machine Network setup
 
-**macOS:**
+
+### Windows
+
+Run powershell as administrator
+
 ```bash
-# Make is usually pre-installed, but if not:
-brew install make
+./windows_network.ps1
 ```
 
-**Ubuntu/Debian:**
+### Ubuntu/WSL2
+
+Run the following script
+
 ```bash
-sudo apt update
-sudo apt install make
+./wsl_ubuntu_network_iptables.sh
 ```
 
-**CentOS/RHEL/Fedora:**
+## Building Nodes
+
+1. Build mocks from the Makefile in the repo, from git/0chain directory run:
+ ```bash
+make build-mocks
+```
+
+2. Make initial setup for images and run the chain for first time
 ```bash
-sudo yum install make
-# or for newer versions:
-sudo dnf install make
+./zus_setup.sh
 ```
-
-**Windows:**
-- Install [Chocolatey](https://chocolatey.org/) and run: `choco install make`
-- Or install [WSL](https://docs.microsoft.com/en-us/windows/wsl/) and use the Ubuntu commands above
-- Or use [Git Bash](https://gitforwindows.org/) which includes make
-
-**Verify installation:**
+3. Start the chain
 ```bash
-make --version
-``` 
-
-### Using the Makefile
-
-This project includes a Makefile in the `docker.local/` directory that provides convenient commands for common operations. You can use these commands instead of running the shell scripts directly:
-
-- `make init_setup` - Initialize the directory setup for miners and sharders
-- `make network_setup` - Set up the network for node containers
-- `make build_base` - Build the base Docker images
-- `make build_miner` - Build miner containers
-- `make build_sharder` - Build sharder containers
-- `make sync_clock` - Sync the clock between host and containers
-- `make cleanup` - Clean up the blockchain data and directories
-- `make miner num=N` - Run miner number N (e.g., `make miner num=1`)
-- `make sharder num=N` - Run sharder number N (e.g., `make sharder num=1`)
-
-**Note:** All make commands should be run from the project's `docker.local/` folder. 
-
-### Directory Setup for Miners and Sharders
-
-In the git/0chain run the following command
-
-```
-make init_setup
+./zus_start.sh
 ```
 
-### Setup Network
-
-Set up a network called testnet0 for each of these node containers to talk to each other.
-
-**_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
-
+4. Restart the chain after clearing all previous logs
+```bash
+./zus_restart.sh
 ```
-make network_setup
-```
+Node: To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build images again using ```./zus_setup.sh```".
 
-## Building the Nodes
-
-1. Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
-
-   1.1) First build the base containers, zchain_build_base and zchain_run_base
-
-   ```
-make build_base
-```
-2. Build mocks from the Makefile in the repo, from git/0chain directory run:
-   
-   ```
-    make build-mocks 
-   ```
-   Note: Mocks have to be built once in the beginning. Building mocks require mockery and brew which can be installed from [here](https://docs.zus.network/guides/setup-a-blockchain/additional-tips-and-troubleshooting-for-mac#install-homebrew-and-mockery-on-mac-and-linux). 
-
-3. Building the miners and sharders. From the git/0chain directory use
-
-   3.1) To build the miner containers
-
-   ```
-make build_miner
-```
-
-   3.2) To build the sharder containers
-
-```
-make build_sharder
-```
-
-   3.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
-
-```
-make sync_clock
-```
-
-## Configuring the nodes
-
-1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
-
-  1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
-
-  1.2) If you want the debug statements in the logs to appear - change `logging.level` from `"info"` to `"debug"`
-
-  1.3) If you want to change the block size, set the value of `server_chain.block.size`
-
-  1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
-
-  1.5) If you want to turn off fees adjust `server_chain.smart_contract.miner` from `true` to `false`
-
-**_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
-
-## Starting the nodes
-
-1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
-
-Start sharder first because miners need the genesis magic block. On the sharder terminal, use
-
-```
-make sharder num=1
-```
-
-Wait till the cassandra is started and the sharder is ready to listen to requests.
-
-On the respective miner terminal, use
-
-```
-make miner num=1
+5. Stop the chain
+```bash
+./zus_stop.sh
 ```
 
 **Note:** You can run multiple miners/sharders by changing the `num` parameter (e.g., `make miner num=2`, `make sharder num=2`, etc.)
@@ -250,39 +162,6 @@ Redis used for transactions:
 ```
 ../bin/run.sharder.sh cassandra cqlsh
 ```
-
-## Restarting the nodes
-
-To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build.
-```
-git pull
-make build_base && make build_sharder && make build_miner
-```
-For existing code and if you have tried running once, make sure there are no previous files and processes.
-```
-docker stop $(docker ps -a -q)
-make cleanup
-make init_setup
-make sync_clock
-```
-Then go to individual miner/sharder:
-```
-make sharder num=1  # start sharders first!
-make miner num=1
-```
-## Cleanup
-
-1. If you want to restart the blockchain from the beginning
-
-```
-make cleanup
-```
-
-This cleans up the directories within docker.local/miner* and docker.local/sharder*
-
-**_Note: this script can take a while if the blockchain generated a lot of blocks as the script deletes
-the databases and also all the blocks that are stored by the sharders. Since each block is stored as a
-separate file, deleting thousands of such files will take some time._**
 
 2. If you want to get rid of old unused docker resources:
 
