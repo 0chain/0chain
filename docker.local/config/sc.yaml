@@ -1,6 +1,6 @@
 smart_contracts:
   faucetsc:
-    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
     pour_limit: 1
     pour_amount: 1
     max_pour_amount: 100
@@ -15,7 +15,7 @@ smart_contracts:
 
 
   minersc:
-    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
     # miners
     max_n: 7 # 100
     min_n: 3 # 3
@@ -86,7 +86,7 @@ smart_contracts:
       kill_miner: 146
       kill_sharder: 140
   storagesc:
-    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
     # the time_unit is a duration used as divider for a write price; a write
     # price measured in tok / GB / time_unit, where the time_unit is this
     # configuration; for example 1h, 24h (a day), 720h (a month -- 30 days);
@@ -209,7 +209,7 @@ smart_contracts:
       shutdown_blobber: 597
       shutdown_validator: 227
   vestingsc:
-    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
     min_lock: 0.01
     min_duration: "2m"
     max_duration: "2h"
@@ -223,7 +223,7 @@ smart_contracts:
       delete: 100
       vestingsc-update-settings: 100
   zcnsc:
-    owner_id: 1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802
+    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
     min_mint: 1
     min_burn: 1
     min_stake: 0

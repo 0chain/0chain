@@ -363,9 +363,9 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 
 /*PruneClientStateWorker - a worker that prunes the client state */
 func (c *Chain) PruneClientStateWorker(ctx context.Context) {
-	tick := 7 * time.Second
+	tick := 20 * time.Minute
 	timer := time.NewTimer(time.Second)
-	logging.Logger.Debug("PruneClientStateWorker start")
+	logging.Logger.Debug("PruneCl  ientStateWorker start")
 	defer func() {
 		logging.Logger.Debug("PruneClientStateWorker stopped, we should not see this...")
 	}()

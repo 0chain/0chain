@@ -16,7 +16,7 @@ import (
 	bk "0chain.net/smartcontract/benchmark"
 )
 
-const owner = "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802"
+const owner = "c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9"
 
 type BenchTest struct {
 	name     string

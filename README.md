@@ -9,6 +9,8 @@
 - [Züs Overview](#züs-overview)
 - [Changelog](#changelog)
 - [Initial Setup](#initial-setup)
+  - [Prerequisites](#prerequisites)
+  - [Using the Makefile](#using-the-makefile)
   - [Host Machine Network Setup](#host-machine-network-setup)
   - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders)
   - [Setup Network](#setup-network)
@@ -59,111 +61,60 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 
 ## Initial Setup
 
-Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/) and Go from [here](https://go.dev/doc/install). 
+Docker, Go, and Make must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/) and Go from [here](https://go.dev/doc/install).
 
-### Host Machine Network setup
+### Prerequisites
 
-#### MacOS
-```bash
-./macos_network.sh
-```
-#### Windows
+- [Go](https://go.dev/doc/install) must be installed
+- [mockery](https://github.com/vektra/mockery) must be installed (`go install github.com/vektra/mockery/v2@latest`)
+
+## Host Machine Network setup
+
+
+### Windows
+
 Run powershell as administrator
-```powershell
+
+```bash
 ./windows_network.ps1
 ```
-#### Ubuntu/WSL2
+
+### Ubuntu/WSL2
+
 Run the following script
+
 ```bash
 ./wsl_ubuntu_network_iptables.sh
 ```
-### Directory Setup for Miners and Sharders
 
-In the git/0chain run the following command
+## Building Nodes
 
-```
-./docker.local/bin/init.setup.sh
-```
-
-### Setup Network
-
-Set up a network called testnet0 for each of these node containers to talk to each other.
-
-**_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
-
-```
-./docker.local/bin/setup.network.sh
+1. Build mocks from the Makefile in the repo, from git/0chain directory run:
+ ```bash
+make build-mocks
 ```
 
-## Building the Nodes
-
-1. Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
-
-   1.1) First build the base containers, zchain_build_base and zchain_run_base
-
-   ```
-   ./docker.local/bin/build.base.sh
-   ```
-2. Build mocks from the Makefile in the repo, from git/0chain directory run:
-   
-   ```
-    make build-mocks 
-   ```
-   Note: Mocks have to be built once in the beginning. Building mocks require mockery and brew which can be installed from [here](https://docs.zus.network/guides/setup-a-blockchain/additional-tips-and-troubleshooting-for-mac#install-homebrew-and-mockery-on-mac-and-linux). 
-
-3. Building the miners and sharders. From the git/0chain directory use
-
-   3.1) To build the miner containers
-
-   ```
-   ./docker.local/bin/build.miners.sh
-   ```
-
-   3.2) To build the sharder containers
-
-   ```
-   ./docker.local/bin/build.sharders.sh
-   ```
-
-   3.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
-
-   ```
-   ./docker.local/bin/sync_clock.sh
-   ```
-
-## Configuring the nodes
-
-1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
-
-  1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
-
-  1.2) If you want the debug statements in the logs to appear - change `logging.level` from `"info"` to `"debug"`
-
-  1.3) If you want to change the block size, set the value of `server_chain.block.size`
-
-  1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
-
-  1.5) If you want to turn off fees adjust `server_chain.smart_contract.miner` from `true` to `false`
-
-**_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
-
-## Starting the nodes
-
-1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
-
-Start sharder first because miners need the genesis magic block. On the sharder terminal, use
-
+2. Make initial setup for images and run the chain for first time
+```bash
+./zus_setup.sh
 ```
-../bin/start.b0sharder.sh
+3. Start the chain
+```bash
+./zus_start.sh
 ```
 
-Wait till the cassandra is started and the sharder is ready to listen to requests.
-
-On the respective miner terminal, use
-
+4. Restart the chain after clearing all previous logs
+```bash
+./zus_restart.sh
 ```
-../bin/start.b0miner.sh
+Node: To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build images again using ```./zus_setup.sh```".
+
+5. Stop the chain
+```bash
+./zus_stop.sh
 ```
+
+**Note:** You can run multiple miners/sharders by changing the `num` parameter (e.g., `make miner num=2`, `make sharder num=2`, etc.)
 ## Check Chain Status
 
 1. Ensure the port mapping is all correct:
@@ -211,39 +162,6 @@ Redis used for transactions:
 ```
 ../bin/run.sharder.sh cassandra cqlsh
 ```
-
-## Restarting the nodes
-
-To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build.
-```
-git pull
-docker.local/bin/build.base.sh && docker.local/bin/build.sharders.sh && docker.local/bin/build.miners.sh
-```
-For existing code and if you have tried running once, make sure there are no previous files and processes.
-```
-docker stop $(docker ps -a -q)
-docker.local/bin/clean.sh
-docker.local/bin/init.setup.sh
-docker.local/bin/sync_clock.sh
-```
-Then go to individual miner/sharder:
-```
-../bin/start.b0sharder.sh (start sharders first!)
-../bin/start.b0miner.sh
-```
-## Cleanup
-
-1. If you want to restart the blockchain from the beginning
-
-```
-./docker.local/bin/clean.sh
-```
-
-This cleans up the directories within docker.local/miner* and docker.local/sharder*
-
-**_Note: this script can take a while if the blockchain generated a lot of blocks as the script deletes
-the databases and also all the blocks that are stored by the sharders. Since each block is stored as a
-separate file, deleting thousands of such files will take some time._**
 
 2. If you want to get rid of old unused docker resources:
 
@@ -400,7 +318,7 @@ Navigate to 0chain folder and run the script to build base docker image for unit
 
 ```
 cd 0chain
-./docker.local/bin/build.base.sh
+make build_base
 ```
 
 The base image includes all the dependencies required to test the 0chain code.
@@ -602,19 +520,19 @@ git clone https://github.com/0chain/0chain.git
 Build miner docker image for integration test
 
 ```
-(cd 0chain && ./docker.local/bin/build.miners-integration-tests.sh)
+(cd 0chain && make build_miner_it)
 ```
 
 Build sharder docker image for integration test
 
 ```
-(cd 0chain && ./docker.local/bin/build.sharders-integration-tests.sh)
+(cd 0chain && make build_sharder_it)
 ```
 
 NOTE: The miner and sharder images are designed for integration tests only. If wanted to run chain normally, rebuild the original images.
 
 ```
-(cd 0chain && ./docker.local/bin/build.sharders.sh && ./docker.local/bin/build.miners.sh)
+(cd docker.local && make build_sharder && make build_miner)
 ```
 
 Confirm that view change rounds are set to 50 on `0chain/docker.local/config.yaml`
@@ -674,7 +592,7 @@ Check [Custom Commands](https://github.com/0chain/0chain/blob/master/code/go/0ch
 To generate swagger documentation you need go-swagger installed, visit https://goswagger.io/install.html for details.
 
 You then need to run the makefile
-```bash
+```
 make swagger
 ```
 The documentation will be in `docs/swagger.md` and `docs/swagger.yaml`.
