@@ -67,10 +67,12 @@ Docker, Go, and Make must be installed to run the testnet containers.
 
 ### Prerequisites
 
-- [Go](https://go.dev/doc/install) must be installed
-- [mockery](https://github.com/vektra/mockery) must be installed (`go install github.com/vektra/mockery/v2@latest`)
-- [Docker](https://docs.docker.com/engine/install/)
-**Important**: The Züs blockchain requires Docker and docker-compose (legacy version) to be properly configured.
+- **Go 1.21+** ([Install Go](https://go.dev/doc/install))
+- **mockery v2** ([Install mockery](https://github.com/vektra/mockery))`go install github.com/vektra/mockery/v2@latest`
+- **Docker & docker-compose** ([Install Docker](https://docs.docker.com/engine/install/))
+  - Docker Engine 20.10+ (recommended: latest stable)
+  - docker-compose 1.29+ (legacy version recommended for compatibility)
+
 
 #### Detailed Setup
 See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructions.
@@ -79,12 +81,12 @@ See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructio
 ## Configure Setup
 
 In the `blockchain.config` file, you will need to edit 
-- The number of miners and sharders [Default - 2 sharders & 3 miners]
+- The number of miners and sharders you would like to spin up [Default - 2 sharders & 3 miners]
 - Your operating system for network setup
 
 ```config
 # Blockchain Configuration
-# Recommended number of sharders and miners
+# Recommend 2 sharders and 3 miners
 
 NUM_SHARDERS=2
 NUM_MINERS=3

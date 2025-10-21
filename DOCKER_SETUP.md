@@ -4,9 +4,10 @@ This guide explains how to properly set up Docker and docker-compose for the Zü
 
 ## Requirements
 
-- **Docker daemon** running and accessible
-- **docker-compose (legacy version)** installed
+- **Docker Engine 20.10+** (recommended: latest stable)
+- **docker-compose 1.29+** (legacy version recommended for compatibility)
 - **User in docker group** for permission access
+- **Go 1.21+** (for local development, not required for Docker-only usage)
 
 ## Quick Setup
 
@@ -60,17 +61,36 @@ You should see:
 ✅ Docker is ready (using: docker-compose)
 ```
 
+## Version Compatibility
+
+### Go Version Requirements
+- **Minimum**: Go 1.21
+- **Recommended**: Go 1.22.1 (matches Docker build environment)
+- **Docker Build**: Uses `golang:1.22.1-alpine3.18`
+- **Local Development**: Go 1.21+ required for `go mod` commands
+
+### Docker Version Requirements
+- **Docker Engine**: 20.10+ (recommended: latest stable)
+- **Docker Compose**: 1.29+ (legacy version recommended)
+- **Docker Compose v2**: Supported but not recommended
+
+### Database Versions (Docker)
+- **PostgreSQL**: 14 (as specified in docker-compose files)
+- **Redis**: Alpine (latest stable)
+
 ## Docker Compose Versions
 
 ### Legacy docker-compose (Recommended)
 - **Command**: `docker-compose`
 - **Installation**: `sudo apt install docker-compose`
+- **Version**: 1.29+ recommended
 - **Compatibility**: Best with existing scripts
 - **Status**: ✅ Recommended
 
 ### Modern Docker Compose v2
 - **Command**: `docker compose`
 - **Installation**: Included with Docker
+- **Version**: 2.0+ (latest recommended)
 - **Compatibility**: Works but may have issues
 - **Status**: ⚠️ Supported but not recommended
 
