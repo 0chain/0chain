@@ -7,7 +7,7 @@ This guide explains how to properly set up Docker and docker-compose for the Zü
 - **Docker Engine 20.10+** (recommended: latest stable)
 - **docker-compose 1.29+** (legacy version recommended for compatibility)
 - **User in docker group** for permission access
-- **Go 1.21+** (for local development, not required for Docker-only usage)
+- **Go 1.22+** (for local development, not required for Docker-only usage)
 
 ## Quick Setup
 
@@ -73,10 +73,6 @@ You should see:
 - **Docker Engine**: 20.10+ (recommended: latest stable)
 - **Docker Compose**: 1.29+ (legacy version recommended)
 - **Docker Compose v2**: Supported but not recommended
-
-### Database Versions (Docker)
-- **PostgreSQL**: 14 (as specified in docker-compose files)
-- **Redis**: Alpine (latest stable)
 
 ## Docker Compose Versions
 

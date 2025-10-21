@@ -67,7 +67,7 @@ Docker, Go, and Make must be installed to run the testnet containers.
 
 ### Prerequisites
 
-- **Go 1.21+** ([Install Go](https://go.dev/doc/install))
+- **Go 1.22+** ([Install Go](https://go.dev/doc/install)) 
 - **mockery v2** ([Install mockery](https://github.com/vektra/mockery))`go install github.com/vektra/mockery/v2@latest`
 - **Docker & docker-compose** ([Install Docker](https://docs.docker.com/engine/install/))
   - Docker Engine 20.10+ (recommended: latest stable)
