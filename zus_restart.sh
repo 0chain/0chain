@@ -1,42 +1,66 @@
 #!/bin/bash
 
-# Quick Start Script - Your Original Approach
-# Assumes setup is already done, just starts the services
+# Züs Blockchain Restart Script
+# Stops all services, then starts them again
 
-echo "🚀 Quick starting Züs blockchain..."
+echo "🔄 Restarting Züs Blockchain services..."
 
-./macos_network.sh
+# Load configuration
+if [ -f "blockchain.config" ]; then
+    source blockchain.config
+else
+    # Default configuration
+    NUM_SHARDERS=2
+    NUM_MINERS=3
+fi
 
-# Navigate to docker.local directory
-cd docker.local
+echo "Restarting $NUM_SHARDERS sharders and $NUM_MINERS miners..."
 
-make cleanup
+# Track overall success
+RESTART_SUCCESS=true
 
-make sync_clock
+# Stop all services first
+echo "🛑 Stopping existing services..."
+if ! ./zus_stop.sh; then
+    echo "❌ Failed to stop services properly"
+    RESTART_SUCCESS=false
+fi
 
-echo "Starting sharders..."
-make sharder num=1 &
-sleep 15
-make sharder num=2 &
-sleep 15
+# Wait a moment for cleanup
+sleep 5
 
-echo "Starting miners..."
-make miner num=1 &
-sleep 15
-make miner num=2 &
-sleep 15
-make miner num=3 &
+# Start services again
+echo "🚀 Starting services..."
+if ! ./zus_start.sh; then
+    echo "❌ Failed to start services properly"
+    RESTART_SUCCESS=false
+fi
 
-echo "⏳ Waiting for services to initialize..."
-sleep 20
-
-echo "✅ All sharders and miners started in background!"
+# Final status
 echo ""
-echo "📋 Check running processes:"
-echo "  ps aux | grep -E \"(miner|sharder)\""
-echo ""
-echo "🔗 Blockchain Endpoints:"
-echo "  Sharders: http://localhost:7171/_diagnostics, http://localhost:7172/_diagnostics"
-echo "  Miners:   http://localhost:7071/_diagnostics, http://localhost:7072/_diagnostics, http://localhost:7073/_diagnostics"
-echo ""
-echo "🛑 To stop: ./stop_chain.sh"
+if [ "$RESTART_SUCCESS" = true ]; then
+    echo "✅ Blockchain services restarted successfully!"
+    echo ""
+    echo "📊 Service Status:"
+    echo "  Sharders: $NUM_SHARDERS running"
+    echo "  Miners:   $NUM_MINERS running"
+    echo ""
+    echo "🔗 Blockchain Endpoints:"
+    echo "  Sharders:"
+    for i in $(seq 1 $NUM_SHARDERS); do
+        echo "    - http://localhost:717$i/_diagnostics"
+    done
+    echo "  Miners:"
+    for i in $(seq 1 $NUM_MINERS); do
+        echo "    - http://localhost:707$i/_diagnostics"
+    done
+else
+    echo "❌ Restart failed! Some services may not be running properly."
+    echo ""
+    echo "🛠️  Troubleshooting:"
+    echo "  Check running processes: ps aux | grep -E \"(miner|sharder)\""
+    echo "  Check containers: docker ps"
+    echo "  View logs: docker logs <container_name>"
+    echo "  Try manual restart: ./zus_stop.sh && ./zus_start.sh"
+    exit 1
+fi

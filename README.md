@@ -5,9 +5,63 @@
 [![GoDoc](https://godoc.org/github.com/0chain/0chain?status.png)](https://godoc.org/github.com/0chain/0chain)
 [![codecov](https://codecov.io/gh/0chain/0chain/branch/staging/graph/badge.svg)](https://codecov.io/gh/0chain/0chain)
 
+## Quick Start
+
+For a quick setup of the Züs blockchain locally:
+
+1. **Set up Docker** (see [Docker Setup](#docker-setup) below)
+2. **Configure your platform**:
+   ```bash
+   ./configure_network.sh
+   ```
+3. **Run the setup**:
+   ```bash
+   ./zus_setup.sh
+   ```
+4. **Start services**:
+   ```bash
+   ./zus_start.sh
+   ```
+5. **Stop services**:
+   ```bash
+   ./zus_stop.sh
+   ```
+
+## Docker Setup
+
+**Important**: The Züs blockchain requires Docker and docker-compose (legacy version) to be properly configured.
+
+### Prerequisites
+- Docker daemon running and accessible
+- docker-compose (legacy version) installed
+- User in docker group
+
+### Quick Installation
+```bash
+# Install Docker
+sudo apt update
+sudo apt install docker.io docker-compose
+
+# Start Docker
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Add user to docker group
+sudo usermod -aG docker $USER
+newgrp docker
+
+# Verify setup
+./docker_check.sh
+```
+
+### Detailed Setup
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructions.
+
 ## Table of Contents
 - [Züs Overview](#züs-overview)
 - [Changelog](#changelog)
+- [Quick Start](#quick-start)
+- [Docker Setup](#docker-setup)
 - [Initial Setup](#initial-setup)
   - [Prerequisites](#prerequisites)
   - [Using the Makefile](#using-the-makefile)
