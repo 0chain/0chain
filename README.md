@@ -5,62 +5,10 @@
 [![GoDoc](https://godoc.org/github.com/0chain/0chain?status.png)](https://godoc.org/github.com/0chain/0chain)
 [![codecov](https://codecov.io/gh/0chain/0chain/branch/staging/graph/badge.svg)](https://codecov.io/gh/0chain/0chain)
 
-## Quick Start
-
-For a quick setup of the Züs blockchain locally:
-
-1. **Set up Docker** (see [Docker Setup](#docker-setup) below)
-2. **Configure your platform**:
-   ```bash
-   ./configure_network.sh
-   ```
-3. **Run the setup**:
-   ```bash
-   ./zus_setup.sh
-   ```
-4. **Start services**:
-   ```bash
-   ./zus_start.sh
-   ```
-5. **Stop services**:
-   ```bash
-   ./zus_stop.sh
-   ```
-
-## Docker Setup
-
-**Important**: The Züs blockchain requires Docker and docker-compose (legacy version) to be properly configured.
-
-### Prerequisites
-- Docker daemon running and accessible
-- docker-compose (legacy version) installed
-- User in docker group
-
-### Quick Installation
-```bash
-# Install Docker
-sudo apt update
-sudo apt install docker.io docker-compose
-
-# Start Docker
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Add user to docker group
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Verify setup
-./docker_check.sh
-```
-
-### Detailed Setup
-See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructions.
 
 ## Table of Contents
 - [Züs Overview](#züs-overview)
 - [Changelog](#changelog)
-- [Quick Start](#quick-start)
 - [Docker Setup](#docker-setup)
 - [Initial Setup](#initial-setup)
   - [Prerequisites](#prerequisites)
@@ -115,30 +63,38 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 
 ## Initial Setup
 
-Docker, Go, and Make must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/) and Go from [here](https://go.dev/doc/install).
+Docker, Go, and Make must be installed to run the testnet containers. 
 
 ### Prerequisites
 
 - [Go](https://go.dev/doc/install) must be installed
 - [mockery](https://github.com/vektra/mockery) must be installed (`go install github.com/vektra/mockery/v2@latest`)
+- [Docker](https://docs.docker.com/engine/install/)
+**Important**: The Züs blockchain requires Docker and docker-compose (legacy version) to be properly configured.
 
-## Host Machine Network setup
+#### Detailed Setup
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructions.
 
 
-### Windows
+## Configure Setup
 
-Run powershell as administrator
+In the `blockchain.config` file, you will need to edit 
+- The number of miners and sharders [Default - 2 sharders & 3 miners]
+- Your operating system for network setup
 
-```bash
-./windows_network.ps1
-```
+```config
+# Blockchain Configuration
+# Recommended number of sharders and miners
 
-### Ubuntu/WSL2
+NUM_SHARDERS=2
+NUM_MINERS=3
 
-Run the following script
+# Network Configuration
+# Choose your platform: macos, wsl_ubuntu, windows, linux, or custom
+NETWORK_PLATFORM=linux
 
-```bash
-./wsl_ubuntu_network_iptables.sh
+# Custom network script (if NETWORK_PLATFORM=custom)
+# CUSTOM_NETWORK_SCRIPT=./my_custom_network.sh
 ```
 
 ## Building Nodes
@@ -168,7 +124,6 @@ Node: To reflect a change in config files 0chain.yaml and sc.yaml, just restart 
 ./zus_stop.sh
 ```
 
-**Note:** You can run multiple miners/sharders by changing the `num` parameter (e.g., `make miner num=2`, `make sharder num=2`, etc.)
 ## Check Chain Status
 
 1. Ensure the port mapping is all correct:
@@ -195,7 +150,6 @@ Similarly, following links can be used to see the status of the sharders
 
 - http://localhost:7172/_diagnostics
 
-- http://localhost:7173/_diagnostics
 
 3. Connecting to redis servers running within the containers (you are within the appropriate miner directories)
 
