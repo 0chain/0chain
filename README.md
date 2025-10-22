@@ -108,10 +108,11 @@ NETWORK_PLATFORM=linux
 
 ## Building Nodes
 
-1. Build mocks from the Makefile in the repo, from git/0chain directory run:
+1. Build mocks from the Makefile in the repo, from 0chain directory run:
  ```bash
 make build-mocks
 ```
+Note: Just need to run this once even if there are errors or it exits the command early
 
 2. Make initial setup for images and run the chain for first time
 ```bash
