@@ -59,7 +59,7 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 ## Changelog
 [CHANGELOG.md](CHANGELOG.md)
 
-# Setting up the 0chain blockchain Locally
+# Setting up the Züs Blockchain Locally
 
 Create a local Züs blockchain on your device. This can be used as a testnet to develop and test new features for the blockchain.
 The installation steps will setup up a small number of sharders and miners in docker containers, then spin up the blockchain processes. 
