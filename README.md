@@ -77,7 +77,11 @@ Docker, Go, and Make must be installed to run the testnet containers.
 #### Detailed Setup
 See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructions.
 
-
+## Clone Repo 
+Clone the repo onto your computer.
+```
+git clone -b fix/rikachet/fixes-local-setup https://github.com/0chain/0chain.git
+```
 ## Configure Setup
 
 In the `blockchain.config` file, you will need to edit 
