@@ -1,44 +1,44 @@
-            # Züs TestNet Setup with Docker Containers
-
 [![Build](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/build-&-publish-docker-image.yml)
 [![Test](https://github.com/0chain/0chain/actions/workflows/unit-test.yml/badge.svg)](https://github.com/0chain/0chain/actions/workflows/unit-test.yml)
 [![GoDoc](https://godoc.org/github.com/0chain/0chain?status.png)](https://godoc.org/github.com/0chain/0chain)
 [![codecov](https://codecov.io/gh/0chain/0chain/branch/staging/graph/badge.svg)](https://codecov.io/gh/0chain/0chain)
 
+
 ## Table of Contents
 - [Züs Overview](#züs-overview)
 - [Changelog](#changelog)
+- [Setting up the Züs Blockchain Locally](#setting-up-the-züs-blockchain-locally)
 - [Initial Setup](#initial-setup)
   - [Prerequisites](#prerequisites)
-  - [Using the Makefile](#using-the-makefile)
-  - [Host Machine Network Setup](#host-machine-network-setup)
-  - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders)
-  - [Setup Network](#setup-network)
-  - [Building the Nodes](#building-the-nodes)
-  - [Configuring the Nodes](#configuring-the-nodes)
-  - [Starting the Nodes](#starting-the-nodes)
-  - [Check Chain Status](#check-chain-status)
-  - [Restarting the Nodes](#restarting-the-nodes)
-  - [Cleanup](#cleanup)
-- [Run 0chain on ec2 / vm / bare metal](https://github.com/0chain/0chain/blob/master/docker.aws/README.md)
-- [Run 0chain on ec2 / vm / bare metal over https](https://github.com/0chain/0chain/blob/master/https/README.md)
+    - [Docker Detailed Setup](#docker-detailed-setup)
+  - [Clone Repo](#clone-repo)
+  - [Configure Setup](#configure-setup)
+  - [Setting Up and Running Blockchain](#setting-up-and-running-blockchain)
+  - [Accessing Redis and Cassandra components](#accessing-redis-and-cassandra-components)
+  - [Running on systems with SELinux enabled](#running-on-systems-with-selinux-enabled)
 - [Development](#development)
   - [Installing msgp](#installing-msgp)
   - [Dependencies for local compilation](#dependencies-for-local-compilation)
   - [Debugging](#debugging)
+    - [Bringing up the chain faster](#bringing-up-the-chain-faster)
+    - [Debug builds of 0chain](#debug-builds-of-0chain)
+    - [Log files](#log-files)
   - [Unit tests](#unit-tests)
+    - [Running Tests](#running-tests)
+    - [Testing Steps](#testing-steps)
   - [Creating The Magic Block](#creating-the-magic-block)
   - [Initial states](#initial-states)
-  - [Integration tests ](#integration-tests)
-    - [Architecture](#architecture)
-    - [Running Integration Tests](#running-integration-tests)
-    - [Running Standard Tests](#running-standard-tests)
-    - [Running complex scenario suites](#running-complex-scenario-suites)
-    - [Running Blobber Tests](#running-blobber-tests)
-    - [Adding new Tests](#adding-new-tests)
-    - [Supported Conductor Commands](#supported-conductor-commands)
-    - [Creating Custom Conductor Commands](#creating-custom-conductor-commands) 
   - [Benchmarks](#benchmarks)
+  - [Integration tests](#integration-tests)
+    - [Architecture](#architecture)
+    - [Running Integration Tests](#running-integration-tests-1)
+    - [Running standard tests](#running-standard-tests)
+    - [Running complex scenario suites](#running-complex-scenario-suites)
+    - [Running blobber tests](#running-blobber-tests)
+    - [Adding new Tests](#adding-new-tests)
+    - [Enabling or Disabling Tests](#enabling-or-disabling-tests)
+    - [Supported Conductor Commands](#supported-conductor-commands)
+    - [Creating Custom Conductor Commands](#creating-custom-conductor-commands)
   - [Swagger documentation](#swagger-documentation)
 
 ## Züs Overview 
@@ -59,65 +59,71 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 ## Changelog
 [CHANGELOG.md](CHANGELOG.md)
 
+# Setting up the Züs Blockchain Locally
+
+Create a local Züs blockchain on your device. This can be used as a testnet to develop and test new features for the blockchain.
+The installation steps will setup up a small number of sharders and miners in docker containers, then spin up the blockchain processes. 
+
 ## Initial Setup
 
-Docker, Go, and Make must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/) and Go from [here](https://go.dev/doc/install).
+Docker, Go, and Make must be installed to run the testnet containers. 
 
 ### Prerequisites
 
-- [Go](https://go.dev/doc/install) must be installed
-- [mockery](https://github.com/vektra/mockery) must be installed (`go install github.com/vektra/mockery/v2@latest`)
+- **Go 1.22+** ([Install Go](https://go.dev/doc/install)) 
+- **mockery v2** ([Install mockery](https://github.com/vektra/mockery))`go install github.com/vektra/mockery/v2@latest`
+- **Docker & docker-compose** ([Install Docker](https://docs.docker.com/engine/install/))
+  - Docker Engine 20.10+ (recommended: latest stable)
+  - docker-compose 1.29+ (legacy version recommended for compatibility)
 
-## Host Machine Network setup
 
+#### Docker Detailed Setup
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructions.
 
-### Windows
+## Clone Repo 
+Clone the repo onto your computer.
+```
+git clone -b fix/rikachet/fixes-local-setup https://github.com/0chain/0chain.git
+```
+## Configure Setup
 
-Run powershell as administrator
+In the `blockchain.config` file, you will need to edit 
+- The number of miners and sharders you would like to spin up [Default - 1 sharders & 4 miners]
+- Your operating system for network setup
 
-```bash
-./windows_network.ps1
+```config
+# Blockchain Configuration
+# Recommend 1 sharders and 4 miners
+
+NUM_SHARDERS=1
+NUM_MINERS=4
+
+# Network Configuration
+# Choose your platform: macos, wsl_ubuntu, windows, linux, or custom
+NETWORK_PLATFORM=linux
+
+# Custom network script (if NETWORK_PLATFORM=custom)
+# CUSTOM_NETWORK_SCRIPT=./my_custom_network.sh
 ```
 
-### Ubuntu/WSL2
+## Setting Up and Running Blockchain
 
-Run the following script
-
-```bash
-./wsl_ubuntu_network_iptables.sh
-```
-
-## Building Nodes
-
-1. Build mocks from the Makefile in the repo, from git/0chain directory run:
+1. Build mocks from the Makefile in the repo, from 0chain directory run:
  ```bash
 make build-mocks
 ```
+> [!Note]
+> Just need to run this once even if there are errors or it exits the command early
 
 2. Make initial setup for images and run the chain for first time
 ```bash
 ./zus_setup.sh
 ```
-3. Start the chain
-```bash
-./zus_start.sh
-```
+> [!NOTE]
+> Run the above script with root (sudo)
 
-4. Restart the chain after clearing all previous logs
-```bash
-./zus_restart.sh
-```
-Node: To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build images again using ```./zus_setup.sh```".
 
-5. Stop the chain
-```bash
-./zus_stop.sh
-```
-
-**Note:** You can run multiple miners/sharders by changing the `num` parameter (e.g., `make miner num=2`, `make sharder num=2`, etc.)
-## Check Chain Status
-
-1. Ensure the port mapping is all correct:
+3a. Ensure the port mapping is all correct:
 
 ```
 docker ps
@@ -125,7 +131,7 @@ docker ps
 
 This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner, and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
 
-2. Confirming the servers are up and running. From a browser, visit
+3b. Confirming the servers are up and running. From a browser, visit
 
 - http://localhost:7071/_diagnostics
 
@@ -133,17 +139,28 @@ This should display a few containers and should include containers with images m
 
 - http://localhost:7073/_diagnostics
 
+- http://localhost:7074/_diagnostics
+
 to see the status of the miners.
 
 Similarly, following links can be used to see the status of the sharders
 
 - http://localhost:7171/_diagnostics
 
-- http://localhost:7172/_diagnostics
+3. Stop the chain
+```bash
+./zus_stop.sh
+```
 
-- http://localhost:7173/_diagnostics
+4. Restart the chain after clearing all previous logs
+```bash
+./zus_restart.sh
+```
+> [!NOTE]
+> To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build images again using ```./zus_setup.sh```".
 
-3. Connecting to redis servers running within the containers (you are within the appropriate miner directories)
+### Accessing Redis and Cassandra components
+1. Connecting to redis servers running within the containers (you are within the appropriate miner directories)
 
 Default redis (used for clients and state):
 
@@ -157,13 +174,13 @@ Redis used for transactions:
 ../bin/run.miner.sh redis_txns redis-cli
 ```
 
-4. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
+2. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
 
 ```
 ../bin/run.sharder.sh cassandra cqlsh
 ```
 
-2. If you want to get rid of old unused docker resources:
+3. If you want to get rid of old unused docker resources:
 
 ```
 docker system prune
@@ -181,33 +198,7 @@ If you are curious about the reasons for this, this thread sheds some light on t
 
 https://github.com/herumi/xbyak/issues/9
 
-## Setting up Cassandra Schema
 
-The following is no longer required as the schema is automatically loaded.
-
-Start the sharder service that also brings up the cassandra service. To run commands on cassandra, use the following command
-
-```
-../bin/run.sharder.sh cassandra cqlsh
-```
-
-1. To create zerochain keyspace, do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
-```
-
-2. To create the tables, do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
-```
-
-3. When you want to truncate existing data (use caution), do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
-```
 
 ## Development
 
