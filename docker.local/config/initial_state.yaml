@@ -44,7 +44,7 @@ initialStates:
         tokens: 10000000000
 
       # your wallet
-      - id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
+      - id: 57167c7c379b85c1f9d614804f8625b796c10798fecb0d3642215ce36a51c362
         tokens: 100000000000
 
   # storagesc

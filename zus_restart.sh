@@ -36,6 +36,11 @@ if ! ./zus_start.sh; then
     RESTART_SUCCESS=false
 fi
 
+# Wait for background processes to complete initialization
+echo ""
+echo "⏳ Waiting for blockchain initialization to complete..."
+sleep 20
+
 # Final status
 echo ""
 if [ "$RESTART_SUCCESS" = true ]; then

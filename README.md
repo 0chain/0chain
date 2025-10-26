@@ -77,7 +77,7 @@ Docker, Go, and Make must be installed to run the testnet containers.
   - docker-compose 1.29+ (legacy version recommended for compatibility)
 
 
-#### Detailed Setup
+#### Docker Detailed Setup
 See [DOCKER_SETUP.md](DOCKER_SETUP.md) for comprehensive Docker setup instructions.
 
 ## Clone Repo 
@@ -88,15 +88,15 @@ git clone -b fix/rikachet/fixes-local-setup https://github.com/0chain/0chain.git
 ## Configure Setup
 
 In the `blockchain.config` file, you will need to edit 
-- The number of miners and sharders you would like to spin up [Default - 2 sharders & 3 miners]
+- The number of miners and sharders you would like to spin up [Default - 1 sharders & 4 miners]
 - Your operating system for network setup
 
 ```config
 # Blockchain Configuration
-# Recommend 2 sharders and 3 miners
+# Recommend 1 sharders and 4 miners
 
-NUM_SHARDERS=2
-NUM_MINERS=3
+NUM_SHARDERS=1
+NUM_MINERS=4
 
 # Network Configuration
 # Choose your platform: macos, wsl_ubuntu, windows, linux, or custom
@@ -106,37 +106,24 @@ NETWORK_PLATFORM=linux
 # CUSTOM_NETWORK_SCRIPT=./my_custom_network.sh
 ```
 
-## Building Nodes
+## Setting Up and Running Blockchain
 
 1. Build mocks from the Makefile in the repo, from 0chain directory run:
  ```bash
 make build-mocks
 ```
-Note: Just need to run this once even if there are errors or it exits the command early
+> [!Note]
+> Just need to run this once even if there are errors or it exits the command early
 
 2. Make initial setup for images and run the chain for first time
 ```bash
 ./zus_setup.sh
 ```
-3. Start the chain
-```bash
-./zus_start.sh
-```
+> [!NOTE]
+> Run the above script with root (sudo)
 
-4. Restart the chain after clearing all previous logs
-```bash
-./zus_restart.sh
-```
-Node: To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build images again using ```./zus_setup.sh```".
 
-5. Stop the chain
-```bash
-./zus_stop.sh
-```
-
-## Check Chain Status
-
-1. Ensure the port mapping is all correct:
+3a. Ensure the port mapping is all correct:
 
 ```
 docker ps
@@ -144,7 +131,7 @@ docker ps
 
 This should display a few containers and should include containers with images miner1_miner, miner2_miner and miner3_miner, and they should have the ports mapped like "0.0.0.0:7071->7071/tcp"
 
-2. Confirming the servers are up and running. From a browser, visit
+3b. Confirming the servers are up and running. From a browser, visit
 
 - http://localhost:7071/_diagnostics
 
@@ -152,16 +139,28 @@ This should display a few containers and should include containers with images m
 
 - http://localhost:7073/_diagnostics
 
+- http://localhost:7074/_diagnostics
+
 to see the status of the miners.
 
 Similarly, following links can be used to see the status of the sharders
 
 - http://localhost:7171/_diagnostics
 
-- http://localhost:7172/_diagnostics
+3. Stop the chain
+```bash
+./zus_stop.sh
+```
 
+4. Restart the chain after clearing all previous logs
+```bash
+./zus_restart.sh
+```
+> [!NOTE]
+> To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build images again using ```./zus_setup.sh```".
 
-3. Connecting to redis servers running within the containers (you are within the appropriate miner directories)
+### Accessing Redis and Cassandra components
+1. Connecting to redis servers running within the containers (you are within the appropriate miner directories)
 
 Default redis (used for clients and state):
 
@@ -175,13 +174,13 @@ Redis used for transactions:
 ../bin/run.miner.sh redis_txns redis-cli
 ```
 
-4. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
+2. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
 
 ```
 ../bin/run.sharder.sh cassandra cqlsh
 ```
 
-2. If you want to get rid of old unused docker resources:
+3. If you want to get rid of old unused docker resources:
 
 ```
 docker system prune
@@ -199,33 +198,7 @@ If you are curious about the reasons for this, this thread sheds some light on t
 
 https://github.com/herumi/xbyak/issues/9
 
-## Setting up Cassandra Schema
 
-The following is no longer required as the schema is automatically loaded.
-
-Start the sharder service that also brings up the cassandra service. To run commands on cassandra, use the following command
-
-```
-../bin/run.sharder.sh cassandra cqlsh
-```
-
-1. To create zerochain keyspace, do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
-```
-
-2. To create the tables, do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
-```
-
-3. When you want to truncate existing data (use caution), do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
-```
 
 ## Development
 

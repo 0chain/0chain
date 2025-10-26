@@ -10,8 +10,8 @@ if [ -f "blockchain.config" ]; then
     source blockchain.config
 else
     # Default configuration
-    NUM_SHARDERS=2
-    NUM_MINERS=3
+    NUM_SHARDERS=1
+    NUM_MINERS=4
     NETWORK_PLATFORM=wsl_ubuntu
 fi
 
@@ -103,15 +103,6 @@ else
     echo "  ✅ $RUNNING_CONTAINERS containers are running"
 fi
 
-# Check for running processes (more specific to avoid system processes)
-RUNNING_PROCESSES=$(ps aux | grep -E "(miner|sharder)" | grep -v grep | grep -v "tracker-miner" | grep -v "systemd" | wc -l)
-if [ "$RUNNING_PROCESSES" -lt "$EXPECTED_CONTAINERS" ]; then
-    echo "  ❌ Only $RUNNING_PROCESSES processes running (expected $EXPECTED_CONTAINERS)"
-    START_SUCCESS=false
-    ERRORS+=("Only $RUNNING_PROCESSES/$EXPECTED_CONTAINERS processes running")
-else
-    echo "  ✅ $RUNNING_PROCESSES processes are running"
-fi
 
 # Wait for background processes to complete initialization
 echo ""

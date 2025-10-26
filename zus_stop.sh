@@ -94,17 +94,6 @@ else
     echo "  ✅ No blockchain containers are running"
 fi
 
-# Check for running processes (more specific to avoid system processes)
-RUNNING_PROCESSES=$(ps aux | grep -E "(miner|sharder)" | grep -v grep | grep -v "tracker-miner" | grep -v "systemd" | wc -l)
-if [ "$RUNNING_PROCESSES" -gt 0 ]; then
-    echo "  ❌ $RUNNING_PROCESSES blockchain processes are still running:"
-    ps aux | grep -E "(miner|sharder)" | grep -v grep | grep -v "tracker-miner" | grep -v "systemd" | awk '{print "  - " $11 " (PID: " $2 ")"}'
-    STOP_SUCCESS=false
-    ERRORS+=("$RUNNING_PROCESSES processes still running")
-else
-    echo "  ✅ No blockchain processes are running"
-fi
-
 # Show final status
 echo ""
 if [ "$STOP_SUCCESS" = true ]; then

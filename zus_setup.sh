@@ -10,9 +10,36 @@ if [ -f "blockchain.config" ]; then
     source blockchain.config
 else
     # Default configuration
-    NUM_SHARDERS=2
-    NUM_MINERS=3
+    NUM_SHARDERS=1
+    NUM_MINERS=4
     NETWORK_PLATFORM=wsl_ubuntu
+fi
+
+# Select magic block file based on configuration
+echo "🔍 Selecting magic block file for $NUM_MINERS miners and $NUM_SHARDERS sharders..."
+
+# Try to construct the filename based on miner/sharder count
+if [ "$NUM_SHARDERS" -eq 1 ]; then
+    MAGIC_BLOCK_FILE="docker.local/config/b0magicBlock_${NUM_MINERS}_miners_${NUM_SHARDERS}_sharder.json"
+else
+    MAGIC_BLOCK_FILE="docker.local/config/b0magicBlock_${NUM_MINERS}_miners_${NUM_SHARDERS}_sharders.json"
+fi
+
+# Check if the constructed file exists, otherwise use default
+if [ -f "$MAGIC_BLOCK_FILE" ]; then
+    echo "✅ Using magic block file: $(basename $MAGIC_BLOCK_FILE)"
+else
+    echo "⚠️  File not found, using default: b0magicBlock_4_miners_2_sharders.json"
+    MAGIC_BLOCK_FILE="docker.local/config/b0magicBlock_4_miners_2_sharders.json"
+fi
+
+# Update 0chain.yaml configuration
+echo "🔧 Updating 0chain.yaml configuration..."
+CONFIG_FILE="docker.local/config/0chain.yaml"
+if [ -f "$CONFIG_FILE" ]; then
+    MAGIC_BLOCK_FILENAME=$(basename "$MAGIC_BLOCK_FILE")
+    sed -i "s|magic_block_file: config/.*\.json|magic_block_file: config/$MAGIC_BLOCK_FILENAME|" "$CONFIG_FILE"
+    echo "✅ Updated configuration with: $MAGIC_BLOCK_FILENAME"
 fi
 
 echo "🚀 Starting Züs Blockchain with $NUM_SHARDERS sharders and $NUM_MINERS miners..."
