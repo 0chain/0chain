@@ -1,31 +1,28 @@
-name: Mirror repo to S3 (weekly)
+name: Mirror repo to S3
 
 on:
   schedule:
-    # Runs every Monday at 12:25 AM UTC
+    # Runs everyday at 12:25 AM UTC
     - cron: '25 0 * * 1'
   workflow_dispatch:
 
 jobs:
   s3Backup:
-    runs-on: ubuntu-latest
+    runs-on: docker-builds
 
     steps:
-
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v1
 
-
-      - name: Get commit date info
+      - name: Get info
         id: get_info
         run: |
-          GIT_COMMIT_DATE=$(git log -1 --date=format:%d --pretty=format:%d)
+          GIT_COMMIT_DATE=$(git log -1 --date=format:'%d' --format=%cd)
           YESTERDAY_DATE=$(date -d "yesterday" '+%d')
-          echo "GIT_COMMIT_DATE=$GIT_COMMIT_DATE" >> $GITHUB_ENV
-          echo "YESTERDAY_DATE=$YESTERDAY_DATE" >> $GITHUB_ENV
-          echo "Git commit day: $GIT_COMMIT_DATE"
-          echo "Yesterday: $YESTERDAY_DATE"
-
+          echo "GIT_COMMIT_DATE=$GIT_COMMIT_DATE" >> $GITHUB_OUTPUT
+          echo "YESTERDAY_DATE=$YESTERDAY_DATE" >> $GITHUB_OUTPUT
+          echo "Latest commit date: $GIT_COMMIT_DATE"
+          echo "Yesterday's date: $YESTERDAY_DATE"
 
       - name: Ensure AWS CLI is installed
         run: |
@@ -41,31 +38,27 @@ jobs:
           fi
           aws --version || { echo "AWS CLI installation failed"; exit 1; }
 
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pip zip
-          pip install github-backup
-
-
       - name: Create backup
+        if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
         run: |
-          mkdir -p /github-backup/0chain
-          github-backup -O 0chain -P -t "${{ secrets.SVC_ACCOUNT_SECRET }}" \
-            --output-directory=/github-backup/0chain --all -O -R 0chain
-
+          sudo apt update && sudo apt install -y python3-pip
+          sudo pip3 install github-backup
+          sudo github-backup -O 0chain -P -t ${{ secrets.SVC_ACCOUNT_SECRET }} --output-directory=/github-backup/0chain --all -O -R 0chain
 
       - name: Create zip
-        run: zip -r 0chain.zip /github-backup/0chain
-
+        if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
+        run: |
+          sudo zip -r 0chain.zip /github-backup/0chain
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
+        uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.BACKUP_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.BACKUP_SECRET_KEY_ID }}
           aws-region: us-east-2
 
-      - name: Upload backup to S3
-        run: aws s3 cp 0chain.zip s3://${{ secrets.MIRROR_TARGET }}/0chain.zip
+      - name: Upload to S3
+        if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
+        run: |
+          aws s3 cp 0chain.zip s3://${{ secrets.MIRROR_TARGET }}/0chain.zip
