@@ -1,0 +1,9 @@
+{
+ "id": "1",
+ "starting_round": 0,
+ "secret_shares": {
+  "131810bd1258ae95955fb40c7ef72498": "185c5f99edc45888b7d5a6a784ef94302ded33bea9ad465936fcc9ae4ee229b2",
+  "1585732eb076d07455fbebcf3388856b": "8a26dc31113f030b301f911d77d7f57cf13dea94abd0232f96fa349484e70a2",
+  "1bfa64c67f49bceec8be618b1b6f558b": "80dc17ecbb1dfd59fd14f8df3f5c514298a4e20f5c97f1bd1651faeeb95d399"
+ }
+}

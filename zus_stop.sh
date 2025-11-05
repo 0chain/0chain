@@ -9,7 +9,7 @@ echo "🛑 Stopping Züs Blockchain services..."
 cd docker.local
 
 echo "Stopping miners..."
-for i in {1..3}; do
+for i in {1..4}; do
     echo "  Stopping miner$i..."
     cd miner$i
     docker-compose -p miner$i down 2>/dev/null || echo "    Miner$i was not running"
@@ -17,7 +17,7 @@ for i in {1..3}; do
 done
 
 echo "Stopping sharders..."
-for i in {1..2}; do
+for i in {1..3}; do
     echo "  Stopping sharder$i..."
     cd sharder$i
     docker-compose -p sharder$i down 2>/dev/null || echo "    Sharder$i was not running"

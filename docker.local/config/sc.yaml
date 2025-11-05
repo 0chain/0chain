@@ -62,6 +62,7 @@ smart_contracts:
     cooldown_period: 100
     health_check_period: 90m
     cost:
+      add_hardfork: 200
       add_miner: 361
       add_sharder: 331
       delete_miner: 484

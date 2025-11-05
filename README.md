@@ -79,6 +79,12 @@ Run powershell as administrator
 ./windows_network.ps1
 ```
 
+### Macos
+
+```bash
+./macos_network.sh
+```
+
 ### Ubuntu/WSL2
 
 Run the following script
