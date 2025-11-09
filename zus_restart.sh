@@ -1,10 +1,9 @@
 #!/bin/bash
 
-# Flexible Quick Start Script
+# Flexible Quick Restart Script
 # Usage examples:
-#   ./zus_start.sh                # defaults to 3 miners, 1 sharder
-#   ./zus_start.sh -m 4 -s 2      # start 4 miners and 2 sharders
-#   ./zus_start.sh --miners=4 --sharders=2
+#   ./zus_restart.sh                # defaults to 3 miners, 1 sharder
+#   ./zus_restart.sh -m 4 -s 2      # start 4 miners and 2 sharders
 
 set -euo pipefail
 
