@@ -14,6 +14,12 @@ if ! ./docker.local/bin/setup.network.sh; then
     echo "⚠️  Network setup failed (network may already exist), continuing..."
 fi
 
+# Verify Docker is working
+if ! ./check_docker.sh; then
+  echo "❌ Docker check failed. Please fix Docker issues before continuing." >&2
+  exit 1
+fi
+
 echo "✅ Docker is running"
 
 # Navigate to docker.local directory

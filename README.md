@@ -10,6 +10,7 @@
 - [Changelog](#changelog)
 - [Initial Setup](#initial-setup)
   - [Prerequisites](#prerequisites)
+  - [Docker Resource Allocation](#docker-resource-allocation)
   - [Using the Makefile](#using-the-makefile)
   - [Host Machine Network Setup](#host-machine-network-setup)
   - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders)
@@ -68,6 +69,58 @@ Docker, Go, and Make must be installed to run the testnet containers. Get Docker
 - [Go](https://go.dev/doc/install) must be installed
 - [mockery](https://github.com/vektra/mockery) must be installed (`go install github.com/vektra/mockery/v2@latest`)
 
+### Docker Resource Allocation
+
+For optimal performance, it's recommended to allocate sufficient resources to Docker. Allocate approximately **40% of CPU** and **30% of memory** to Docker for better running of the project.
+
+#### Docker Desktop (macOS/Windows)
+
+1. Open Docker Desktop
+2. Go to **Settings** (gear icon) → **Resources**
+3. Adjust the following:
+   - **CPUs**: Set to approximately 40% of your total CPU cores (e.g., if you have 8 cores, allocate 3-4 cores)
+   - **Memory**: Set to approximately 30% of your total RAM (e.g., if you have 16GB RAM, allocate ~4.8GB or 5GB)
+4. Click **Apply & Restart**
+
+#### Docker Engine (Linux)
+
+Edit the Docker daemon configuration file (usually `/etc/docker/daemon.json`):
+
+```json
+{
+  "default-ulimits": {
+    "nofile": {
+      "Name": "nofile",
+      "Hard": 64000,
+      "Soft": 64000
+    }
+  }
+}
+```
+
+For CPU and memory limits, use Docker Compose resource limits in your `docker-compose.yml` files, or set them when running containers:
+
+```bash
+docker run --cpus="0.4" --memory="3g" ...
+```
+
+Alternatively, you can limit resources per container in your docker-compose files:
+
+```yaml
+services:
+  miner:
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: 3G
+        reservations:
+          cpus: '0.2'
+          memory: 1.5G
+```
+
+**Note**: Adjust these values based on your system's total resources. The percentages (40% CPU, 30% memory) are recommendations for optimal performance, but you can adjust them based on your system's capacity and other running applications.
+
 ## Host Machine Network setup
 
 
@@ -106,13 +159,16 @@ make build-mocks
 ```
 3. Start the chain
 ```bash
-./zus_start.sh
+./zus_start.sh -m m -s s
 ```
+where m is number of miners and s is number of shaders
 
 4. Restart the chain after clearing all previous logs
 ```bash
-./zus_restart.sh
+./zus_restart.sh -m m -s s
 ```
+where m is number of miners and s is number of sharders
+
 Node: To reflect a change in config files 0chain.yaml and sc.yaml, just restart the miner or sharder to take the new configuration. If you're doing a code change locally or pulling updates from GitHub, you need to build images again using ```./zus_setup.sh```".
 
 5. Stop the chain
