@@ -10,12 +10,6 @@ set -euo pipefail
 MINERS=3
 SHARDERS=1
 
-# Verify Docker is working
-if ! ./check_docker.sh; then
-  echo "❌ Docker check failed. Please fix Docker issues before continuing." >&2
-  exit 1
-fi
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -m|--miners)

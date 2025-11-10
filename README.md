@@ -176,7 +176,22 @@ Node: To reflect a change in config files 0chain.yaml and sc.yaml, just restart 
 ./zus_stop.sh
 ```
 
-**Note:** You can run multiple miners/sharders by changing the `num` parameter (e.g., `make miner num=2`, `make sharder num=2`, etc.)
+### Adding Your Wallet for Faucet Tokens
+
+To receive faucet tokens when the chain starts, you need to add your wallet's client ID to the `initial_state.yaml` file:
+
+1. Open `docker.local/config/initial_state.yaml`
+2. Find the section marked with `# your wallet` (under the `minersc` state section)
+3. Replace the example wallet ID with your actual wallet client ID:
+   ```yaml
+   # your wallet
+   - id: YOUR_WALLET_CLIENT_ID_HERE
+     tokens: 100000000000
+   ```
+4. Save the file and restart the chain
+
+When you start the chain with `./zus_start.sh` or `./zus_restart.sh`, your wallet will automatically receive the specified amount of tokens (100000000000 in the example above) in the initial state.
+
 ## Check Chain Status
 
 1. Ensure the port mapping is all correct:
@@ -219,12 +234,6 @@ Redis used for transactions:
 ../bin/run.miner.sh redis_txns redis-cli
 ```
 
-4. Connecting to cassandra used in the sharder (you are within the appropriate sharder directories)
-
-```
-../bin/run.sharder.sh cassandra cqlsh
-```
-
 2. If you want to get rid of old unused docker resources:
 
 ```
@@ -242,34 +251,6 @@ setsebool -P selinuxuser_execheap 1
 If you are curious about the reasons for this, this thread sheds some light on the topic:
 
 https://github.com/herumi/xbyak/issues/9
-
-## Setting up Cassandra Schema
-
-The following is no longer required as the schema is automatically loaded.
-
-Start the sharder service that also brings up the cassandra service. To run commands on cassandra, use the following command
-
-```
-../bin/run.sharder.sh cassandra cqlsh
-```
-
-1. To create zerochain keyspace, do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -f /0chain/sql/zerochain_keyspace.sql
-```
-
-2. To create the tables, do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/txn_summary.sql
-```
-
-3. When you want to truncate existing data (use caution), do the following
-
-```
-../bin/run.sharder.sh cassandra cqlsh -k zerochain -f /0chain/sql/truncate_tables.sql
-```
 
 ## Development
 
@@ -478,8 +459,6 @@ running a sharder or miner, falling that the `0chain.yaml`
 
 An example, that can be used with the preset ids, can be found at
 [0chain/docker.local/config/initial_state.yaml`](https://github.com/0chain/0chain/blob/master/docker.local/config/initial_state.yaml)
-
-
 
 ## Benchmarks
 Benchmark 0chain smart-contract endpoints.
