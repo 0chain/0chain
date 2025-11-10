@@ -55,7 +55,7 @@ server_chain:
 
   round_range: 10000000 #todo remove after laxmi is merge
   dkg: true
-  view_change: false
+  view_change: true
   round_timeouts:
     softto_min: 1500 # in miliseconds
     softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
@@ -146,7 +146,7 @@ server_chain:
       page_limit: 50
 
 network:
-  magic_block_file: config/b0magicBlock_4_miners_2_sharders.json
+  magic_block_file: config/b0magicBlock_3_miners_1_sharder.json
   initial_states: config/initial_state.yaml
   genesis_dkg: 0
   dns_url: "" # http://198.18.0.98:9091
