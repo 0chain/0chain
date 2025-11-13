@@ -55,7 +55,7 @@ server_chain:
 
   round_range: 10000000 #todo remove after laxmi is merge
   dkg: true
-  view_change: true
+  view_change: false
   round_timeouts:
     softto_min: 1500 # in miliseconds
     softto_mult: 1 # multiples of mean network time (mnt)  softto = max{softo_min, softto_mult * mnt}
