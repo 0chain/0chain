@@ -192,6 +192,32 @@ To receive faucet tokens when the chain starts, you need to add your wallet's cl
 
 When you start the chain with `./zus_start.sh` or `./zus_restart.sh`, your wallet will automatically receive the specified amount of tokens (100000000000 in the example above) in the initial state.
 
+### Owner's Wallet
+
+The owner's wallet is used for administrative operations on the blockchain. Below is the owner's wallet configuration:
+
+```json
+{
+  "client_id": "edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759",
+  "client_key": "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305",
+  "keys": [
+    {
+      "public_key": "627eb53becc3d312836bfdd97deb25a6d71f1e15bf3bcd233ab3d0c36300161990d4e2249f1d7747c0d1775ee7ffec912a61bd8ab5ed164fd6218099419c4305",
+      "private_key": "593f00a0fdf8596589956bca6cfe2e648e2586bba616f417d173c1acda4fce1e"
+    }
+  ],
+  "mnemonics": "",
+  "version": "1.0",
+  "date_created": "2025-11-07T00:00:00Z",
+  "nonce": 0
+}
+```
+
+**Important Notes:**
+- This wallet is used for owner-level operations and smart contract administration
+- Keep the private key and mnemonics secure and never commit them to version control
+- The `client_id` can be used to identify the owner in blockchain transactions
+
 ## Check Chain Status
 
 1. Ensure the port mapping is all correct:

@@ -56,7 +56,7 @@ dbs:
 
 smart_contracts:
   minersc:
-    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
+    owner_id: edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759
     min_delegates: 0
     max_delegates: 200
     min_stake: 0.0
@@ -91,7 +91,7 @@ smart_contracts:
     num_sharder_delegates_rewarded: 5
 
   storagesc:
-    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
+    owner_id: edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759
     min_alloc_size: 1024
     min_alloc_duration: 50h
     max_read_price: 100.0
@@ -146,14 +146,14 @@ smart_contracts:
       blobber_ratio: 50
       trigger_period: 30
   vestingsc:
-    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
+    owner_id: edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759
     min_lock: 0.01
     min_duration: 1m
     max_duration: 1000h
     max_destinations: 10
     max_description_length: 100
   zcnsc:
-    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
+    owner_id: edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759
     min_mint: 1
     min_burn: 1
     min_stake: 3
@@ -172,7 +172,7 @@ smart_contracts:
       add-authorizer: 100
 
   faucetsc:
-    owner_id: c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9
+    owner_id: edb90b850f2e7e7cbd0a1fa370fdcc5cd378ffbec95363a7bc0e5a98b8ba5759
 
 internal:
   t: 2
