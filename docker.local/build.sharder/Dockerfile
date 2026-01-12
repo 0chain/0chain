@@ -35,3 +35,7 @@ ENV APP_DIR=/0chain
 WORKDIR $APP_DIR
 COPY --from=sharder_build $APP_DIR/code/go/0chain.net/sharder/sharder/sharder $APP_DIR/bin/
 # COPY ./code/go/0chain.net/sharder/sharder/swagger.yaml /docs/swagger.yaml
+
+# Set ownership and switch to non-root user
+RUN chown -R zchain:zchain $APP_DIR
+USER zchain
