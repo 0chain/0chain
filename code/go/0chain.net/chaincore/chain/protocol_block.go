@@ -2,7 +2,6 @@ package chain
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -330,29 +329,34 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	ts := time.Now()
 	numGenerators := c.GetGeneratorsNumOfRound(fb.Round)
+
+	// March 2019 behavior: Don't reject blocks with invalid rank, just log warning and skip stats
+	// This can happen during timeout when random seed changes and ranks are recomputed
 	if fb.RoundRank >= numGenerators || fb.RoundRank < 0 {
-		logging.Logger.Warn("finalize block - round rank is invalid or greater than num_generators",
+		logging.Logger.Warn("finalize block - round rank outside normal range (timeout scenario)",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", numGenerators))
-		return errors.New("round rank is invalid or greater than num_generators")
+		// Don't return error - continue with finalization (March 2019 behavior)
 	} else {
+		// Update stats only for valid ranks
 		bNode := c.GetMiners(fb.Round).GetNode(fb.MinerID)
 		if bNode != nil {
 			if bNode.ProtocolStats != nil {
-				//FIXME: fix node stats
 				ms := bNode.ProtocolStats.(*MinerStats)
 				if numGenerators > len(ms.FinalizationCountByRank) {
 					newRankStat := make([]int64, numGenerators)
 					copy(newRankStat, ms.FinalizationCountByRank)
 					ms.FinalizationCountByRank = newRankStat
 				}
-				ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+				ms.FinalizationCountByRank[fb.RoundRank]++
 			}
 		} else {
-			logging.Logger.Error("generator is not registered",
+			logging.Logger.Warn("finalize block - generator not registered, skipping stats",
 				zap.Int64("round", fb.Round),
 				zap.String("miner", fb.MinerID))
-			return fmt.Errorf("generator: %s is not registered", fb.MinerID)
+			// Don't return error - continue with finalization
 		}
 	}
 	fr := c.GetRound(fb.Round)

@@ -203,7 +203,18 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 }
 
 func (c *Chain) BumpLFBTicket(ctx context.Context) {
+	// Check if local LFB is at round 0 (fresh startup or stale state)
+	// If so, DON'T bump the ticket - let the miner start from genesis and sync incrementally
+	// Setting ticket high when at genesis causes filtering issues that prevent syncing
+	localLFB := c.GetLatestFinalizedBlock()
+	if localLFB == nil || localLFB.Round == 0 {
+		logging.Logger.Debug("BumpLFBTicket - skipping (local LFB is nil or at round 0, will sync from genesis)")
+		return
+	}
+
+	// Normal operation - fetch and bump ticket
 	list := c.GetLatestFinalizedBlockFromSharder(ctx)
+
 	if len(list) == 0 {
 		logging.Logger.Debug("ensure_lfb - no new lfb received")
 		return // no LFB given
@@ -235,13 +246,29 @@ type BlockConsensus struct {
 func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	fbs []*BlockConsensus) {
 
-	mb := c.GetLatestFinalizedMagicBlockBrief()
+	// Get magic block for sharders list
+	// First try LFMB, fall back to latest magic block (which always has genesis)
+	// This ensures we can query sharders even on fresh startup before LFMB is set
+	var mb *block.MagicBlock
+	lfmb := c.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb != nil && lfmb.MagicBlock != nil {
+		mb = lfmb.MagicBlock
+	} else {
+		// Fallback: use GetLatestMagicBlock which always returns at least genesis
+		mb = c.GetLatestMagicBlock()
+	}
+
 	if mb == nil {
 		return
 	}
 
-	fbs = make([]*BlockConsensus, 0, len(mb.ShardersN2NURLs))
-	fbc := make(chan *block.Block, len(mb.ShardersN2NURLs))
+	shardersN2NURLs := mb.Sharders.N2NURLs()
+	if len(shardersN2NURLs) == 0 {
+		return
+	}
+
+	fbs = make([]*BlockConsensus, 0, len(shardersN2NURLs))
+	fbc := make(chan *block.Block, len(shardersN2NURLs))
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
@@ -269,7 +296,9 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 		return fb, nil
 	}
 
-	c.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
+	// Use RequestEntityFromShardersOnMB directly with our magic block
+	// to avoid the LFMB channel lookup in RequestEntityFromSharders
+	c.RequestEntityFromShardersOnMB(ctx, mb, MinerLatestFinalizedBlockRequestor, nil, handler)
 	close(fbc)
 
 	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -285,7 +314,9 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 
 		lfbtk := c.GetLatestLFBTicket(ctx)
 
-		if fb.Round < lfbtk.Round {
+		// Only filter by ticket if we have a valid ticket with round > 0
+		// On fresh startup, ticket may be nil or at round 0
+		if lfbtk != nil && lfbtk.Round > 0 && fb.Round < lfbtk.Round {
 			logging.Logger.Debug("lfb from sharder - round too old",
 				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 				zap.Int64("current_round", c.GetCurrentRound()),
@@ -308,6 +339,98 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 
 		return fbs[i].Round > fbs[j].Round
 	})
+
+	return
+}
+
+// GetLatestFinalizedBlockFromSharderNoFilter - request for latest finalized block from
+// all the sharders WITHOUT filtering by LFB ticket round. This is used as a fallback
+// when the miner's RocksDB is empty and needs to bootstrap from sharders.
+func (c *Chain) GetLatestFinalizedBlockFromSharderNoFilter(ctx context.Context) (
+	fbs []*BlockConsensus) {
+
+	// Use GetLatestMagicBlock() instead of GetLatestFinalizedMagicBlockBrief()
+	// because on fresh startup, LFMB may not be set yet in the worker,
+	// but GetLatestMagicBlock() always returns at least the genesis magic block.
+	mb := c.GetLatestMagicBlock()
+	if mb == nil {
+		logging.Logger.Warn("GetLatestFinalizedBlockFromSharderNoFilter - no magic block")
+		return
+	}
+
+	shardersN2NURLs := mb.Sharders.N2NURLs()
+	if len(shardersN2NURLs) == 0 {
+		logging.Logger.Warn("GetLatestFinalizedBlockFromSharderNoFilter - no sharders in magic block")
+		return
+	}
+
+	fbs = make([]*BlockConsensus, 0, len(shardersN2NURLs))
+	fbc := make(chan *block.Block, len(shardersN2NURLs))
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		var fb, ok = entity.(*block.Block)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+
+		if fb.Round == 0 {
+			return
+		}
+
+		if err = fb.Validate(ctx); err != nil {
+			logging.Logger.Error("lfb from sharder (no filter) - invalid",
+				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+				zap.Error(err))
+			return
+		}
+		select {
+		case fbc <- fb:
+		default:
+		}
+
+		return fb, nil
+	}
+
+	// Use RequestEntityFromShardersOnMB directly with our magic block
+	// to avoid the LFMB channel lookup in RequestEntityFromSharders
+	c.RequestEntityFromShardersOnMB(ctx, mb, MinerLatestFinalizedBlockRequestor, nil, handler)
+	close(fbc)
+
+	for fb := range fbc {
+		// increase consensus
+		found := false
+		for i, b := range fbs {
+			if b.Hash == fb.Hash {
+				fbs[i].Consensus++
+				found = true
+				break
+			}
+		}
+
+		if found {
+			continue
+		}
+
+		// add new block (NO filtering by ticket round)
+		fbs = append(fbs, &BlockConsensus{
+			Block:     fb,
+			Consensus: 1,
+		})
+	}
+
+	// highest (the first sorting order), most popular (the second order)
+	sort.Slice(fbs, func(i int, j int) bool {
+		if fbs[i].Round == fbs[j].Round {
+			return fbs[i].Consensus > fbs[j].Consensus
+		}
+
+		return fbs[i].Round > fbs[j].Round
+	})
+
+	logging.Logger.Debug("GetLatestFinalizedBlockFromSharderNoFilter - received blocks",
+		zap.Int("count", len(fbs)))
 
 	return
 }

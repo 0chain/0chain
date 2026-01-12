@@ -1531,6 +1531,23 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	}
 	mc.RoundTimeoutsCount++
 
+	// March 2019 behavior: broadcast the previous round's notarized block to all miners
+	// This helps miners on different rounds sync up - if we have a notarized block
+	// for the previous round, push it to all miners so they can advance
+	if rn > 1 {
+		pr := mc.GetMinerRound(rn - 1)
+		if pr != nil {
+			pnb := pr.GetHeaviestNotarizedBlock()
+			if pnb != nil && pnb.IsBlockNotarized() {
+				logging.Logger.Debug("restartRound - broadcasting previous round notarized block",
+					zap.Int64("round", rn),
+					zap.Int64("prev_round", rn-1),
+					zap.String("block", pnb.Hash))
+				go mc.SendNotarization(ctx, pnb)
+			}
+		}
+	}
+
 	// get LFMB and LFB from sharders
 	var (
 		isAhead = mc.isAheadOfSharders(ctx, rn)
@@ -1557,10 +1574,26 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	if lfb.Round+1 > r.Number {
 		r = mc.getOrCreateRound(ctx, lfb.Round+1)
 	}
-	// fetch from remote
+	// fetch from remote - try miners first
 	xrhnb = mc.GetHeaviestNotarizedBlock(ctx, r)
 	if xrhnb == nil {
-		logging.Logger.Debug("restartRound - could not get HNB",
+		// Fallback: try sharders when miners don't have the HNB
+		// This helps in split-brain scenarios where miners are on different rounds
+		logging.Logger.Debug("restartRound - could not get HNB from miners, trying sharders",
+			zap.Int64("round", r.GetRoundNumber()),
+			zap.Int64("lfb_round", lfb.Round))
+
+		nb, err := mc.GetNotarizedBlockFromSharders(ctx, "", r.GetRoundNumber())
+		if err == nil && nb != nil {
+			logging.Logger.Info("restartRound - got HNB from sharders",
+				zap.Int64("round", nb.Round),
+				zap.String("block", nb.Hash))
+			mc.Chain.AddNotarizedBlockToRound(r, nb)
+			xrhnb = r.GetHeaviestNotarizedBlock()
+		}
+	}
+	if xrhnb == nil {
+		logging.Logger.Debug("restartRound - could not get HNB from miners or sharders",
 			zap.Int64("round", r.GetRoundNumber()),
 			zap.Int64("lfb_round", lfb.Round),
 			zap.Int("soft_timeout", r.GetSoftTimeoutCount()))
@@ -1593,13 +1626,19 @@ func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
 
 	mc.BumpTicket(ctx, lfb)
 
-	// we can't compute state in the start protocol
-	if err := mc.InitBlockState(lfb); err != nil {
-		logging.Logger.Error("start protocol on LFB - init block state failed",
-			zap.Int64("round", lfb.Round),
-			zap.String("block", lfb.Hash),
-			zap.Error(err))
-		lfb.SetStateStatus(0)
+	// Only try to init block state if state is not already computed
+	// Genesis block has state computed in-memory during SetupGenesisBlock
+	if !lfb.IsStateComputed() {
+		if err := mc.InitBlockState(lfb); err != nil {
+			logging.Logger.Error("start protocol on LFB - init block state failed",
+				zap.Int64("round", lfb.Round),
+				zap.String("block", lfb.Hash),
+				zap.Error(err))
+			lfb.SetStateStatus(0)
+		}
+	} else {
+		logging.Logger.Debug("start protocol on LFB - state already computed, skipping init",
+			zap.Int64("round", lfb.Round))
 	}
 
 	logging.Logger.Info("start protocoal on LFB - set lfb", zap.Int64("round", lfb.Round),
