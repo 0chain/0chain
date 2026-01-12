@@ -42,8 +42,6 @@ jobs:
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Setup go 1.22
       uses: actions/setup-go@v5
@@ -133,8 +131,6 @@ jobs:
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
     - uses: actions/checkout@v4
-      with:
-        submodules: recursive
 
     - name: Setup go 1.22
       uses: actions/setup-go@v5
