@@ -42,7 +42,3 @@ ENV SRC_DIR=/code/go/0chain.net
 WORKDIR $APP_DIR
 
 COPY --from=miner_build $APP_DIR/code/go/0chain.net/miner/miner/miner $APP_DIR/bin/miner
-
-# Set ownership and switch to non-root user for security
-RUN chown -R zchain:zchain $APP_DIR
-USER zchain
