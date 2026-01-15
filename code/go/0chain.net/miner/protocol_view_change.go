@@ -158,7 +158,9 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 		phaseFuncName := getFunctionName(phaseFunc)
 
 		// only go through if pn.Phase is expected
+		// Allow any phase when currentPhase is Unknown (recovery from failed confirmation)
 		if !(pn.Phase == minersc.Start ||
+			mc.CurrentPhase() == minersc.Unknown ||
 			pn.Phase == mc.CurrentPhase()+1 || retrySharePhase) {
 			logging.Logger.Debug(
 				"[mvc] dkg process: jumping over a phase; skip and wait for restart",
