@@ -370,18 +370,6 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 		txn.Fee = int64(fee)
 	}
 
-	// For DKG transactions, use higher fee to prioritize them over payFees
-	if scData != nil && dkgTxns[scData.Name] {
-		maxFee := c.ChainConfig.MaxTxnFee()
-		dkgFee := int64(maxFee) / 10
-		if dkgFee > txn.Fee {
-			txn.Fee = dkgFee
-			logging.Logger.Debug("[mvc] DKG txn using higher fee",
-				zap.String("txn_name", scData.Name),
-				zap.Int64("dkg_fee", dkgFee))
-		}
-	}
-
 	// nextNonce := node.Self.GetNextNonce()
 	// if nextNonce == 0 {
 	// try get nonce from LFB
