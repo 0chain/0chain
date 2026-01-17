@@ -111,12 +111,17 @@ func (tc *timeoutCounter) AddTimeoutVote(num int, id string) {
 
 // IncrementTimeoutCount - increments timeout count.
 func (tc *timeoutCounter) IncrementTimeoutCount(prrs int64, miners *node.Pool) {
-	if prrs == 0 {
-		return // no PRRS, no timeout incrementation
-	}
-
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
+
+	// If no PRRS (previous round random seed), we can't rank miners for voting
+	// but we should still increment timeout to eventually hit timeout_cap
+	// This prevents the chain from getting stuck when VRF hasn't completed
+	if prrs == 0 {
+		tc.count++
+		tc.checkCap()
+		return
+	}
 
 	if tc.votes == nil {
 		tc.resetVotes() // it creates the map

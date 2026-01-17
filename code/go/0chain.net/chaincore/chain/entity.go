@@ -2118,6 +2118,8 @@ func (c *Chain) ResetRoundTimeoutCount() {
 // IncrementRoundTimeoutCount - increment the counter
 func (c *Chain) IncrementRoundTimeoutCount() {
 	atomic.AddInt64(&c.crtCount, 1)
+	// Note: This chain-level counter is for diagnostics only.
+	// The round-level timeoutCounter (with cap) is used for VRF share matching.
 }
 
 // GetRoundTimeoutCount - get the counter
