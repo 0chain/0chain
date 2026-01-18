@@ -21,6 +21,7 @@ type RoundStorage interface {
 	GetRound(i int) int64
 	FindRoundIndex(round int64) int
 	GetRounds() []int64
+	Reset()
 }
 
 type roundStartingStorage struct {
@@ -189,4 +190,13 @@ func (s *roundStartingStorage) Prune(round int64) error {
 	}
 	s.rounds = s.rounds[pruneIndex+1:]
 	return nil
+}
+
+// Reset clears all stored items
+func (s *roundStartingStorage) Reset() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.items = make(map[int64]RoundStorageEntity)
+	s.rounds = make([]int64, 0)
+	s.max = 0
 }
