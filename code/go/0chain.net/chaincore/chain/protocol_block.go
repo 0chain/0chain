@@ -171,13 +171,17 @@ func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 		// Try to heal by fetching correct MB from sharders and clearing orphan
 		lfmb := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 		if lfmb != nil && lfmb.MagicBlock != nil && lfmb.MagicBlock.StartingRound == relatedmbr {
-			// LFMB matches - clear orphan MB from storage and reset
-			logging.Logger.Warn("verify_related_mb_presence: clearing orphan MB, using LFMB",
-				zap.Int64("orphan_mb_sr", mb.StartingRound),
-				zap.Int64("lfmb_sr", lfmb.MagicBlock.StartingRound))
-			c.MagicBlockStorage.Reset()
-			c.SetMagicBlock(lfmb.MagicBlock)
-			return nil
+			// Only clear if local MB is older than or equal to sharder LFMB (true orphan)
+			// Don't clear if local MB is newer - it's the new valid MB during view change
+			if mb.StartingRound <= lfmb.MagicBlock.StartingRound {
+				logging.Logger.Warn("verify_related_mb_presence: clearing orphan MB, using LFMB",
+					zap.Int64("orphan_mb_sr", mb.StartingRound),
+					zap.Int64("lfmb_sr", lfmb.MagicBlock.StartingRound))
+				c.MagicBlockStorage.Reset()
+				c.SetMagicBlock(lfmb.MagicBlock)
+				return nil
+			}
+			return nil // Local MB is newer, don't clear
 		}
 		return common.NewErrorf("verify_related_mb_presence",
 			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
