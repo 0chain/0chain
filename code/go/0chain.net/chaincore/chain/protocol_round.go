@@ -56,79 +56,61 @@ func init() {
 	event.InitMetrics()
 }
 
-// ComputeFinalizedBlock iterates through all previous blocks of notarized block on round r until finds single notarized block on the round,
-// returns this block
+// ComputeFinalizedBlock finds the block that can be finalized.
+// Fast path (3 blocks) when no forks, convergence algorithm when forks exist.
 func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.RoundI) *block.Block {
-	isIn := func(blocks []*block.Block, hash string) bool {
-		for _, b := range blocks {
-			if b.Hash == hash {
-				return true
-			}
-		}
-		return false
-	}
-
-	var (
-		roundNumber     = r.GetRoundNumber()
-		rd              = r
-		notarizedBlocks []*block.Block
-	)
-
-	for {
-		if roundNumber <= lfbr {
-			break
-		}
-
-		notarizedBlocks = rd.GetNotarizedBlocks()
-		if len(notarizedBlocks) > 0 {
-			break
-		}
-		roundNumber--
-		rd = c.GetRound(roundNumber)
-		if rd == nil {
-			break
+	// Find first round with notarized blocks
+	rd, rn := r, r.GetRoundNumber()
+	for rn > lfbr && len(rd.GetNotarizedBlocks()) == 0 {
+		rn--
+		if rd = c.GetRound(rn); rd == nil {
+			return nil
 		}
 	}
 
-	if len(notarizedBlocks) == 0 {
-		logging.Logger.Error("compute finalize block: no notarized blocks",
-			zap.Int64("round", r.GetRoundNumber()))
+	nbs := rd.GetNotarizedBlocks()
+	if len(nbs) == 0 || rn <= lfbr {
 		return nil
 	}
 
-	for {
-		prevNotarizedBlocks := make([]*block.Block, 0, 1)
-		for _, b := range notarizedBlocks {
-			if b.PrevBlock == nil {
-				pb := c.GetPreviousBlock(ctx, b)
-				if pb == nil {
-					logging.Logger.Error("compute finalized block: null prev block",
-						zap.Int64("round", roundNumber),
-						zap.Int64("block_round", b.Round),
-						zap.String("block", b.Hash))
-					return nil
-				}
+	// Fast path: single notarized block - walk back 3 blocks
+	if len(nbs) == 1 {
+		fb := nbs[0]
+		for i := 0; i < 3 && fb.Round > lfbr; i++ {
+			if fb.PrevBlock == nil && c.GetPreviousBlock(ctx, fb) == nil {
+				return nil
 			}
-			if isIn(prevNotarizedBlocks, b.PrevHash) {
-				continue
-			}
-			prevNotarizedBlocks = append(prevNotarizedBlocks, b.PrevBlock)
+			fb = fb.PrevBlock
 		}
-		notarizedBlocks = prevNotarizedBlocks
-		if len(notarizedBlocks) == 1 {
-			break
+		if fb.Round <= lfbr {
+			return nil
 		}
+		return fb
 	}
 
-	if len(notarizedBlocks) != 1 {
-		return nil
+	// Safe path: multiple forks - wait for convergence
+	seen := make(map[string]bool)
+	for len(nbs) > 1 {
+		prev := make([]*block.Block, 0, 1)
+		for _, b := range nbs {
+			if b.PrevBlock == nil && c.GetPreviousBlock(ctx, b) == nil {
+				return nil
+			}
+			if !seen[b.PrevHash] {
+				seen[b.PrevHash] = true
+				prev = append(prev, b.PrevBlock)
+			}
+		}
+		if nbs = prev; len(nbs) == 0 {
+			return nil
+		}
+		clear(seen)
 	}
 
-	fb := notarizedBlocks[0]
-	if fb.Round == r.GetRoundNumber() {
-		return nil
+	if fb := nbs[0]; fb.Round > lfbr && fb.Round != r.GetRoundNumber() {
+		return fb
 	}
-	return fb
+	return nil
 }
 
 // FinalizeRoundImpl - starting from the given round work backwards and identify the round that can be assumed to be finalized as all forks after
