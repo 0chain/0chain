@@ -1739,18 +1739,6 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		return
 	}
 
-	// Validate against sharders before using - prevent orphan MB from being loaded
-	sharderLFMB := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
-	if sharderLFMB != nil && sharderLFMB.MagicBlock != nil {
-		if sharderLFMB.MagicBlock.MagicBlockNumber < newMB.MagicBlockNumber {
-			// Local MB is ahead of sharders - it's an orphan, don't load it
-			logging.Logger.Warn("load_mbs_and_dkg -- local MB ahead of sharders, skipping orphan MB",
-				zap.Int64("local_mb_num", newMB.MagicBlockNumber),
-				zap.Int64("sharder_mb_num", sharderLFMB.MagicBlock.MagicBlockNumber))
-			return
-		}
-	}
-
 	if err := mc.SetDKGSFromStore(ctx, newMB); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- see no newer DKG")
 		return

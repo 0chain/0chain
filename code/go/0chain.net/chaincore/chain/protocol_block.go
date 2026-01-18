@@ -167,26 +167,9 @@ func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
 	)
 
 	if mb.StartingRound != relatedmbr {
-		// Magic block mismatch - attempt self-healing from sharders
-		ctx, cancel := context.WithTimeout(common.GetRootContext(), 5*time.Second)
-		lfmbBlock := c.GetLatestFinalizedMagicBlockFromSharders(ctx)
-		cancel()
-
-		if lfmbBlock != nil && lfmbBlock.MagicBlock != nil {
-			logging.Logger.Warn("verify_related_mb_presence: mismatch, healing from sharders",
-				zap.Int64("want_mb_sr", relatedmbr),
-				zap.Int64("local_mb_sr", mb.StartingRound),
-				zap.Int64("sharder_mb_sr", lfmbBlock.MagicBlock.StartingRound))
-			c.SetMagicBlock(lfmbBlock.MagicBlock)
-			c.SetLatestFinalizedMagicBlock(lfmbBlock)
-			mb = c.GetMagicBlock(b.Round)
-		}
-
-		if mb.StartingRound != relatedmbr {
-			return common.NewErrorf("verify_related_mb_presence",
-				"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
-				relatedmbr, mb.StartingRound)
-		}
+		return common.NewErrorf("verify_related_mb_presence",
+			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
+			relatedmbr, mb.StartingRound)
 	}
 
 	if b.Round < lfb.Round {
