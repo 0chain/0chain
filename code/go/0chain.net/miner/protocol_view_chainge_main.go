@@ -382,7 +382,7 @@ func (mc *Chain) Wait(ctx context.Context,
 		return // error
 	}
 
-	if magicBlock.MagicBlockNumber != mb.MagicBlockNumber+1 {
+	if magicBlock.MagicBlockNumber <= mb.MagicBlockNumber {
 		logging.Logger.Error("[mvc] dkg wait failed, not new magic block",
 			zap.Int64("mb_num", magicBlock.MagicBlockNumber),
 			zap.Int64("mb_sr", magicBlock.StartingRound),
