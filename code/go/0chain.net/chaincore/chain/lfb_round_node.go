@@ -24,6 +24,8 @@ type LfbRound struct {
 
 // StoreLFBRound stores LFB round to state DB
 func (c *Chain) StoreLFBRound(round, magicBlockNum int64, blockHash string) error {
+	// Keep the max MB number logic - this is intentional to handle orphan blocks
+	// and prevent MB number from going backward
 	if mbr, _ := c.LoadLFBRound(); mbr != nil {
 		if mbr.MagicBlockNumber > magicBlockNum {
 			magicBlockNum = mbr.MagicBlockNumber

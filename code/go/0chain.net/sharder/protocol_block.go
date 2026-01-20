@@ -146,10 +146,33 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 		Logger.Panic("db error (save round)", zap.Int64("round", fr.GetRoundNumber()), zap.Error(err))
 	}
 
-	cmb := sc.GetCurrentMagicBlock()
-	if err := sc.StoreLFBRound(b.Round, cmb.MagicBlockNumber, b.Hash); err != nil {
+	// CRITICAL FIX: Use the magic block from the finalized block itself, not from memory
+	// This ensures all sharders store the same MB number for this LFB round
+	var mbNumber int64
+	if b.MagicBlock != nil {
+		// Block contains a new magic block - use its number
+		mbNumber = b.MagicBlock.MagicBlockNumber
+		Logger.Info("update finalized block - storing with block's magic block",
+			zap.Int64("round", b.Round),
+			zap.Int64("mb_number", mbNumber))
+	} else {
+		// Block doesn't contain a magic block - use the latest finalized MB
+		lfmb := sc.GetLatestFinalizedMagicBlock(context.Background())
+		if lfmb != nil && lfmb.MagicBlock != nil {
+			mbNumber = lfmb.MagicBlock.MagicBlockNumber
+		} else {
+			// Fallback: use current magic block
+			cmb := sc.GetCurrentMagicBlock()
+			mbNumber = cmb.MagicBlockNumber
+			Logger.Warn("update finalized block - fallback to current magic block",
+				zap.Int64("round", b.Round),
+				zap.Int64("mb_number", mbNumber))
+		}
+	}
+	
+	if err := sc.StoreLFBRound(b.Round, mbNumber, b.Hash); err != nil {
 		Logger.Panic("db error (save lfb with magicblock round)", zap.Int64("round", b.Round),
-			zap.Int64("magicblock number", cmb.MagicBlockNumber),
+			zap.Int64("magicblock number", mbNumber),
 			zap.String("block", b.Hash),
 			zap.Error(err))
 	}

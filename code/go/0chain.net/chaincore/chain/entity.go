@@ -2279,11 +2279,40 @@ func (c *Chain) SetLatestFinalizedBlock(b *block.Block) {
 	if b.Round > 0 {
 		// do not store genesis block, otherwise it would re-write the LFB to 0 round every time
 		// on restarting
-		cmb := c.GetCurrentMagicBlock()
-		if err := c.StoreLFBRound(b.Round, cmb.MagicBlockNumber, b.Hash); err != nil {
+		
+		// CRITICAL FIX: Use the magic block from the finalized block itself, not from memory
+		// This ensures all miners store the same MB number for this LFB round
+		var mbNumber int64
+		if b.MagicBlock != nil {
+			// Block contains a new magic block - use its number
+			mbNumber = b.MagicBlock.MagicBlockNumber
+			logging.Logger.Info("[mvc] set lfb - storing with block's magic block",
+				zap.Int64("round", b.Round),
+				zap.Int64("mb_number", mbNumber))
+		} else {
+			// Block doesn't contain a magic block - use the latest finalized MB
+			// that covers this round
+			lfmb := c.GetLatestFinalizedMagicBlock(context.Background())
+			if lfmb != nil && lfmb.MagicBlock != nil {
+				mbNumber = lfmb.MagicBlock.MagicBlockNumber
+				logging.Logger.Debug("[mvc] set lfb - storing with latest finalized magic block",
+					zap.Int64("round", b.Round),
+					zap.Int64("mb_number", mbNumber))
+			} else {
+				// Fallback: use current magic block (shouldn't happen in normal operation)
+				cmb := c.GetCurrentMagicBlock()
+				mbNumber = cmb.MagicBlockNumber
+				logging.Logger.Warn("[mvc] set lfb - fallback to current magic block",
+					zap.Int64("round", b.Round),
+					zap.Int64("mb_number", mbNumber))
+			}
+		}
+		
+		if err := c.StoreLFBRound(b.Round, mbNumber, b.Hash); err != nil {
 			logging.Logger.Warn("[mvc] set lfb - store round to state DB failed",
 				zap.Int64("round", b.Round),
 				zap.String("block", b.Hash),
+				zap.Int64("mb_number", mbNumber),
 				zap.Error(err))
 		}
 	}
