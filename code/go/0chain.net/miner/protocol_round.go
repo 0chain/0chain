@@ -1727,8 +1727,31 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 	}
 	mc.SetMagicBlock(current)
 	if err = mc.SetDKGSFromStore(ctx, current); err != nil {
-		logging.Logger.Info("load_mbs_and_dkg -- loading previous DKG",
+		logging.Logger.Info("load_mbs_and_dkg -- loading current DKG failed",
 			zap.Error(err))
+	}
+
+	// Load PREVIOUS MB's DKG - needed for rounds still using the previous MB
+	// (rounds where mbRoundOffset(round) < current.StartingRound)
+	// This must be done here because SetupLatestAndPreviousMagicBlocks runs before
+	// LoadLatestFinalizedMagicBlockFromStore populates magicBlockStartingRoundsMap
+	if lfbr.MagicBlockNumber > 1 {
+		prevMBNum := lfbr.MagicBlockNumber - 1
+		prevMB, prevErr := LoadMagicBlock(ctx, strconv.FormatInt(prevMBNum, 10))
+		if prevErr == nil && prevMB != nil {
+			if err := mc.SetDKGSFromStore(ctx, prevMB); err != nil {
+				logging.Logger.Info("load_mbs_and_dkg -- loading previous DKG failed",
+					zap.Int64("mb_number", prevMBNum),
+					zap.Error(err))
+			} else {
+				logging.Logger.Debug("load_mbs_and_dkg -- loaded previous MB DKG",
+					zap.Int64("mb_number", prevMBNum),
+					zap.Int64("mb_sr", prevMB.StartingRound))
+			}
+		} else {
+			logging.Logger.Debug("load_mbs_and_dkg -- no previous MB found",
+				zap.Int64("mb_number", prevMBNum))
+		}
 	}
 
 	// check if there are new MB which is possible, load them into memory store if any

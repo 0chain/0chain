@@ -735,8 +735,12 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
-			logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		// Fix: Load DKG from previous MB (pfmb), not current MB (lfmb)
+		// This was a copy-paste bug from 2020-08-28 commit 10c2e7df2d
+		if err := mc.SetDKGSFromStore(ctx, pfmb.MagicBlock); err != nil {
+			logging.Logger.Warn("set dkgs from store failed for previous MB", zap.Error(err),
+				zap.Int64("pfmb_number", pfmb.MagicBlockNumber),
+				zap.Int64("pfmb_sr", pfmb.StartingRound))
 		}
 		mc.UpdateMagicBlocks(pfmb, lfmb)
 		return
