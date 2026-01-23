@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
@@ -115,15 +116,41 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 
 		if needsRecovery {
 			// Attempt to recover DKG from magic block's ShareOrSigns
-			logging.Logger.Info("[dkg] attempting recovery from magic block",
+			logging.Logger.Info("[dkg] attempting recovery from local magic block",
 				zap.Int64("mb_number", mb.MagicBlockNumber))
 
 			summary, err = RecoverDKGSummaryFromMagicBlock(ctx, mb)
 			if err != nil {
-				logging.Logger.Error("[dkg] failed to recover DKG from magic block",
+				logging.Logger.Warn("[dkg] local MB recovery failed, trying to fetch MB from sharders",
 					zap.Int64("mb_number", mb.MagicBlockNumber),
 					zap.Error(err))
-				return
+
+				// Fallback: fetch MB from sharders and try again
+				if mb.Sharders != nil {
+					fetchedBlock, fetchErr := httpclientutil.FetchMagicBlockFromSharders(
+						ctx, mb.Sharders.N2NURLs(), mb.MagicBlockNumber,
+						func(*block.Block) bool { return true })
+					if fetchErr == nil && fetchedBlock != nil && fetchedBlock.MagicBlock != nil {
+						logging.Logger.Info("[dkg] fetched MB from sharders, attempting recovery",
+							zap.Int64("mb_number", mb.MagicBlockNumber))
+						summary, err = RecoverDKGSummaryFromMagicBlock(ctx, fetchedBlock.MagicBlock)
+						if err != nil {
+							logging.Logger.Error("[dkg] failed to recover DKG from sharder MB",
+								zap.Int64("mb_number", mb.MagicBlockNumber),
+								zap.Error(err))
+							return
+						}
+					} else {
+						logging.Logger.Error("[dkg] failed to fetch MB from sharders",
+							zap.Int64("mb_number", mb.MagicBlockNumber),
+							zap.Error(fetchErr))
+						return
+					}
+				} else {
+					logging.Logger.Error("[dkg] no sharders available for MB fetch",
+						zap.Int64("mb_number", mb.MagicBlockNumber))
+					return
+				}
 			}
 
 			// Store the recovered summary for future use
