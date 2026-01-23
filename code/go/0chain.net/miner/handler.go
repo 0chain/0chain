@@ -4,16 +4,20 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/diagnostics"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
+	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs/event"
+	"go.uber.org/zap"
 )
 
 // LocalhostOnly wraps a handler to only allow requests from localhost
@@ -73,6 +77,9 @@ func SetupHandlers() {
 	))
 	http.HandleFunc("/_diagnostics/dkg/restore", common.WithCORS(
 		common.UserRateLimit(LocalhostOnly(common.ToJSONResponse(DKGRestoreHandler))),
+	))
+	http.HandleFunc("/_diagnostics/dkg/recover_from_sharder", common.WithCORS(
+		common.UserRateLimit(LocalhostOnly(common.ToJSONResponse(DKGRecoverFromSharderHandler))),
 	))
 }
 
@@ -512,6 +519,177 @@ func DKGRestoreHandler(ctx context.Context, r *http.Request) (interface{}, error
 
 	resp.Success = true
 	resp.Message = "DKG restored successfully from backup"
+	return resp, nil
+}
+
+// DKGRecoverFromSharderResponse contains the result of recovery from sharder
+type DKGRecoverFromSharderResponse struct {
+	Success         bool     `json:"success"`
+	Message         string   `json:"message"`
+	MBNumber        int64    `json:"mb_number"`
+	SelfKey         string   `json:"self_key"`
+	SelfInMiners    bool     `json:"self_in_miners"`
+	SharesFound     int      `json:"shares_found"`
+	Threshold       int      `json:"threshold"`
+	FetchedFromURLs []string `json:"fetched_from_urls,omitempty"`
+	SampleRecipKeys []string `json:"sample_recip_keys,omitempty"`
+	BackupFile      string   `json:"backup_file,omitempty"`
+}
+
+// DKGRecoverFromSharderHandler fetches MB from sharders and attempts DKG recovery
+// Usage: /_diagnostics/dkg/recover_from_sharder?mb=19
+func DKGRecoverFromSharderHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	mc := GetMinerChain()
+	selfKey := node.Self.Underlying().GetKey()
+
+	resp := DKGRecoverFromSharderResponse{
+		SelfKey: selfKey,
+	}
+
+	// Get MB number from query param, default to current LFMB
+	mbNumStr := r.URL.Query().Get("mb")
+	var mbNumber int64
+
+	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb == nil || lfmb.MagicBlock == nil {
+		return nil, common.NewError("recover_from_sharder", "no LFMB available")
+	}
+
+	if mbNumStr == "" {
+		mbNumber = lfmb.MagicBlock.MagicBlockNumber
+	} else {
+		var err error
+		mbNumber, err = strconv.ParseInt(mbNumStr, 10, 64)
+		if err != nil {
+			return nil, common.NewError("recover_from_sharder", "invalid mb parameter: "+err.Error())
+		}
+	}
+	resp.MBNumber = mbNumber
+
+	// Get sharder URLs from current MB
+	if lfmb.MagicBlock.Sharders == nil {
+		return nil, common.NewError("recover_from_sharder", "no sharders in LFMB")
+	}
+	sharderURLs := lfmb.MagicBlock.Sharders.N2NURLs()
+	if len(sharderURLs) == 0 {
+		return nil, common.NewError("recover_from_sharder", "empty sharder URLs")
+	}
+
+	logging.Logger.Info("[dkg_recovery] fetching MB from sharders",
+		zap.Int64("mb_number", mbNumber),
+		zap.Int("sharder_count", len(sharderURLs)))
+
+	// Fetch MB from sharders
+	fetchedBlock, err := httpclientutil.FetchMagicBlockFromSharders(
+		ctx, sharderURLs, mbNumber, func(*block.Block) bool { return true })
+	if err != nil {
+		resp.Success = false
+		resp.Message = "failed to fetch MB from sharders: " + err.Error()
+		return resp, nil
+	}
+
+	if fetchedBlock == nil || fetchedBlock.MagicBlock == nil {
+		resp.Success = false
+		resp.Message = "fetched block or magic block is nil"
+		return resp, nil
+	}
+
+	mb := fetchedBlock.MagicBlock
+	resp.Threshold = mb.T
+
+	// Check if self is in miners list
+	if mb.Miners != nil {
+		miners := mb.Miners.CopyNodesMap()
+		_, resp.SelfInMiners = miners[selfKey]
+	}
+
+	// Check ShareOrSigns
+	if mb.ShareOrSigns == nil {
+		resp.Success = false
+		resp.Message = "fetched MB has no ShareOrSigns"
+		return resp, nil
+	}
+
+	shares := mb.ShareOrSigns.GetShares()
+	if len(shares) == 0 {
+		resp.Success = false
+		resp.Message = "fetched MB has empty ShareOrSigns"
+		return resp, nil
+	}
+
+	// Count shares for self and collect debug info
+	sharesFound := 0
+	for senderKey, sos := range shares {
+		if sos == nil || sos.ShareOrSigns == nil {
+			continue
+		}
+
+		// Collect sample recipient keys from first sender for debugging
+		if len(resp.SampleRecipKeys) == 0 {
+			for recipKey := range sos.ShareOrSigns {
+				resp.SampleRecipKeys = append(resp.SampleRecipKeys, recipKey[:16]+"...")
+				if len(resp.SampleRecipKeys) >= 5 {
+					break
+				}
+			}
+		}
+
+		// Check if this sender has a share for us
+		if dkgShare, ok := sos.ShareOrSigns[selfKey]; ok && dkgShare != nil && dkgShare.Share != "" {
+			sharesFound++
+			logging.Logger.Debug("[dkg_recovery] found share from sender",
+				zap.String("sender", senderKey[:16]+"..."))
+		}
+	}
+	resp.SharesFound = sharesFound
+
+	if sharesFound == 0 {
+		resp.Success = false
+		resp.Message = fmt.Sprintf("no shares found for self key %s in fetched MB (checked %d senders)",
+			selfKey[:16]+"...", len(shares))
+		return resp, nil
+	}
+
+	if sharesFound < mb.T {
+		logging.Logger.Warn("[dkg_recovery] found fewer shares than threshold",
+			zap.Int("found", sharesFound),
+			zap.Int("threshold", mb.T))
+	}
+
+	// Actually recover the DKG using the existing function
+	summary, err := RecoverDKGSummaryFromMagicBlock(ctx, mb)
+	if err != nil {
+		resp.Success = false
+		resp.Message = "failed to recover DKG: " + err.Error()
+		return resp, nil
+	}
+
+	// Backup existing DKG before overwriting
+	backupFile, _ := BackupDKGSummary(ctx, summary.ID)
+	resp.BackupFile = backupFile
+
+	// Store the recovered DKG
+	if err := StoreDKGSummary(ctx, summary); err != nil {
+		resp.Success = false
+		resp.Message = "failed to store recovered DKG: " + err.Error()
+		return resp, nil
+	}
+
+	// Reload DKG into memory
+	if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
+		logging.Logger.Warn("[dkg_recovery] recovered DKG stored but failed to reload into memory",
+			zap.Error(err))
+	}
+
+	resp.Success = true
+	resp.Message = fmt.Sprintf("successfully recovered DKG from sharder MB%d with %d shares (threshold=%d)",
+		mbNumber, sharesFound, mb.T)
+
+	logging.Logger.Info("[dkg_recovery] DKG recovered from sharder",
+		zap.Int64("mb_number", mbNumber),
+		zap.Int("shares", sharesFound),
+		zap.Int("threshold", mb.T))
+
 	return resp, nil
 }
 
