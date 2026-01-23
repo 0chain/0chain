@@ -116,6 +116,7 @@ jobs:
 
 
   sharder:
+    needs: [miner]
     runs-on: [self-hosted, arc-runner]
     steps:
 
