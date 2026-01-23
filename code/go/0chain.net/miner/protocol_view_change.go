@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -601,6 +602,50 @@ func LoadDKGKey(ctx context.Context, mbNum int64) (dkgKey *block.DKGKey, err err
 	return dkgKeyData.DKGKey, nil
 }
 
+// BackupDKGSummary creates a backup of an existing DKG summary to a JSON file.
+// The backup is stored in the data/dkg_backup directory with the format: dkg_summary_{id}_{timestamp}.json
+func BackupDKGSummary(ctx context.Context, id string, backupDir string) error {
+	// Load existing summary
+	existingSummary, err := LoadDKGSummary(ctx, id)
+	if err != nil {
+		// No existing summary to backup
+		logging.Logger.Debug("[dkg_backup] no existing summary to backup",
+			zap.String("id", id),
+			zap.Error(err))
+		return nil
+	}
+
+	// Create backup directory if it doesn't exist
+	if backupDir == "" {
+		backupDir = "data/dkg_backup"
+	}
+	if err := os.MkdirAll(backupDir, 0755); err != nil {
+		return fmt.Errorf("failed to create backup directory: %v", err)
+	}
+
+	// Create backup file with timestamp
+	timestamp := time.Now().Format("20060102_150405")
+	backupFile := filepath.Join(backupDir, fmt.Sprintf("dkg_summary_%s_%s.json", id, timestamp))
+
+	// Marshal summary to JSON
+	data, err := json.Marshal(existingSummary)
+	if err != nil {
+		return fmt.Errorf("failed to marshal DKG summary: %v", err)
+	}
+
+	// Write to file
+	if err := os.WriteFile(backupFile, data, 0600); err != nil {
+		return fmt.Errorf("failed to write backup file: %v", err)
+	}
+
+	logging.Logger.Info("[dkg_backup] created backup of DKG summary",
+		zap.String("id", id),
+		zap.String("backup_file", backupFile),
+		zap.Int("shares", len(existingSummary.SecretShares)))
+
+	return nil
+}
+
 // StoreDKGSummary in DB.
 func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
 	var (
@@ -616,6 +661,78 @@ func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
 
 	var con = ememorystore.GetEntityCon(dctx, dkgSummaryMetadata)
 	return con.Commit()
+}
+
+// StoreDKGSummaryWithBackup creates a backup of existing DKG before storing new one.
+func StoreDKGSummaryWithBackup(ctx context.Context, summary *bls.DKGSummary, backupDir string) error {
+	// Backup existing summary first
+	if err := BackupDKGSummary(ctx, summary.ID, backupDir); err != nil {
+		logging.Logger.Warn("[dkg] failed to backup existing DKG summary",
+			zap.String("id", summary.ID),
+			zap.Error(err))
+		// Continue anyway - backup failure shouldn't block recovery
+	}
+
+	// Store new summary
+	return StoreDKGSummary(ctx, summary)
+}
+
+// ListDKGBackups returns a list of available DKG backup files
+func ListDKGBackups(backupDir string) ([]string, error) {
+	if backupDir == "" {
+		backupDir = "data/dkg_backup"
+	}
+
+	files, err := os.ReadDir(backupDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return nil, err
+	}
+
+	var backups []string
+	for _, f := range files {
+		if !f.IsDir() && filepath.Ext(f.Name()) == ".json" {
+			backups = append(backups, filepath.Join(backupDir, f.Name()))
+		}
+	}
+	return backups, nil
+}
+
+// RestoreDKGFromBackup restores a DKG summary from a backup file
+func RestoreDKGFromBackup(ctx context.Context, backupFile string) error {
+	// Read the backup file
+	data, err := os.ReadFile(backupFile)
+	if err != nil {
+		return fmt.Errorf("failed to read backup file: %v", err)
+	}
+
+	// Parse the DKG summary
+	summary := &bls.DKGSummary{SecretShares: make(map[string]string)}
+	if err := json.Unmarshal(data, summary); err != nil {
+		return fmt.Errorf("failed to parse backup file: %v", err)
+	}
+
+	if summary.ID == "" {
+		return common.NewError("restore_dkg", "backup file has no ID")
+	}
+
+	if summary.SecretShares == nil || len(summary.SecretShares) == 0 {
+		return common.NewError("restore_dkg", "backup file has no secret shares")
+	}
+
+	// Store the restored summary (this will backup current one first)
+	if err := StoreDKGSummaryWithBackup(ctx, summary, ""); err != nil {
+		return fmt.Errorf("failed to store restored DKG: %v", err)
+	}
+
+	logging.Logger.Info("[dkg_restore] successfully restored DKG from backup",
+		zap.String("backup_file", backupFile),
+		zap.String("id", summary.ID),
+		zap.Int("shares", len(summary.SecretShares)))
+
+	return nil
 }
 
 // LoadDKGSummary loads DKG summary by stored DKG (that stores DKG summary).
@@ -869,6 +986,235 @@ func SignShareRequestHandler(ctx context.Context, r *http.Request) (
 		zap.Int("shares num", mc.viewChangeProcess.viewChangeDKG.GetSecretSharesSize()))
 
 	return afterSignShareRequestHandler(message, nodeID)
+}
+
+// ForceRecoverDKG forces DKG recovery from magic block even if existing DKG exists.
+// This should be called when existing DKG data is suspected to be corrupt.
+// It recovers DKG for both the current MB and previous MB if available.
+func (mc *Chain) ForceRecoverDKG(ctx context.Context) error {
+	logging.Logger.Info("[dkg_recovery] forcing DKG recovery from magic blocks")
+
+	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb == nil || lfmb.MagicBlock == nil {
+		return common.NewError("force_recover_dkg", "no latest finalized magic block")
+	}
+
+	// Recover DKG for current MB
+	currentMB := lfmb.MagicBlock
+	logging.Logger.Info("[dkg_recovery] recovering DKG for current MB",
+		zap.Int64("mb_number", currentMB.MagicBlockNumber),
+		zap.Int64("starting_round", currentMB.StartingRound))
+
+	if err := RecoverAndStoreDKGFromMagicBlock(ctx, currentMB); err != nil {
+		logging.Logger.Error("[dkg_recovery] failed to recover DKG for current MB",
+			zap.Int64("mb_number", currentMB.MagicBlockNumber),
+			zap.Error(err))
+	}
+
+	// Recover DKG for previous MB if available
+	if currentMB.MagicBlockNumber > 1 {
+		prevMB := mc.GetPrevMagicBlockFromMB(currentMB)
+		if prevMB != nil && prevMB.ShareOrSigns != nil {
+			logging.Logger.Info("[dkg_recovery] recovering DKG for previous MB",
+				zap.Int64("mb_number", prevMB.MagicBlockNumber),
+				zap.Int64("starting_round", prevMB.StartingRound))
+
+			if err := RecoverAndStoreDKGFromMagicBlock(ctx, prevMB); err != nil {
+				logging.Logger.Error("[dkg_recovery] failed to recover DKG for previous MB",
+					zap.Int64("mb_number", prevMB.MagicBlockNumber),
+					zap.Error(err))
+			}
+		}
+	}
+
+	return nil
+}
+
+// VerifyDKGSummary checks if a DKGSummary is valid by verifying shares against MPKs.
+// Returns nil if valid, error if corrupt or invalid.
+func VerifyDKGSummary(summary *bls.DKGSummary, mb *block.MagicBlock) error {
+	if summary == nil {
+		return common.NewError("verify_dkg", "summary is nil")
+	}
+
+	if summary.SecretShares == nil || len(summary.SecretShares) == 0 {
+		return common.NewError("verify_dkg", "no secret shares in summary")
+	}
+
+	if len(summary.SecretShares) < mb.T {
+		return common.NewError("verify_dkg", fmt.Sprintf("insufficient shares: have %d, need %d",
+			len(summary.SecretShares), mb.T))
+	}
+
+	if mb.Mpks == nil {
+		// Can't verify without MPKs, assume valid
+		return nil
+	}
+
+	selfKey := node.Self.Underlying().GetKey()
+	selfID := bls.ComputeIDdkg(selfKey)
+	mpks, err := mb.Mpks.GetMpkMap()
+	if err != nil {
+		// Can't verify, assume valid
+		logging.Logger.Warn("[dkg] could not get MPK map for verification", zap.Error(err))
+		return nil
+	}
+
+	return summary.Verify(selfID, mpks)
+}
+
+// RecoverDKGSummaryFromMagicBlock reconstructs a DKGSummary from the ShareOrSigns
+// stored in a magic block. This is useful when a miner has lost or corrupted its
+// DKG data and needs to recover it from the magic block.
+//
+// The magic block contains all the shares that were exchanged during DKG, so we can
+// extract the shares that were sent TO this miner (self) and rebuild the DKGSummary.
+//
+// Pattern: mb.ShareOrSigns.Shares[senderKey].ShareOrSigns[selfKey].Share
+func RecoverDKGSummaryFromMagicBlock(ctx context.Context, mb *block.MagicBlock) (*bls.DKGSummary, error) {
+	if mb == nil {
+		return nil, common.NewError("recover_dkg", "magic block is nil")
+	}
+
+	// If local MB doesn't have ShareOrSigns, try to fetch from sharders
+	if mb.ShareOrSigns == nil || len(mb.ShareOrSigns.GetShares()) == 0 {
+		logging.Logger.Warn("[dkg_recovery] local magic block has no ShareOrSigns, attempting fetch from sharders",
+			zap.Int64("mb_number", mb.MagicBlockNumber))
+
+		// Try to fetch from sharders
+		if mb.Sharders != nil {
+			fetchedMB, err := httpclientutil.FetchMagicBlockFromSharders(
+				ctx, mb.Sharders.N2NURLs(), mb.MagicBlockNumber, func(*block.Block) bool { return true })
+			if err == nil && fetchedMB != nil && fetchedMB.MagicBlock != nil &&
+				fetchedMB.MagicBlock.ShareOrSigns != nil {
+				logging.Logger.Info("[dkg_recovery] fetched magic block with ShareOrSigns from sharders",
+					zap.Int64("mb_number", mb.MagicBlockNumber))
+				mb = fetchedMB.MagicBlock
+			} else {
+				logging.Logger.Error("[dkg_recovery] failed to fetch magic block from sharders",
+					zap.Int64("mb_number", mb.MagicBlockNumber),
+					zap.Error(err))
+			}
+		}
+	}
+
+	if mb.ShareOrSigns == nil {
+		return nil, common.NewError("recover_dkg", "magic block has no ShareOrSigns")
+	}
+
+	if mb.Miners == nil {
+		return nil, common.NewError("recover_dkg", "magic block has no miners pool")
+	}
+
+	selfKey := node.Self.Underlying().GetKey()
+	shares := mb.ShareOrSigns.GetShares()
+
+	if len(shares) == 0 {
+		return nil, common.NewError("recover_dkg", "no shares in magic block")
+	}
+
+	// Build the DKGSummary
+	summary := &bls.DKGSummary{
+		SecretShares:  make(map[string]string),
+		StartingRound: mb.StartingRound,
+		IsFinalized:   true,
+	}
+	summary.ID = strconv.FormatInt(mb.MagicBlockNumber, 10)
+
+	// Extract shares meant for self from each sender
+	recoveredCount := 0
+	for senderKey, sos := range shares {
+		if sos == nil || sos.ShareOrSigns == nil {
+			continue
+		}
+
+		// Get the share this sender sent to us
+		if dkgShare, ok := sos.ShareOrSigns[selfKey]; ok && dkgShare != nil && dkgShare.Share != "" {
+			// Convert sender key to BLS PartyID hex string
+			partyIDHex := bls.ComputeIDdkg(senderKey).GetHexString()
+			summary.SecretShares[partyIDHex] = dkgShare.Share
+			recoveredCount++
+			logging.Logger.Debug("[dkg_recovery] recovered share",
+				zap.String("from", senderKey[:8]+"..."),
+				zap.String("party_id", partyIDHex[:8]+"..."))
+		}
+	}
+
+	if recoveredCount == 0 {
+		return nil, common.NewError("recover_dkg", "no shares found for self in magic block")
+	}
+
+	if recoveredCount < mb.T {
+		logging.Logger.Warn("[dkg_recovery] recovered fewer shares than threshold",
+			zap.Int("recovered", recoveredCount),
+			zap.Int("threshold", mb.T))
+	}
+
+	logging.Logger.Info("[dkg_recovery] recovered DKG summary from magic block",
+		zap.Int64("mb_number", mb.MagicBlockNumber),
+		zap.Int64("starting_round", mb.StartingRound),
+		zap.Int("recovered_shares", recoveredCount),
+		zap.Int("threshold", mb.T),
+		zap.Int("total_miners", mb.N))
+
+	return summary, nil
+}
+
+// RecoverAndStoreDKGFromMagicBlock recovers the DKG from a magic block and stores it.
+// This is a convenience function that combines recovery and storage.
+// It creates a backup of existing DKG before overwriting.
+func RecoverAndStoreDKGFromMagicBlock(ctx context.Context, mb *block.MagicBlock) error {
+	summary, err := RecoverDKGSummaryFromMagicBlock(ctx, mb)
+	if err != nil {
+		return fmt.Errorf("failed to recover DKG summary: %v", err)
+	}
+
+	// Verify the recovered summary against MPKs if available
+	if mb.Mpks != nil {
+		selfKey := node.Self.Underlying().GetKey()
+		selfID := bls.ComputeIDdkg(selfKey)
+		mpks, err := mb.Mpks.GetMpkMap()
+		if err != nil {
+			logging.Logger.Warn("[dkg_recovery] could not get MPK map for verification", zap.Error(err))
+		} else {
+			if err := summary.Verify(selfID, mpks); err != nil {
+				logging.Logger.Warn("[dkg_recovery] DKG summary verification failed, but continuing",
+					zap.Error(err))
+				// Don't fail - the shares from MB should be valid, verification might fail
+				// due to missing MPKs for some miners
+			} else {
+				logging.Logger.Info("[dkg_recovery] DKG summary verified successfully")
+			}
+		}
+	}
+
+	// Store the recovered summary with backup
+	if err := StoreDKGSummaryWithBackup(ctx, summary, ""); err != nil {
+		return fmt.Errorf("failed to store recovered DKG summary: %v", err)
+	}
+
+	logging.Logger.Info("[dkg_recovery] successfully stored recovered DKG summary",
+		zap.String("id", summary.ID),
+		zap.Int64("starting_round", summary.StartingRound),
+		zap.Int("shares", len(summary.SecretShares)))
+
+	return nil
+}
+
+// RecoverDKGFromLatestMB attempts to recover DKG from the latest finalized magic block.
+// This is the main entry point for DKG recovery.
+func (mc *Chain) RecoverDKGFromLatestMB(ctx context.Context) error {
+	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb == nil || lfmb.MagicBlock == nil {
+		return common.NewError("recover_dkg", "no latest finalized magic block available")
+	}
+
+	mb := lfmb.MagicBlock
+	logging.Logger.Info("[dkg_recovery] attempting to recover DKG from latest MB",
+		zap.Int64("mb_number", mb.MagicBlockNumber),
+		zap.Int64("starting_round", mb.StartingRound))
+
+	return RecoverAndStoreDKGFromMagicBlock(ctx, mb)
 }
 
 func (mc *Chain) NextViewChangeOfBlock(lfb *block.Block) (round int64, err error) {

@@ -96,12 +96,50 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 
 	// Time loading DKG summary
 	startLoad := time.Now()
+	needsRecovery := false
+
 	if len(dkgSum) > 0 {
 		summary = dkgSum[0]
 	} else {
 		summary, err = LoadDKGSummary(ctx, id)
 		if err != nil {
-			return
+			needsRecovery = true
+			logging.Logger.Warn("[dkg] failed to load DKG summary, will attempt recovery",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Error(err))
+		} else {
+			// Verify the loaded summary is not corrupt
+			if verifyErr := VerifyDKGSummary(summary, mb); verifyErr != nil {
+				needsRecovery = true
+				logging.Logger.Warn("[dkg] loaded DKG summary is corrupt, will attempt recovery",
+					zap.Int64("mb_number", mb.MagicBlockNumber),
+					zap.Error(verifyErr))
+			}
+		}
+
+		if needsRecovery {
+			// Attempt to recover DKG from magic block's ShareOrSigns
+			logging.Logger.Info("[dkg] attempting recovery from magic block",
+				zap.Int64("mb_number", mb.MagicBlockNumber))
+
+			summary, err = RecoverDKGSummaryFromMagicBlock(ctx, mb)
+			if err != nil {
+				logging.Logger.Error("[dkg] failed to recover DKG from magic block",
+					zap.Int64("mb_number", mb.MagicBlockNumber),
+					zap.Error(err))
+				return
+			}
+
+			// Store the recovered summary for future use
+			if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
+				logging.Logger.Warn("[dkg] failed to store recovered DKG summary",
+					zap.Error(storeErr))
+				// Continue anyway - we have the summary in memory
+			} else {
+				logging.Logger.Info("[dkg] successfully recovered and stored DKG from magic block",
+					zap.Int64("mb_number", mb.MagicBlockNumber),
+					zap.Int("shares", len(summary.SecretShares)))
+			}
 		}
 	}
 	logging.Logger.Debug("[dkg_timing] Loading DKG summary",

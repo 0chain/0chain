@@ -1762,15 +1762,35 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		return
 	}
 
-	if err := mc.SetDKGSFromStore(ctx, newMB); err != nil {
-		logging.Logger.Info("load_mbs_and_dkg -- see no newer DKG")
+	// Don't load a newer MB if LFB round hasn't reached its starting round yet.
+	// This prevents loading orphan MBs that were stored during DKG Wait phase
+	// but never finalized by the network.
+	if newMB.StartingRound > lfbr.Round {
+		logging.Logger.Info("load_mbs_and_dkg -- skip orphan MB (LFB round not reached)",
+			zap.Int64("mb_number", newMB.MagicBlockNumber),
+			zap.Int64("mb_starting_round", newMB.StartingRound),
+			zap.Int64("lfb_round", lfbr.Round))
 		return
+	}
+
+	// LFB round has reached the newer MB's starting round, so we MUST use the newer MB.
+	// Try to load its DKG. If DKG loading fails, we still set the MB but log a warning.
+	// Without the DKG, VRF operations will fail, but at least the miner knows it should
+	// be using the newer MB and can potentially recover by fetching DKG during operation.
+	dkgErr := mc.SetDKGSFromStore(ctx, newMB)
+	if dkgErr != nil {
+		logging.Logger.Warn("load_mbs_and_dkg -- newer MB DKG loading failed, VRF operations will fail until DKG is available",
+			zap.Int64("mb_number", newMB.MagicBlockNumber),
+			zap.Int64("mb_starting_round", newMB.StartingRound),
+			zap.Int64("lfb_round", lfbr.Round),
+			zap.Error(dkgErr))
 	}
 
 	logging.Logger.Debug("load_mbs_and_dkg -- load newer MB and DKG",
 		zap.Int64("mb number", newMB.MagicBlockNumber),
 		zap.Int64("mb sr", newMB.StartingRound),
-		zap.String("mb hash", newMB.Hash))
+		zap.String("mb hash", newMB.Hash),
+		zap.Bool("dkg_loaded", dkgErr == nil))
 
 	mc.SetMagicBlock(newMB)
 
