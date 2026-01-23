@@ -1131,7 +1131,7 @@ func RecoverDKGSummaryFromMagicBlock(ctx context.Context, mb *block.MagicBlock) 
 		// Get the share this sender sent to us
 		if dkgShare, ok := sos.ShareOrSigns[selfKey]; ok && dkgShare != nil && dkgShare.Share != "" {
 			// Convert sender key to BLS PartyID hex string
-			partyIDHex := bls.ComputeIDdkg(senderKey).GetHexString()
+			partyIDHex := ComputeBlsID(senderKey)
 			summary.SecretShares[partyIDHex] = dkgShare.Share
 			recoveredCount++
 			logging.Logger.Debug("[dkg_recovery] recovered share",
