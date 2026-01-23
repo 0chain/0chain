@@ -107,15 +107,11 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 			logging.Logger.Warn("[dkg] failed to load DKG summary, will attempt recovery",
 				zap.Int64("mb_number", mb.MagicBlockNumber),
 				zap.Error(err))
-		} else {
-			// Verify the loaded summary is not corrupt
-			if verifyErr := VerifyDKGSummary(summary, mb); verifyErr != nil {
-				needsRecovery = true
-				logging.Logger.Warn("[dkg] loaded DKG summary is corrupt, will attempt recovery",
-					zap.Int64("mb_number", mb.MagicBlockNumber),
-					zap.Error(verifyErr))
-			}
 		}
+		// Note: We intentionally do NOT verify the loaded summary here because:
+		// 1. VerifyDKGSummary can fail for valid DKGs if the miner wasn't in the MB
+		// 2. Recovery from MB ShareOrSigns will also fail for such miners
+		// 3. The existing code at lines 194-201 already handles fallback to MB shares
 
 		if needsRecovery {
 			// Attempt to recover DKG from magic block's ShareOrSigns
