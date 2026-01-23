@@ -665,8 +665,7 @@ func DKGRecoverFromSharderHandler(ctx context.Context, r *http.Request) (interfa
 	}
 
 	// Backup existing DKG before overwriting
-	backupFile, _ := BackupDKGSummary(ctx, summary.ID)
-	resp.BackupFile = backupFile
+	_ = BackupDKGSummary(ctx, summary.ID, "")
 
 	// Store the recovered DKG
 	if err := StoreDKGSummary(ctx, summary); err != nil {
