@@ -281,6 +281,14 @@ func DKGStatusHandler(ctx context.Context, r *http.Request) (interface{}, error)
 			}
 		}
 
+		// Check for next MB (MB+1) in storage - might exist if DKG completed but network stuck
+		nextMBNum := mb.MagicBlockNumber + 1
+		nextSummary, nextErr := LoadDKGSummary(ctx, fmt.Sprintf("%d", nextMBNum))
+		if nextErr == nil && nextSummary != nil && nextSummary.SecretShares != nil {
+			resp.DKGStatus[fmt.Sprintf("MB%d", nextMBNum)] = fmt.Sprintf(
+				"IN_STORE (shares=%d)", len(nextSummary.SecretShares))
+		}
+
 		// Check previous MB
 		prevMB := mc.GetPrevMagicBlockFromMB(mb)
 		if prevMB != nil && prevMB.MagicBlockNumber > 0 {
@@ -317,6 +325,10 @@ type DKGRecoveryTestResponse struct {
 	Threshold       int      `json:"threshold"`
 	TotalMiners     int      `json:"total_miners"`
 	CanRecover      bool     `json:"can_recover"`
+	SelfInMiners    bool     `json:"self_in_miners"`
+	SelfKey         string   `json:"self_key"`
+	SendersWithSOS  int      `json:"senders_with_sos"`
+	SampleRecipKeys []string `json:"sample_recip_keys,omitempty"`
 	VerifyResult    string   `json:"verify_result"`
 	ShareSources    []string `json:"share_sources,omitempty"`
 	Error           string   `json:"error,omitempty"`
@@ -346,11 +358,19 @@ func DKGTestRecoveryHandler(ctx context.Context, r *http.Request) (interface{}, 
 }
 
 func testRecoveryForMB(ctx context.Context, mb *block.MagicBlock) DKGRecoveryTestResponse {
+	selfKey := node.Self.Underlying().GetKey()
 	resp := DKGRecoveryTestResponse{
 		MBNumber:      mb.MagicBlockNumber,
 		StartingRound: mb.StartingRound,
 		Threshold:     mb.T,
 		TotalMiners:   mb.N,
+		SelfKey:       selfKey,
+	}
+
+	// Check if self is in miners list
+	if mb.Miners != nil {
+		miners := mb.Miners.CopyNodesMap()
+		_, resp.SelfInMiners = miners[selfKey]
 	}
 
 	if mb.ShareOrSigns == nil {
@@ -362,19 +382,30 @@ func testRecoveryForMB(ctx context.Context, mb *block.MagicBlock) DKGRecoveryTes
 	summary, err := RecoverDKGSummaryFromMagicBlock(ctx, mb)
 	if err != nil {
 		resp.Error = err.Error()
-		return resp
+	} else {
+		resp.SharesRecovered = len(summary.SecretShares)
+		resp.CanRecover = resp.SharesRecovered >= mb.T
 	}
 
-	resp.SharesRecovered = len(summary.SecretShares)
-	resp.CanRecover = resp.SharesRecovered >= mb.T
-
-	// Collect share sources
-	selfKey := node.Self.Underlying().GetKey()
+	// Debug: collect info about what's in ShareOrSigns
 	shares := mb.ShareOrSigns.GetShares()
+	resp.SendersWithSOS = len(shares)
+	sampleCollected := 0
 	for senderKey, sos := range shares {
 		if sos != nil && sos.ShareOrSigns != nil {
+			// Check if our key is there
 			if dkgShare, ok := sos.ShareOrSigns[selfKey]; ok && dkgShare != nil && dkgShare.Share != "" {
 				resp.ShareSources = append(resp.ShareSources, senderKey[:16]+"...")
+			}
+			// Collect sample of recipient keys from first sender
+			if sampleCollected == 0 {
+				for recipKey := range sos.ShareOrSigns {
+					resp.SampleRecipKeys = append(resp.SampleRecipKeys, recipKey[:16]+"...")
+					if len(resp.SampleRecipKeys) >= 3 {
+						break
+					}
+				}
+				sampleCollected++
 			}
 		}
 	}
