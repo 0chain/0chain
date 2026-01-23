@@ -15,8 +15,8 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
-	"0chain.net/core/logging"
 	"0chain.net/smartcontract/dbs/event"
+	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
