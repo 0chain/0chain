@@ -644,9 +644,16 @@ func (r *Round) Clear() {
 }
 
 // Restart - restart the round
+// Only prevents restart if round has notarized blocks. This allows recovery from
+// edge cases where a round reaches Complete phase without being notarized (e.g.,
+// due to race conditions at magic block boundaries).
 func (r *Round) Restart() error {
 	r.mutex.Lock()
-	if r.getState() >= Share {
+	// Only block restart if round is in late phase AND has notarized blocks.
+	// Rounds in Complete phase without notarized blocks (edge case from race
+	// conditions or bugs) should be allowed to restart.
+	if r.getState() >= Share && len(r.notarizedBlocks) > 0 {
+		r.mutex.Unlock()
 		return CompleteRoundRestartError
 	}
 	r.initialize()
