@@ -190,40 +190,24 @@ When investigating network consensus issues on live miners:
 - `LFMB`: Latest Finalized Merkle Block - should match across healthy miners
 - `gn_mb_magic_block_number`: Current magic block being used for DKG keys
 
-## DKG Recovery Diagnostics
+## DKG Backup and Restore
 
-**Endpoints for monitoring and recovering DKG keys:**
+**Endpoints for DKG backup and restore:**
 
 | Endpoint | Method | Description | Modifies State |
 |----------|--------|-------------|----------------|
-| `/_diagnostics/dkg/status` | GET | Show DKG status for current and previous MB | No |
-| `/_diagnostics/dkg/test_recovery` | GET | Dry run - test if recovery is possible | No |
-| `/_diagnostics/dkg/force_recovery` | GET | Force DKG recovery with backup | **Yes** |
 | `/_diagnostics/dkg/backups` | GET | List available backup files | No |
 | `/_diagnostics/dkg/restore?file=<path>` | GET | Restore DKG from backup file | **Yes** |
 
 **Example Usage:**
 ```bash
-# Check DKG status
-curl https://<miner-host>/miner01/_diagnostics/dkg/status
-
-# Test recovery (dry run - no changes)
-curl https://<miner-host>/miner01/_diagnostics/dkg/test_recovery
-
-# Force recovery (creates backup first)
-curl https://<miner-host>/miner01/_diagnostics/dkg/force_recovery
-
 # List backups
 curl https://<miner-host>/miner01/_diagnostics/dkg/backups
 
-# Restore from backup
-curl "https://<miner-host>/miner01/_diagnostics/dkg/restore?file=data/dkg_backup/dkg_summary_19_20260123_120000.json"
+# Restore from backup (localhost only)
+docker exec -it miner1 curl "http://localhost:7071/_diagnostics/dkg/restore?file=data/dkg_backup/dkg_summary_19_20260123_120000.json"
 ```
 
-**Security:** State-modifying endpoints (`force_recovery`, `restore`) are **localhost-only**. To use them remotely, SSH into the miner container first:
-```bash
-# SSH into miner container, then call locally
-docker exec -it miner1 curl http://localhost:7071/_diagnostics/dkg/force_recovery
-```
+**Security:** The `restore` endpoint is **localhost-only**. SSH into the miner container first.
 
 **Backups:** Stored in `data/dkg_backup/` with format `dkg_summary_{mb_number}_{timestamp}.json`

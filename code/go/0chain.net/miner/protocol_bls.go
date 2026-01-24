@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/threshold/bls"
@@ -97,72 +96,16 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 
 	// Time loading DKG summary
 	startLoad := time.Now()
-	needsRecovery := false
 
 	if len(dkgSum) > 0 {
 		summary = dkgSum[0]
 	} else {
 		summary, err = LoadDKGSummary(ctx, id)
 		if err != nil {
-			needsRecovery = true
-			logging.Logger.Warn("[dkg] failed to load DKG summary, will attempt recovery",
+			logging.Logger.Error("[dkg] failed to load DKG summary - use /_diagnostics/dkg/restore to restore from backup",
 				zap.Int64("mb_number", mb.MagicBlockNumber),
 				zap.Error(err))
-		}
-		// Note: We intentionally do NOT verify the loaded summary here because:
-		// 1. VerifyDKGSummary can fail for valid DKGs if the miner wasn't in the MB
-		// 2. Recovery from MB ShareOrSigns will also fail for such miners
-		// 3. The existing code at lines 194-201 already handles fallback to MB shares
-
-		if needsRecovery {
-			// Attempt to recover DKG from magic block's ShareOrSigns
-			logging.Logger.Info("[dkg] attempting recovery from local magic block",
-				zap.Int64("mb_number", mb.MagicBlockNumber))
-
-			summary, err = RecoverDKGSummaryFromMagicBlock(ctx, mb)
-			if err != nil {
-				logging.Logger.Warn("[dkg] local MB recovery failed, trying to fetch MB from sharders",
-					zap.Int64("mb_number", mb.MagicBlockNumber),
-					zap.Error(err))
-
-				// Fallback: fetch MB from sharders and try again
-				if mb.Sharders != nil {
-					fetchedBlock, fetchErr := httpclientutil.FetchMagicBlockFromSharders(
-						ctx, mb.Sharders.N2NURLs(), mb.MagicBlockNumber,
-						func(*block.Block) bool { return true })
-					if fetchErr == nil && fetchedBlock != nil && fetchedBlock.MagicBlock != nil {
-						logging.Logger.Info("[dkg] fetched MB from sharders, attempting recovery",
-							zap.Int64("mb_number", mb.MagicBlockNumber))
-						summary, err = RecoverDKGSummaryFromMagicBlock(ctx, fetchedBlock.MagicBlock)
-						if err != nil {
-							logging.Logger.Error("[dkg] failed to recover DKG from sharder MB",
-								zap.Int64("mb_number", mb.MagicBlockNumber),
-								zap.Error(err))
-							return
-						}
-					} else {
-						logging.Logger.Error("[dkg] failed to fetch MB from sharders",
-							zap.Int64("mb_number", mb.MagicBlockNumber),
-							zap.Error(fetchErr))
-						return
-					}
-				} else {
-					logging.Logger.Error("[dkg] no sharders available for MB fetch",
-						zap.Int64("mb_number", mb.MagicBlockNumber))
-					return
-				}
-			}
-
-			// Store the recovered summary for future use
-			if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
-				logging.Logger.Warn("[dkg] failed to store recovered DKG summary",
-					zap.Error(storeErr))
-				// Continue anyway - we have the summary in memory
-			} else {
-				logging.Logger.Info("[dkg] successfully recovered and stored DKG from magic block",
-					zap.Int64("mb_number", mb.MagicBlockNumber),
-					zap.Int("shares", len(summary.SecretShares)))
-			}
+			return
 		}
 	}
 	logging.Logger.Debug("[dkg_timing] Loading DKG summary",
