@@ -154,18 +154,31 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*b
 }
 
 // VerifyRelatedMagicBlockPresence check is there related magic block and
-// returns detailed error or nil for successful case. Since GetMagicBlock
-// is optimistic it can returns different magic block for requested round.
+// returns detailed error or nil for successful case.
+// Uses the block's declared LatestFinalizedMagicBlockRound to look up the MB
+// directly, rather than deriving it from the block's round. This fixes issues
+// at view change boundaries where GetMagicBlock(b.Round) might return a newer
+// MB than what the block was actually created with.
 func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
-
-	// return // force ok to check
 
 	var (
 		lfb        = c.GetLatestFinalizedBlock()
 		relatedmbr = b.LatestFinalizedMagicBlockRound
-		mb         = c.GetMagicBlock(b.Round)
 	)
 
+	// Look up MB by exact starting round from the block, not by calculating from block round.
+	// This fixes view change boundary issues where blocks created just before a new MB
+	// becomes active would fail verification because GetMagicBlock(b.Round) returns the new MB.
+	c.mbMutex.RLock()
+	entity := c.MagicBlockStorage.GetByStartingRound(relatedmbr)
+	c.mbMutex.RUnlock()
+
+	if entity == nil {
+		return common.NewErrorf("verify_related_mb_presence",
+			"MB not found for starting round: %d, block_round: %d", relatedmbr, b.Round)
+	}
+
+	mb := entity.(*block.MagicBlock)
 	if mb.StartingRound != relatedmbr {
 		return common.NewErrorf("verify_related_mb_presence",
 			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
