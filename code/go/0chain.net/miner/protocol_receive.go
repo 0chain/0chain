@@ -485,10 +485,6 @@ func (mc *Chain) handleNotarizedBlockMessage(ctx context.Context,
 		return // can't handle yet
 	}
 
-	if mr.GetRandomSeed() == 0 {
-		mc.SetRandomSeed(mr, nb.GetRoundRandomSeed())
-	}
-
 	lfb := mc.GetLatestFinalizedBlock()
 	cctx, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -507,6 +503,11 @@ func (mc *Chain) handleNotarizedBlockMessage(ctx context.Context,
 			zap.Int64("lfb_round", lfb.Round))
 		finish(false)
 		return
+	}
+
+	// Only set random seed AFTER verification succeeds to avoid poisoning VRF state
+	if mr.GetRandomSeed() == 0 {
+		mc.SetRandomSeed(mr, nb.GetRoundRandomSeed())
 	}
 
 	var b = mc.AddRoundBlock(mr, nb)
