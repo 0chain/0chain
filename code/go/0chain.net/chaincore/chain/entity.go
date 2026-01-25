@@ -78,7 +78,8 @@ const (
 	Generators = 13
 
 	// ViewChangeOffset is offset between block with new MB and the block where the new MB should be used.
-	ViewChangeOffset = 25
+	// Changed from 25 to 20 for mainnet recovery (MB19->MB20 transition at round 141945735)
+	ViewChangeOffset = 20
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
@@ -865,10 +866,12 @@ func (c *Chain) GetStateCache() *statecache.StateCache {
 	return c.stateCache
 }
 
-// GetLatestFinalizedBlockFromDB gets the latest finalized block hash and round number from event db
+// GetLatestFinalizedBlockFromDB gets the latest finalized block hash and round number from event db.
+// Returns ("", 0, nil) if event db is not enabled, which signals the caller to use genesis block.
 func (c *Chain) GetLatestFinalizedBlockFromDB() (string, int64, error) {
 	if c.EventDb == nil {
-		return "", 0, errors.New("event db is not initialized")
+		// Event DB not enabled - fall back to genesis block
+		return "", 0, nil
 	}
 
 	var roundHash = struct {
