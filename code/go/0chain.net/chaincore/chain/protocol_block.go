@@ -226,8 +226,20 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	)
 
 	if mb.StartingRound != mbRound {
-		// return true when local MB does not match the block's mb_round,
-		// this could be the miner just started, and try to fetch the MagicBlock from remote
+		// When local MB does not match the block's mb_round, we cannot fully verify
+		// tickets against our MB. However, we must NOT trust a block as notarized
+		// unless it actually has verification tickets - a block with 0 tickets
+		// should never be considered notarized regardless of MB state.
+		if len(bvt) == 0 {
+			logging.Logger.Warn("reachedNotarization - MB mismatch and block has no tickets",
+				zap.Int64("round", round),
+				zap.Int64("block_mb_round", mbRound),
+				zap.Int64("local_mb_sr", mb.StartingRound),
+				zap.String("hash", hash))
+			return false
+		}
+		// Block has tickets but we can't verify against our MB - trust it.
+		// This happens during MB transitions or when miner just started.
 		return true
 	}
 
