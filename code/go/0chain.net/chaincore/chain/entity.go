@@ -78,8 +78,7 @@ const (
 	Generators = 13
 
 	// ViewChangeOffset is offset between block with new MB and the block where the new MB should be used.
-	// Changed from 25 to 20 for mainnet recovery (MB19->MB20 transition at round 141945735)
-	ViewChangeOffset = 20
+	ViewChangeOffset = 25
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */

@@ -304,11 +304,19 @@ func TxnsInPoolTableRows(w http.ResponseWriter, txn *transaction.Transaction, s 
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", s.Nonce)
+	if s != nil {
+		fmt.Fprintf(w, "%v", s.Nonce)
+	} else {
+		fmt.Fprintf(w, "-")
+	}
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", s.Balance)
+	if s != nil {
+		fmt.Fprintf(w, "%v", s.Balance)
+	} else {
+		fmt.Fprintf(w, "-")
+	}
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "</tr>")
