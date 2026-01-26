@@ -701,7 +701,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 	// sc.UpdateMagicBlock(lfmb.MagicBlock)
 
-	const maxRollbackRounds = 5
+	const maxRollbackRounds = 1000
 	var i int
 
 loop:
