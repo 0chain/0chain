@@ -221,36 +221,31 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	var (
 		mb        = c.GetMagicBlock(round)
 		num       = mb.Miners.Size()
-		threshold = c.GetNotarizationThresholdCount(num)
+		threshold = mb.T // Use MB's T (BLS threshold from t_percent=60%) for consistency with VRF
 		err       error
 	)
 
 	// MB mismatch: block was created under different MB configuration.
 	// We cannot verify signatures (different DKG keys).
-	// Use minimum threshold between current MB and block's MB for safety.
+	// Use the block's MB threshold for validation.
 	if mb.StartingRound != mbRound {
 		c.mbMutex.RLock()
 		entity := c.MagicBlockStorage.GetByStartingRound(mbRound)
 		c.mbMutex.RUnlock()
 		if entity != nil {
 			blockMB := entity.(*block.MagicBlock)
-			blockMBThreshold := c.GetNotarizationThresholdCount(blockMB.Miners.Size())
-			// Use the lower threshold - block may have been created under either config
-			if blockMBThreshold < threshold {
-				threshold = blockMBThreshold
-				num = blockMB.Miners.Size()
-			}
-			logging.Logger.Debug("reachedNotarization - MB mismatch, using min threshold",
+			threshold = blockMB.T
+			num = blockMB.Miners.Size()
+			logging.Logger.Debug("reachedNotarization - MB mismatch, using block's MB threshold",
 				zap.Int64("round", round),
 				zap.Int64("block_mb_round", mbRound),
 				zap.Int64("local_mb_sr", mb.StartingRound),
-				zap.Int("current_mb_threshold", c.GetNotarizationThresholdCount(mb.Miners.Size())),
-				zap.Int("block_mb_threshold", blockMBThreshold),
+				zap.Int("block_mb_T", blockMB.T),
 				zap.Int("using_threshold", threshold),
 				zap.Int("tickets", len(bvt)))
 		} else {
-			// Block's MB not found - use current threshold (safer than trusting blindly)
-			logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current threshold",
+			// Block's MB not found - use current MB's T
+			logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current MB threshold",
 				zap.Int64("round", round),
 				zap.Int64("block_mb_round", mbRound),
 				zap.Int64("local_mb_sr", mb.StartingRound),
