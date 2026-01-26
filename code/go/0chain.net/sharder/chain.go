@@ -195,12 +195,12 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	// check is it notarized
 	err = sc.VerifyBlockNotarization(ctx, bl.lfb)
 	if err != nil {
-		logging.Logger.Error("load_lfb - verify notarization failed",
+		logging.Logger.Error("load_lfb - verify notarization failed, triggering rollback",
 			zap.Error(err),
 			zap.Int64("round", bl.lfb.Round),
 			zap.String("block", bl.lfb.Hash))
-		err = nil // not a real error
-		return    // do nothing, if not notarized
+		// Return errInvalidState to trigger rollback to find a block with valid notarization
+		return common.NewErrorf(errInvalidStateCode, "block notarization failed: %v", err)
 	}
 	bl.lfb.SetBlockNotarized()
 
