@@ -455,14 +455,6 @@ func (c *Chain) chainHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</td>")
 
 	fmt.Fprintf(w, "</tr>")
-	fmt.Fprintf(w, "<tr class='active'>")
-	fmt.Fprintf(w, "<td>")
-	fmt.Fprintf(w, "Deterministic Finalized Round")
-	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", c.LatestDeterministicBlock.Round)
-	fmt.Fprintf(w, "</td>")
-	fmt.Fprintf(w, "</tr>")
 
 	fmt.Fprintf(w, "<tr class='active'>")
 	fmt.Fprintf(w, "<td>")
