@@ -225,16 +225,35 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 		err       error
 	)
 
-	// Always check threshold - never bypass consensus requirement.
-	// During MB mismatch we can't verify signatures, but we still require
-	// the block to have threshold number of tickets for consensus.
+	// MB mismatch: block was created under different MB configuration.
+	// We cannot verify signatures (different DKG keys).
+	// Use minimum threshold between current MB and block's MB for safety.
 	if mb.StartingRound != mbRound {
-		logging.Logger.Debug("reachedNotarization - MB mismatch, checking threshold only",
-			zap.Int64("round", round),
-			zap.Int64("block_mb_round", mbRound),
-			zap.Int64("local_mb_sr", mb.StartingRound),
-			zap.Int("tickets", len(bvt)),
-			zap.Int("threshold", threshold))
+		blockMB := c.GetMagicBlockByStartingRound(mbRound)
+		if blockMB != nil {
+			blockMBThreshold := c.GetNotarizationThresholdCount(blockMB.Miners.Size())
+			// Use the lower threshold - block may have been created under either config
+			if blockMBThreshold < threshold {
+				threshold = blockMBThreshold
+				num = blockMB.Miners.Size()
+			}
+			logging.Logger.Debug("reachedNotarization - MB mismatch, using min threshold",
+				zap.Int64("round", round),
+				zap.Int64("block_mb_round", mbRound),
+				zap.Int64("local_mb_sr", mb.StartingRound),
+				zap.Int("current_mb_threshold", c.GetNotarizationThresholdCount(mb.Miners.Size())),
+				zap.Int("block_mb_threshold", blockMBThreshold),
+				zap.Int("using_threshold", threshold),
+				zap.Int("tickets", len(bvt)))
+		} else {
+			// Block's MB not found - use current threshold (safer than trusting blindly)
+			logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current threshold",
+				zap.Int64("round", round),
+				zap.Int64("block_mb_round", mbRound),
+				zap.Int64("local_mb_sr", mb.StartingRound),
+				zap.Int("threshold", threshold),
+				zap.Int("tickets", len(bvt)))
+		}
 	}
 
 	if c.ThresholdByCount() > 0 {
