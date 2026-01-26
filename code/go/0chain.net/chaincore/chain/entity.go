@@ -78,7 +78,9 @@ const (
 	Generators = 13
 
 	// ViewChangeOffset is offset between block with new MB and the block where the new MB should be used.
-	ViewChangeOffset = 25
+	// Set to 20 for mainnet recovery: blocks at rounds 141945736-141945739 have only 15 tickets,
+	// which passes MB20's T=11 but fails MB19's T=17. With offset=20, MB20 activates at round 141945735.
+	ViewChangeOffset = 20
 )
 
 /*ServerChain - the chain object of the chain  the server is responsible for */
