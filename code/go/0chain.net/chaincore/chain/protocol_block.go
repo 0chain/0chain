@@ -670,7 +670,8 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.GetUniqueBlockExtensions())*100 >= mb.Miners.Size()*c.ThresholdByCount() {
+	// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
+	if len(b.GetUniqueBlockExtensions()) >= mb.T {
 		return true
 	}
 	return false

@@ -413,7 +413,8 @@ func (c *Chain) getBlocksHealth(ctx context.Context) BlockHealth {
 				numVerificationTickets = len(b.GetVerificationTickets())
 			}
 		}
-		consensus = int(math.Ceil((float64(config.GetThresholdCount()) / 100) * float64(lfmb.Miners.Size())))
+		// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
+		consensus = lfmb.T
 	}
 
 	return BlockHealth{

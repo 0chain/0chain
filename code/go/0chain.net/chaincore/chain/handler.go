@@ -725,10 +725,11 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 				numVerificationTickets = len(b.GetVerificationTickets())
 			}
 		}
-		consensus := int(math.Ceil((float64(config.GetThresholdCount()) / 100) * float64(lfmb.Miners.Size())))
+		// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
+		consensus := lfmb.T
 
 		bvts := fmt.Sprintf("<span style='display:flex;'>%.10s<span style='flex:1;'></span>(%v/%v)%s</span>",
-			blockHash, numVerificationTickets, consensus, boolString(numVerificationTickets > consensus))
+			blockHash, numVerificationTickets, consensus, boolString(numVerificationTickets >= consensus))
 		fmt.Fprintf(w, "<tr class='green'><td>CRB</td><td>%v</td></tr>", bvts)
 
 	}
@@ -1560,11 +1561,11 @@ func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 		if rnd.HasRandomSeed() {
 			rrs = rnd.GetRandomSeed()
 		}
-		thresholdByCount := config.GetThresholdCount()
-		consensus := int(math.Ceil((float64(thresholdByCount) / 100) * float64(mb.Miners.Size())))
+		// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
+		consensus := mb.T
 
 		fmt.Fprintf(w, "<table>")
-		fmt.Fprintf(w, "<tr><td class='active'>Consensus</td><td class='number'>%d</td>", consensus)
+		fmt.Fprintf(w, "<tr><td class='active'>Consensus (T)</td><td class='number'>%d</td>", consensus)
 		fmt.Fprintf(w, "<tr><td class='active'>Random Seed</td><td class='number'>%d</td>", rrs)
 		fmt.Fprintf(w, "</table>")
 
@@ -1751,7 +1752,11 @@ func (c *Chain) MinerStatsHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "<table>")
 		fmt.Fprintf(w, "<tr><td>Miner</td><td>Verification Failures</td></tr>")
 		for _, nd := range mb.Miners.CopyNodes() {
-			ms := nd.ProtocolStats.(*MinerStats)
+			ms, ok := nd.ProtocolStats.(*MinerStats)
+			if !ok || ms == nil {
+				fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>-</td></tr>", nd.GetPseudoName())
+				continue
+			}
 			fmt.Fprintf(w, "<tr><td>%v</td><td class='number'>%v</td></tr>", nd.GetPseudoName(), ms.VerificationFailures)
 		}
 		fmt.Fprintf(w, "</table>")
@@ -1876,7 +1881,14 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	totals := make([]int64, generatorsNum)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
-		ms := nd.ProtocolStats.(*MinerStats)
+		ms, ok := nd.ProtocolStats.(*MinerStats)
+		if !ok || ms == nil {
+			for i := 0; i < generatorsNum; i++ {
+				fmt.Fprintf(w, "<td class='number'>-</td>")
+			}
+			fmt.Fprintf(w, "<td class='number'>-</td></tr>")
+			continue
+		}
 		var total int64
 		for i := 0; i < generatorsNum; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.GenerationCountByRank[i])
@@ -1906,7 +1918,14 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter, numGenerators int)
 	totals := make([]int64, numGenerators)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
-		ms := nd.ProtocolStats.(*MinerStats)
+		ms, ok := nd.ProtocolStats.(*MinerStats)
+		if !ok || ms == nil {
+			for i := 0; i < numGenerators; i++ {
+				fmt.Fprintf(w, "<td class='number'>-</td>")
+			}
+			fmt.Fprintf(w, "<td class='number'>-</td></tr>")
+			continue
+		}
 		var total int64
 		for i := 0; i < numGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.VerificationTicketsByRank[i])
@@ -1937,7 +1956,14 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	totals := make([]int64, numGenerators)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
-		ms := nd.ProtocolStats.(*MinerStats)
+		ms, ok := nd.ProtocolStats.(*MinerStats)
+		if !ok || ms == nil {
+			for i := 0; i < numGenerators; i++ {
+				fmt.Fprintf(w, "<td class='number'>-</td>")
+			}
+			fmt.Fprintf(w, "<td class='number'>-</td></tr>")
+			continue
+		}
 		var total int64
 		for i := 0; i < numGenerators; i++ {
 			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])

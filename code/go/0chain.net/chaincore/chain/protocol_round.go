@@ -102,11 +102,14 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 			if b.PrevBlock == nil {
 				pb := c.GetPreviousBlock(ctx, b)
 				if pb == nil {
-					logging.Logger.Error("compute finalized block: null prev block",
+					// Skip blocks whose prev can't be fetched - they may be orphans
+					// from magic block transitions. Continue with other valid chains.
+					logging.Logger.Warn("compute finalized block: skipping block with unreachable prev",
 						zap.Int64("round", roundNumber),
 						zap.Int64("block_round", b.Round),
-						zap.String("block", b.Hash))
-					return nil
+						zap.String("block", b.Hash),
+						zap.String("prev_hash", b.PrevHash))
+					continue
 				}
 			}
 			if isIn(prevNotarizedBlocks, b.PrevHash) {
@@ -114,6 +117,14 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 			}
 			prevNotarizedBlocks = append(prevNotarizedBlocks, b.PrevBlock)
 		}
+
+		// If all blocks were orphans and we couldn't trace any chain back
+		if len(prevNotarizedBlocks) == 0 {
+			logging.Logger.Error("compute finalized block: all blocks have unreachable prev blocks",
+				zap.Int64("round", roundNumber))
+			return nil
+		}
+
 		notarizedBlocks = prevNotarizedBlocks
 		if len(notarizedBlocks) == 1 {
 			break
