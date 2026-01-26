@@ -55,7 +55,7 @@ func (mc *Chain) handleVerifyBlockMessage(ctx context.Context, msg *BlockMessage
 func (mc *Chain) isVRFComplete(ctx context.Context, r int64, rrs int64) error { //nolint
 	var (
 		mb           = mc.GetMagicBlock(r)
-		blsThreshold = mb.T
+		blsThreshold = mc.GetThresholdFromState(mb.Miners.Size()) // Use t_percent from smart contract
 		mr           = mc.GetMinerRound(r)
 	)
 

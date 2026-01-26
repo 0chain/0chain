@@ -348,7 +348,7 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 			phase = round.GetPhaseName(cr.GetPhase())
 		}
 
-		vrfThreshold := mb.T
+		vrfThreshold := c.GetThresholdFromState(mb.Miners.Size()) // Use t_percent from smart contract
 		if shares >= vrfThreshold {
 			check = "&#x2714;"
 		}
@@ -725,8 +725,8 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 				numVerificationTickets = len(b.GetVerificationTickets())
 			}
 		}
-		// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
-		consensus := lfmb.T
+		// Use t_percent from smart contract for consensus threshold
+		consensus := c.GetThresholdFromState(lfmb.Miners.Size())
 
 		bvts := fmt.Sprintf("<span style='display:flex;'>%.10s<span style='flex:1;'></span>(%v/%v)%s</span>",
 			blockHash, numVerificationTickets, consensus, boolString(numVerificationTickets >= consensus))
@@ -1561,8 +1561,8 @@ func RoundInfoHandler(c Chainer) common.ReqRespHandlerf {
 		if rnd.HasRandomSeed() {
 			rrs = rnd.GetRandomSeed()
 		}
-		// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
-		consensus := mb.T
+		// Use t_percent from smart contract for consensus threshold
+		consensus := c.GetThresholdFromState(mb.Miners.Size())
 
 		fmt.Fprintf(w, "<table>")
 		fmt.Fprintf(w, "<tr><td class='active'>Consensus (T)</td><td class='number'>%d</td>", consensus)

@@ -3,6 +3,7 @@ package chain
 import (
 	"context"
 	"fmt"
+	"math"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -13,6 +14,7 @@ import (
 	"0chain.net/core/maths"
 	"0chain.net/core/util/waitgroup"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -221,7 +223,7 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	var (
 		mb        = c.GetMagicBlock(round)
 		num       = mb.Miners.Size()
-		threshold = mb.T // Use MB's T (BLS threshold from t_percent=60%) for consistency with VRF
+		threshold = c.GetThresholdFromState(num) // Calculate from t_percent in smart contract state
 		err       error
 	)
 
@@ -234,21 +236,23 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 		c.mbMutex.RUnlock()
 		if entity != nil {
 			blockMB := entity.(*block.MagicBlock)
+			// Calculate threshold for block's MB from t_percent in smart contract state
+			blockMBThreshold := c.GetThresholdFromState(blockMB.Miners.Size())
 			// Use the lower threshold - block may have been created under either config
-			if blockMB.T < threshold {
-				threshold = blockMB.T
+			if blockMBThreshold < threshold {
+				threshold = blockMBThreshold
 				num = blockMB.Miners.Size()
 			}
 			logging.Logger.Debug("reachedNotarization - MB mismatch, using min threshold",
 				zap.Int64("round", round),
 				zap.Int64("block_mb_round", mbRound),
 				zap.Int64("local_mb_sr", mb.StartingRound),
-				zap.Int("current_mb_T", mb.T),
-				zap.Int("block_mb_T", blockMB.T),
+				zap.Int("current_mb_threshold", threshold),
+				zap.Int("block_mb_threshold", blockMBThreshold),
 				zap.Int("using_threshold", threshold),
 				zap.Int("tickets", len(bvt)))
 		} else {
-			// Block's MB not found - use current MB's T
+			// Block's MB not found - use current MB's threshold
 			logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current MB threshold",
 				zap.Int64("round", round),
 				zap.Int64("block_mb_round", mbRound),
@@ -674,11 +678,40 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
-	if len(b.GetUniqueBlockExtensions()) >= mb.T {
+	// Calculate threshold from t_percent in smart contract state
+	threshold := c.GetThresholdFromState(mb.Miners.Size())
+	if len(b.GetUniqueBlockExtensions()) >= threshold {
 		return true
 	}
 	return false
+}
+
+// GetThresholdFromState reads t_percent from smart contract's GlobalNode state
+// and calculates the notarization threshold. Falls back to local config if state read fails.
+// This method is exported for use by miner package.
+func (c *Chain) GetThresholdFromState(minersCount int) int {
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.Round < 1 {
+		// Fallback to local config during bootstrap
+		return c.GetNotarizationThresholdCount(minersCount)
+	}
+
+	var gn minersc.GlobalNode
+	err := c.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
+	if err != nil {
+		logging.Logger.Debug("getThresholdFromState - failed to read GlobalNode, using local config",
+			zap.Error(err),
+			zap.Int64("lfb_round", lfb.Round))
+		return c.GetNotarizationThresholdCount(minersCount)
+	}
+
+	tPercent := gn.MustBase().TPercent
+	threshold := int(math.Ceil(float64(minersCount) * tPercent))
+	logging.Logger.Debug("getThresholdFromState - using t_percent from smart contract",
+		zap.Float64("t_percent", tPercent),
+		zap.Int("miners_count", minersCount),
+		zap.Int("threshold", threshold))
+	return threshold
 }
 
 // GetLocalPreviousBlock returns previous block for the block. Without a network

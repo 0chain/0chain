@@ -224,7 +224,7 @@ func (c *Chain) getRoundHealth(ctx context.Context) roundHealth {
 			phase = round.GetPhaseName(cr.GetPhase())
 		}
 
-		vrfThreshold = mb.T
+		vrfThreshold = c.GetThresholdFromState(mb.Miners.Size()) // Use t_percent from smart contract
 		if shares >= vrfThreshold {
 			check = "&#x2714;"
 		}
@@ -412,8 +412,8 @@ func (c *Chain) getBlocksHealth(ctx context.Context) BlockHealth {
 				numVerificationTickets = len(b.GetVerificationTickets())
 			}
 		}
-		// Use MB.T (BLS threshold from t_percent=60%) for consistency with VRF consensus
-		consensus = lfmb.T
+		// Use t_percent from smart contract for consensus threshold
+		consensus = c.GetThresholdFromState(lfmb.Miners.Size())
 	}
 
 	return BlockHealth{
