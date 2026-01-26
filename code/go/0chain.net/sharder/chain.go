@@ -718,7 +718,8 @@ loop:
 			return err
 		}
 
-		if bl.lfb.Round > sc.GetCurrentRound() {
+		// Set current round to LFB round (handles both forward sync and rollback)
+		if bl.lfb.Round != sc.GetCurrentRound() {
 			sc.SetCurrentRound(bl.lfb.Round)
 		}
 
