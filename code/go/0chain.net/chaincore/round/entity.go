@@ -598,9 +598,11 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
-		_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v",
-			r.GetPhase(), r.GetRandomSeed(), r.GetRoundNumber()))
+		logging.Logger.Debug("get miner rank - miner permutation not computed yet",
+			zap.Int("phase", int(r.GetPhase())),
+			zap.Int64("random_seed", r.GetRandomSeed()),
+			zap.Int64("round", r.GetRoundNumber()))
+		return -1
 	}
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
