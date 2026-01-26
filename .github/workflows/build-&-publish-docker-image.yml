@@ -95,7 +95,7 @@ jobs:
         make build-mocks
 
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+        docker build --build-arg GIT_COMMIT=${{ env.SHA }} -t miner:latest -f "$DOCKERFILE_MINER" .
 
 
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
@@ -184,7 +184,7 @@ jobs:
         make install-mockery
         make build-mocks
 
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
+        docker build --build-arg GIT_COMMIT=${{ env.SHA }} -t sharder:latest -f docker.local/build.sharder/Dockerfile .
 
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
         docker tag sharder:latest $SHARDER_REGISTRY:latest

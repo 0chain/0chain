@@ -226,20 +226,24 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	)
 
 	// MB mismatch: block was created under different MB configuration.
-	// We cannot verify signatures (different DKG keys).
-	// Use the block's MB threshold for validation.
+	// Use minimum threshold between current MB and block's MB for safety.
+	// This ensures blocks with sufficient tickets for either MB config are accepted.
 	if mb.StartingRound != mbRound {
 		c.mbMutex.RLock()
 		entity := c.MagicBlockStorage.GetByStartingRound(mbRound)
 		c.mbMutex.RUnlock()
 		if entity != nil {
 			blockMB := entity.(*block.MagicBlock)
-			threshold = blockMB.T
-			num = blockMB.Miners.Size()
-			logging.Logger.Debug("reachedNotarization - MB mismatch, using block's MB threshold",
+			// Use the lower threshold - block may have been created under either config
+			if blockMB.T < threshold {
+				threshold = blockMB.T
+				num = blockMB.Miners.Size()
+			}
+			logging.Logger.Debug("reachedNotarization - MB mismatch, using min threshold",
 				zap.Int64("round", round),
 				zap.Int64("block_mb_round", mbRound),
 				zap.Int64("local_mb_sr", mb.StartingRound),
+				zap.Int("current_mb_T", mb.T),
 				zap.Int("block_mb_T", blockMB.T),
 				zap.Int("using_threshold", threshold),
 				zap.Int("tickets", len(bvt)))
