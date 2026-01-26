@@ -290,6 +290,18 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		return mc.tryFetchCurrentLFBFromSharders(ctx)
 	}
 
+	// Verify block has sufficient verification tickets before accepting
+	if err = mc.VerifyBlockNotarization(ctx, b); err != nil {
+		logging.Logger.Error("load_lfb - block notarization verification failed, falling back to sharder sync",
+			zap.Error(err),
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int("tickets", len(b.GetVerificationTickets())))
+		// Block doesn't have enough tickets - fall back to fetching from sharders
+		// which will find blocks with valid notarization
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
+	}
+
 	b.SetStateStatus(block.StateSuccessful)
 	if err = mc.InitBlockState(b); err != nil {
 		b.SetStateStatus(0)
@@ -299,6 +311,11 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 	}
 
 	mc.SetLatestFinalizedBlock(ctx, b)
+
+	// Set current round to LFB round (handles both forward sync and rollback)
+	if b.Round != mc.GetCurrentRound() {
+		mc.SetCurrentRound(b.Round)
+	}
 
 	logging.Logger.Info("load_lfb setup LFB from store",
 		zap.String("block", b.Hash),
@@ -310,6 +327,7 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 
 // tryFetchCurrentLFBFromSharders attempts to fetch the current LFB from sharders
 // and set it as the miner's LFB. This is used when local RocksDB state is stale or missing.
+// It verifies that blocks have sufficient verification tickets before accepting them.
 func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 	// Use unfiltered fetch to get whatever LFB sharders have
 	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
@@ -318,22 +336,36 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 		return nil // Fall back to genesis
 	}
 
-	// Find the highest round block
+	// Find the highest round block that passes notarization verification
 	var best *block.Block
 	for _, fb := range fbs {
-		if fb.Block != nil && (best == nil || fb.Block.Round > best.Round) {
+		if fb.Block == nil {
+			continue
+		}
+		// Verify block has sufficient verification tickets
+		if err := mc.VerifyBlockNotarization(ctx, fb.Block); err != nil {
+			logging.Logger.Debug("load_lfb - block from sharder failed notarization verification",
+				zap.Int64("round", fb.Block.Round),
+				zap.String("hash", fb.Block.Hash),
+				zap.Int("tickets", len(fb.Block.GetVerificationTickets())),
+				zap.Error(err))
+			continue
+		}
+		// Block passed verification - check if it's better than current best
+		if best == nil || fb.Block.Round > best.Round {
 			best = fb.Block
 		}
 	}
 
 	if best == nil {
-		logging.Logger.Warn("load_lfb - no valid LFB in sharder response, will use genesis")
+		logging.Logger.Warn("load_lfb - no valid LFB with sufficient verification tickets from sharders, will use genesis")
 		return nil // Fall back to genesis
 	}
 
-	logging.Logger.Info("load_lfb - fetched current LFB from sharders",
+	logging.Logger.Info("load_lfb - fetched current LFB from sharders with valid notarization",
 		zap.Int64("round", best.Round),
-		zap.String("hash", best.Hash))
+		zap.String("hash", best.Hash),
+		zap.Int("tickets", len(best.GetVerificationTickets())))
 
 	// Try to initialize the block's state from local RocksDB
 	best.SetStateStatus(block.StateSuccessful)
@@ -351,6 +383,12 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 	}
 
 	mc.SetLatestFinalizedBlock(ctx, best)
+
+	// Set current round to LFB round (handles both forward sync and rollback)
+	if best.Round != mc.GetCurrentRound() {
+		mc.SetCurrentRound(best.Round)
+	}
+
 	logging.Logger.Info("load_lfb - successfully set LFB from sharders",
 		zap.Int64("round", best.Round),
 		zap.String("hash", best.Hash))

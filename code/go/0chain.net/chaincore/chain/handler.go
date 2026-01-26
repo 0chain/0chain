@@ -1882,7 +1882,7 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms, ok := nd.ProtocolStats.(*MinerStats)
-		if !ok || ms == nil {
+		if !ok || ms == nil || ms.GenerationCountByRank == nil {
 			for i := 0; i < generatorsNum; i++ {
 				fmt.Fprintf(w, "<td class='number'>-</td>")
 			}
@@ -1891,9 +1891,13 @@ func (c *Chain) generationCountStats(w http.ResponseWriter) {
 		}
 		var total int64
 		for i := 0; i < generatorsNum; i++ {
-			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.GenerationCountByRank[i])
-			totals[i] += ms.GenerationCountByRank[i]
-			total += ms.GenerationCountByRank[i]
+			if i < len(ms.GenerationCountByRank) {
+				fmt.Fprintf(w, "<td class='number'>%v</td>", ms.GenerationCountByRank[i])
+				totals[i] += ms.GenerationCountByRank[i]
+				total += ms.GenerationCountByRank[i]
+			} else {
+				fmt.Fprintf(w, "<td class='number'>-</td>")
+			}
 		}
 		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
 	}
@@ -1919,7 +1923,7 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter, numGenerators int)
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms, ok := nd.ProtocolStats.(*MinerStats)
-		if !ok || ms == nil {
+		if !ok || ms == nil || ms.VerificationTicketsByRank == nil {
 			for i := 0; i < numGenerators; i++ {
 				fmt.Fprintf(w, "<td class='number'>-</td>")
 			}
@@ -1928,9 +1932,13 @@ func (c *Chain) verificationCountStats(w http.ResponseWriter, numGenerators int)
 		}
 		var total int64
 		for i := 0; i < numGenerators; i++ {
-			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.VerificationTicketsByRank[i])
-			totals[i] += ms.VerificationTicketsByRank[i]
-			total += ms.VerificationTicketsByRank[i]
+			if i < len(ms.VerificationTicketsByRank) {
+				fmt.Fprintf(w, "<td class='number'>%v</td>", ms.VerificationTicketsByRank[i])
+				totals[i] += ms.VerificationTicketsByRank[i]
+				total += ms.VerificationTicketsByRank[i]
+			} else {
+				fmt.Fprintf(w, "<td class='number'>-</td>")
+			}
 		}
 		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
 	}
@@ -1957,7 +1965,7 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 	for _, nd := range mb.Miners.CopyNodes() {
 		fmt.Fprintf(w, "<tr><td>%v</td>", nd.GetPseudoName())
 		ms, ok := nd.ProtocolStats.(*MinerStats)
-		if !ok || ms == nil {
+		if !ok || ms == nil || ms.FinalizationCountByRank == nil {
 			for i := 0; i < numGenerators; i++ {
 				fmt.Fprintf(w, "<td class='number'>-</td>")
 			}
@@ -1966,9 +1974,13 @@ func (c *Chain) finalizationCountStats(w http.ResponseWriter) {
 		}
 		var total int64
 		for i := 0; i < numGenerators; i++ {
-			fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
-			totals[i] += ms.FinalizationCountByRank[i]
-			total += ms.FinalizationCountByRank[i]
+			if i < len(ms.FinalizationCountByRank) {
+				fmt.Fprintf(w, "<td class='number'>%v</td>", ms.FinalizationCountByRank[i])
+				totals[i] += ms.FinalizationCountByRank[i]
+				total += ms.FinalizationCountByRank[i]
+			} else {
+				fmt.Fprintf(w, "<td class='number'>-</td>")
+			}
 		}
 		fmt.Fprintf(w, "<td class='number'>%v</td></tr>", total)
 	}
