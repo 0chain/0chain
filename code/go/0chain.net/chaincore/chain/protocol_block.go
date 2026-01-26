@@ -229,8 +229,11 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	// We cannot verify signatures (different DKG keys).
 	// Use minimum threshold between current MB and block's MB for safety.
 	if mb.StartingRound != mbRound {
-		blockMB := c.GetMagicBlockByStartingRound(mbRound)
-		if blockMB != nil {
+		c.mbMutex.RLock()
+		entity := c.MagicBlockStorage.GetByStartingRound(mbRound)
+		c.mbMutex.RUnlock()
+		if entity != nil {
+			blockMB := entity.(*block.MagicBlock)
 			blockMBThreshold := c.GetNotarizationThresholdCount(blockMB.Miners.Size())
 			// Use the lower threshold - block may have been created under either config
 			if blockMBThreshold < threshold {
