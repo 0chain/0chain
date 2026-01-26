@@ -392,7 +392,10 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			}
 
 			r := c.GetRound(cr)
-			cb := r.GetHeaviestNotarizedBlock()
+			var cb *block.Block
+			if r != nil {
+				cb = r.GetHeaviestNotarizedBlock()
+			}
 			if cb == nil {
 				logging.Logger.Debug("process block, current heaviest notarized block is nil", zap.Int64("current round", cr))
 				if cr > 0 {
