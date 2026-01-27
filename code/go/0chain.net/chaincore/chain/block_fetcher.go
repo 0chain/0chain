@@ -362,6 +362,7 @@ type Chainer interface {
 	GetRound(roundNumber int64) round.RoundI
 	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
 	GetLatestFinalizedBlock() *block.Block
+	GetThresholdFromState(minersCount int) int
 }
 
 //
