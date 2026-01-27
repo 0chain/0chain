@@ -506,7 +506,33 @@ func fbHandlerFunc(bc chan *block.Block, ticket *LFBTicket) datastore.JSONEntity
 	}
 }
 
+// attachRelatedMagicBlock attaches the related magic block to the block for validation.
+// This is needed when validating blocks from other magic block periods - the miner
+// who created the block may not be in the current magic block's miner set.
+func (c *Chain) attachRelatedMagicBlock(b *block.Block) {
+	if b.MagicBlock != nil {
+		return // already attached
+	}
+
+	c.mbMutex.RLock()
+	entity := c.MagicBlockStorage.GetByStartingRound(b.LatestFinalizedMagicBlockRound)
+	c.mbMutex.RUnlock()
+
+	if entity != nil {
+		mb := entity.(*block.MagicBlock)
+		b.MagicBlock = mb
+		logging.Logger.Debug("attachRelatedMagicBlock - attached related MB",
+			zap.Int64("block_round", b.Round),
+			zap.Int64("mb_sr", mb.StartingRound),
+			zap.Int("mb_miners", mb.Miners.Size()))
+	}
+}
+
 func (c *Chain) validateBlock(ctx context.Context, b *block.Block) (*block.Block, error) {
+	// Attach the related magic block before validation so that miners from
+	// previous magic blocks can be looked up during block.Validate()
+	c.attachRelatedMagicBlock(b)
+
 	if err := b.Validate(ctx); err != nil {
 		logging.Logger.Error("fetch_fb_from_sharders - invalid",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
@@ -587,6 +613,10 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 				zap.Duration("duration", time.Since(ts)))
 			return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
 		}
+
+		// Attach the related magic block before validation so that miners from
+		// previous magic blocks can be looked up during block.Validate()
+		c.attachRelatedMagicBlock(nb)
 
 		if err = nb.Validate(ctx); err != nil {
 			logging.Logger.Error("fetch_nb_from_miners - invalid",
