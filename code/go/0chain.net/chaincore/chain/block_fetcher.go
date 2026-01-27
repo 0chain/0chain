@@ -506,12 +506,15 @@ func fbHandlerFunc(bc chan *block.Block, ticket *LFBTicket) datastore.JSONEntity
 	}
 }
 
-// attachRelatedMagicBlock attaches the related magic block to the block for validation.
+// registerMinersFromRelatedMagicBlock ensures miners from the block's magic block period
+// are registered in the global node pool for validation lookups.
 // This is needed when validating blocks from other magic block periods - the miner
 // who created the block may not be in the current magic block's miner set.
-func (c *Chain) attachRelatedMagicBlock(b *block.Block) {
-	if b.MagicBlock != nil {
-		return // already attached
+// NOTE: We don't set b.MagicBlock because that would change the block hash computation.
+func (c *Chain) registerMinersFromRelatedMagicBlock(b *block.Block) {
+	// Check if miner is already known
+	if node.GetNode(b.MinerID) != nil {
+		return // miner already in global pool
 	}
 
 	c.mbMutex.RLock()
@@ -520,18 +523,31 @@ func (c *Chain) attachRelatedMagicBlock(b *block.Block) {
 
 	if entity != nil {
 		mb := entity.(*block.MagicBlock)
-		b.MagicBlock = mb
-		logging.Logger.Debug("attachRelatedMagicBlock - attached related MB",
-			zap.Int64("block_round", b.Round),
-			zap.Int64("mb_sr", mb.StartingRound),
-			zap.Int("mb_miners", mb.Miners.Size()))
+		// Register the specific miner from the related magic block
+		miner := mb.Miners.GetNode(b.MinerID)
+		if miner != nil {
+			if err := node.Setup(miner); err == nil {
+				node.RegisterNode(miner)
+				logging.Logger.Debug("registerMinersFromRelatedMagicBlock - registered miner from related MB",
+					zap.Int64("block_round", b.Round),
+					zap.String("miner_id", b.MinerID),
+					zap.Int64("mb_sr", mb.StartingRound))
+			}
+		} else {
+			logging.Logger.Warn("registerMinersFromRelatedMagicBlock - miner not found in related MB",
+				zap.Int64("block_round", b.Round),
+				zap.String("miner_id", b.MinerID),
+				zap.Int64("mb_sr", mb.StartingRound),
+				zap.Int("mb_miners", mb.Miners.Size()))
+		}
 	}
 }
 
 func (c *Chain) validateBlock(ctx context.Context, b *block.Block) (*block.Block, error) {
-	// Attach the related magic block before validation so that miners from
-	// previous magic blocks can be looked up during block.Validate()
-	c.attachRelatedMagicBlock(b)
+	// Register miners from the related magic block so they can be looked up
+	// during block.Validate(). We don't set b.MagicBlock because that would
+	// change the block hash computation.
+	c.registerMinersFromRelatedMagicBlock(b)
 
 	if err := b.Validate(ctx); err != nil {
 		logging.Logger.Error("fetch_fb_from_sharders - invalid",
@@ -614,9 +630,10 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 			return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
 		}
 
-		// Attach the related magic block before validation so that miners from
-		// previous magic blocks can be looked up during block.Validate()
-		c.attachRelatedMagicBlock(nb)
+		// Register miners from the related magic block so they can be looked up
+		// during block.Validate(). We don't set nb.MagicBlock because that would
+		// change the block hash computation.
+		c.registerMinersFromRelatedMagicBlock(nb)
 
 		if err = nb.Validate(ctx); err != nil {
 			logging.Logger.Error("fetch_nb_from_miners - invalid",
