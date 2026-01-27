@@ -302,6 +302,26 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		return mc.tryFetchCurrentLFBFromSharders(ctx)
 	}
 
+	// Verify block continuity and finalization depth from sharders
+	recommendedLFB, cerr := mc.verifyBlockContinuityFromSharders(ctx, b.Round, 500, 3)
+	if cerr != nil {
+		logging.Logger.Warn("load_lfb - continuity check failed, falling back to sharder sync",
+			zap.Int64("round", b.Round), zap.Error(cerr))
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
+	}
+	if recommendedLFB < b.Round {
+		logging.Logger.Info("load_lfb - finalization depth requires earlier LFB",
+			zap.Int64("stored_lfb", b.Round),
+			zap.Int64("recommended_lfb", recommendedLFB))
+		rb, rerr := mc.GetNotarizedBlockFromSharders(ctx, "", recommendedLFB)
+		if rerr != nil || rb == nil {
+			logging.Logger.Warn("load_lfb - could not fetch recommended LFB, falling back",
+				zap.Int64("round", recommendedLFB))
+			return mc.tryFetchCurrentLFBFromSharders(ctx)
+		}
+		b = rb
+	}
+
 	b.SetStateStatus(block.StateSuccessful)
 	if err = mc.InitBlockState(b); err != nil {
 		b.SetStateStatus(0)
@@ -323,6 +343,57 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
 	return nil
+}
+
+// verifyBlockContinuityFromSharders fetches blocks from sharders around the
+// candidate round, verifies notarization, and returns the recommended LFB round
+// based on finalization depth (highest block with finalizationDepth+ notarized successors).
+func (mc *Chain) verifyBlockContinuityFromSharders(ctx context.Context, candidateRound int64, targetContinuity int, finalizationDepth int) (int64, error) {
+	var ch []*block.Block
+
+	// Fetch blocks backward from candidate
+	for r := candidateRound; r > 0 && len(ch) < targetContinuity; r-- {
+		fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		b, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+		cancel()
+		if err != nil || b == nil {
+			break
+		}
+		if err := mc.VerifyBlockNotarization(ctx, b); err != nil {
+			break
+		}
+		ch = append([]*block.Block{b}, ch...)
+	}
+
+	// Fetch blocks forward from candidate+1
+	for r := candidateRound + 1; len(ch) < targetContinuity; r++ {
+		fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		b, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+		cancel()
+		if err != nil || b == nil {
+			break
+		}
+		if err := mc.VerifyBlockNotarization(ctx, b); err != nil {
+			break
+		}
+		ch = append(ch, b)
+	}
+
+	if len(ch) == 0 {
+		return 0, fmt.Errorf("no valid blocks from sharders around round %d", candidateRound)
+	}
+
+	logging.Logger.Info("verify_continuity - continuous chain from sharders",
+		zap.Int("length", len(ch)),
+		zap.Int64("from", ch[0].Round),
+		zap.Int64("to", ch[len(ch)-1].Round))
+
+	// Apply finalization depth
+	if len(ch) > finalizationDepth {
+		idx := len(ch) - 1 - finalizationDepth
+		return ch[idx].Round, nil
+	}
+	return ch[0].Round, nil
 }
 
 // tryFetchCurrentLFBFromSharders attempts to fetch the current LFB from sharders
@@ -366,6 +437,20 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 		zap.Int64("round", best.Round),
 		zap.String("hash", best.Hash),
 		zap.Int("tickets", len(best.GetVerificationTickets())))
+
+	// Verify continuity and finalization depth
+	recommendedLFB, cerr := mc.verifyBlockContinuityFromSharders(ctx, best.Round, 500, 3)
+	if cerr == nil && recommendedLFB < best.Round {
+		logging.Logger.Info("load_lfb - adjusting LFB for finalization depth",
+			zap.Int64("sharder_lfb", best.Round),
+			zap.Int64("recommended_lfb", recommendedLFB))
+		rb, rerr := mc.GetNotarizedBlockFromSharders(ctx, "", recommendedLFB)
+		if rerr == nil && rb != nil {
+			if verr := mc.VerifyBlockNotarization(ctx, rb); verr == nil {
+				best = rb
+			}
+		}
+	}
 
 	// Try to initialize the block's state from local RocksDB
 	best.SetStateStatus(block.StateSuccessful)

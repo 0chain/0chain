@@ -167,6 +167,97 @@ type blocksLoaded struct {
 	nlfmb *block.Block // magic block equal to the lfmb or newer
 }
 
+// verifyBlockContinuityFromStore walks blocks around candidateRound in local
+// blockstore, verifies each has valid notarization, and returns the recommended
+// LFB round (highest block with finalizationDepth+ notarized successors).
+func (sc *Chain) verifyBlockContinuityFromStore(ctx context.Context, candidateRound int64, targetContinuity int, finalizationDepth int) (int64, error) {
+	var chain []*block.Block
+
+	// Walk backward from candidateRound
+	for r := candidateRound; r > 0 && len(chain) < targetContinuity; r-- {
+		hash, err := sc.GetBlockHash(ctx, r)
+		if err != nil {
+			break
+		}
+		b, err := sc.GetBlockFromStore(hash, r)
+		if err != nil {
+			break
+		}
+		if err := sc.VerifyBlockNotarization(ctx, b); err != nil {
+			logging.Logger.Debug("verify_continuity - block failed notarization",
+				zap.Int64("round", r), zap.Error(err))
+			break
+		}
+		chain = append([]*block.Block{b}, chain...) // prepend
+	}
+
+	// Walk forward from candidateRound+1
+	for r := candidateRound + 1; len(chain) < targetContinuity; r++ {
+		hash, err := sc.GetBlockHash(ctx, r)
+		if err != nil {
+			break
+		}
+		b, err := sc.GetBlockFromStore(hash, r)
+		if err != nil {
+			break
+		}
+		if err := sc.VerifyBlockNotarization(ctx, b); err != nil {
+			break
+		}
+		chain = append(chain, b)
+	}
+
+	if len(chain) == 0 {
+		return 0, fmt.Errorf("no valid blocks around round %d", candidateRound)
+	}
+
+	logging.Logger.Info("verify_continuity - continuous chain from local store",
+		zap.Int("length", len(chain)),
+		zap.Int64("from", chain[0].Round),
+		zap.Int64("to", chain[len(chain)-1].Round))
+
+	// Apply finalization depth: highest block with finalizationDepth successors
+	if len(chain) > finalizationDepth {
+		idx := len(chain) - 1 - finalizationDepth
+		return chain[idx].Round, nil
+	}
+
+	// Not enough depth — use earliest block (safest)
+	return chain[0].Round, nil
+}
+
+// fetchMissingBlocksFromSharders fetches blocks from peer sharders to fill gaps
+// in local blockstore around the given round.
+func (sc *Chain) fetchMissingBlocksFromSharders(ctx context.Context, aroundRound int64, count int) int {
+	fetched := 0
+	for r := aroundRound; r > aroundRound-int64(count) && r > 0; r-- {
+		hash, err := sc.GetBlockHash(ctx, r)
+		if err == nil {
+			if _, berr := sc.GetBlockFromStore(hash, r); berr == nil {
+				continue
+			}
+		}
+		fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		nb, nerr := sc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+		cancel()
+		if nerr != nil || nb == nil {
+			continue
+		}
+		if serr := blockstore.GetStore().Write(nb); serr != nil {
+			logging.Logger.Debug("fetch_missing - failed to store block",
+				zap.Int64("round", r), zap.Error(serr))
+			continue
+		}
+		fetched++
+	}
+	if fetched > 0 {
+		logging.Logger.Info("fetch_missing - fetched blocks from sharders",
+			zap.Int("fetched", fetched),
+			zap.Int64("around_round", aroundRound))
+	}
+	return fetched
+}
+
 func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	err error) {
 
@@ -202,6 +293,22 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		// Return errInvalidState to trigger rollback to find a block with valid notarization
 		return common.NewErrorf(errInvalidStateCode, "block notarization failed: %v", err)
 	}
+	// Verify block continuity and finalization depth
+	recommendedLFB, cerr := sc.verifyBlockContinuityFromStore(ctx, bl.lfb.Round, 500, 3)
+	if cerr != nil {
+		logging.Logger.Warn("load_lfb - continuity check failed, triggering rollback",
+			zap.Int64("round", bl.lfb.Round), zap.Error(cerr))
+		return common.NewErrorf(errInvalidStateCode,
+			"block continuity check failed at round %d: %v", bl.lfb.Round, cerr)
+	}
+	if recommendedLFB < bl.lfb.Round {
+		logging.Logger.Warn("load_lfb - finalization depth requires earlier LFB, triggering rollback",
+			zap.Int64("current_lfb", bl.lfb.Round),
+			zap.Int64("recommended_lfb", recommendedLFB))
+		return common.NewErrorf(errInvalidStateCode,
+			"finalization depth requires LFB at round %d, not %d", recommendedLFB, bl.lfb.Round)
+	}
+
 	bl.lfb.SetBlockNotarized()
 
 	// add as notarized
