@@ -647,7 +647,8 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 
 	isSharder := node.Self.IsSharder()
 	if isSharder {
-		if pb.ClientState == nil || pb.GetStateStatus() != block.StateSuccessful {
+		// Accept both StateSuccessful and StateSynched as valid computed states
+		if pb.ClientState == nil || !pb.IsStateComputed() {
 			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
 				pb.Round, pb.Hash, pb, pb.GetStateStatus())
 		}
