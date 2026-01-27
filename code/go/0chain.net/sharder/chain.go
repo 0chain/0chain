@@ -192,12 +192,16 @@ func (sc *Chain) verifyBlockContinuityFromStore(ctx context.Context, candidateRo
 	}
 
 	// Walk forward from candidateRound+1
+	// Note: we use GetRoundFromStore directly instead of GetBlockHash because
+	// GetBlockHash checks r > GetCurrentRound(), but during startup rollback
+	// the current round is set to the candidate LFB round which would prevent
+	// us from looking at blocks beyond it.
 	for r := candidateRound + 1; len(chain) < targetContinuity; r++ {
-		hash, err := sc.GetBlockHash(ctx, r)
-		if err != nil {
+		rd, err := sc.GetRoundFromStore(ctx, r)
+		if err != nil || rd.BlockHash == "" {
 			break
 		}
-		b, err := sc.GetBlockFromStore(hash, r)
+		b, err := sc.GetBlockFromStore(rd.BlockHash, r)
 		if err != nil {
 			break
 		}
