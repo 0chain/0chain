@@ -160,7 +160,7 @@ func (sc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 func (sc *Chain) SharderHealthCheck(ctx context.Context) {
 	gn, err := minersc.GetGlobalNode(sc.GetQueryStateContext())
 	if err != nil {
-		logging.Logger.Panic("sharder health check - get global node failed", zap.Error(err))
+		logging.Logger.Error("sharder health check - get global node failed, retrying later", zap.Error(err))
 		return
 	}
 
