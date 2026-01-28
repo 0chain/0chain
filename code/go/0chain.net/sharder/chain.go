@@ -192,16 +192,12 @@ func (sc *Chain) verifyBlockContinuityFromStore(ctx context.Context, candidateRo
 	}
 
 	// Walk forward from candidateRound+1
-	// Note: we use GetRoundFromStore directly instead of GetBlockHash because
-	// GetBlockHash checks r > GetCurrentRound(), but during startup rollback
-	// the current round is set to the candidate LFB round which would prevent
-	// us from looking at blocks beyond it.
 	for r := candidateRound + 1; len(chain) < targetContinuity; r++ {
-		rd, err := sc.GetRoundFromStore(ctx, r)
-		if err != nil || rd.BlockHash == "" {
+		hash, err := sc.GetBlockHash(ctx, r)
+		if err != nil {
 			break
 		}
-		b, err := sc.GetBlockFromStore(rd.BlockHash, r)
+		b, err := sc.GetBlockFromStore(hash, r)
 		if err != nil {
 			break
 		}
@@ -813,6 +809,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 	// sc.UpdateMagicBlock(lfmb.MagicBlock)
 
 	const maxRollbackRounds = 1000
+	const maxLocalFailsBeforeNetworkFetch = 10
 	var i int
 
 loop:
@@ -849,13 +846,41 @@ loop:
 
 			cerr, ok := err.(*common.Error)
 			if ok && cerr.Is(errInvalidState) {
+				i++
+
+				// After maxLocalFailsBeforeNetworkFetch consecutive local failures,
+				// stop rolling back and try to fetch LFB from peer sharders
+				if i == maxLocalFailsBeforeNetworkFetch {
+					logging.Logger.Warn("load_lfb - too many local failures, fetching LFB from peer sharders",
+						zap.Int("failures", i),
+						zap.Int64("current_round", lfbRound))
+
+					fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					nb, nerr := sc.GetNotarizedBlockFromSharders(fetchCtx, "", lfbRound)
+					cancel()
+					if nerr == nil && nb != nil {
+						logging.Logger.Info("load_lfb - fetched block from peer sharders, retrying",
+							zap.Int64("round", nb.Round),
+							zap.String("block", nb.Hash))
+						// Store the fetched block locally
+						if serr := blockstore.GetStore().Write(nb); serr != nil {
+							logging.Logger.Warn("load_lfb - failed to store fetched block",
+								zap.Int64("round", nb.Round), zap.Error(serr))
+						}
+						lfbRound = nb.Round
+						lfbHash = nb.Hash
+						continue
+					}
+					logging.Logger.Warn("load_lfb - failed to fetch from peer sharders",
+						zap.Int64("round", lfbRound), zap.Error(nerr))
+				}
+
 				logging.Logger.Error("load_lfb - check previous block",
 					zap.Int64("round", lfbRound-1),
 					zap.String("hash", bl.lfb.PrevHash))
 				lfbRound = lfbRound - 1
 				lfbHash = bl.lfb.PrevHash
 
-				i++
 				if i >= maxRollbackRounds {
 					logging.Logger.Error("load_lfb - rollback max count meet", zap.Int("max", maxRollbackRounds))
 

@@ -2247,16 +2247,34 @@ func (c *Chain) InitBlockState(b *block.Block) (err error) {
 
 			select {
 			case <-ctx.Done():
-				logging.Logger.Error("init block state failed",
+				logging.Logger.Error("init block state - GetBlockStateChange timed out",
 					zap.Int64("round", b.Round),
 					zap.Error(err))
 			case err := <-errC:
-				logging.Logger.Error("init block state failed", zap.Error(err))
-				return err
+				logging.Logger.Error("init block state - GetBlockStateChange failed", zap.Error(err))
 			case <-doneC:
 				logging.Logger.Info("init block state by synching block state from network successfully",
 					zap.Int64("round", b.Round), zap.Any("state status", b.GetStateStatus()))
 				return nil
+			}
+
+			// Fallback: try to fetch just the state root node from peers
+			logging.Logger.Info("init block state - trying to fetch state root node from peers",
+				zap.Int64("round", b.Round),
+				zap.String("state_hash", util.ToHex(b.ClientStateHash)))
+			fetchCtx, fetchCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			if fetchErr := c.GetStateNodes(fetchCtx, []util.Key{b.ClientStateHash}); fetchErr == nil {
+				fetchCancel()
+				// Retry InitStateDB now that root node is available
+				if retryErr := b.InitStateDB(c.stateDB); retryErr == nil {
+					logging.Logger.Info("init block state - succeeded after fetching state root from peers",
+						zap.Int64("round", b.Round))
+					return nil
+				}
+			} else {
+				fetchCancel()
+				logging.Logger.Error("init block state - failed to fetch state root from peers",
+					zap.Int64("round", b.Round), zap.Error(fetchErr))
 			}
 		}
 		return
