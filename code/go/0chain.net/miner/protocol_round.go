@@ -1804,7 +1804,7 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 // verifyMBAndDKGForLFB verifies that the current MB and DKG are consistent with the LFB.
 // This is called after LoadLatestBlocksFromStore sets the LFB from sharders.
 // If the LFB requires a different MB than what was loaded from stored lfbr,
-// this function reloads the correct MB and DKG.
+// this function reloads the correct MB and DKG, and updates the finalized MB.
 func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 	lfb := mc.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.Round == 0 {
@@ -1825,7 +1825,25 @@ func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 		return
 	}
 
-	// If MB matches, we're good
+	// Check finalized MB and update if needed
+	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb == nil || lfmb.MagicBlock == nil ||
+		lfmb.MagicBlock.MagicBlockNumber < expectedMB.MagicBlockNumber {
+		// Finalized MB is stale, update it
+		mbBlock := &block.Block{MagicBlock: expectedMB}
+		mc.SetLatestFinalizedMagicBlock(mbBlock)
+		logging.Logger.Info("verifyMBAndDKGForLFB - updated finalized MB",
+			zap.Int64("old_mb", func() int64 {
+				if lfmb != nil && lfmb.MagicBlock != nil {
+					return lfmb.MagicBlock.MagicBlockNumber
+				}
+				return 0
+			}()),
+			zap.Int64("new_mb", expectedMB.MagicBlockNumber),
+			zap.Int64("lfb_round", lfb.Round))
+	}
+
+	// If current MB matches expected, we're done
 	if currentMB.MagicBlockNumber == expectedMB.MagicBlockNumber {
 		logging.Logger.Debug("verifyMBAndDKGForLFB - MB is correct",
 			zap.Int64("mb_number", currentMB.MagicBlockNumber),
