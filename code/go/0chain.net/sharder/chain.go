@@ -313,6 +313,9 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 					logging.Logger.Info("load_lfb - switched to recommended LFB",
 						zap.Int64("round", recommendedLFB))
 					bl.lfb = recBlock
+					// Update chain's internal state to match the switched LFB
+					sc.SetLatestFinalizedBlock(recBlock)
+					sc.SetCurrentRound(recommendedLFB)
 				} else {
 					logging.Logger.Warn("load_lfb - recommended LFB has no state, keeping current",
 						zap.Int64("recommended", recommendedLFB),

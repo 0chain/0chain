@@ -1665,6 +1665,10 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		// return
 	}
 
+	// After LFB is set from sharders, verify MB/DKG is consistent
+	// This handles the case where stored lfbr was stale
+	mc.verifyMBAndDKGForLFB(ctx)
+
 	lfb := mc.GetLatestFinalizedBlock()
 	if lfb != nil {
 		mr = mc.startProtocolOnLFB(ctx, lfb)
@@ -1795,6 +1799,71 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 	mc.SetMagicBlock(newMB)
 
 	// everything is OK
+}
+
+// verifyMBAndDKGForLFB verifies that the current MB and DKG are consistent with the LFB.
+// This is called after LoadLatestBlocksFromStore sets the LFB from sharders.
+// If the LFB requires a different MB than what was loaded from stored lfbr,
+// this function reloads the correct MB and DKG.
+func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
+	lfb := mc.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.Round == 0 {
+		return // No LFB set yet, nothing to verify
+	}
+
+	// Get the MB that should be active for this LFB round
+	expectedMB := mc.GetMagicBlock(lfb.Round)
+	if expectedMB == nil {
+		logging.Logger.Warn("verifyMBAndDKGForLFB - no MB for LFB round",
+			zap.Int64("lfb_round", lfb.Round))
+		return
+	}
+
+	currentMB := mc.GetCurrentMagicBlock()
+	if currentMB == nil {
+		logging.Logger.Warn("verifyMBAndDKGForLFB - no current MB")
+		return
+	}
+
+	// If MB matches, we're good
+	if currentMB.MagicBlockNumber == expectedMB.MagicBlockNumber {
+		logging.Logger.Debug("verifyMBAndDKGForLFB - MB is correct",
+			zap.Int64("mb_number", currentMB.MagicBlockNumber),
+			zap.Int64("lfb_round", lfb.Round))
+		return
+	}
+
+	logging.Logger.Info("verifyMBAndDKGForLFB - MB mismatch detected, reloading DKG",
+		zap.Int64("current_mb", currentMB.MagicBlockNumber),
+		zap.Int64("expected_mb", expectedMB.MagicBlockNumber),
+		zap.Int64("lfb_round", lfb.Round))
+
+	// Reload DKG for the expected MB
+	if err := mc.SetDKGSFromStore(ctx, expectedMB); err != nil {
+		logging.Logger.Warn("verifyMBAndDKGForLFB - failed to load DKG for expected MB",
+			zap.Int64("mb_number", expectedMB.MagicBlockNumber),
+			zap.Error(err))
+	} else {
+		logging.Logger.Info("verifyMBAndDKGForLFB - loaded DKG for expected MB",
+			zap.Int64("mb_number", expectedMB.MagicBlockNumber))
+	}
+
+	// Also load previous MB's DKG if applicable
+	// This is needed for rounds still using the previous MB
+	if expectedMB.MagicBlockNumber > 1 {
+		prevMBNum := expectedMB.MagicBlockNumber - 1
+		prevMB, err := LoadMagicBlock(ctx, strconv.FormatInt(prevMBNum, 10))
+		if err == nil && prevMB != nil {
+			if err := mc.SetDKGSFromStore(ctx, prevMB); err != nil {
+				logging.Logger.Debug("verifyMBAndDKGForLFB - failed to load previous DKG",
+					zap.Int64("mb_number", prevMBNum),
+					zap.Error(err))
+			} else {
+				logging.Logger.Debug("verifyMBAndDKGForLFB - loaded previous MB DKG",
+					zap.Int64("mb_number", prevMBNum))
+			}
+		}
+	}
 }
 
 func (mc *Chain) WaitForActiveSharders(ctx context.Context) error {
