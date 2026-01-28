@@ -296,17 +296,31 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	// Verify block continuity and finalization depth
 	recommendedLFB, cerr := sc.verifyBlockContinuityFromStore(ctx, bl.lfb.Round, 500, 3)
 	if cerr != nil {
-		logging.Logger.Warn("load_lfb - continuity check failed, triggering rollback",
+		logging.Logger.Warn("load_lfb - continuity check failed, proceeding with current LFB",
 			zap.Int64("round", bl.lfb.Round), zap.Error(cerr))
-		return common.NewErrorf(errInvalidStateCode,
-			"block continuity check failed at round %d: %v", bl.lfb.Round, cerr)
-	}
-	if recommendedLFB < bl.lfb.Round {
-		logging.Logger.Warn("load_lfb - finalization depth requires earlier LFB, triggering rollback",
+		// Don't rollback — state is valid at current round, continuity check is advisory
+	} else if recommendedLFB < bl.lfb.Round {
+		logging.Logger.Info("load_lfb - finalization depth recommends earlier LFB, attempting switch",
 			zap.Int64("current_lfb", bl.lfb.Round),
 			zap.Int64("recommended_lfb", recommendedLFB))
-		return common.NewErrorf(errInvalidStateCode,
-			"finalization depth requires LFB at round %d, not %d", recommendedLFB, bl.lfb.Round)
+		// Try to load the recommended block and init its state
+		recHash, hashErr := sc.GetBlockHash(ctx, recommendedLFB)
+		if hashErr == nil {
+			recBlock, blkErr := sc.GetBlockFromStore(recHash, recommendedLFB)
+			if blkErr == nil {
+				recBlock.SetStateStatus(block.StateSuccessful)
+				if stErr := sc.InitBlockState(recBlock); stErr == nil {
+					logging.Logger.Info("load_lfb - switched to recommended LFB",
+						zap.Int64("round", recommendedLFB))
+					bl.lfb = recBlock
+				} else {
+					logging.Logger.Warn("load_lfb - recommended LFB has no state, keeping current",
+						zap.Int64("recommended", recommendedLFB),
+						zap.Int64("keeping", bl.lfb.Round),
+						zap.Error(stErr))
+				}
+			}
+		}
 	}
 
 	bl.lfb.SetBlockNotarized()
@@ -808,13 +822,15 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 	// sc.UpdateMagicBlock(lfmb.MagicBlock)
 
-	const maxRollbackRounds = 20
+	const maxRollbackRounds = 1000
 	const maxLocalFailsBeforeNetworkFetch = 10
 	var i int
 
 loop:
 	for {
 		logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")
+		// and then, check out related LFMB can be missing
+		// sc.LoadLatestFinalizedMagicBlockFromStore(ctx)
 
 		logging.Logger.Debug("load_lfb - load round and block",
 			zap.Int64("round", lfbRound),
@@ -846,15 +862,13 @@ loop:
 			if ok && cerr.Is(errInvalidState) {
 				i++
 
-				// Every maxLocalFailsBeforeNetworkFetch consecutive local failures,
+				// After maxLocalFailsBeforeNetworkFetch consecutive local failures,
 				// stop rolling back and try to fetch LFB from peer sharders
-				if i%maxLocalFailsBeforeNetworkFetch == 0 {
+				if i == maxLocalFailsBeforeNetworkFetch {
 					logging.Logger.Warn("load_lfb - too many local failures, fetching LFB from peer sharders",
 						zap.Int("failures", i),
 						zap.Int64("current_round", lfbRound))
 
-					// Try fetching the current LFB that peer sharders report
-					// This gets a block the peer sharders have valid state for
 					fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 					nb, nerr := sc.GetNotarizedBlockFromSharders(fetchCtx, "", lfbRound)
 					cancel()
@@ -862,6 +876,7 @@ loop:
 						logging.Logger.Info("load_lfb - fetched block from peer sharders, retrying",
 							zap.Int64("round", nb.Round),
 							zap.String("block", nb.Hash))
+						// Store the fetched block locally
 						if serr := blockstore.GetStore().Write(nb); serr != nil {
 							logging.Logger.Warn("load_lfb - failed to store fetched block",
 								zap.Int64("round", nb.Round), zap.Error(serr))
