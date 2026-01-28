@@ -688,13 +688,10 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 		}
 
 		if err := c.ComputeState(ctx, b); err != nil {
-			if isSharder {
-				select {
-				case errC <- fmt.Errorf("failed to execute block %d, err: %v", b.Round, err):
-				default:
-				}
-				return
-			}
+			logging.Logger.Warn("AddNotarizedBlock ComputeState failed, trying GetBlockStateChange",
+				zap.Int64("round", b.Round),
+				zap.Bool("is_sharder", isSharder),
+				zap.Error(err))
 
 			if err := c.GetBlockStateChange(b); err != nil {
 				logging.Logger.Warn("add notarized block - sync block state failed",
@@ -702,11 +699,12 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 					zap.String("block", b.Hash),
 					zap.String("prev block", b.PrevHash),
 					zap.Error(err))
-			}
 
-			select {
-			case errC <- fmt.Errorf("failed to sync block state changes: %d, err: %v", b.Round, err):
-			default:
+				select {
+				case errC <- fmt.Errorf("failed to sync block state changes: %d, err: %v", b.Round, err):
+				default:
+				}
+				return
 			}
 		}
 	}(cctx)
