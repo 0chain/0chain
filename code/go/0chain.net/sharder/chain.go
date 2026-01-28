@@ -808,15 +808,13 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 	// sc.UpdateMagicBlock(lfmb.MagicBlock)
 
-	const maxRollbackRounds = 1000
+	const maxRollbackRounds = 20
 	const maxLocalFailsBeforeNetworkFetch = 10
 	var i int
 
 loop:
 	for {
 		logging.Logger.Debug("load_lfb, start to load latest finalized magic block from store")
-		// and then, check out related LFMB can be missing
-		// sc.LoadLatestFinalizedMagicBlockFromStore(ctx)
 
 		logging.Logger.Debug("load_lfb - load round and block",
 			zap.Int64("round", lfbRound),
@@ -848,13 +846,15 @@ loop:
 			if ok && cerr.Is(errInvalidState) {
 				i++
 
-				// After maxLocalFailsBeforeNetworkFetch consecutive local failures,
+				// Every maxLocalFailsBeforeNetworkFetch consecutive local failures,
 				// stop rolling back and try to fetch LFB from peer sharders
-				if i == maxLocalFailsBeforeNetworkFetch {
+				if i%maxLocalFailsBeforeNetworkFetch == 0 {
 					logging.Logger.Warn("load_lfb - too many local failures, fetching LFB from peer sharders",
 						zap.Int("failures", i),
 						zap.Int64("current_round", lfbRound))
 
+					// Try fetching the current LFB that peer sharders report
+					// This gets a block the peer sharders have valid state for
 					fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 					nb, nerr := sc.GetNotarizedBlockFromSharders(fetchCtx, "", lfbRound)
 					cancel()
@@ -862,7 +862,6 @@ loop:
 						logging.Logger.Info("load_lfb - fetched block from peer sharders, retrying",
 							zap.Int64("round", nb.Round),
 							zap.String("block", nb.Hash))
-						// Store the fetched block locally
 						if serr := blockstore.GetStore().Write(nb); serr != nil {
 							logging.Logger.Warn("load_lfb - failed to store fetched block",
 								zap.Int64("round", nb.Round), zap.Error(serr))
