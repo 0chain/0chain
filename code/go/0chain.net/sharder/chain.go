@@ -822,7 +822,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 	// sc.UpdateMagicBlock(lfmb.MagicBlock)
 
-	const maxRollbackRounds = 1000
+	const maxRollbackRounds = 500
 	const maxLocalFailsBeforeNetworkFetch = 10
 	var i int
 
