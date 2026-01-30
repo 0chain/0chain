@@ -313,13 +313,23 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 		}
 
 		lfbtk := c.GetLatestLFBTicket(ctx)
+		localLFB := c.GetLatestFinalizedBlock()
+		localLFBRound := int64(0)
+		if localLFB != nil {
+			localLFBRound = localLFB.Round
+		}
 
-		// Only filter by ticket if we have a valid ticket with round > 0
-		// On fresh startup, ticket may be nil or at round 0
-		if lfbtk != nil && lfbtk.Round > 0 && fb.Round < lfbtk.Round {
+		// Only filter by ticket if:
+		// 1. We have a valid ticket with round > 0
+		// 2. Sharder's LFB is less than our ticket
+		// 3. AND sharder's LFB is also less than our actual LFB
+		// This prevents rejecting sharder LFBs that are ahead of us but behind a stale ticket
+		if lfbtk != nil && lfbtk.Round > 0 && fb.Round < lfbtk.Round && fb.Round < localLFBRound {
 			logging.Logger.Debug("lfb from sharder - round too old",
 				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
 				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("local_lfb_round", localLFBRound),
+				zap.Int64("ticket_round", lfbtk.Round),
 			)
 			continue
 		}
@@ -512,8 +522,16 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				continue // not updated
 			}
 
-			// for self updating case (kick itself)
+			// for self updating case (kick itself) - blank ticket from BumpTicket
 			if ticket.Sign == "" {
+				// If ticket is ahead of local LFB, trigger sync to catch up
+				lfb := c.GetLatestFinalizedBlock()
+				if lfb != nil && ticket.Round > lfb.Round {
+					logging.Logger.Info("update lfb ticket - ticket ahead of LFB, syncing",
+						zap.Int64("ticket.Round", ticket.Round),
+						zap.Int64("lfb.Round", lfb.Round))
+					c.NotifyBlockSync()
+				}
 				latest = ticket
 				// send for all subscribers
 				c.sendLFBTicketEventToSubscribers(subs, ticket)
@@ -577,6 +595,17 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		case unsub := <-c.unsubLFBTicket:
 			delete(subs, unsub)
 
+		// reset ticket to lower round (startup rollback)
+		case b = <-c.resetLFBTicket:
+			ticket = c.newLFBTicket(b)
+			latest = ticket
+			localBumpTicket = ticket
+			logging.Logger.Info("reset lfb ticket",
+				zap.Int64("round", ticket.Round),
+				zap.String("hash", ticket.LFBHash))
+			// send for all subscribers
+			c.sendLFBTicketEventToSubscribers(subs, ticket)
+
 		case <-ctx.Done():
 			return
 		}
@@ -588,6 +617,15 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 func (c *Chain) AddReceivedLFBTicket(ctx context.Context, ticket *LFBTicket) {
 	select {
 	case c.updateLFBTicket <- ticket:
+	case <-ctx.Done():
+	}
+}
+
+// ResetLFBTicket forces the LFB ticket to a specific block, even if lower than current.
+// Used during startup when LFB rolls back due to invalid notarization.
+func (c *Chain) ResetLFBTicket(ctx context.Context, b *block.Block) {
+	select {
+	case c.resetLFBTicket <- b:
 	case <-ctx.Done():
 	}
 }
@@ -613,6 +651,8 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
+	// Accept signed tickets from network - they represent the sender's actual LFB state.
+	// This allows nodes that are behind to know where the network is and sync up.
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
 }
