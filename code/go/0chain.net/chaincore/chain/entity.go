@@ -213,6 +213,7 @@ type Chain struct {
 	subLFBTicket          chan chan *LFBTicket     // } wait for a received LFBTicket
 	unsubLFBTicket        chan chan *LFBTicket     // }
 	lfbTickerWorkerIsDone chan struct{}            // get rid out of context misuse
+	resetLFBTicket        chan *block.Block        // reset ticket to lower round (startup rollback)
 	syncLFBStateC         chan *block.BlockSummary // sync MPT state for latest finalized round
 	syncMissingNodesC     chan syncPathNodes
 	// precise DKG phases tracking
@@ -262,6 +263,8 @@ func (c *Chain) PushToBlockProcessor(b *block.Block) error {
 func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 	blocks := make([]*block.Block, reqNum)
 	wg := sync.WaitGroup{}
+	isSharder := node.Self.IsSharder()
+
 	for i := int64(0); i < reqNum; i++ {
 		wg.Add(1)
 		go func(idx int64) {
@@ -270,22 +273,49 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 			var cancel func()
 			cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
 			defer cancel()
-			b, err := c.GetNotarizedBlockFromSharders(cctx, "", r)
-			if err != nil {
-				if strings.Contains(err.Error(), "push to block fetch channel failed") {
-					logging.Logger.Error("request block failed",
+
+			var b *block.Block
+			var err error
+
+			// For sharders syncing historical blocks, use sharders only with retry
+			// Miners don't cache old blocks, so fallback to miners is useless
+			if isSharder {
+				for retry := 0; retry < 3; retry++ {
+					b, err = c.GetNotarizedBlockFromSharders(cctx, "", r)
+					if err == nil {
+						break
+					}
+					if strings.Contains(err.Error(), "queue full") {
+						time.Sleep(100 * time.Millisecond)
+						continue
+					}
+					break
+				}
+				if err != nil {
+					logging.Logger.Error("request block failed (sharder)",
 						zap.Int64("round", r),
 						zap.Error(err))
 					return
 				}
-
-				// fetch from miners
-				b, err = c.GetNotarizedBlock(cctx, "", r)
+			} else {
+				// For miners, try sharders first then fall back to miners
+				b, err = c.GetNotarizedBlockFromSharders(cctx, "", r)
 				if err != nil {
-					logging.Logger.Error("request block failed",
-						zap.Int64("round", r),
-						zap.Error(err))
-					return
+					if strings.Contains(err.Error(), "push to block fetch channel failed") {
+						logging.Logger.Error("request block failed",
+							zap.Int64("round", r),
+							zap.Error(err))
+						return
+					}
+
+					// fetch from miners
+					b, err = c.GetNotarizedBlock(cctx, "", r)
+					if err != nil {
+						logging.Logger.Error("request block failed",
+							zap.Int64("round", r),
+							zap.Error(err))
+						return
+					}
 				}
 			}
 
@@ -372,12 +402,21 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 					zap.Int64("lfb", lfb.Round),
 					zap.Int64("lfb+ahead", lfb.Round+aheadN))
 
+				roundsMissing := false
 				for rn := lfb.Round + 1; rn <= cr; rn++ {
 					if r := c.GetRound(rn); r != nil {
 						c.FinalizeRound(c.GetRound(rn))
+					} else {
+						roundsMissing = true
 					}
 				}
-				// continue
+				// If rounds are missing (e.g., after restart), sync from LFB instead of cr
+				if roundsMissing {
+					logging.Logger.Debug("process block, rounds missing after LFB, syncing from LFB",
+						zap.Int64("lfb", lfb.Round),
+						zap.Int64("current round", cr))
+					cr = lfb.Round
+				}
 			}
 
 			endRound = lfbTk.Round + aheadN
@@ -392,6 +431,15 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				continue
 			}
 
+			// When LFB is behind ticket, sync from LFB+1 to catch up finalization
+			if lfb.Round < lfbTk.Round && lfb.Round < cr {
+				logging.Logger.Debug("process block, LFB behind ticket, syncing from LFB",
+					zap.Int64("lfb", lfb.Round),
+					zap.Int64("lfb_ticket", lfbTk.Round),
+					zap.Int64("current_round", cr))
+				cr = lfb.Round
+			}
+
 			r := c.GetRound(cr)
 			var cb *block.Block
 			if r != nil {
@@ -399,7 +447,8 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			}
 			if cb == nil {
 				logging.Logger.Debug("process block, current heaviest notarized block is nil", zap.Int64("current round", cr))
-				if cr > 0 {
+				// Don't decrement below LFB when syncing
+				if cr > lfb.Round {
 					cr = cr - 1
 				}
 			}
@@ -1125,6 +1174,7 @@ func Provider() datastore.Entity {
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
+	c.resetLFBTicket = make(chan *block.Block, 1)      // for startup rollback
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncMissingNodesC = make(chan syncPathNodes, 1)
 
@@ -1548,8 +1598,18 @@ func (c *Chain) AddLoadedFinalizedBlocks(lfb, lfmb *block.Block, r *round.Round)
 	}
 	c.SetLatestFinalizedMagicBlock(lfmb)
 	c.SetLatestFinalizedBlock(lfb)
+
+	c.blocksMutex.Lock()
 	c.blocks[lfb.Hash] = lfb
+	c.blocksMutex.Unlock()
+
+	c.roundsMutex.Lock()
 	c.rounds[lfb.Round] = r
+	c.roundsMutex.Unlock()
+
+	logging.Logger.Debug("added loaded finalized blocks",
+		zap.Int64("round", lfb.Round),
+		zap.String("block", lfb.Hash))
 }
 
 /*AddBlock - adds a block to the cache */
@@ -2857,7 +2917,7 @@ func (c *Chain) LoadLatestFinalizedMagicBlockFromStore(ctx context.Context) {
 
 func (c *Chain) UpdateMagicBlocks(mbs ...*block.Block) {
 	for _, mb := range mbs {
-		if mb == nil {
+		if mb == nil || mb.MagicBlock == nil {
 			continue
 		}
 		if err := c.UpdateMagicBlock(mb.MagicBlock); err == nil {
