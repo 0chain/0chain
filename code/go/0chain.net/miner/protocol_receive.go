@@ -33,6 +33,46 @@ func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
 		logging.Logger.Debug("received VRF share for the future round, caching it",
 			zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("vrf_share_round", msg.VRFShare.Round))
 		mr.vrfSharesCache.add(msg.VRFShare)
+
+		// When receiving VRF shares for a future round, check if we should advance.
+		// This handles split network scenarios where other miners have advanced
+		// but this miner is behind even though it has a notarized block for the current round.
+		curRound := mc.GetMinerRound(mc.GetCurrentRound())
+		if curRound != nil {
+			hnb := curRound.GetHeaviestNotarizedBlock()
+			if hnb != nil {
+				// Have HNB locally, trigger advancement
+				logging.Logger.Info("received VRF share for future round, current round has HNB, triggering advancement",
+					zap.Int64("current_round", curRound.GetRoundNumber()),
+					zap.Int64("vrf_share_round", msg.VRFShare.Round),
+					zap.String("hnb", hnb.Hash))
+				go mc.ProgressOnNotarization(curRound)
+			} else {
+				// Don't have HNB locally - try to fetch from sharders first, then miners
+				// Sharders have finalized blocks that we can use to advance
+				logging.Logger.Debug("received VRF share for future round, no local HNB, fetching from sharders",
+					zap.Int64("current_round", curRound.GetRoundNumber()),
+					zap.Int64("vrf_share_round", msg.VRFShare.Round))
+				go func(r *Round) {
+					fetchCtx, cancel := context.WithTimeout(common.GetRootContext(), 5*time.Second)
+					defer cancel()
+					// Try fetching from sharders first - they have finalized blocks
+					fetchedBlock, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r.GetRoundNumber())
+					if err != nil || fetchedBlock == nil {
+						// Fallback to miners
+						fetchedBlock = mc.GetHeaviestNotarizedBlock(fetchCtx, r)
+					}
+					if fetchedBlock != nil {
+						logging.Logger.Info("fetched block for current round, triggering advancement",
+							zap.Int64("round", r.GetRoundNumber()),
+							zap.String("block", fetchedBlock.Hash))
+						// Add to round and trigger advancement
+						r.AddNotarizedBlock(fetchedBlock)
+						mc.ProgressOnNotarization(r)
+					}
+				}(curRound)
+			}
+		}
 		return
 	}
 
