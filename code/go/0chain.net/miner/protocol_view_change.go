@@ -142,10 +142,13 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		if lfbPhaseNode.Phase > pn.Phase {
-			logging.Logger.Error("[mvc] lfb phase > pn phase - skip",
+		// Skip stale phase events - either phase has advanced or phase has restarted with new StartRound
+		if lfbPhaseNode.Phase > pn.Phase || lfbPhaseNode.StartRound > pn.StartRound {
+			logging.Logger.Debug("[mvc] stale phase event - skip",
 				zap.String("lfb_phase", lfbPhaseNode.Phase.String()),
-				zap.String("pn_phase", pn.Phase.String()))
+				zap.String("pn_phase", pn.Phase.String()),
+				zap.Int64("lfb_start_round", lfbPhaseNode.StartRound),
+				zap.Int64("pn_start_round", pn.StartRound))
 			continue
 		}
 
