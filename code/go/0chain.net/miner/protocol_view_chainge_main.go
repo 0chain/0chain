@@ -192,6 +192,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	data.InputArgs = sos.Clone()
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
+
 	var minerUrls []string
 	// DEBUG: only send VC transaction to self node
 	for _, v := range dmn.Nodes {
