@@ -115,6 +115,9 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 		timer             = time.NewTimer(4 * time.Second)
 		cround            = mc.GetCurrentRound()
 		protocol Protocol = mc
+		// Track repeated sync failures when LFB < ticket and blocks can't be fetched
+		syncFailureCount    int
+		lastSyncFailureRound int64
 	)
 
 	for {
@@ -147,7 +150,19 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						if nr != nil {
 							roundTimeoutProcess(ctx, protocol, cround+1)
 						} else {
-							logging.Logger.Info("round worker: next round is nil", zap.Int64("next round", cround+1))
+							// Next round doesn't exist - start it if LFB is close enough
+							lfb := mc.GetLatestFinalizedBlock()
+							if lfb != nil && cround <= lfb.Round+3 {
+								logging.Logger.Info("round worker: starting next round after finalized round",
+									zap.Int64("finalized_round", cround),
+									zap.Int64("next_round", cround+1),
+									zap.Int64("lfb", lfb.Round))
+								mc.StartNextRound(ctx, r)
+							} else {
+								logging.Logger.Info("round worker: next round is nil, waiting for sync",
+									zap.Int64("next round", cround+1),
+									zap.Int64("lfb", lfb.Round))
+							}
 						}
 					} else {
 						logging.Logger.Info("round worker: round timeout",
@@ -166,8 +181,37 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						logging.Logger.Info("round worker: LFB < latest lfb ticket round, notify block sync",
 							zap.Int64("lfb round", lfb.Round),
 							zap.Int64("lfb ticket round", lfbTk.Round),
-							zap.Int64("current round", cround))
+							zap.Int64("current round", cround),
+							zap.Int("sync_failure_count", syncFailureCount))
 						mc.NotifyBlockSync()
+
+						// Track sync failures - if LFB hasn't progressed for multiple timeouts,
+						// the missing blocks likely don't exist (e.g., after network-wide rollback)
+						if lastSyncFailureRound == lfb.Round {
+							syncFailureCount++
+							// After 10 failed attempts, re-sync LFB from sharders
+							// The miner should adopt whatever LFB the sharders have
+							if syncFailureCount >= 10 {
+								logging.Logger.Warn("round worker: sync stuck, re-syncing LFB from sharders",
+									zap.Int64("current_lfb", lfb.Round),
+									zap.Int64("ticket_round", lfbTk.Round),
+									zap.Int("failures", syncFailureCount))
+								// Re-fetch LFB from sharders and adopt it
+								if err := mc.ResyncLFBFromSharders(ctx); err != nil {
+									logging.Logger.Error("round worker: failed to resync LFB from sharders",
+										zap.Error(err))
+								}
+								syncFailureCount = 0
+							}
+						} else {
+							// LFB progressed, reset counter
+							lastSyncFailureRound = lfb.Round
+							syncFailureCount = 1
+						}
+					} else {
+						// LFB caught up to ticket, reset failure tracking
+						syncFailureCount = 0
+						lastSyncFailureRound = 0
 					}
 				} else {
 					// set current round to latest finalized block

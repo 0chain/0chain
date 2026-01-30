@@ -267,16 +267,19 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.String("block", lfbr.Hash))
 
 	// fetch from sharders
-	// retry 3 times, each time wait for about 5 seconds.
+	// retry 10 times, each time wait for 3-5 seconds with backoff.
 	// the main reason for retry is that sharders APIs may not ready yet after all miners/sharders restarted
-	retry := 3
+	retry := 10
 	var b *block.Block
 	for i := 0; i < retry; i++ {
 		b, err = mc.GetNotarizedBlockFromSharders(ctx, lfbr.Hash, lfbr.Round)
 		if err != nil {
-			logging.Logger.Error("load_lfb - could not fetch block from sharders, waiting for retry...",
-				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
-			time.Sleep(5 * time.Second)
+			waitTime := time.Duration(3+i) * time.Second
+			logging.Logger.Warn("load_lfb - could not fetch block from sharders, waiting for retry...",
+				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash),
+				zap.Int("retry", i+1), zap.Int("max_retries", retry),
+				zap.Duration("wait", waitTime), zap.Error(err))
+			time.Sleep(waitTime)
 			continue
 		}
 		break
@@ -342,6 +345,41 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.Int64("round", b.Round),
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
+	// Check if sharders have a higher LFB - if so, sync to catch up
+	// This handles the case where miner restarted and sharders advanced
+	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
+	if len(fbs) > 0 && fbs[0].Block != nil && fbs[0].Block.Round > b.Round {
+		sharderLFB := fbs[0].Block
+		logging.Logger.Info("load_lfb - sharders have higher LFB, syncing forward",
+			zap.Int64("local_lfb", b.Round),
+			zap.Int64("sharder_lfb", sharderLFB.Round))
+
+		// Sync blocks from our LFB+1 to sharder's LFB
+		for r := b.Round + 1; r <= sharderLFB.Round; r++ {
+			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			syncBlock, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+			cancel()
+			if err != nil || syncBlock == nil {
+				logging.Logger.Warn("load_lfb - failed to sync block from sharders",
+					zap.Int64("round", r), zap.Error(err))
+				break
+			}
+			if err := mc.VerifyBlockNotarization(ctx, syncBlock); err != nil {
+				logging.Logger.Warn("load_lfb - sync block failed notarization",
+					zap.Int64("round", r), zap.Error(err))
+				break
+			}
+			// Push to block processor to finalize
+			if err := mc.PushToBlockProcessor(syncBlock); err != nil {
+				logging.Logger.Warn("load_lfb - failed to push sync block",
+					zap.Int64("round", r), zap.Error(err))
+			}
+		}
+	}
+
+	// Don't reset LFB ticket with cap - the network's ticket is authoritative
+	// The ticket will be updated naturally via BumpLFBTicket during operation
+
 	return nil
 }
 
@@ -400,10 +438,23 @@ func (mc *Chain) verifyBlockContinuityFromSharders(ctx context.Context, candidat
 // and set it as the miner's LFB. This is used when local RocksDB state is stale or missing.
 // It verifies that blocks have sufficient verification tickets before accepting them.
 func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
-	// Use unfiltered fetch to get whatever LFB sharders have
-	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
+	// Retry fetching from sharders with backoff - sharders may still be starting up
+	var fbs []*chain.BlockConsensus
+	maxRetries := 10
+	for retry := 0; retry < maxRetries; retry++ {
+		fbs = mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
+		if len(fbs) > 0 {
+			break
+		}
+		waitTime := time.Duration(3+retry*2) * time.Second
+		logging.Logger.Info("load_lfb - no LFB from sharders yet, waiting for retry",
+			zap.Int("retry", retry+1),
+			zap.Int("max_retries", maxRetries),
+			zap.Duration("wait", waitTime))
+		time.Sleep(waitTime)
+	}
 	if len(fbs) == 0 {
-		logging.Logger.Warn("load_lfb - no LFB available from sharders, will use genesis")
+		logging.Logger.Warn("load_lfb - no LFB available from sharders after retries, will use genesis")
 		return nil // Fall back to genesis
 	}
 
@@ -477,6 +528,98 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 	logging.Logger.Info("load_lfb - successfully set LFB from sharders",
 		zap.Int64("round", best.Round),
 		zap.String("hash", best.Hash))
+
+	// Don't reset LFB ticket when syncing from network - the network's ticket is authoritative
+	// Calling ResetLFBTicket here would cap received tickets at our adjusted LFB,
+	// but the network may be legitimately ahead. Let BumpLFBTicket handle ticket updates.
+
+	return nil
+}
+
+// ResyncLFBFromSharders re-queries sharders for their current LFB and adopts it.
+// This is called when the miner is stuck trying to sync blocks that don't exist.
+func (mc *Chain) ResyncLFBFromSharders(ctx context.Context) error {
+	// Query sharders for their current LFB
+	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
+	if len(fbs) == 0 {
+		return fmt.Errorf("no LFB available from sharders")
+	}
+
+	// Find the highest round block that passes notarization verification
+	var best *block.Block
+	for _, fb := range fbs {
+		if fb.Block == nil {
+			continue
+		}
+		if err := mc.VerifyBlockNotarization(ctx, fb.Block); err != nil {
+			continue
+		}
+		if best == nil || fb.Block.Round > best.Round {
+			best = fb.Block
+		}
+	}
+
+	if best == nil {
+		return fmt.Errorf("no valid LFB with sufficient verification tickets from sharders")
+	}
+
+	currentLFB := mc.GetLatestFinalizedBlock()
+	if best.Round > currentLFB.Round {
+		// Sharder LFB is ahead - sync blocks from local LFB+1 to sharder LFB
+		logging.Logger.Info("resync_lfb - sharder LFB ahead, syncing forward",
+			zap.Int64("sharder_lfb", best.Round),
+			zap.Int64("current_lfb", currentLFB.Round))
+
+		// Sync blocks one by one from sharders
+		for r := currentLFB.Round + 1; r <= best.Round; r++ {
+			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			syncBlock, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+			cancel()
+			if err != nil || syncBlock == nil {
+				logging.Logger.Warn("resync_lfb - failed to fetch block from sharders",
+					zap.Int64("round", r), zap.Error(err))
+				break
+			}
+			if err := mc.VerifyBlockNotarization(ctx, syncBlock); err != nil {
+				logging.Logger.Warn("resync_lfb - block failed notarization verification",
+					zap.Int64("round", r), zap.Error(err))
+				break
+			}
+			// Push to block processor for finalization
+			if err := mc.PushToBlockProcessor(syncBlock); err != nil {
+				logging.Logger.Warn("resync_lfb - failed to push block to processor",
+					zap.Int64("round", r), zap.Error(err))
+			}
+		}
+		return nil
+	}
+
+	if best.Round == currentLFB.Round {
+		// LFB matches - just reset ticket
+		logging.Logger.Info("resync_lfb - sharder LFB matches local LFB",
+			zap.Int64("lfb_round", best.Round))
+		mc.ResetLFBTicket(ctx, currentLFB)
+		return nil
+	}
+
+	logging.Logger.Info("resync_lfb - adopting lower LFB from sharders",
+		zap.Int64("old_lfb", currentLFB.Round),
+		zap.Int64("new_lfb", best.Round))
+
+	// Initialize block state
+	best.SetStateStatus(block.StateSuccessful)
+	if err := mc.InitBlockState(best); err != nil {
+		best.SetStateStatus(0)
+		return fmt.Errorf("can't initialize LFB state: %v", err)
+	}
+
+	// Set as new LFB
+	mc.SetLatestFinalizedBlock(ctx, best)
+	mc.SetCurrentRound(best.Round)
+
+	// Reset ticket to match new LFB
+	mc.ResetLFBTicket(ctx, best)
+
 	return nil
 }
 
