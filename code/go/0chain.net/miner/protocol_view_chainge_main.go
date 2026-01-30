@@ -382,8 +382,13 @@ func (mc *Chain) Wait(ctx context.Context,
 		return // error
 	}
 
-	if magicBlock.MagicBlockNumber <= mb.MagicBlockNumber {
-		logging.Logger.Error("[mvc] dkg wait failed, not new magic block",
+	// Note: We intentionally do NOT skip based on local DKG summary existence.
+	// The Wait transaction must be sent to the smart contract even if we have
+	// a local DKG summary, otherwise the miner won't be marked as "waited"
+	// and the view change will fail with "miner not waited" error.
+
+	if magicBlock.MagicBlockNumber < mb.MagicBlockNumber {
+		logging.Logger.Error("[mvc] dkg wait failed, magic block from SC is older than current",
 			zap.Int64("mb_num", magicBlock.MagicBlockNumber),
 			zap.Int64("mb_sr", magicBlock.StartingRound),
 			zap.String("mb_hash", magicBlock.Hash),
