@@ -303,19 +303,25 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 		logging.Logger.Info("load_lfb - finalization depth recommends earlier LFB, attempting switch",
 			zap.Int64("current_lfb", bl.lfb.Round),
 			zap.Int64("recommended_lfb", recommendedLFB))
-		// Try to load the recommended block and init its state
-		recHash, hashErr := sc.GetBlockHash(ctx, recommendedLFB)
-		if hashErr == nil {
-			recBlock, blkErr := sc.GetBlockFromStore(recHash, recommendedLFB)
+		// Try to load the recommended block and its round from store
+		recRound, roundErr := sc.GetRoundFromStore(ctx, recommendedLFB)
+		if roundErr == nil {
+			recBlock, blkErr := sc.GetBlockFromStore(recRound.BlockHash, recommendedLFB)
 			if blkErr == nil {
 				recBlock.SetStateStatus(block.StateSuccessful)
 				if stErr := sc.InitBlockState(recBlock); stErr == nil {
 					logging.Logger.Info("load_lfb - switched to recommended LFB",
 						zap.Int64("round", recommendedLFB))
 					bl.lfb = recBlock
+					bl.r = recRound // IMPORTANT: also update the round!
 					// Update chain's internal state to match the switched LFB
 					sc.SetLatestFinalizedBlock(recBlock)
 					sc.SetCurrentRound(recommendedLFB)
+					// CRITICAL: Finalize the new round so subsequent rounds can be finalized
+					sc.SetRandomSeed(recRound, recRound.GetRandomSeed())
+					recRound.Finalize(recBlock)
+					// CRITICAL: Update the round cache with the new LFB round
+					sc.AddLoadedFinalizedBlocks(recBlock, bl.lfmb, recRound)
 				} else {
 					logging.Logger.Warn("load_lfb - recommended LFB has no state, keeping current",
 						zap.Int64("recommended", recommendedLFB),
@@ -323,6 +329,10 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 						zap.Error(stErr))
 				}
 			}
+		} else {
+			logging.Logger.Warn("load_lfb - could not load recommended round from store, keeping current",
+				zap.Int64("recommended", recommendedLFB),
+				zap.Error(roundErr))
 		}
 	}
 
@@ -955,6 +965,10 @@ loop:
 		logging.Logger.Debug("load_lfb from store (nlfmb)",
 			zap.Int64("round", bl.nlfmb.Round))
 	}
+
+	// Reset LFB ticket to match actual LFB after any rollback during startup
+	sc.Chain.ResetLFBTicket(ctx, bl.lfb)
+
 	return nil
 }
 
