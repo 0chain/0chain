@@ -390,6 +390,11 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 				lfb   = c.GetLatestFinalizedBlock()
 			)
 
+			if lfbTk == nil {
+				logging.Logger.Debug("process block, no LFB ticket available, skipping sync")
+				continue
+			}
+
 			cr := c.GetCurrentRound()
 			if cr < lfb.Round {
 				c.SetCurrentRound(lfb.Round)
@@ -579,14 +584,20 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 
 			lfbTk := c.GetLatestLFBTicket(ctx)
 			lfb = c.GetLatestFinalizedBlock()
+
+			lfbTkRound := int64(0)
+			if lfbTk != nil {
+				lfbTkRound = lfbTk.Round
+			}
+
 			logging.Logger.Debug("process block successfully",
 				zap.Int64("round", b.Round),
 				zap.Int64("lfb round", lfb.Round),
-				zap.Int64("lfb ticket round", lfbTk.Round))
+				zap.Int64("lfb ticket round", lfbTkRound))
 
 			if b.Round >= lfb.Round+aheadN || b.Round >= endRound {
 				syncing = false
-				if b.Round < lfbTk.Round {
+				if lfbTk != nil && b.Round < lfbTk.Round {
 					logging.Logger.Debug("process block, hit end, trigger sync",
 						zap.Int64("round", b.Round),
 						zap.Int64("end round", endRound),
@@ -1086,6 +1097,14 @@ func (c *Chain) SetMagicBlock(mb *block.MagicBlock) {
 		zap.Int64("mb number", mb.MagicBlockNumber),
 		zap.Int64("mb sr", mb.StartingRound),
 		zap.String("mb hash", mb.Hash))
+}
+
+// DeleteMagicBlocksAfter removes all magic blocks with starting round > the given round.
+// This is used during startup to remove non-finalized magic blocks that could cause split-brain.
+func (c *Chain) DeleteMagicBlocksAfter(round int64) error {
+	c.mbMutex.Lock()
+	defer c.mbMutex.Unlock()
+	return c.MagicBlockStorage.DeleteAfter(round)
 }
 
 /*GetEntityMetadata - implementing the interface */
@@ -1810,14 +1829,51 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 	c.DeleteBlocksBelowRound(b.Round - 50)
 }
 
-/*ValidateMagicBlock - validate the block for a given round has the right magic block */
+/*ValidateMagicBlock - validate the block for a given round has the right magic block.
+Modified to allow adjacent MBs: accepts blocks with our current LFMB or the immediately
+previous MB (MagicBlockNumber - 1). This helps during chain recovery when miners may
+have slightly different LFMB states while still maintaining security by not accepting
+blocks with arbitrarily old MBs. */
 func (c *Chain) ValidateMagicBlock(_ context.Context, mr *round.Round, b *block.Block) bool {
+	// Get our current LFMB for this round
 	mb := c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
 	if mb == nil {
-		logging.Logger.Error("can't get lfmb`")
+		logging.Logger.Error("can't get lfmb")
 		return false
 	}
-	return b.LatestFinalizedMagicBlockHash == mb.Hash
+
+	// If exact match with current LFMB, accept
+	if b.LatestFinalizedMagicBlockHash == mb.Hash {
+		return true
+	}
+
+	// Check if the block's LFMB is the immediately previous MB (adjacent)
+	// This allows for temporary LFMB state differences during recovery
+	c.mbMutex.RLock()
+	entity := c.MagicBlockStorage.GetByStartingRound(b.LatestFinalizedMagicBlockRound)
+	c.mbMutex.RUnlock()
+
+	if entity != nil {
+		blockMB := entity.(*block.MagicBlock)
+		// Only allow if it's adjacent (current MB number - 1)
+		if mb.MagicBlockNumber > 0 && blockMB.MagicBlockNumber >= mb.MagicBlockNumber-1 {
+			logging.Logger.Debug("validate_magic_block: accepting block with adjacent LFMB",
+				zap.Int64("round", mr.GetRoundNumber()),
+				zap.Int64("block_lfmbr", b.LatestFinalizedMagicBlockRound),
+				zap.Int64("block_mb_num", blockMB.MagicBlockNumber),
+				zap.Int64("local_lfmbr", mb.StartingRound),
+				zap.Int64("local_mb_num", mb.MagicBlockNumber))
+			return true
+		}
+	}
+
+	logging.Logger.Warn("validate_magic_block: rejecting block with non-adjacent LFMB",
+		zap.Int64("round", mr.GetRoundNumber()),
+		zap.Int64("block_lfmbr", b.LatestFinalizedMagicBlockRound),
+		zap.String("block_lfmbh", b.LatestFinalizedMagicBlockHash),
+		zap.Int64("local_lfmbr", mb.StartingRound),
+		zap.Int64("local_mb_num", mb.MagicBlockNumber))
+	return false
 }
 
 // GetGenerators - get all the block generators for a given round.
@@ -2585,20 +2641,25 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		return
 	}
 
-	// Ensure block has valid Hash and Round values for GetLatestFinalizedMagicBlockRound
-	// to return proper values. If not set (e.g., synthetic blocks during recovery),
-	// use the MagicBlock's values as fallback.
-	if b.Hash == "" {
-		logging.Logger.Warn("SetLatestFinalizedMagicBlock: using MagicBlock.Hash as fallback",
+	// For synthetic blocks without proper Hash/Round values, only update the
+	// LFMB channel (for diagnostics) and MagicBlockStorage, but skip storing
+	// in magicBlockStartingRoundsMap to avoid hash mismatches during verification.
+	isSyntheticBlock := b.Hash == "" || b.Round == 0
+	if isSyntheticBlock {
+		logging.Logger.Warn("SetLatestFinalizedMagicBlock: processing synthetic block",
 			zap.Int64("mb_number", b.MagicBlock.MagicBlockNumber),
-			zap.String("mb_hash", b.MagicBlock.Hash))
-		b.Hash = b.MagicBlock.Hash
-	}
-	if b.Round == 0 {
-		logging.Logger.Warn("SetLatestFinalizedMagicBlock: using MagicBlock.StartingRound as fallback",
-			zap.Int64("mb_number", b.MagicBlock.MagicBlockNumber),
-			zap.Int64("mb_sr", b.MagicBlock.StartingRound))
-		b.Round = b.MagicBlock.StartingRound
+			zap.Int64("mb_starting_round", b.MagicBlock.StartingRound),
+			zap.String("block_hash", b.Hash),
+			zap.Int64("block_round", b.Round))
+		// Update the magic block storage
+		c.mbMutex.Lock()
+		if err := c.MagicBlockStorage.Put(b.MagicBlock.Clone(), b.MagicBlock.StartingRound); err != nil {
+			logging.Logger.Error("failed to put magic block from synthetic block", zap.Error(err))
+		}
+		c.mbMutex.Unlock()
+		// Update the LFMB channel so diagnostics shows correct value
+		c.updateLatestFinalizedMagicBlock(context.Background(), b)
+		return
 	}
 
 	latest := c.GetLatestFinalizedMagicBlock(common.GetRootContext())

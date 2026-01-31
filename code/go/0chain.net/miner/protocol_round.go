@@ -387,6 +387,20 @@ func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 				zap.Int64("round", r.GetRoundNumber()),
 				zap.String("block", bnb.Hash),
 				zap.Error(err))
+
+			// CRITICAL FIX: If the block's state can't be computed (likely because parent
+			// chain is unreachable/orphaned), fall back to the LFB which is guaranteed
+			// to have a valid parent chain.
+			lfb := mc.GetLatestFinalizedBlock()
+			if lfb != nil && lfb.Round < bnb.Round {
+				logging.Logger.Warn("get block to extend - falling back to LFB due to orphaned block",
+					zap.Int64("round", r.GetRoundNumber()),
+					zap.String("orphaned_block", bnb.Hash),
+					zap.Int64("lfb_round", lfb.Round),
+					zap.String("lfb_hash", lfb.Hash))
+				return lfb
+			}
+
 			if state.DebugBlock() {
 				logging.Logger.Error("get block to extend - best nb compute state",
 					zap.Int64("round", r.GetRoundNumber()),
@@ -1797,18 +1811,46 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 // This is called after LoadLatestBlocksFromStore sets the LFB from sharders.
 // If the LFB requires a different MB than what was loaded from stored lfbr,
 // this function reloads the correct MB and DKG, and updates the finalized MB.
+// IMPORTANT: Uses sharders' LFMB as source of truth to prevent split-brain where
+// different miners have different MBs stored locally.
 func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 	lfb := mc.GetLatestFinalizedBlock()
 	if lfb == nil || lfb.Round == 0 {
 		return // No LFB set yet, nothing to verify
 	}
 
-	// Get the MB that should be active for this LFB round
-	expectedMB := mc.GetMagicBlock(lfb.Round)
+	// CRITICAL FIX: Fetch LFMB from sharders as the source of truth.
+	// This prevents split-brain where different miners have different MBs stored locally.
+	// Sharders are the authoritative source for which MB is finalized.
+	var expectedMB *block.MagicBlock
+	sharderLFMB := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
+	if sharderLFMB != nil && sharderLFMB.MagicBlock != nil {
+		// Use sharder's LFMB if it's valid for our LFB round
+		if sharderLFMB.MagicBlock.StartingRound <= lfb.Round {
+			expectedMB = sharderLFMB.MagicBlock
+			logging.Logger.Info("verifyMBAndDKGForLFB - using sharder LFMB as expected MB",
+				zap.Int64("sharder_mb_number", sharderLFMB.MagicBlock.MagicBlockNumber),
+				zap.Int64("sharder_mb_sr", sharderLFMB.MagicBlock.StartingRound),
+				zap.Int64("lfb_round", lfb.Round))
+		} else {
+			logging.Logger.Warn("verifyMBAndDKGForLFB - sharder LFMB starting round ahead of LFB, using local MB",
+				zap.Int64("sharder_mb_sr", sharderLFMB.MagicBlock.StartingRound),
+				zap.Int64("lfb_round", lfb.Round))
+		}
+	}
+
+	// Fall back to local MB only if sharder LFMB wasn't usable
 	if expectedMB == nil {
-		logging.Logger.Warn("verifyMBAndDKGForLFB - no MB for LFB round",
+		expectedMB = mc.GetMagicBlock(lfb.Round)
+		if expectedMB == nil {
+			logging.Logger.Warn("verifyMBAndDKGForLFB - no MB for LFB round",
+				zap.Int64("lfb_round", lfb.Round))
+			return
+		}
+		logging.Logger.Info("verifyMBAndDKGForLFB - using local MB as expected MB",
+			zap.Int64("local_mb_number", expectedMB.MagicBlockNumber),
+			zap.Int64("local_mb_sr", expectedMB.StartingRound),
 			zap.Int64("lfb_round", lfb.Round))
-		return
 	}
 
 	currentMB := mc.GetCurrentMagicBlock()
@@ -1817,29 +1859,27 @@ func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 		return
 	}
 
-	// Check finalized MB and update if needed
+	// ALWAYS update finalized MB to match sharders' LFMB.
+	// This ensures all miners converge to the same LFMB on startup.
 	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
-	if lfmb == nil || lfmb.MagicBlock == nil ||
-		lfmb.MagicBlock.MagicBlockNumber < expectedMB.MagicBlockNumber {
-		// Finalized MB is stale, update it
-		// Set the block's Round and Hash from the magic block so GetLatestFinalizedMagicBlockRound
-		// returns proper values for LatestFinalizedMagicBlockRound/Hash fields in proposed blocks
-		mbBlock := &block.Block{
-			MagicBlock: expectedMB,
-		}
-		mbBlock.Round = expectedMB.StartingRound
-		mbBlock.Hash = expectedMB.Hash
-		mc.SetLatestFinalizedMagicBlock(mbBlock)
-		logging.Logger.Info("verifyMBAndDKGForLFB - updated finalized MB",
-			zap.Int64("old_mb", func() int64 {
-				if lfmb != nil && lfmb.MagicBlock != nil {
-					return lfmb.MagicBlock.MagicBlockNumber
-				}
-				return 0
-			}()),
-			zap.Int64("new_mb", expectedMB.MagicBlockNumber),
-			zap.Int64("lfb_round", lfb.Round))
-	}
+	mbBlock := &block.Block{MagicBlock: expectedMB}
+	mc.SetLatestFinalizedMagicBlock(mbBlock)
+	logging.Logger.Info("verifyMBAndDKGForLFB - set finalized MB from sharders",
+		zap.Int64("old_mb", func() int64 {
+			if lfmb != nil && lfmb.MagicBlock != nil {
+				return lfmb.MagicBlock.MagicBlockNumber
+			}
+			return 0
+		}()),
+		zap.Int64("old_mb_sr", func() int64 {
+			if lfmb != nil && lfmb.MagicBlock != nil {
+				return lfmb.MagicBlock.StartingRound
+			}
+			return 0
+		}()),
+		zap.Int64("new_mb", expectedMB.MagicBlockNumber),
+		zap.Int64("new_mb_sr", expectedMB.StartingRound),
+		zap.Int64("lfb_round", lfb.Round))
 
 	// If current MB matches expected, we're done
 	if currentMB.MagicBlockNumber == expectedMB.MagicBlockNumber {
@@ -1849,10 +1889,38 @@ func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 		return
 	}
 
-	logging.Logger.Info("verifyMBAndDKGForLFB - MB mismatch detected, reloading DKG",
+	logging.Logger.Info("verifyMBAndDKGForLFB - MB mismatch detected, switching to expected MB",
 		zap.Int64("current_mb", currentMB.MagicBlockNumber),
+		zap.Int64("current_mb_sr", currentMB.StartingRound),
 		zap.Int64("expected_mb", expectedMB.MagicBlockNumber),
+		zap.Int64("expected_mb_sr", expectedMB.StartingRound),
 		zap.Int64("lfb_round", lfb.Round))
+
+	// CRITICAL: Delete any MBs with starting round > expectedMB's starting round.
+	// These are non-finalized MBs from interrupted view changes that cause split-brain.
+	if err := mc.DeleteMagicBlocksAfter(expectedMB.StartingRound); err != nil {
+		logging.Logger.Warn("verifyMBAndDKGForLFB - failed to delete non-finalized MBs",
+			zap.Int64("after_round", expectedMB.StartingRound),
+			zap.Error(err))
+	} else {
+		logging.Logger.Info("verifyMBAndDKGForLFB - deleted non-finalized MBs",
+			zap.Int64("after_round", expectedMB.StartingRound))
+	}
+
+	// CRITICAL: UpdateMagicBlock has a check that prevents "downgrading" to an older MB
+	// (newMagicBlock.StartingRound <= lfmb.StartingRound returns early).
+	// We need to directly set the MB and update nodes to force the switch.
+	// This is safe because we've verified expectedMB comes from sharders (source of truth).
+	mc.SetMagicBlock(expectedMB)
+	if err := mc.UpdateNodesFromMagicBlock(expectedMB); err != nil {
+		logging.Logger.Warn("verifyMBAndDKGForLFB - failed to update nodes from magic block",
+			zap.Int64("mb_number", expectedMB.MagicBlockNumber),
+			zap.Error(err))
+	} else {
+		logging.Logger.Info("verifyMBAndDKGForLFB - force-updated current magic block",
+			zap.Int64("mb_number", expectedMB.MagicBlockNumber),
+			zap.Int64("mb_sr", expectedMB.StartingRound))
+	}
 
 	// Reload DKG for the expected MB
 	if err := mc.SetDKGSFromStore(ctx, expectedMB); err != nil {

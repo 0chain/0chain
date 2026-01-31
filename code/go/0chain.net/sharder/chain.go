@@ -803,12 +803,37 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		// load and set up latest magic block
 		mbs := sc.LoadLatestMBs(ctx, lfbr.MagicBlockNumber)
 		if len(mbs) != 0 {
+			// Store all MBs in the MagicBlockStorage
 			for i := len(mbs) - 1; i >= 0; i-- {
 				sc.SetMagicBlock(mbs[i].MagicBlock)
 			}
 
-			sc.UpdateMagicBlock(mbs[0].MagicBlock)
-			sc.SetLatestFinalizedMagicBlock(mbs[0])
+			// Determine which MB to use as LFMB based on LFB round from state DB.
+			// The LFMB starting round should not exceed the LFB round, otherwise
+			// block validation will fail for blocks between LFB and LFMB because
+			// the miner pool won't include all miners that created those blocks.
+			selectedMB := mbs[0]
+			if mbs[0].MagicBlock != nil && mbs[0].MagicBlock.StartingRound > lfbr.Round {
+				logging.Logger.Warn("load_lfb - LFMB starting round ahead of LFB, finding appropriate MB",
+					zap.Int64("lfmb_sr", mbs[0].MagicBlock.StartingRound),
+					zap.Int64("lfb_round", lfbr.Round),
+					zap.Int64("lfmb_number", mbs[0].MagicBlock.MagicBlockNumber))
+				// Find the MB whose starting round is <= lfbr.Round (state DB)
+				for i := 1; i < len(mbs); i++ {
+					if mbs[i].MagicBlock != nil && mbs[i].MagicBlock.StartingRound <= lfbr.Round {
+						logging.Logger.Info("load_lfb - using appropriate MB for LFB round",
+							zap.Int64("lfb_round", lfbr.Round),
+							zap.Int64("mb_sr", mbs[i].MagicBlock.StartingRound),
+							zap.Int64("mb_number", mbs[i].MagicBlock.MagicBlockNumber))
+						selectedMB = mbs[i]
+						break
+					}
+				}
+			}
+
+			// Now set up nodes and LFMB with the selected MB
+			sc.UpdateMagicBlock(selectedMB.MagicBlock)
+			sc.SetLatestFinalizedMagicBlock(selectedMB)
 
 			if lfbr.Round <= lfbRound {
 				// use LFB from state DB when:

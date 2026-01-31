@@ -544,6 +544,18 @@ func (c *Chain) tryRecoverMagicBlock(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch latest magic block: %v", err)
 	}
 
+	// Ensure the magic block's StartingRound is not ahead of our LFB.
+	// LFMB should never be ahead of the sharders' LFMB or miner/sharder LFB.
+	// If the MB's StartingRound is ahead, we haven't finalized enough blocks yet.
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb != nil && latestBlock.MagicBlock.StartingRound > lfb.Round {
+		logging.Logger.Debug("skipping magic block recovery: MB starting round ahead of LFB",
+			zap.Int64("mb_starting_round", latestBlock.MagicBlock.StartingRound),
+			zap.Int64("lfb_round", lfb.Round),
+			zap.Int64("mb_number", latestBlock.MagicBlockNumber))
+		return nil
+	}
+
 	if latestBlock.MagicBlockNumber <= currentMB.MagicBlockNumber {
 		logging.Logger.Debug("no newer magic block available",
 			zap.Int64("current", currentMB.MagicBlockNumber),

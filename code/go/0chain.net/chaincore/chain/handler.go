@@ -666,7 +666,9 @@ func (c *Chain) blocksHealthInATable(w http.ResponseWriter, r *http.Request) {
 		cr   = c.GetRound(rn)
 		lfb  = c.GetLatestFinalizedBlock()
 		plfb = c.GetLocalPreviousBlock(ctx, lfb)
-		lfmb = c.GetLatestMagicBlock()
+		// Use the MB for current LFB round, not the latest from storage
+		// (storage may have future MBs that aren't finalized yet)
+		lfmb = c.GetMagicBlock(lfb.Round)
 
 		next [4]*block.Block // blocks after LFB
 	)
