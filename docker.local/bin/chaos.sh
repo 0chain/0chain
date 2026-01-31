@@ -12,6 +12,7 @@ MAX_STOP_TIME=30    # Maximum time container stays stopped (seconds)
 MIN_RUN_TIME=20     # Minimum time before next chaos operation (seconds)
 MAX_RUN_TIME=60     # Maximum time before next chaos operation (seconds)
 ITERATIONS=0        # Number of test iterations (0 = infinite)
+VC_PAUSE_TIME=300   # Time to pause after restoring all containers (seconds) - allows view change to execute
 
 # Local container names (matching docker-compose naming)
 MINERS=("miner-1" "miner-2" "miner-3" "miner-4")
@@ -130,6 +131,90 @@ check_chain_status() {
     local vrfs=$(curl -s "$MINER_DIAG" 2>/dev/null | grep -oE "VRFs</td><td[^>]*>\([0-9]+/[0-9]+\)" | grep -oE "\([0-9]+/[0-9]+\)" || echo "?")
 
     echo -e "  Round: ${GREEN}$round${NC}, LFB: ${GREEN}$lfb${NC}, VRFs: ${GREEN}$vrfs${NC}"
+}
+
+# Get current LFB round
+get_lfb() {
+    local lfb=$(curl -s "$MINER_DIAG" 2>/dev/null | grep -oE "Latest Finalized Round</td><td[^>]*>([0-9]+)" | grep -oE "[0-9]+")
+    echo "${lfb:-0}"
+}
+
+# Wait for chain to make progress (LFB to advance)
+# Returns 0 if chain progressed, 1 if timeout
+wait_for_chain_progress() {
+    local min_rounds=${1:-5}         # Minimum rounds to advance
+    local timeout=${2:-300}          # Timeout in seconds (default 5 min)
+    local check_interval=${3:-10}    # Check interval in seconds
+
+    local start_lfb=$(get_lfb)
+    local start_time=$(date +%s)
+    local target_lfb=$((start_lfb + min_rounds))
+
+    log "${CYAN}Waiting for chain progress: LFB $start_lfb -> $target_lfb (min +$min_rounds rounds)${NC}"
+
+    while true; do
+        local current_lfb=$(get_lfb)
+        local elapsed=$(($(date +%s) - start_time))
+        local progress=$((current_lfb - start_lfb))
+
+        if [ "$current_lfb" -ge "$target_lfb" ]; then
+            log "${GREEN}Chain progressed: LFB $start_lfb -> $current_lfb (+$progress rounds in ${elapsed}s)${NC}"
+            return 0
+        fi
+
+        if [ $elapsed -ge $timeout ]; then
+            log "${RED}TIMEOUT waiting for chain progress: LFB stuck at $current_lfb (started at $start_lfb, +$progress rounds)${NC}"
+            return 1
+        fi
+
+        # Show progress every check
+        echo -n -e "  ${YELLOW}LFB: $current_lfb (+$progress), ${elapsed}s elapsed...${NC}\r"
+        sleep $check_interval
+    done
+}
+
+# Pause for view change transactions with chain progress verification
+vc_pause() {
+    log "${MAGENTA}=== Waiting for View Change Window (3 minutes) ===${NC}"
+
+    # Ensure all containers are running before waiting
+    ensure_all_running
+
+    # Wait minimum 3 minutes for view change to complete
+    local min_wait=180
+    local start_time=$(date +%s)
+    local start_lfb=$(get_lfb)
+
+    log "${CYAN}Waiting ${min_wait}s for view change to complete (LFB: $start_lfb)${NC}"
+
+    while true; do
+        local elapsed=$(($(date +%s) - start_time))
+        local current_lfb=$(get_lfb)
+        local progress=$((current_lfb - start_lfb))
+
+        if [ $elapsed -ge $min_wait ]; then
+            log "${GREEN}View change window complete: ${elapsed}s elapsed, LFB $start_lfb -> $current_lfb (+$progress rounds)${NC}"
+            break
+        fi
+
+        # Show progress every 15 seconds
+        echo -n -e "  ${YELLOW}LFB: $current_lfb (+$progress), ${elapsed}s/${min_wait}s elapsed...${NC}\r"
+        sleep 15
+    done
+
+    # Verify chain is still progressing
+    if ! wait_for_chain_progress 5 60 10; then
+        log "${RED}WARNING: Chain did not progress after VC window!${NC}"
+        log "${YELLOW}Chain may be stuck - check miner logs for errors${NC}"
+        check_status
+        check_chain_status
+        return 1
+    fi
+
+    log "${GREEN}=== Chain Progress Verified ===${NC}"
+    check_status
+    check_chain_status
+    return 0
 }
 
 # Get a random stopped miner
@@ -359,6 +444,7 @@ log "Miners: ${MINERS[*]}"
 log "Sharders: ${SHARDERS[*]}"
 log "Stop time range: ${MIN_STOP_TIME}-${MAX_STOP_TIME} seconds"
 log "Run time range: ${MIN_RUN_TIME}-${MAX_RUN_TIME} seconds"
+log "VC pause time: ${VC_PAUSE_TIME} seconds (5 minutes)"
 log "Min miners for consensus: $MIN_MINERS_RUNNING"
 log "Press Ctrl+C to stop and restore containers"
 echo ""
@@ -386,6 +472,17 @@ while true; do
     sleep 3
     check_status
     check_chain_status
+
+    # Wait for chain to progress before next operation
+    if ! vc_pause; then
+        log "${YELLOW}Chain stuck - ensuring all containers running and waiting longer...${NC}"
+        ensure_all_running
+        sleep 30
+        # Try again with longer timeout
+        if ! wait_for_chain_progress 5 120 10; then
+            log "${RED}Chain still stuck after recovery attempt - continuing anyway${NC}"
+        fi
+    fi
 
     # Fixed sleep before next operation
     run_time=$MIN_RUN_TIME
