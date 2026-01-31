@@ -1822,7 +1822,13 @@ func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 	if lfmb == nil || lfmb.MagicBlock == nil ||
 		lfmb.MagicBlock.MagicBlockNumber < expectedMB.MagicBlockNumber {
 		// Finalized MB is stale, update it
-		mbBlock := &block.Block{MagicBlock: expectedMB}
+		// Set the block's Round and Hash from the magic block so GetLatestFinalizedMagicBlockRound
+		// returns proper values for LatestFinalizedMagicBlockRound/Hash fields in proposed blocks
+		mbBlock := &block.Block{
+			MagicBlock: expectedMB,
+		}
+		mbBlock.Round = expectedMB.StartingRound
+		mbBlock.Hash = expectedMB.Hash
 		mc.SetLatestFinalizedMagicBlock(mbBlock)
 		logging.Logger.Info("verifyMBAndDKGForLFB - updated finalized MB",
 			zap.Int64("old_mb", func() int64 {

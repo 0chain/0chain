@@ -2585,6 +2585,22 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		return
 	}
 
+	// Ensure block has valid Hash and Round values for GetLatestFinalizedMagicBlockRound
+	// to return proper values. If not set (e.g., synthetic blocks during recovery),
+	// use the MagicBlock's values as fallback.
+	if b.Hash == "" {
+		logging.Logger.Warn("SetLatestFinalizedMagicBlock: using MagicBlock.Hash as fallback",
+			zap.Int64("mb_number", b.MagicBlock.MagicBlockNumber),
+			zap.String("mb_hash", b.MagicBlock.Hash))
+		b.Hash = b.MagicBlock.Hash
+	}
+	if b.Round == 0 {
+		logging.Logger.Warn("SetLatestFinalizedMagicBlock: using MagicBlock.StartingRound as fallback",
+			zap.Int64("mb_number", b.MagicBlock.MagicBlockNumber),
+			zap.Int64("mb_sr", b.MagicBlock.StartingRound))
+		b.Round = b.MagicBlock.StartingRound
+	}
+
 	latest := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	if latest != nil && latest.MagicBlock != nil &&
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
