@@ -764,17 +764,43 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 				zap.Error(err))
 
 			if err := c.GetBlockStateChange(b); err != nil {
-				logging.Logger.Warn("add notarized block - sync block state failed",
+				logging.Logger.Warn("add notarized block - GetBlockStateChange failed, trying to fetch state root node",
 					zap.Int64("round", b.Round),
 					zap.String("block", b.Hash),
 					zap.String("prev block", b.PrevHash),
 					zap.Error(err))
 
-				select {
-				case errC <- fmt.Errorf("failed to sync block state changes: %d, err: %v", b.Round, err):
-				default:
+				// Fallback: fetch the state root node directly from peers.
+				// GetBlockStateChange fails for old blocks because peers don't cache state changes.
+				// But GetStateNodes can fetch individual MPT nodes from any peer's state DB.
+				if err := c.GetStateNodes(cctx, []util.Key{b.ClientStateHash}); err != nil {
+					logging.Logger.Error("add notarized block - GetStateNodes fallback failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.String("state_hash", util.ToHex(b.ClientStateHash)),
+						zap.Error(err))
+					select {
+					case errC <- fmt.Errorf("failed to sync block state: round %d, err: %v", b.Round, err):
+					default:
+					}
+					return
 				}
-				return
+
+				// Now try to initialize block state - the root node should exist in local DB
+				if err := b.InitStateDB(c.GetStateDB()); err != nil {
+					logging.Logger.Error("add notarized block - InitStateDB after GetStateNodes failed",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash),
+						zap.Error(err))
+					select {
+					case errC <- fmt.Errorf("failed to init block state: round %d, err: %v", b.Round, err):
+					default:
+					}
+					return
+				}
+				logging.Logger.Info("add notarized block - state recovered via GetStateNodes fallback",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash))
 			}
 		}
 	}(cctx)
