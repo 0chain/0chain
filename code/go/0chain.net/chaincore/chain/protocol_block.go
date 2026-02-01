@@ -411,7 +411,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	logging.Logger.Info("finalize block -- round", zap.Any("round", fr), zap.String("block", fb.Hash))
 	generators := c.GetGenerators(fr)
 	for idx, g := range generators {
-		ms := g.ProtocolStats.(*MinerStats)
+		if g.ProtocolStats == nil {
+			continue
+		}
+		ms, ok := g.ProtocolStats.(*MinerStats)
+		if !ok || ms == nil {
+			continue
+		}
 		if len(generators) > len(ms.GenerationCountByRank) {
 			newRankStat := make([]int64, len(generators))
 			copy(newRankStat, ms.GenerationCountByRank)

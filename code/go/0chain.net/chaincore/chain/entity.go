@@ -914,6 +914,9 @@ func (c *Chain) SetupEventDatabase() error {
 
 func (c *Chain) getBlockEvents(round int64) (int64, []event.Event, error) {
 	meta := datastore.GetEntityMetadata("last_block_events")
+	if meta == nil {
+		return 0, nil, fmt.Errorf("last_block_events entity metadata not registered")
+	}
 	blockEvents := meta.Instance().(*block.BlockEvents)
 	key := strconv.FormatInt(round%int64(block.EventsRingSize), 10)
 

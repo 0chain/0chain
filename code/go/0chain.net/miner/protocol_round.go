@@ -1862,7 +1862,11 @@ func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 	// ALWAYS update finalized MB to match sharders' LFMB.
 	// This ensures all miners converge to the same LFMB on startup.
 	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
+	// Set the block's Round and Hash from the magic block so GetLatestFinalizedMagicBlockRound
+	// returns proper values for LatestFinalizedMagicBlockRound/Hash fields in proposed blocks
 	mbBlock := &block.Block{MagicBlock: expectedMB}
+	mbBlock.Round = expectedMB.StartingRound
+	mbBlock.Hash = expectedMB.Hash
 	mc.SetLatestFinalizedMagicBlock(mbBlock)
 	logging.Logger.Info("verifyMBAndDKGForLFB - set finalized MB from sharders",
 		zap.Int64("old_mb", func() int64 {
