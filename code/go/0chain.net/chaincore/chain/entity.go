@@ -2656,7 +2656,27 @@ func (c *Chain) SetupNodes(mb *block.MagicBlock) error {
 		}
 	}
 
-	node.RegisterNodes(append(mns, shs...))
+	// Also include nodes from previous magic block to allow validation of
+	// blocks created by miners that were in the previous MB but not current
+	allNodes := append(mns, shs...)
+	if c.PreviousMagicBlock != nil {
+		prevMns := c.PreviousMagicBlock.Miners.CopyNodes()
+		for _, mn := range prevMns {
+			if err := node.Setup(mn); err != nil {
+				return err
+			}
+		}
+		prevShs := c.PreviousMagicBlock.Sharders.CopyNodes()
+		for _, sh := range prevShs {
+			if err := node.Setup(sh); err != nil {
+				return err
+			}
+		}
+		allNodes = append(allNodes, prevMns...)
+		allNodes = append(allNodes, prevShs...)
+	}
+
+	node.RegisterNodes(allNodes)
 
 	return nil
 }
@@ -2710,6 +2730,15 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		return
 	}
 
+	// ALWAYS update magicBlockStartingRoundsMap first, even if LFMB channel already has
+	// this MB. This ensures GetLatestFinalizedMagicBlockRound can find the MB for block
+	// generation and VRF signing. Without this, the map may not have the correct MB
+	// and GetLatestFinalizedMagicBlockRound falls back to LFMB channel which could be stale.
+	c.lfmbMutex.Lock()
+	c.magicBlockStartingRoundsMap[b.MagicBlock.StartingRound] = b
+	c.magicBlockStartingRounds.Add(b.StartingRound)
+	c.lfmbMutex.Unlock()
+
 	latest := c.GetLatestFinalizedMagicBlock(common.GetRootContext())
 	if latest != nil && latest.MagicBlock != nil &&
 		latest.MagicBlock.MagicBlockNumber == b.MagicBlock.MagicBlockNumber-1 &&
@@ -2722,6 +2751,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 			b.MagicBlock.PreviousMagicBlockHash))
 	}
 
+	// Early return if LFMB channel already has this MB - but map is already updated above
 	if latest != nil && latest.MagicBlock.Hash == b.MagicBlock.Hash {
 		return
 	}
@@ -2734,11 +2764,6 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		zap.Int("miners num:", b.Miners.Size()),
 		zap.Int("sharders num:", b.Sharders.Size()),
 	)
-
-	c.lfmbMutex.Lock()
-	c.magicBlockStartingRoundsMap[b.MagicBlock.StartingRound] = b
-	c.magicBlockStartingRounds.Add(b.StartingRound)
-	c.lfmbMutex.Unlock()
 
 	if latest == nil || b.StartingRound >= latest.StartingRound {
 		c.updateLatestFinalizedMagicBlock(context.Background(), b)
