@@ -1212,7 +1212,7 @@ func Provider() datastore.Entity {
 	c.subLFBTicket = make(chan chan *LFBTicket, 1)      //
 	c.unsubLFBTicket = make(chan chan *LFBTicket, 1)    //
 	c.lfbTickerWorkerIsDone = make(chan struct{})       //
-	c.resetLFBTicket = make(chan *block.Block, 1)      // for startup rollback
+	c.resetLFBTicket = make(chan *block.Block, 1)       // for startup rollback
 	c.syncLFBStateC = make(chan *block.BlockSummary)
 	c.syncMissingNodesC = make(chan syncPathNodes, 1)
 
@@ -1848,11 +1848,13 @@ func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
 	c.DeleteBlocksBelowRound(b.Round - 50)
 }
 
-/*ValidateMagicBlock - validate the block for a given round has the right magic block.
+/*
+ValidateMagicBlock - validate the block for a given round has the right magic block.
 Modified to allow adjacent MBs: accepts blocks with our current LFMB or the immediately
 previous MB (MagicBlockNumber - 1). This helps during chain recovery when miners may
 have slightly different LFMB states while still maintaining security by not accepting
-blocks with arbitrarily old MBs. */
+blocks with arbitrarily old MBs.
+*/
 func (c *Chain) ValidateMagicBlock(_ context.Context, mr *round.Round, b *block.Block) bool {
 	// Get our current LFMB for this round
 	mb := c.GetLatestFinalizedMagicBlockRound(mr.GetRoundNumber())
@@ -2660,9 +2662,10 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 		return
 	}
 
-	// For synthetic blocks without proper Hash/Round values, only update the
-	// LFMB channel (for diagnostics) and MagicBlockStorage, but skip storing
-	// in magicBlockStartingRoundsMap to avoid hash mismatches during verification.
+	// For synthetic blocks without proper Hash/Round values, still update
+	// magicBlockStartingRoundsMap so GetLatestFinalizedMagicBlockRound returns
+	// the correct MB. This is critical for VRF and block generation which use
+	// this map to determine which MB to reference for a given round.
 	isSyntheticBlock := b.Hash == "" || b.Round == 0
 	if isSyntheticBlock {
 		logging.Logger.Warn("SetLatestFinalizedMagicBlock: processing synthetic block",
@@ -2676,6 +2679,12 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 			logging.Logger.Error("failed to put magic block from synthetic block", zap.Error(err))
 		}
 		c.mbMutex.Unlock()
+		// Also add to magicBlockStartingRoundsMap so GetLatestFinalizedMagicBlockRound
+		// returns correct MB for VRF and block generation
+		c.lfmbMutex.Lock()
+		c.magicBlockStartingRoundsMap[b.MagicBlock.StartingRound] = b
+		c.magicBlockStartingRounds.Add(b.MagicBlock.StartingRound)
+		c.lfmbMutex.Unlock()
 		// Update the LFMB channel so diagnostics shows correct value
 		c.updateLatestFinalizedMagicBlock(context.Background(), b)
 		return

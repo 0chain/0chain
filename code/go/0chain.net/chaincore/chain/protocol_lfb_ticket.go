@@ -530,6 +530,26 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				continue // not updated
 			}
 
+			// Reject tickets that are too far ahead of local LFB.
+			// This prevents stale high tickets from overwriting the correct LFB ticket after startup.
+			// If LFB is not yet loaded, only accept tickets within a reasonable range.
+			const maxTicketAhead int64 = 5
+			lfb := c.GetLatestFinalizedBlock()
+			if lfb == nil {
+				// LFB not loaded yet - only accept low round tickets
+				if ticket.Round > maxTicketAhead {
+					logging.Logger.Debug("update lfb ticket - rejecting (LFB not loaded, ticket round too high)",
+						zap.Int64("ticket_round", ticket.Round))
+					continue
+				}
+			} else if ticket.Round > lfb.Round+maxTicketAhead {
+				logging.Logger.Debug("update lfb ticket - rejecting (too far ahead of LFB)",
+					zap.Int64("ticket_round", ticket.Round),
+					zap.Int64("lfb_round", lfb.Round),
+					zap.Int64("max_ahead", maxTicketAhead))
+				continue
+			}
+
 			// for self updating case (kick itself) - blank ticket from BumpTicket
 			if ticket.Sign == "" {
 				// If ticket is ahead of local LFB, trigger sync to catch up
@@ -672,9 +692,16 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 	// The chain cannot move ahead more than 5 blocks at a time, so tickets
 	// claiming a much higher round are either stale (from before a rollback)
 	// or from a forked chain.
-	const maxTicketAhead = 5
+	const maxTicketAhead int64 = 5
 	lfb := chain.GetLatestFinalizedBlock()
-	if lfb != nil && ticket.Round > lfb.Round+maxTicketAhead {
+	if lfb == nil {
+		// LFB not loaded yet - only accept low round tickets
+		if ticket.Round > maxTicketAhead {
+			logging.Logger.Debug("handling LFB ticket - rejecting (LFB not loaded, ticket round too high)",
+				zap.Int64("ticket_round", ticket.Round))
+			return nil, common.NewError("lfb_ticket_handler", "ticket too far ahead (LFB not loaded)")
+		}
+	} else if ticket.Round > lfb.Round+maxTicketAhead {
 		logging.Logger.Debug("handling LFB ticket - rejecting (too far ahead)",
 			zap.Int64("ticket_round", ticket.Round),
 			zap.Int64("local_lfb_round", lfb.Round),

@@ -2,8 +2,12 @@ package chain
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
+	"strconv"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -693,7 +697,9 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 }
 
 // GetThresholdFromState reads t_percent from smart contract's GlobalNode state
-// and calculates the notarization threshold. Falls back to local config if state read fails.
+// and calculates the notarization threshold. If local state read fails (corrupted state),
+// it fetches t_percent from peer sharders via REST API. Falls back to local config only
+// if both local state and peer fetch fail.
 // This method is exported for use by miner package.
 func (c *Chain) GetThresholdFromState(minersCount int) int {
 	lfb := c.GetLatestFinalizedBlock()
@@ -705,10 +711,24 @@ func (c *Chain) GetThresholdFromState(minersCount int) int {
 	var gn minersc.GlobalNode
 	err := c.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
 	if err != nil {
-		logging.Logger.Debug("getThresholdFromState - failed to read GlobalNode, using local config",
+		logging.Logger.Debug("getThresholdFromState - failed to read GlobalNode from local state, trying peer sharders",
 			zap.Error(err),
 			zap.Int64("lfb_round", lfb.Round))
-		return c.GetNotarizationThresholdCount(minersCount)
+
+		// Try to fetch t_percent from peer sharders via REST API
+		tPercent, fetchErr := c.getTPercentFromSharders()
+		if fetchErr != nil {
+			logging.Logger.Debug("getThresholdFromState - failed to fetch from peers, using local config",
+				zap.Error(fetchErr))
+			return c.GetNotarizationThresholdCount(minersCount)
+		}
+
+		threshold := int(math.Ceil(float64(minersCount) * tPercent))
+		logging.Logger.Info("getThresholdFromState - using t_percent from peer sharders",
+			zap.Float64("t_percent", tPercent),
+			zap.Int("miners_count", minersCount),
+			zap.Int("threshold", threshold))
+		return threshold
 	}
 
 	tPercent := gn.MustBase().TPercent
@@ -718,6 +738,89 @@ func (c *Chain) GetThresholdFromState(minersCount int) int {
 		zap.Int("miners_count", minersCount),
 		zap.Int("threshold", threshold))
 	return threshold
+}
+
+// getTPercentFromSharders fetches t_percent from peer sharders via the smart contract
+// REST API when local state is corrupted or unavailable.
+func (c *Chain) getTPercentFromSharders() (float64, error) {
+	mb := c.GetLatestMagicBlock()
+	if mb == nil || mb.Sharders == nil {
+		return 0, common.NewError("no_magic_block", "no magic block available")
+	}
+
+	sharders := mb.Sharders.CopyNodesMap()
+	if len(sharders) == 0 {
+		return 0, common.NewError("no_sharders", "no sharders in magic block")
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	// Try each sharder until we get a successful response
+	for _, sharder := range sharders {
+		if sharder.GetStatus() == node.NodeStatusInactive {
+			continue
+		}
+
+		url := fmt.Sprintf("%s/v1/screst/%s/globalSettings", sharder.GetN2NURLBase(), minersc.ADDRESS)
+
+		resp, err := client.Get(url)
+		if err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - request failed",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Error(err))
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			logging.Logger.Debug("getTPercentFromSharders - non-200 status",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Int("status", resp.StatusCode))
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - failed to read body",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Error(err))
+			continue
+		}
+
+		var result struct {
+			Fields map[string]string `json:"fields"`
+		}
+		if err := json.Unmarshal(body, &result); err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - failed to parse JSON",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Error(err))
+			continue
+		}
+
+		tPercentStr, ok := result.Fields["t_percent"]
+		if !ok {
+			logging.Logger.Debug("getTPercentFromSharders - t_percent not in response",
+				zap.String("sharder", sharder.GetKey()))
+			continue
+		}
+
+		tPercent, err := strconv.ParseFloat(tPercentStr, 64)
+		if err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - failed to parse t_percent",
+				zap.String("sharder", sharder.GetKey()),
+				zap.String("t_percent_str", tPercentStr),
+				zap.Error(err))
+			continue
+		}
+
+		logging.Logger.Info("getTPercentFromSharders - successfully fetched t_percent",
+			zap.String("sharder", sharder.GetKey()),
+			zap.Float64("t_percent", tPercent))
+		return tPercent, nil
+	}
+
+	return 0, common.NewError("fetch_failed", "failed to fetch t_percent from all peer sharders")
 }
 
 // GetLocalPreviousBlock returns previous block for the block. Without a network
