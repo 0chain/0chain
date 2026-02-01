@@ -203,6 +203,14 @@ func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 }
 
 func (c *Chain) BumpLFBTicket(ctx context.Context) {
+	// Wait for LoadLatestBlocksFromStore to complete before bumping ticket.
+	// This prevents race conditions where workers bump the ticket with network data
+	// before the local LFB is properly loaded.
+	if !c.IsLFBLoadingComplete() {
+		logging.Logger.Debug("BumpLFBTicket - skipping (LFB loading not complete)")
+		return
+	}
+
 	// Check if local LFB is at round 0 (fresh startup or stale state)
 	// If so, DON'T bump the ticket - let the miner start from genesis and sync incrementally
 	// Setting ticket high when at genesis causes filtering issues that prevent syncing
@@ -634,6 +642,16 @@ func (c *Chain) ResetLFBTicket(ctx context.Context, b *block.Block) {
 func LFBTicketHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
 
+	var chain = GetServerChain()
+
+	// Reject network tickets until LoadLatestBlocksFromStore completes.
+	// This prevents the ticket from being set too high before the local LFB is loaded,
+	// which would cause the node to reject valid blocks during sync.
+	if !chain.IsLFBLoadingComplete() {
+		logging.Logger.Debug("handling LFB ticket - rejecting (LFB loading not complete)")
+		return nil, common.NewError("lfb_ticket_handler", "node still loading")
+	}
+
 	var dec = json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
@@ -644,7 +662,6 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return // (nil, err)
 	}
 
-	var chain = GetServerChain()
 	if !chain.verifyLFBTicket(&ticket) {
 		logging.Logger.Debug("handling LFB ticket", zap.String("err", "can't verify"),
 			zap.Int64("round", ticket.Round))

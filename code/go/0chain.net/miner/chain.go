@@ -377,8 +377,13 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		}
 	}
 
-	// Don't reset LFB ticket with cap - the network's ticket is authoritative
-	// The ticket will be updated naturally via BumpLFBTicket during operation
+	// Reset LFB ticket to match actual LFB after any rollback during startup.
+	// This ensures the ticket is not set too high from stale network data.
+	mc.Chain.ResetLFBTicket(ctx, b)
+
+	// Mark LFB loading as complete - workers can now call BumpLFBTicket
+	// and LFBTicketHandler can accept network tickets
+	mc.Chain.SetLFBLoadingComplete()
 
 	return nil
 }
@@ -455,6 +460,8 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 	}
 	if len(fbs) == 0 {
 		logging.Logger.Warn("load_lfb - no LFB available from sharders after retries, will use genesis")
+		// Mark loading complete even for genesis fallback
+		mc.Chain.SetLFBLoadingComplete()
 		return nil // Fall back to genesis
 	}
 
@@ -481,6 +488,8 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 
 	if best == nil {
 		logging.Logger.Warn("load_lfb - no valid LFB with sufficient verification tickets from sharders, will use genesis")
+		// Mark loading complete even for genesis fallback
+		mc.Chain.SetLFBLoadingComplete()
 		return nil // Fall back to genesis
 	}
 
@@ -515,6 +524,8 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 			zap.Int64("network_lfb_round", best.Round),
 			zap.String("network_lfb_hash", best.Hash),
 			zap.Error(err))
+		// Mark loading complete even for genesis fallback
+		mc.Chain.SetLFBLoadingComplete()
 		return nil // Fall back to genesis - state will be built as blocks are synced
 	}
 
@@ -529,9 +540,13 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 		zap.Int64("round", best.Round),
 		zap.String("hash", best.Hash))
 
-	// Don't reset LFB ticket when syncing from network - the network's ticket is authoritative
-	// Calling ResetLFBTicket here would cap received tickets at our adjusted LFB,
-	// but the network may be legitimately ahead. Let BumpLFBTicket handle ticket updates.
+	// Reset LFB ticket to match actual LFB after loading from sharders.
+	// This ensures the ticket is not set too high from stale network data.
+	mc.Chain.ResetLFBTicket(ctx, best)
+
+	// Mark LFB loading as complete - workers can now call BumpLFBTicket
+	// and LFBTicketHandler can accept network tickets
+	mc.Chain.SetLFBLoadingComplete()
 
 	return nil
 }

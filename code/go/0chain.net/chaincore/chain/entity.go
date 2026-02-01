@@ -245,10 +245,26 @@ type Chain struct {
 
 	roundDkg   round.RoundStorage
 	roundDkgMu sync.RWMutex
+
+	// lfbLoadingComplete is set to 1 after LoadLatestBlocksFromStore completes.
+	// This prevents race conditions where workers start calling BumpLFBTicket
+	// and LFBTicketHandler accepts network tickets before the local LFB is loaded.
+	lfbLoadingComplete uint32
 }
 
 func (c *Chain) GetRoundDkg() round.RoundStorage {
 	return c.roundDkg
+}
+
+// SetLFBLoadingComplete marks that LoadLatestBlocksFromStore has finished.
+// This allows BumpLFBTicket and LFBTicketHandler to start accepting/processing tickets.
+func (c *Chain) SetLFBLoadingComplete() {
+	atomic.StoreUint32(&c.lfbLoadingComplete, 1)
+}
+
+// IsLFBLoadingComplete returns true if LoadLatestBlocksFromStore has completed.
+func (c *Chain) IsLFBLoadingComplete() bool {
+	return atomic.LoadUint32(&c.lfbLoadingComplete) == 1
 }
 
 func (c *Chain) GetNotifyMoveToNextRoundC() chan round.RoundI {

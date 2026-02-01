@@ -781,6 +781,8 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 	if lfbRound == 0 {
 		// use genesis
 		logging.Logger.Debug("load_lfb - load from event db, use genesis block")
+		// Mark loading complete even for genesis fallback
+		sc.Chain.SetLFBLoadingComplete()
 		return nil
 	}
 
@@ -993,6 +995,10 @@ loop:
 
 	// Reset LFB ticket to match actual LFB after any rollback during startup
 	sc.Chain.ResetLFBTicket(ctx, bl.lfb)
+
+	// Mark LFB loading as complete - workers can now call BumpLFBTicket
+	// and LFBTicketHandler can accept network tickets
+	sc.Chain.SetLFBLoadingComplete()
 
 	return nil
 }
