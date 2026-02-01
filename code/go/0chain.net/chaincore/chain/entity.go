@@ -722,22 +722,16 @@ func (c *Chain) AddNotarizedBlock(ctx context.Context, r round.RoundI, b *block.
 	}
 
 	isSharder := node.Self.IsSharder()
-	if isSharder {
-		// Accept both StateSuccessful and StateSynched as valid computed states
-		if pb.ClientState == nil || !pb.IsStateComputed() {
-			return common.NewErrorf("previous block state is not computed", "round: %d, hash: %s, ptr: %p, state status: %d",
-				pb.Round, pb.Hash, pb, pb.GetStateStatus())
-		}
-	} else {
-		if pb.ClientState == nil || !pb.IsStateComputed() {
-			if err := c.ComputeState(ctx, pb); err != nil {
-				if isSharder {
-					return fmt.Errorf("failed to compute state of block %d: %v", pb.Round, err)
-				}
-
-				if err := c.GetBlockStateChange(pb); err != nil {
-					return fmt.Errorf("failed to sync block state changes: %d, err: %v", pb.Round, err)
-				}
+	if pb.ClientState == nil || !pb.IsStateComputed() {
+		// Try to compute state first
+		if err := c.ComputeState(ctx, pb); err != nil {
+			// ComputeState failed, try to fetch state from peers
+			logging.Logger.Debug("AddNotarizedBlock - ComputeState failed, trying GetBlockStateChange",
+				zap.Int64("round", pb.Round),
+				zap.Bool("is_sharder", isSharder),
+				zap.Error(err))
+			if err := c.GetBlockStateChange(pb); err != nil {
+				return fmt.Errorf("failed to sync block state changes for round %d: %v", pb.Round, err)
 			}
 		}
 	}

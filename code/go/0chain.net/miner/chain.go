@@ -260,7 +260,8 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	if currentFinalizedMB == nil || currentFinalizedMB.MagicBlock == nil {
 		return
 	}
-	if expectedMB.MagicBlockNumber != currentFinalizedMB.MagicBlock.MagicBlockNumber {
+	// Only update to a NEWER MB (higher number), never downgrade
+	if expectedMB.MagicBlockNumber > currentFinalizedMB.MagicBlock.MagicBlockNumber {
 		logging.Logger.Info("SetLatestFinalizedBlock - LFB crossed MB transition, updating finalized MB",
 			zap.Int64("lfb_round", b.Round),
 			zap.Int64("old_mb", currentFinalizedMB.MagicBlock.MagicBlockNumber),
