@@ -530,9 +530,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 				continue // not updated
 			}
 
-			// Reject tickets that are too far ahead of local LFB.
-			// This prevents stale high tickets from overwriting the correct LFB ticket after startup.
-			// If LFB is not yet loaded, only accept tickets within a reasonable range.
+			// Handle tickets that are far ahead of local LFB.
+			// We need to accept them to learn the network is ahead and trigger sync,
+			// but we cap the ticket round to prevent rebroadcasting tickets far ahead of our actual LFB.
 			const maxTicketAhead int64 = 5
 			lfb := c.GetLatestFinalizedBlock()
 			if lfb == nil {
@@ -543,11 +543,13 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 					continue
 				}
 			} else if ticket.Round > lfb.Round+maxTicketAhead {
-				logging.Logger.Debug("update lfb ticket - rejecting (too far ahead of LFB)",
+				// Ticket is far ahead - trigger sync but cap the ticket for rebroadcasting
+				logging.Logger.Info("update lfb ticket - far ahead, triggering sync",
 					zap.Int64("ticket_round", ticket.Round),
-					zap.Int64("lfb_round", lfb.Round),
-					zap.Int64("max_ahead", maxTicketAhead))
-				continue
+					zap.Int64("lfb_round", lfb.Round))
+				c.NotifyBlockSync()
+				// Cap ticket to prevent rebroadcasting high tickets we haven't synced to
+				ticket.Round = lfb.Round + maxTicketAhead
 			}
 
 			// for self updating case (kick itself) - blank ticket from BumpTicket
@@ -688,10 +690,9 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
-	// Reject tickets that are too far ahead of local LFB.
-	// The chain cannot move ahead more than 5 blocks at a time, so tickets
-	// claiming a much higher round are either stale (from before a rollback)
-	// or from a forked chain.
+	// Check if ticket is far ahead of local LFB.
+	// We accept far-ahead tickets to learn about network state and trigger sync,
+	// but the worker will cap the ticket round to prevent rebroadcasting.
 	const maxTicketAhead int64 = 5
 	lfb := chain.GetLatestFinalizedBlock()
 	if lfb == nil {
@@ -702,11 +703,10 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 			return nil, common.NewError("lfb_ticket_handler", "ticket too far ahead (LFB not loaded)")
 		}
 	} else if ticket.Round > lfb.Round+maxTicketAhead {
-		logging.Logger.Debug("handling LFB ticket - rejecting (too far ahead)",
+		// Log but don't reject - let it through to trigger sync in the worker
+		logging.Logger.Debug("handling LFB ticket - far ahead, will trigger sync",
 			zap.Int64("ticket_round", ticket.Round),
-			zap.Int64("local_lfb_round", lfb.Round),
-			zap.Int64("max_ahead", maxTicketAhead))
-		return nil, common.NewError("lfb_ticket_handler", "ticket too far ahead of local LFB")
+			zap.Int64("local_lfb_round", lfb.Round))
 	}
 
 	// Accept signed tickets from network - they represent the sender's actual LFB state.
