@@ -1819,39 +1819,20 @@ func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 		return // No LFB set yet, nothing to verify
 	}
 
-	// CRITICAL FIX: Fetch LFMB from sharders as the source of truth.
-	// This prevents split-brain where different miners have different MBs stored locally.
-	// Sharders are the authoritative source for which MB is finalized.
-	var expectedMB *block.MagicBlock
-	sharderLFMB := mc.GetLatestFinalizedMagicBlockFromSharders(ctx)
-	if sharderLFMB != nil && sharderLFMB.MagicBlock != nil {
-		// Use sharder's LFMB if it's valid for our LFB round
-		if sharderLFMB.MagicBlock.StartingRound <= lfb.Round {
-			expectedMB = sharderLFMB.MagicBlock
-			logging.Logger.Info("verifyMBAndDKGForLFB - using sharder LFMB as expected MB",
-				zap.Int64("sharder_mb_number", sharderLFMB.MagicBlock.MagicBlockNumber),
-				zap.Int64("sharder_mb_sr", sharderLFMB.MagicBlock.StartingRound),
-				zap.Int64("lfb_round", lfb.Round))
-		} else {
-			logging.Logger.Warn("verifyMBAndDKGForLFB - sharder LFMB starting round ahead of LFB, using local MB",
-				zap.Int64("sharder_mb_sr", sharderLFMB.MagicBlock.StartingRound),
-				zap.Int64("lfb_round", lfb.Round))
-		}
-	}
-
-	// Fall back to local MB only if sharder LFMB wasn't usable
+	// Use GetMagicBlock(lfb.Round) as the primary source of truth.
+	// This correctly calculates which MB is active for the LFB round based on
+	// StartingRound + ViewChangeOffset. Don't blindly trust sharder's LFMB because
+	// sharders may be behind and report an older MB even when a newer MB should be active.
+	expectedMB := mc.GetMagicBlock(lfb.Round)
 	if expectedMB == nil {
-		expectedMB = mc.GetMagicBlock(lfb.Round)
-		if expectedMB == nil {
-			logging.Logger.Warn("verifyMBAndDKGForLFB - no MB for LFB round",
-				zap.Int64("lfb_round", lfb.Round))
-			return
-		}
-		logging.Logger.Info("verifyMBAndDKGForLFB - using local MB as expected MB",
-			zap.Int64("local_mb_number", expectedMB.MagicBlockNumber),
-			zap.Int64("local_mb_sr", expectedMB.StartingRound),
+		logging.Logger.Warn("verifyMBAndDKGForLFB - no MB for LFB round",
 			zap.Int64("lfb_round", lfb.Round))
+		return
 	}
+	logging.Logger.Info("verifyMBAndDKGForLFB - using GetMagicBlock for LFB round",
+		zap.Int64("mb_number", expectedMB.MagicBlockNumber),
+		zap.Int64("mb_sr", expectedMB.StartingRound),
+		zap.Int64("lfb_round", lfb.Round))
 
 	currentMB := mc.GetCurrentMagicBlock()
 	if currentMB == nil {
