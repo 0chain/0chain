@@ -668,6 +668,20 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
+	// Reject tickets that are too far ahead of local LFB.
+	// The chain cannot move ahead more than 5 blocks at a time, so tickets
+	// claiming a much higher round are either stale (from before a rollback)
+	// or from a forked chain.
+	const maxTicketAhead = 5
+	lfb := chain.GetLatestFinalizedBlock()
+	if lfb != nil && ticket.Round > lfb.Round+maxTicketAhead {
+		logging.Logger.Debug("handling LFB ticket - rejecting (too far ahead)",
+			zap.Int64("ticket_round", ticket.Round),
+			zap.Int64("local_lfb_round", lfb.Round),
+			zap.Int64("max_ahead", maxTicketAhead))
+		return nil, common.NewError("lfb_ticket_handler", "ticket too far ahead of local LFB")
+	}
+
 	// Accept signed tickets from network - they represent the sender's actual LFB state.
 	// This allows nodes that are behind to know where the network is and sync up.
 	chain.AddReceivedLFBTicket(ctx, &ticket)
