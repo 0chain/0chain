@@ -703,37 +703,38 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 // This method is exported for use by miner package.
 func (c *Chain) GetThresholdFromState(minersCount int) int {
 	lfb := c.GetLatestFinalizedBlock()
-	if lfb == nil || lfb.Round < 1 {
-		// Fallback to local config during bootstrap
-		return c.GetNotarizationThresholdCount(minersCount)
-	}
 
-	var gn minersc.GlobalNode
-	err := c.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
-	if err != nil {
+	// If LFB is available, try to read from local state
+	if lfb != nil && lfb.Round >= 1 {
+		var gn minersc.GlobalNode
+		err := c.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
+		if err == nil {
+			tPercent := gn.MustBase().TPercent
+			threshold := int(math.Ceil(float64(minersCount) * tPercent))
+			logging.Logger.Debug("getThresholdFromState - using t_percent from smart contract",
+				zap.Float64("t_percent", tPercent),
+				zap.Int("miners_count", minersCount),
+				zap.Int("threshold", threshold))
+			return threshold
+		}
 		logging.Logger.Debug("getThresholdFromState - failed to read GlobalNode from local state, trying peer sharders",
 			zap.Error(err),
 			zap.Int64("lfb_round", lfb.Round))
-
-		// Try to fetch t_percent from peer sharders via REST API
-		tPercent, fetchErr := c.getTPercentFromSharders()
-		if fetchErr != nil {
-			logging.Logger.Debug("getThresholdFromState - failed to fetch from peers, using local config",
-				zap.Error(fetchErr))
-			return c.GetNotarizationThresholdCount(minersCount)
-		}
-
-		threshold := int(math.Ceil(float64(minersCount) * tPercent))
-		logging.Logger.Info("getThresholdFromState - using t_percent from peer sharders",
-			zap.Float64("t_percent", tPercent),
-			zap.Int("miners_count", minersCount),
-			zap.Int("threshold", threshold))
-		return threshold
+	} else {
+		logging.Logger.Debug("getThresholdFromState - LFB not available, trying peer sharders")
 	}
 
-	tPercent := gn.MustBase().TPercent
+	// Try to fetch t_percent from peer sharders via REST API
+	// This is used when local state is corrupted OR during early bootstrap
+	tPercent, fetchErr := c.getTPercentFromSharders()
+	if fetchErr != nil {
+		logging.Logger.Debug("getThresholdFromState - failed to fetch from peers, using local config",
+			zap.Error(fetchErr))
+		return c.GetNotarizationThresholdCount(minersCount)
+	}
+
 	threshold := int(math.Ceil(float64(minersCount) * tPercent))
-	logging.Logger.Debug("getThresholdFromState - using t_percent from smart contract",
+	logging.Logger.Info("getThresholdFromState - using t_percent from peer sharders",
 		zap.Float64("t_percent", tPercent),
 		zap.Int("miners_count", minersCount),
 		zap.Int("threshold", threshold))

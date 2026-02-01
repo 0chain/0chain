@@ -249,6 +249,30 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 				zap.String("block", b.Hash))
 		}
 	}
+
+	// Check if the new LFB round requires a different MB than current finalized MB.
+	// This handles the case where forward sync advances LFB past an MB transition point.
+	expectedMB := mc.GetMagicBlock(b.Round)
+	if expectedMB == nil {
+		return
+	}
+	currentFinalizedMB := mc.GetLatestFinalizedMagicBlock(ctx)
+	if currentFinalizedMB == nil || currentFinalizedMB.MagicBlock == nil {
+		return
+	}
+	if expectedMB.MagicBlockNumber != currentFinalizedMB.MagicBlock.MagicBlockNumber {
+		logging.Logger.Info("SetLatestFinalizedBlock - LFB crossed MB transition, updating finalized MB",
+			zap.Int64("lfb_round", b.Round),
+			zap.Int64("old_mb", currentFinalizedMB.MagicBlock.MagicBlockNumber),
+			zap.Int64("old_mb_sr", currentFinalizedMB.MagicBlock.StartingRound),
+			zap.Int64("new_mb", expectedMB.MagicBlockNumber),
+			zap.Int64("new_mb_sr", expectedMB.StartingRound))
+		// Create a block wrapper for SetLatestFinalizedMagicBlock
+		mbBlock := &block.Block{MagicBlock: expectedMB}
+		mbBlock.Round = expectedMB.StartingRound
+		mbBlock.Hash = expectedMB.Hash
+		mc.SetLatestFinalizedMagicBlock(mbBlock)
+	}
 }
 
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
