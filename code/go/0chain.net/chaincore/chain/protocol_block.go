@@ -761,7 +761,7 @@ func (c *Chain) getTPercentFromSharders() (float64, error) {
 			continue
 		}
 
-		url := fmt.Sprintf("%s/v1/screst/%s/globalSettings", sharder.GetN2NURLBase(), minersc.ADDRESS)
+		url := fmt.Sprintf("%s/v1/screst/%s/configs", sharder.GetN2NURLBase(), minersc.ADDRESS)
 
 		resp, err := client.Get(url)
 		if err != nil {
