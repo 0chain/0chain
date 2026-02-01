@@ -2604,11 +2604,9 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 	c.InitializeMinerPool(newMagicBlock)
 	c.SetMagicBlock(newMagicBlock)
 
-	// initialize magicblock nodepools
-	if err := c.UpdateNodesFromMagicBlock(newMagicBlock); err != nil {
-		return common.NewErrorf("failed to update magic block", "%v", err)
-	}
-
+	// Set PreviousMagicBlock BEFORE updating nodes so that SetupNodes includes
+	// nodes from the previous MB. This is critical during MB transitions where
+	// a miner may be removed from the new MB but their blocks still need to be validated.
 	if lfmb != nil {
 		logging.Logger.Info("update magic block",
 			zap.Int("old magic block miners num", lfmb.Miners.Size()),
@@ -2622,6 +2620,11 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 				zap.String("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
 			c.PreviousMagicBlock = lfmb.MagicBlock
 		}
+	}
+
+	// initialize magicblock nodepools (now includes previous MB nodes)
+	if err := c.UpdateNodesFromMagicBlock(newMagicBlock); err != nil {
+		return common.NewErrorf("failed to update magic block", "%v", err)
 	}
 
 	return nil

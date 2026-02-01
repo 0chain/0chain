@@ -833,6 +833,25 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 				}
 			}
 
+			// Set PreviousMagicBlock BEFORE calling UpdateMagicBlock so that SetupNodes
+			// includes nodes from the previous MB. This is critical during MB transitions
+			// where a miner may be removed from the new MB but their blocks still need
+			// to be validated.
+			if selectedMB.MagicBlock != nil && selectedMB.MagicBlock.MagicBlockNumber > 1 {
+				// Look for the previous MB in the loaded MBs slice
+				for i := 0; i < len(mbs); i++ {
+					if mbs[i].MagicBlock != nil &&
+						mbs[i].MagicBlock.MagicBlockNumber == selectedMB.MagicBlock.MagicBlockNumber-1 {
+						sc.Chain.PreviousMagicBlock = mbs[i].MagicBlock
+						logging.Logger.Debug("load_lfb - set previous MB for node registration",
+							zap.Int64("prev_mb_number", mbs[i].MagicBlock.MagicBlockNumber),
+							zap.Int64("prev_mb_sr", mbs[i].MagicBlock.StartingRound),
+							zap.Int("prev_miners", mbs[i].MagicBlock.Miners.Size()))
+						break
+					}
+				}
+			}
+
 			// Now set up nodes and LFMB with the selected MB
 			sc.UpdateMagicBlock(selectedMB.MagicBlock)
 			sc.SetLatestFinalizedMagicBlock(selectedMB)

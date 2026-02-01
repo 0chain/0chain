@@ -410,6 +410,41 @@ func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 		}
 	}
 
+	// CRITICAL FIX: Even if IsStateComputed() returns true (in-memory flag), verify
+	// the state root actually exists in RocksDB. This handles the case where a block
+	// was notarized but never finalized, so state was computed in memory but never
+	// persisted to disk. Without this check, the chain can get stuck trying to use
+	// a block whose state doesn't actually exist.
+	if bnb.ClientStateHash != nil && len(bnb.ClientStateHash) > 0 {
+		if _, err := mc.GetStateDB().GetNode(bnb.ClientStateHash); err != nil {
+			logging.Logger.Warn("get block to extend - state root not found in DB despite IsStateComputed=true",
+				zap.Int64("round", r.GetRoundNumber()),
+				zap.String("block", bnb.Hash),
+				zap.String("state_hash", util.ToHex(bnb.ClientStateHash)),
+				zap.Error(err))
+
+			// Try to sync the state from peers
+			syncErr := mc.ComputeOrSyncState(ctx, bnb)
+			if syncErr != nil {
+				logging.Logger.Warn("get block to extend - failed to sync missing state, falling back to LFB",
+					zap.Int64("round", r.GetRoundNumber()),
+					zap.String("block", bnb.Hash),
+					zap.Error(syncErr))
+
+				// Fall back to LFB which is guaranteed to have valid state
+				lfb := mc.GetLatestFinalizedBlock()
+				if lfb != nil && lfb.Round < bnb.Round {
+					logging.Logger.Warn("get block to extend - using LFB due to missing state",
+						zap.Int64("round", r.GetRoundNumber()),
+						zap.String("orphaned_block", bnb.Hash),
+						zap.Int64("lfb_round", lfb.Round),
+						zap.String("lfb_hash", lfb.Hash))
+					return lfb
+				}
+			}
+		}
+	}
+
 	return // bnb
 }
 
@@ -1742,6 +1777,22 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		zap.Int64("mb number", current.MagicBlockNumber),
 		zap.Int64("mb sr", current.StartingRound),
 		zap.String("mb hash", current.Hash))
+
+	// Load previous MB BEFORE setupLoadedMagicBlock so that PreviousMagicBlock is set
+	// when UpdateMagicBlock->SetupNodes runs. This ensures previous MB's miners are
+	// registered, allowing validation of blocks from miners that were in the previous
+	// MB but may not be in the current MB (due to view change).
+	if current.MagicBlockNumber > 1 {
+		prevMBNum := current.MagicBlockNumber - 1
+		prevMB, prevErr := LoadMagicBlock(ctx, strconv.FormatInt(prevMBNum, 10))
+		if prevErr == nil && prevMB != nil {
+			mc.Chain.PreviousMagicBlock = prevMB
+			logging.Logger.Debug("[mvc] set previous MB for node registration",
+				zap.Int64("prev_mb_number", prevMBNum),
+				zap.Int64("prev_mb_sr", prevMB.StartingRound),
+				zap.Int("prev_miners", prevMB.Miners.Size()))
+		}
+	}
 
 	if err = mc.setupLoadedMagicBlock(current); err != nil {
 		logging.Logger.Info("load_mbs_and_dkg -- updating previous MB",
