@@ -254,12 +254,22 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 	// This handles the case where forward sync advances LFB past an MB transition point.
 	expectedMB := mc.GetMagicBlock(b.Round)
 	if expectedMB == nil {
+		logging.Logger.Debug("SetLatestFinalizedBlock - GetMagicBlock returned nil",
+			zap.Int64("lfb_round", b.Round))
 		return
 	}
 	currentFinalizedMB := mc.GetLatestFinalizedMagicBlock(ctx)
 	if currentFinalizedMB == nil || currentFinalizedMB.MagicBlock == nil {
+		logging.Logger.Debug("SetLatestFinalizedBlock - GetLatestFinalizedMagicBlock returned nil",
+			zap.Int64("lfb_round", b.Round))
 		return
 	}
+	logging.Logger.Debug("SetLatestFinalizedBlock - checking MB transition",
+		zap.Int64("lfb_round", b.Round),
+		zap.Int64("expected_mb_num", expectedMB.MagicBlockNumber),
+		zap.Int64("expected_mb_sr", expectedMB.StartingRound),
+		zap.Int64("current_mb_num", currentFinalizedMB.MagicBlock.MagicBlockNumber),
+		zap.Int64("current_mb_sr", currentFinalizedMB.MagicBlock.StartingRound))
 	// Only update to a NEWER MB (higher number), never downgrade
 	if expectedMB.MagicBlockNumber > currentFinalizedMB.MagicBlock.MagicBlockNumber {
 		logging.Logger.Info("SetLatestFinalizedBlock - LFB crossed MB transition, updating finalized MB",
