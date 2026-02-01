@@ -1676,7 +1676,9 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 	mc.verifyMBAndDKGForLFB(ctx)
 
 	lfb := mc.GetLatestFinalizedBlock()
+	initialLFBRound := int64(0)
 	if lfb != nil {
+		initialLFBRound = lfb.Round
 		mr = mc.startProtocolOnLFB(ctx, lfb)
 	} else {
 		// start on genesis block
@@ -1685,6 +1687,17 @@ func StartProtocol(ctx context.Context, gb *block.Block) {
 		mr = mc.CreateRound(r)
 		mr = mc.AddRound(mr).(*Round)
 	}
+
+	// After protocol starts, LFB may have advanced from forward sync.
+	// Re-verify MB/DKG if LFB changed to ensure correct MB is used.
+	newLFB := mc.GetLatestFinalizedBlock()
+	if newLFB != nil && newLFB.Round > initialLFBRound {
+		logging.Logger.Info("LFB advanced after forward sync, re-verifying MB/DKG",
+			zap.Int64("initial_lfb", initialLFBRound),
+			zap.Int64("new_lfb", newLFB.Round))
+		mc.verifyMBAndDKGForLFB(ctx)
+	}
+
 	var nr = mc.StartNextRound(ctx, mr)
 	logging.Logger.Info("starting the blockchain ...", zap.Int64("round", nr.Number))
 }
