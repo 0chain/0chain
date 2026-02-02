@@ -171,44 +171,70 @@ type blocksLoaded struct {
 // blockstore, verifies each has valid notarization, and returns the recommended
 // LFB round (highest block with finalizationDepth+ notarized successors).
 func (sc *Chain) verifyBlockContinuityFromStore(ctx context.Context, candidateRound int64, targetContinuity int, finalizationDepth int) (int64, error) {
+	const minConsecutiveBlocks = 5 // need at least 5 consecutive valid blocks for LFB
+
+	// Walk backward from candidateRound looking for a sequence of consecutive valid blocks.
+	// When we hit an invalid block, reset the chain and keep looking further back.
 	var chain []*block.Block
 
-	// Walk backward from candidateRound
-	for r := candidateRound; r > 0 && len(chain) < targetContinuity; r-- {
+	for r := candidateRound; r > 0 && r > candidateRound-int64(targetContinuity); r-- {
 		hash, err := sc.GetBlockHash(ctx, r)
 		if err != nil {
-			break
+			// No hash - reset chain and continue looking
+			if len(chain) > 0 {
+				logging.Logger.Debug("verify_continuity - gap in blocks, resetting chain",
+					zap.Int64("round", r), zap.Int("chain_len", len(chain)))
+			}
+			chain = nil
+			continue
 		}
 		b, err := sc.GetBlockFromStore(hash, r)
 		if err != nil {
-			break
+			// No block - reset chain and continue
+			chain = nil
+			continue
 		}
 		if err := sc.VerifyBlockNotarization(ctx, b); err != nil {
-			logging.Logger.Debug("verify_continuity - block failed notarization",
+			logging.Logger.Debug("verify_continuity - block failed notarization, resetting chain",
 				zap.Int64("round", r), zap.Error(err))
+			// Invalid block - reset chain and continue looking
+			chain = nil
+			continue
+		}
+
+		// Valid block - prepend to chain
+		chain = append([]*block.Block{b}, chain...)
+
+		// Check if we have enough consecutive valid blocks
+		if len(chain) >= minConsecutiveBlocks {
+			logging.Logger.Debug("verify_continuity - found consecutive valid blocks",
+				zap.Int("count", len(chain)),
+				zap.Int64("from", chain[0].Round),
+				zap.Int64("to", chain[len(chain)-1].Round))
 			break
 		}
-		chain = append([]*block.Block{b}, chain...) // prepend
 	}
 
-	// Walk forward from candidateRound+1
-	for r := candidateRound + 1; len(chain) < targetContinuity; r++ {
+	if len(chain) < minConsecutiveBlocks {
+		return 0, fmt.Errorf("could not find %d consecutive valid blocks within %d rounds back from %d (found %d)",
+			minConsecutiveBlocks, targetContinuity, candidateRound, len(chain))
+	}
+
+	// Now walk forward from the end of our chain to extend it
+	lastRound := chain[len(chain)-1].Round
+	for r := lastRound + 1; len(chain) < targetContinuity; r++ {
 		hash, err := sc.GetBlockHash(ctx, r)
 		if err != nil {
-			break
+			break // no more blocks
 		}
 		b, err := sc.GetBlockFromStore(hash, r)
 		if err != nil {
 			break
 		}
 		if err := sc.VerifyBlockNotarization(ctx, b); err != nil {
-			break
+			break // chain ends at first invalid block going forward
 		}
 		chain = append(chain, b)
-	}
-
-	if len(chain) == 0 {
-		return 0, fmt.Errorf("no valid blocks around round %d", candidateRound)
 	}
 
 	logging.Logger.Info("verify_continuity - continuous chain from local store",
