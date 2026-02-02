@@ -13,6 +13,11 @@ SLEEP_TIME=30
 VC_WAIT_TIME=120  # Max time to wait for view change
 CHAIN_PROGRESS_CHECKS=5  # Number of progress checks before moving to next test
 CHAIN_PROGRESS_INTERVAL=3  # Seconds between progress checks
+VC_CYCLES_TO_WAIT=2  # Number of view change cycles to wait for add/delete to take effect
+
+# Nonce management
+CURRENT_NONCE=0
+NONCE_INITIALIZED=false
 
 # Log file
 LOG_FILE="/tmp/view_change_loop.log"
@@ -48,6 +53,133 @@ PREV_MB=0
 # Results tracking
 declare -a TEST_RESULTS
 declare -a TEST_NAMES
+
+# Get client ID from wallet
+get_client_id() {
+    cat "$ZWALLET_DIR/$WALLET" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('client_id',''))" 2>/dev/null
+}
+
+# Get nonce from sharder API
+get_nonce_from_sharder() {
+    local sharder_url=$1
+    local client_id=$(get_client_id)
+    if [ -z "$client_id" ]; then
+        echo "0"
+        return
+    fi
+    local response=$(curl -s "${sharder_url}/v1/client/get?id=${client_id}" 2>/dev/null)
+    local nonce=$(echo "$response" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('nonce', 0))" 2>/dev/null)
+    echo "${nonce:-0}"
+}
+
+# Get highest nonce from multiple sharders
+get_current_nonce() {
+    local nonce1=$(get_nonce_from_sharder "http://localhost:7171")
+    local nonce2=$(get_nonce_from_sharder "http://localhost:7172")
+
+    # Return the higher nonce
+    if [ "$nonce1" -gt "$nonce2" ] 2>/dev/null; then
+        echo "$nonce1"
+    else
+        echo "$nonce2"
+    fi
+}
+
+# Initialize nonce by querying sharders
+initialize_nonce() {
+    if [ "$NONCE_INITIALIZED" = true ]; then
+        return
+    fi
+
+    echo -e "  ${CYAN}Initializing nonce...${NC}"
+    local sharder_nonce=$(get_current_nonce)
+
+    if [ "$sharder_nonce" -gt 0 ] 2>/dev/null; then
+        CURRENT_NONCE=$sharder_nonce
+        echo -e "  ${GREEN}Got nonce from sharder: $CURRENT_NONCE${NC}"
+    else
+        CURRENT_NONCE=0
+        echo -e "  ${YELLOW}Starting with nonce: $CURRENT_NONCE${NC}"
+    fi
+    NONCE_INITIALIZED=true
+}
+
+# Get next nonce and increment
+get_next_nonce() {
+    CURRENT_NONCE=$((CURRENT_NONCE + 1))
+    echo "$CURRENT_NONCE"
+}
+
+# Execute zwallet command with nonce management and retry
+run_zwallet_cmd() {
+    local cmd=$1
+    local max_retries=${2:-5}
+    local retry=0
+    local backoff=3
+
+    while [ $retry -lt $max_retries ]; do
+        local nonce=$(get_next_nonce)
+        local full_cmd="$cmd --withNonce $nonce"
+
+        echo -e "    ${CYAN}> $cmd (nonce=$nonce)${NC}"
+        local output=$(eval "$full_cmd" 2>&1)
+        local exit_code=$?
+
+        # Log to file
+        echo "Command: $full_cmd" >> "$LOG_FILE"
+        echo "Output: $output" >> "$LOG_FILE"
+
+        # Check for success
+        if echo "$output" | grep -qiE "success|Execute faucet|confirmed"; then
+            echo -e "    ${GREEN}SUCCESS${NC}"
+            echo "$output" | grep -E "Hash|transaction" || true
+            return 0
+        fi
+
+        # Check for "already" conditions
+        if echo "$output" | grep -qiE "already"; then
+            echo -e "    ${YELLOW}Already in desired state${NC}"
+            return 0
+        fi
+
+        # Check for nonce errors
+        if echo "$output" | grep -qiE "nonce"; then
+            retry=$((retry + 1))
+            echo -e "    ${YELLOW}Nonce error, jumping ahead (retry $retry/$max_retries)...${NC}"
+            CURRENT_NONCE=$((CURRENT_NONCE + 3))
+            sleep 2
+            continue
+        fi
+
+        # Check for network errors
+        if echo "$output" | grep -qiE "connection refused|timeout|too less sharders|unexpected end"; then
+            retry=$((retry + 1))
+            echo -e "    ${YELLOW}Network error, retrying in ${backoff}s ($retry/$max_retries)...${NC}"
+            sleep $backoff
+            backoff=$((backoff * 2))
+            [ $backoff -gt 20 ] && backoff=20
+            continue
+        fi
+
+        # Command completed (may have succeeded)
+        if [ $exit_code -eq 0 ]; then
+            echo "$output" | grep -E "Hash|error" || true
+            return 0
+        fi
+
+        # Failed - retry
+        retry=$((retry + 1))
+        if [ $retry -lt $max_retries ]; then
+            echo -e "    ${YELLOW}Retrying in ${backoff}s ($retry/$max_retries)...${NC}"
+            sleep $backoff
+            backoff=$((backoff * 2))
+            [ $backoff -gt 20 ] && backoff=20
+        fi
+    done
+
+    echo -e "    ${RED}Max retries reached${NC}"
+    return 1
+}
 
 # Log function with timestamp (like chaos script)
 log() {
@@ -151,73 +283,127 @@ is_sharder_in_0dns_mb() {
     [ "$found" != "null" ] && [ -n "$found" ] && return 0 || return 1
 }
 
-# Verify view change completed correctly (simple - no wait/retry)
-verify_view_change() {
-    local operation=$1  # "delete_miner", "add_miner", "delete_sharder", "add_sharder", etc.
-    local expected_miner_in=$2  # "true" or "false" - should miner be in MB?
-    local expected_sharder_in=$3  # "true" or "false" - should sharder be in MB?
+# Verify view change completed correctly (simple check - returns 1 if not yet complete)
+verify_view_change_check() {
+    local expected_miner_in=$1  # "true" or "false" - should miner be in MB?
+    local expected_sharder_in=$2  # "true" or "false" - should sharder be in MB?
 
-    echo -e "  ${CYAN}Verifying View Change:${NC}"
-
-    # Get 0dns magic block info
-    local mb_num=$(get_0dns_magic_block_number)
-    local mb_round=$(get_0dns_magic_block_starting_round)
-    local mb_miners=$(curl -s "$DNS_MAGIC_BLOCK" 2>/dev/null | jq -r '.miners.nodes | keys | length' 2>/dev/null)
-    local mb_sharders=$(curl -s "$DNS_MAGIC_BLOCK" 2>/dev/null | jq -r '.sharders.nodes | keys | length' 2>/dev/null)
-
-    echo -e "    0dns Magic Block: #${WHITE}$mb_num${NC} (starting round: $mb_round)"
-    echo -e "    MB Miners ($mb_miners): $(get_0dns_mb_miner_ids | tr '\n' ' ')"
-    echo -e "    MB Sharders ($mb_sharders): $(get_0dns_mb_sharder_ids | tr '\n' ' ')"
-
-    # Check if target miner is in/out of MB as expected
-    local miner_short=${MINER_ID:0:16}
-    local sharder_short=${SHARDER_ID:0:16}
     local miner_state_ok=true
     local sharder_state_ok=true
 
     if [ "$expected_miner_in" = "true" ]; then
-        if is_miner_in_0dns_mb "$MINER_ID"; then
-            echo -e "    Miner $miner_short: ${GREEN}IN MB (expected)${NC}"
-        else
-            echo -e "    Miner $miner_short: ${YELLOW}NOT in MB yet${NC}"
+        if ! is_miner_in_0dns_mb "$MINER_ID"; then
             miner_state_ok=false
         fi
     elif [ "$expected_miner_in" = "false" ]; then
-        if ! is_miner_in_0dns_mb "$MINER_ID"; then
-            echo -e "    Miner $miner_short: ${GREEN}NOT in MB (expected)${NC}"
-        else
-            echo -e "    Miner $miner_short: ${YELLOW}Still in MB${NC}"
+        if is_miner_in_0dns_mb "$MINER_ID"; then
             miner_state_ok=false
         fi
     fi
 
     if [ "$expected_sharder_in" = "true" ]; then
-        if is_sharder_in_0dns_mb "$SHARDER_ID"; then
-            echo -e "    Sharder $sharder_short: ${GREEN}IN MB (expected)${NC}"
-        else
-            echo -e "    Sharder $sharder_short: ${YELLOW}NOT in MB yet${NC}"
+        if ! is_sharder_in_0dns_mb "$SHARDER_ID"; then
             sharder_state_ok=false
         fi
     elif [ "$expected_sharder_in" = "false" ]; then
-        if ! is_sharder_in_0dns_mb "$SHARDER_ID"; then
-            echo -e "    Sharder $sharder_short: ${GREEN}NOT in MB (expected)${NC}"
-        else
-            echo -e "    Sharder $sharder_short: ${YELLOW}Still in MB${NC}"
+        if is_sharder_in_0dns_mb "$SHARDER_ID"; then
             sharder_state_ok=false
         fi
     fi
 
-    # Print final status
-    local round=$(get_current_round)
-    echo -e "    ${CYAN}Status:${NC} Round=$round, MB=#$mb_num"
-
     if [ "$miner_state_ok" = true ] && [ "$sharder_state_ok" = true ]; then
-        echo -e "    ${GREEN}VC VERIFIED OK${NC}"
         return 0
     else
-        echo -e "    ${YELLOW}VC state not yet as expected (may still be in progress)${NC}"
-        return 0  # Return success anyway - no waiting
+        return 1
     fi
+}
+
+# Verify view change completed correctly - waits until state is confirmed
+verify_view_change() {
+    local operation=$1  # "delete_miner", "add_miner", "delete_sharder", "add_sharder", etc.
+    local expected_miner_in=$2  # "true" or "false" - should miner be in MB?
+    local expected_sharder_in=$3  # "true" or "false" - should sharder be in MB?
+    local max_wait=${4:-300}  # Maximum wait time in seconds (default 5 minutes)
+
+    echo -e "  ${CYAN}Verifying View Change:${NC}"
+
+    local start_time=$(date +%s)
+    local last_mb=""
+
+    while true; do
+        # Get 0dns magic block info
+        local mb_num=$(get_0dns_magic_block_number)
+        local mb_round=$(get_0dns_magic_block_starting_round)
+        local mb_miners=$(curl -s "$DNS_MAGIC_BLOCK" 2>/dev/null | jq -r '.miners.nodes | keys | length' 2>/dev/null)
+        local mb_sharders=$(curl -s "$DNS_MAGIC_BLOCK" 2>/dev/null | jq -r '.sharders.nodes | keys | length' 2>/dev/null)
+
+        # Only print full status if MB changed or first check
+        if [ "$mb_num" != "$last_mb" ]; then
+            echo -e "    0dns Magic Block: #${WHITE}$mb_num${NC} (starting round: $mb_round)"
+            echo -e "    MB Miners ($mb_miners): $(get_0dns_mb_miner_ids | tr '\n' ' ')"
+            echo -e "    MB Sharders ($mb_sharders): $(get_0dns_mb_sharder_ids | tr '\n' ' ')"
+            last_mb=$mb_num
+        fi
+
+        # Check if target miner is in/out of MB as expected
+        local miner_short=${MINER_ID:0:16}
+        local sharder_short=${SHARDER_ID:0:16}
+        local miner_state_ok=true
+        local sharder_state_ok=true
+
+        if [ "$expected_miner_in" = "true" ]; then
+            if is_miner_in_0dns_mb "$MINER_ID"; then
+                echo -e "    Miner $miner_short: ${GREEN}IN MB (expected)${NC}"
+            else
+                echo -e "    Miner $miner_short: ${YELLOW}NOT in MB yet${NC}"
+                miner_state_ok=false
+            fi
+        elif [ "$expected_miner_in" = "false" ]; then
+            if ! is_miner_in_0dns_mb "$MINER_ID"; then
+                echo -e "    Miner $miner_short: ${GREEN}NOT in MB (expected)${NC}"
+            else
+                echo -e "    Miner $miner_short: ${YELLOW}Still in MB${NC}"
+                miner_state_ok=false
+            fi
+        fi
+
+        if [ "$expected_sharder_in" = "true" ]; then
+            if is_sharder_in_0dns_mb "$SHARDER_ID"; then
+                echo -e "    Sharder $sharder_short: ${GREEN}IN MB (expected)${NC}"
+            else
+                echo -e "    Sharder $sharder_short: ${YELLOW}NOT in MB yet${NC}"
+                sharder_state_ok=false
+            fi
+        elif [ "$expected_sharder_in" = "false" ]; then
+            if ! is_sharder_in_0dns_mb "$SHARDER_ID"; then
+                echo -e "    Sharder $sharder_short: ${GREEN}NOT in MB (expected)${NC}"
+            else
+                echo -e "    Sharder $sharder_short: ${YELLOW}Still in MB${NC}"
+                sharder_state_ok=false
+            fi
+        fi
+
+        # Print current status
+        local round=$(get_current_round)
+        local elapsed=$(($(date +%s) - start_time))
+        echo -e "    ${CYAN}Status:${NC} Round=$round, MB=#$mb_num"
+
+        if [ "$miner_state_ok" = true ] && [ "$sharder_state_ok" = true ]; then
+            echo -e "    ${GREEN}VC VERIFIED OK${NC} (after ${elapsed}s)"
+            return 0
+        fi
+
+        # Check timeout
+        if [ $elapsed -ge $max_wait ]; then
+            echo -e "    ${RED}VC VERIFICATION TIMEOUT${NC} (${elapsed}s) - state not as expected"
+            echo -e "    ${YELLOW}Continuing to next step...${NC}"
+            return 1
+        fi
+
+        # Wait and retry
+        echo -e "    ${YELLOW}VC state not yet as expected, waiting for next MB... (${elapsed}s/${max_wait}s)${NC}"
+        sleep 15
+    done
 }
 
 # Get miners count from diagnostics page table (miner4)
@@ -553,58 +739,11 @@ run_test_step() {
     local start_mb=$(get_current_mb)
     local test_passed=true
 
-    # Log and execute commands with retry on nonce errors
+    # Execute commands using nonce-aware function
     echo -e "  ${CYAN}Executing commands:${NC}"
     for cmd in "${commands[@]}"; do
-        echo -e "    ${YELLOW}> $cmd${NC}"
-        local output
-        local exit_code
-        local retry_count=0
-        local max_retries=3
-
-        while [ $retry_count -lt $max_retries ]; do
-            output=$(eval "$cmd" 2>&1)
-            exit_code=$?
-
-            # Check for nonce-related errors or transaction failures
-            if [ $exit_code -ne 0 ] || echo "$output" | grep -qiE "invalid transaction nonce|nonce|nonce too low|nonce mismatch|duplicate transaction|submit transaction failed"; then
-                # Only retry if it looks like a nonce/transaction issue
-                if echo "$output" | grep -qiE "nonce|duplicate|submit.*failed"; then
-                    retry_count=$((retry_count + 1))
-                    if [ $retry_count -lt $max_retries ]; then
-                        echo -e "    ${YELLOW}Transaction error detected, retrying ($retry_count/$max_retries) after 5s...${NC}"
-                        sleep 5
-                        continue
-                    fi
-                fi
-            fi
-
-            # If command succeeded, break
-            if [ $exit_code -eq 0 ]; then
-                break
-            fi
-
-            # If failed but not a retryable error, break
-            break
-        done
-
-        # Show relevant output
-        echo "$output" | grep -E "success|error|Error|Hash:|nonce|Nonce|transaction|Transaction|failed" || true
-
-        # Log full output for debugging
-        echo "  --- Full command output ---" >> "$LOG_FILE"
-        echo "  Command: $cmd" >> "$LOG_FILE"
-        echo "  Exit code: $exit_code" >> "$LOG_FILE"
-        echo "  Retry count: $retry_count" >> "$LOG_FILE"
-        echo "$output" >> "$LOG_FILE"
-        echo "  --- End command output ---" >> "$LOG_FILE"
-
-        if [ $exit_code -ne 0 ]; then
-            echo -e "    ${RED}Command failed with exit code: $exit_code${NC}"
-            if [ $retry_count -ge $max_retries ]; then
-                echo -e "    ${RED}Max retries reached, continuing...${NC}"
-            fi
-        fi
+        run_zwallet_cmd "$cmd"
+        sleep 2  # Brief pause between commands
     done
 
     echo "  Sleeping ${SLEEP_TIME}s..."
@@ -720,15 +859,13 @@ while true; do
     TEST_RESULTS=()
     TEST_NAMES=()
 
+    # Initialize nonce on first iteration
+    initialize_nonce
+
     # Fund wallet with faucet before each iteration
     echo -e "  ${CYAN}Funding wallet from faucet...${NC}"
-    faucet_output=$($ZWALLET_PATH faucet --methodName pour --input "{}" --tokens 10 --wallet $WALLET --config $CONFIG 2>&1)
-    if echo "$faucet_output" | grep -q "success\|confirmed\|Execute faucet"; then
-        echo -e "  ${GREEN}Faucet: OK${NC}"
-    else
-        echo -e "  ${YELLOW}Faucet: $faucet_output${NC}"
-    fi
-    sleep 5  # Wait for faucet transaction to be confirmed
+    run_zwallet_cmd "$ZWALLET_PATH faucet --methodName pour --input \"{}\" --tokens 10 --wallet $WALLET --config $CONFIG"
+    sleep 3  # Wait for faucet transaction to be confirmed
 
     # Record starting MB for verification
     START_MB=$(get_current_mb)

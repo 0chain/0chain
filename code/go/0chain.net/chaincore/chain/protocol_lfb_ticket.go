@@ -197,7 +197,10 @@ func (c *Chain) UnsubLFBTicket(sub chan *LFBTicket) {
 func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 	select {
 	case tk = <-c.getLFBTicket:
+		logging.Logger.Debug("GetLatestLFBTicket - received",
+			zap.Int64("round", tk.Round))
 	case <-ctx.Done():
+		logging.Logger.Debug("GetLatestLFBTicket - context done")
 	}
 	return
 }
@@ -504,9 +507,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		select {
 
-		// request current
+		// request current - return received ticket (or local if higher) for sync decisions
 		case c.getLFBTicket <- latest:
-			// request latest LFB Ticket generated or received at any time
+			logging.Logger.Debug("getLFBTicket - sent",
+				zap.Int64("latest.Round", latest.Round))
+			// returns the highest known LFB ticket (received or local) for sync logic
 
 		// a received LFB
 		case ticket = <-c.updateLFBTicket:
@@ -524,32 +529,26 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			ticket = prev // the latest in the channel
 
 			if ticket.Round <= latest.Round {
-				logging.Logger.Debug("update lfb ticket -  ticket.Round <= latest.Round",
+				logging.Logger.Debug("update lfb ticket - SKIPPING (ticket.Round <= latest.Round)",
 					zap.Int64("ticket.Round", ticket.Round),
-					zap.Int64("latest.Round", latest.Round))
+					zap.Int64("latest.Round", latest.Round),
+					zap.String("ticket.Sign", ticket.Sign))
 				continue // not updated
 			}
+			logging.Logger.Info("update lfb ticket - ACCEPTING (ticket.Round > latest.Round)",
+				zap.Int64("ticket.Round", ticket.Round),
+				zap.Int64("latest.Round", latest.Round),
+				zap.String("ticket.Sign", ticket.Sign))
 
-			// Handle tickets that are far ahead of local LFB.
-			// We need to accept them to learn the network is ahead and trigger sync,
-			// but we cap the ticket round to prevent rebroadcasting tickets far ahead of our actual LFB.
-			const maxTicketAhead int64 = 5
+			// Received tickets can be any round - we accept them to learn the network state.
+			// We don't cap or rebroadcast received tickets; we only broadcast our own local LFB ticket.
+			// Trigger sync if ticket is ahead of local LFB.
 			lfb := c.GetLatestFinalizedBlock()
-			if lfb == nil {
-				// LFB not loaded yet - only accept low round tickets
-				if ticket.Round > maxTicketAhead {
-					logging.Logger.Debug("update lfb ticket - rejecting (LFB not loaded, ticket round too high)",
-						zap.Int64("ticket_round", ticket.Round))
-					continue
-				}
-			} else if ticket.Round > lfb.Round+maxTicketAhead {
-				// Ticket is far ahead - trigger sync but cap the ticket for rebroadcasting
-				logging.Logger.Info("update lfb ticket - far ahead, triggering sync",
+			if lfb != nil && ticket.Round > lfb.Round {
+				logging.Logger.Info("update lfb ticket - received ticket ahead, triggering sync",
 					zap.Int64("ticket_round", ticket.Round),
 					zap.Int64("lfb_round", lfb.Round))
 				c.NotifyBlockSync()
-				// Cap ticket to prevent rebroadcasting high tickets we haven't synced to
-				ticket.Round = lfb.Round + maxTicketAhead
 			}
 
 			// for self updating case (kick itself) - blank ticket from BumpTicket
@@ -562,7 +561,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 						zap.Int64("lfb.Round", lfb.Round))
 					c.NotifyBlockSync()
 				}
+				oldLatest := latest.Round
 				latest = ticket
+				logging.Logger.Info("update lfb ticket - UPDATED latest (blank ticket)",
+					zap.Int64("old_latest", oldLatest),
+					zap.Int64("new_latest", latest.Round))
 				// send for all subscribers
 				c.sendLFBTicketEventToSubscribers(subs, ticket)
 				continue // don't need a block for the blank kick ticket
@@ -572,7 +575,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
 			// update latest
+			oldLatest := latest.Round
 			latest = ticket //
+			logging.Logger.Info("update lfb ticket - UPDATED latest (signed ticket)",
+				zap.Int64("old_latest", oldLatest),
+				zap.Int64("new_latest", latest.Round))
 
 			// don't broadcast a received LFB ticket, since its already
 			// broadcasted by its sender
@@ -609,7 +616,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			if localBumpTicket.Round < ticket.Round {
 				localBumpTicket = ticket // update the latest
 				if ticket.Round > latest.Round {
+					oldLatest := latest.Round
 					latest = ticket
+					logging.Logger.Info("update lfb ticket - UPDATED latest (broadcast)",
+						zap.Int64("old_latest", oldLatest),
+						zap.Int64("new_latest", latest.Round))
 				}
 				logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
 			}
@@ -691,27 +702,10 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
-	// Check if ticket is far ahead of local LFB.
-	// We accept far-ahead tickets to learn about network state and trigger sync,
-	// but the worker will cap the ticket round to prevent rebroadcasting.
-	const maxTicketAhead int64 = 5
-	lfb := chain.GetLatestFinalizedBlock()
-	if lfb == nil {
-		// LFB not loaded yet - only accept low round tickets
-		if ticket.Round > maxTicketAhead {
-			logging.Logger.Debug("handling LFB ticket - rejecting (LFB not loaded, ticket round too high)",
-				zap.Int64("ticket_round", ticket.Round))
-			return nil, common.NewError("lfb_ticket_handler", "ticket too far ahead (LFB not loaded)")
-		}
-	} else if ticket.Round > lfb.Round+maxTicketAhead {
-		// Log but don't reject - let it through to trigger sync in the worker
-		logging.Logger.Debug("handling LFB ticket - far ahead, will trigger sync",
-			zap.Int64("ticket_round", ticket.Round),
-			zap.Int64("local_lfb_round", lfb.Round))
-	}
-
-	// Accept signed tickets from network - they represent the sender's actual LFB state.
-	// This allows nodes that are behind to know where the network is and sync up.
+	// Accept all signed tickets from network - they represent the sender's actual LFB state.
+	// No cap on ticket round - nodes that are behind need to learn where the network is.
+	// The rebroadcast logic uses localBumpTicket (not received tickets) so we won't
+	// rebroadcast tickets we haven't synced to.
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
 }

@@ -171,10 +171,20 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 			}
 
 			if round+1 <= tkRound+int64(ahead) {
-				logging.Logger.Debug("[wait not ahead] [3*] not ahead, can move on")
+				logging.Logger.Debug("[wait not ahead] [3*] not ahead, can move on",
+					zap.Int64("round", round),
+					zap.Int64("tk.Round", tk.Round),
+					zap.Int64("lfb.Round", lfb.Round),
+					zap.Int64("tkRound", tkRound),
+					zap.Int("ahead", ahead))
 				return true // not ahead, can move on
 			}
-			logging.Logger.Debug("[wait not ahead] [4*] still ahead, can't move on")
+			logging.Logger.Debug("[wait not ahead] [4*] still ahead, can't move on",
+				zap.Int64("round", round),
+				zap.Int64("tk.Round", tk.Round),
+				zap.Int64("lfb.Round", lfb.Round),
+				zap.Int64("tkRound", tkRound),
+				zap.Int("ahead", ahead))
 			if tk.Round < lfb.Round {
 				mc.BumpLFBTicket(ctx)
 			}
