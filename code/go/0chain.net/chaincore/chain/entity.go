@@ -2645,23 +2645,11 @@ func (c *Chain) UpdateNodesFromMagicBlock(newMagicBlock *block.MagicBlock) error
 
 func (c *Chain) SetupNodes(mb *block.MagicBlock) error {
 	mns := mb.Miners.CopyNodes()
-	for _, mn := range mns {
-		if err := node.Setup(mn); err != nil {
-			return err
-		}
-	}
-
 	shs := mb.Sharders.CopyNodes()
-
-	for _, sh := range shs {
-		if err := node.Setup(sh); err != nil {
-			return err
-		}
-	}
-
-	// Also include nodes from previous magic block to allow validation of
-	// blocks created by miners that were in the previous MB but not current
 	allNodes := append(mns, shs...)
+
+	// Process previous magic block nodes FIRST so they get registered for validation,
+	// but the current MB's node.Setup calls will have the final say on Self.Node's SetIndex.
 	if c.PreviousMagicBlock != nil {
 		prevMns := c.PreviousMagicBlock.Miners.CopyNodes()
 		for _, mn := range prevMns {
@@ -2677,6 +2665,19 @@ func (c *Chain) SetupNodes(mb *block.MagicBlock) error {
 		}
 		allNodes = append(allNodes, prevMns...)
 		allNodes = append(allNodes, prevShs...)
+	}
+
+	// Process current MB nodes LAST so Self.Node.SetIndex is set from the current MB
+	for _, mn := range mns {
+		if err := node.Setup(mn); err != nil {
+			return err
+		}
+	}
+
+	for _, sh := range shs {
+		if err := node.Setup(sh); err != nil {
+			return err
+		}
 	}
 
 	node.RegisterNodes(allNodes)
