@@ -316,6 +316,7 @@ func (edb *EventDb) addEventsWorker(ctx context.Context,
 	}
 	go edb.managePartitionsWorker(ctx)
 	go edb.managePermanentPartitionsWorker(ctx)
+	go edb.kafkaRetryWorker(ctx)
 
 	for {
 		es := <-edb.eventsChannel
@@ -348,7 +349,8 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	round, err := edb.getLastPublishedRound()
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
-			logging.Logger.Panic("could not get unpublished events", zap.Error(err))
+			logging.Logger.Error("kafka - could not get last published round, skipping republish", zap.Error(err))
+			return nil
 		}
 		logging.Logger.Debug("kafka - see no published round events")
 		// when see gorm.ErrRecordNotFound, it means there is no published events, which could
@@ -359,7 +361,8 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	lfbRound, err := edb.getLatestFinalizedBlock()
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
-			logging.Logger.Panic("kafka - could not get latest finalized block", zap.Error(err))
+			logging.Logger.Error("kafka - could not get latest finalized block, skipping republish", zap.Error(err))
+			return nil
 		}
 		logging.Logger.Debug("kafka - see no lfb")
 		return nil
@@ -375,24 +378,45 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	// since we are not sure if the lfb events are all published, so we will publish all events in
 	// lfb anyway
 	if round < lfbRound {
-		if round < lfbRound {
-			// see missed events
-			logging.Logger.Debug("kafka - see unpublished events", zap.Int64("from", round), zap.Int64("to", lfbRound))
-		}
+		logging.Logger.Info("kafka - republishing unpublished events",
+			zap.Int64("from", round), zap.Int64("to", lfbRound))
 
 		// get all events from round to lfbRound
 		for r := round; r <= lfbRound; r++ {
+			// First try RocksDB (fast path for miners)
 			rd, events, err := getBlockEvents(r)
 			if err != nil {
-				return err
+				// Fallback to PostgreSQL (works for both miners and sharders)
+				// PostgreSQL is the source of truth - events are written there first
+				pgEvents, pgErr := edb.getUnpublishedEventsByRound(r)
+				if pgErr != nil {
+					logging.Logger.Warn("kafka - could not get events for republish from any source, skipping round",
+						zap.Int64("round", r),
+						zap.NamedError("rocksdb_err", err),
+						zap.NamedError("postgres_err", pgErr))
+					continue
+				}
+				if len(pgEvents) == 0 {
+					// No unpublished events for this round
+					continue
+				}
+				// Convert PostgreSQL events to the format needed for Kafka
+				events = make([]Event, len(pgEvents))
+				for i, e := range pgEvents {
+					events[i] = e
+				}
+				rd = r
+				logging.Logger.Debug("kafka - using PostgreSQL for republish",
+					zap.Int64("round", r), zap.Int("events", len(events)))
 			}
+
 			es := &BlockEvents{
 				round:  rd,
 				events: events,
 			}
 
 			if es.round >= edb.Config().KafkaTriggerRound {
-				edb.mustPushEventsToKafka(es, true)
+				edb.pushEventsToKafka(es, true)
 			}
 		}
 	}
@@ -556,6 +580,108 @@ func (edb *EventDb) managePermanentPartitionsWorker(ctx context.Context) {
 				edb.movePermanentPartitions(current)
 			}()
 		}
+	}
+}
+
+// kafkaRetryWorker periodically attempts to republish events that failed to publish to Kafka.
+// It runs every 5 minutes and queries PostgreSQL for events where is_published = false.
+// This provides resilience against temporary Kafka outages without blocking the sharder.
+func (edb *EventDb) kafkaRetryWorker(ctx context.Context) {
+	const retryInterval = 5 * time.Minute
+	ticker := time.NewTicker(retryInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if !edb.dbConfig.KafkaEnabled {
+				continue
+			}
+			edb.retryUnpublishedEvents()
+		}
+	}
+}
+
+// retryUnpublishedEvents fetches unpublished events from PostgreSQL and attempts to republish them to Kafka.
+// It processes events in batches by round to avoid memory issues with large backlogs.
+func (edb *EventDb) retryUnpublishedEvents() {
+	logging.Logger.Debug("kafka retry - checking for unpublished events")
+
+	// Get the range of rounds with unpublished events
+	var minRound, maxRound int64
+	if err := edb.Store.Get().Model(&Event{}).
+		Where("is_published = ?", false).
+		Select("MIN(block_number)").
+		Scan(&minRound).Error; err != nil {
+		logging.Logger.Debug("kafka retry - no unpublished events found", zap.Error(err))
+		return
+	}
+
+	if minRound == 0 {
+		logging.Logger.Debug("kafka retry - no unpublished events")
+		return
+	}
+
+	if err := edb.Store.Get().Model(&Event{}).
+		Where("is_published = ?", false).
+		Select("MAX(block_number)").
+		Scan(&maxRound).Error; err != nil {
+		logging.Logger.Warn("kafka retry - could not get max round", zap.Error(err))
+		return
+	}
+
+	// Skip rounds before Kafka trigger round
+	if minRound < edb.Config().KafkaTriggerRound {
+		minRound = edb.Config().KafkaTriggerRound
+	}
+
+	if minRound > maxRound {
+		return
+	}
+
+	logging.Logger.Info("kafka retry - republishing unpublished events",
+		zap.Int64("from_round", minRound),
+		zap.Int64("to_round", maxRound))
+
+	// Process rounds one at a time to avoid memory issues
+	successCount := 0
+	failCount := 0
+	for round := minRound; round <= maxRound; round++ {
+		events, err := edb.getUnpublishedEventsByRound(round)
+		if err != nil {
+			logging.Logger.Warn("kafka retry - could not get events for round",
+				zap.Int64("round", round),
+				zap.Error(err))
+			failCount++
+			continue
+		}
+
+		if len(events) == 0 {
+			continue
+		}
+
+		blockEvents := &BlockEvents{
+			round:  round,
+			events: events,
+		}
+
+		if err := edb.pushEventsToKafka(blockEvents, true); err != nil {
+			logging.Logger.Warn("kafka retry - failed to publish events for round",
+				zap.Int64("round", round),
+				zap.Int("event_count", len(events)),
+				zap.Error(err))
+			failCount++
+		} else {
+			successCount++
+		}
+	}
+
+	if successCount > 0 || failCount > 0 {
+		logging.Logger.Info("kafka retry - completed",
+			zap.Int("successful_rounds", successCount),
+			zap.Int("failed_rounds", failCount))
 	}
 }
 

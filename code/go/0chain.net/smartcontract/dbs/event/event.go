@@ -199,6 +199,88 @@ func (edb *EventDb) setEventPublished(round int64) error {
 	return edb.Store.Get().Model(&Event{}).Where("block_number = ?", round).Update("is_published", true).Error
 }
 
+// pushEventsToKafka is a non-panic version of mustPushEventsToKafka.
+// It returns an error instead of panicking, allowing the caller to handle failures gracefully.
+// Use this for republishing where Kafka failures should not crash the node.
+func (edb *EventDb) pushEventsToKafka(events *BlockEvents, updateColumn bool) error {
+	if edb.Store == nil {
+		return fmt.Errorf("event database is nil")
+	}
+
+	if !edb.dbConfig.KafkaEnabled {
+		return nil
+	}
+
+	var (
+		broker    = edb.GetKafkaProv()
+		topic     = edb.dbConfig.KafkaTopic
+		eventsMap = make(map[int64]*Event)
+	)
+
+	for i, e := range events.events {
+		eventsMap[e.SequenceNumber] = &events.events[i]
+	}
+
+	var results []chan int64
+	self := node.Self.Underlying()
+	for _, filteredEvent := range events.events {
+		data := map[string]interface{}{
+			"event":  filteredEvent,
+			"round":  events.round,
+			"source": self.ID,
+		}
+		eventJson, err := json.Marshal(data)
+		if err != nil {
+			logging.Logger.Error("kafka - failed to marshal event",
+				zap.Int64("round", events.round),
+				zap.Error(err))
+			continue // Skip this event, don't crash
+		}
+
+		key := filteredEvent.EventKey
+		res := broker.PublishToKafka(topic, []byte(key), eventJson)
+		results = append(results, res)
+		eventsMap[filteredEvent.SequenceNumber].IsPublished = true
+
+		logging.Logger.Debug("kafka - pushed event",
+			zap.String("event", filteredEvent.Tag.String()),
+			zap.Int64("seq", filteredEvent.SequenceNumber),
+			zap.Int64("round", events.round))
+	}
+
+	// Wait for all responses with timeout
+	timeout, cancelFunc := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelFunc()
+	sent := 0
+L:
+	for _, ch := range results {
+		select {
+		case <-ch:
+			sent++
+			if sent == len(events.events) {
+				break L
+			}
+		case <-timeout.Done():
+			logging.Logger.Error("kafka - timeout publishing events, events will remain unpublished",
+				zap.Int64("round", events.round),
+				zap.Int("sent", sent),
+				zap.Int("total", len(events.events)))
+			return fmt.Errorf("kafka publish timeout for round %d", events.round)
+		}
+	}
+
+	if updateColumn {
+		if err := edb.setEventPublished(events.round); err != nil {
+			logging.Logger.Error("kafka - failed to mark events as published",
+				zap.Int64("round", events.round),
+				zap.Error(err))
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (edb *EventDb) getLastPublishedRound() (int64, error) {
 	var event Event
 	if err := edb.Store.Get().Model(&Event{}).Where("is_published = ?", true).Order("sequence_number desc").First(&event).Error; err != nil {
@@ -213,6 +295,19 @@ func (edb *EventDb) getLatestFinalizedBlock() (int64, error) {
 		return 0, err
 	}
 	return block.Round, nil
+}
+
+// getUnpublishedEventsByRound fetches unpublished events for a specific round from PostgreSQL.
+// This is used as a fallback when the RocksDB-based getBlockEvents fails (e.g., on sharders).
+func (edb *EventDb) getUnpublishedEventsByRound(round int64) ([]Event, error) {
+	var events []Event
+	if err := edb.Store.Get().Model(&Event{}).
+		Where("block_number = ? AND is_published = ?", round, false).
+		Order("sequence_number asc").
+		Find(&events).Error; err != nil {
+		return nil, err
+	}
+	return events, nil
 }
 
 func (edb *EventDb) Drop() error {
