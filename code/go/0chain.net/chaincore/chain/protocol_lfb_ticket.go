@@ -616,8 +616,9 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
-			// send newer tickets
-			c.asyncSendLFBTicket(ctx, latest)
+			// Only rebroadcast our own ticket (localBumpTicket), not received tickets (latest).
+			// A node should only advertise LFB rounds it actually has blocks for.
+			c.asyncSendLFBTicket(ctx, localBumpTicket)
 
 		// subscribe / unsubscribe for new *received* LFB Tickets
 		case sub := <-c.subLFBTicket:
