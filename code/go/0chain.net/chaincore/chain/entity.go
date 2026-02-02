@@ -293,8 +293,8 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 			var b *block.Block
 			var err error
 
-			// For sharders syncing historical blocks, use sharders only with retry
-			// Miners don't cache old blocks, so fallback to miners is useless
+			// For sharders syncing blocks, try sharders first with retry
+			// Fall back to miners for recent blocks (miners cache recent blocks in memory)
 			if isSharder {
 				for retry := 0; retry < 3; retry++ {
 					b, err = c.GetNotarizedBlockFromSharders(cctx, "", r)
@@ -306,6 +306,17 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 						continue
 					}
 					break
+				}
+				// If sharder fetch failed and block is recent, try miners
+				// Miners keep recent blocks in memory (2000 rounds, ~100MB)
+				if err != nil {
+					currentRound := c.GetCurrentRound()
+					if currentRound-r < 2000 {
+						logging.Logger.Info("sharder falling back to miners for recent block",
+							zap.Int64("round", r),
+							zap.Int64("current_round", currentRound))
+						b, err = c.GetNotarizedBlock(cctx, "", r)
+					}
 				}
 				if err != nil {
 					logging.Logger.Error("request block failed (sharder)",
@@ -1863,9 +1874,14 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 	}
 }
 
-/*PruneChain - prunes the chain */
+/*PruneChain - prunes the chain
+Keeps 2000 rounds of blocks in memory (~100MB) to support:
+- Self-healing: sharders can sync recent blocks from miners
+- Faster catch-up after brief outages
+- State sync fallbacks
+*/
 func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
-	c.DeleteBlocksBelowRound(b.Round - 50)
+	c.DeleteBlocksBelowRound(b.Round - 2000)
 }
 
 /*
