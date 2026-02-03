@@ -478,7 +478,7 @@ while true; do
         log "${YELLOW}Chain stuck - ensuring all containers running and waiting for recovery...${NC}"
         ensure_all_running
         # Keep waiting until chain recovers (loop with increasing waits)
-        local recovery_attempts=0
+        recovery_attempts=0
         while true; do
             recovery_attempts=$((recovery_attempts + 1))
             sleep 30
