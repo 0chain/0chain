@@ -211,16 +211,22 @@ func (c *Chain) GetNodeFromSCState(ctx context.Context, r *http.Request) (interf
 //	400:
 func (c *Chain) GetBalanceHandler(ctx context.Context, r *http.Request) (interface{}, error) {
 	clientID := r.FormValue("client_id")
-	if c.GetEventDb() == nil {
-		return nil, common.NewError("get_balance_error", "event database not enabled")
+
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb == nil {
+		return nil, common.NewError("get_balance_error", "latest finalized block not available")
 	}
 
-	user, err := c.GetEventDb().GetUser(clientID)
+	s, err := GetStateById(lfb.ClientState, clientID)
 	if err != nil {
+		// ErrValueNotPresent means client doesn't exist yet - return zero state
+		if err == util.ErrValueNotPresent {
+			return s, nil
+		}
 		return nil, err
 	}
 
-	return userToState(user), nil
+	return s, nil
 }
 
 // swagger:route GET /v1/current-round sharder GetCurrentRound
