@@ -178,6 +178,26 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 					lfb := mc.GetLatestFinalizedBlock()
 					lfbTk := mc.GetLatestLFBTicket(ctx)
 					if lfb.Round < lfbTk.Round {
+						gap := lfbTk.Round - lfb.Round
+
+						// If gap is very large, skip sequential sync and fast-forward to sharder's LFB
+						// This allows miners to catch up quickly after being offline for extended periods
+						if gap > 5000 {
+							logging.Logger.Info("round worker: large gap detected, fast-forwarding to sharder LFB",
+								zap.Int64("gap", gap),
+								zap.Int64("lfb", lfb.Round),
+								zap.Int64("ticket", lfbTk.Round))
+							if err := mc.tryFetchCurrentLFBFromSharders(ctx); err != nil {
+								logging.Logger.Error("round worker: fast-forward failed, falling back to sequential sync",
+									zap.Error(err))
+							} else {
+								// Fast-forward succeeded, reset counters and continue
+								syncFailureCount = 0
+								lastSyncFailureRound = 0
+								continue
+							}
+						}
+
 						logging.Logger.Info("round worker: LFB < latest lfb ticket round, notify block sync",
 							zap.Int64("lfb round", lfb.Round),
 							zap.Int64("lfb ticket round", lfbTk.Round),
@@ -214,12 +234,30 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 						lastSyncFailureRound = 0
 					}
 				} else {
-					// set current round to latest finalized block
-					// lfbr := mc.GetLatestFinalizedBlock().Round
-					// mc.SetCurrentRound(lfbr)
-					// logging.Logger.Debug("round worker: Round timeout, nil miner round, set current round to lfb round",
-					// 	zap.Int64("nil round", cround),
-					// 	zap.Int64("lfb round", lfbr))
+					// No miner round - check if we need to fast-forward
+					lfb := mc.GetLatestFinalizedBlock()
+					lfbTk := mc.GetLatestLFBTicket(ctx)
+					if lfb != nil && lfbTk != nil && lfb.Round < lfbTk.Round {
+						gap := lfbTk.Round - lfb.Round
+
+						// If gap is very large, skip sequential sync and fast-forward to sharder's LFB
+						if gap > 5000 {
+							logging.Logger.Info("round worker: large gap detected (no miner round), fast-forwarding to sharder LFB",
+								zap.Int64("gap", gap),
+								zap.Int64("lfb", lfb.Round),
+								zap.Int64("ticket", lfbTk.Round))
+							if err := mc.tryFetchCurrentLFBFromSharders(ctx); err != nil {
+								logging.Logger.Error("round worker: fast-forward failed, falling back to sequential sync",
+									zap.Error(err))
+							} else {
+								// Fast-forward succeeded
+								continue
+							}
+						}
+
+						// Notify block sync for smaller gaps
+						mc.NotifyBlockSync()
+					}
 					logging.Logger.Warn("round worker: Round timeout, nil miner round", zap.Int64("nil round", cround))
 				}
 			} else {

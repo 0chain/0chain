@@ -284,6 +284,30 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 		mbBlock.Hash = expectedMB.Hash
 		mc.SetLatestFinalizedMagicBlock(mbBlock)
 	}
+
+	// Send phase events for non-MB miners registered via vc-add to participate in DKG.
+	// This is necessary because UpdateFinalizedBlock (used during active consensus) sends
+	// phase events, but SetLatestFinalizedBlock (used during syncing) previously did not.
+	// Without phase events, non-MB miners in the DKG miners list cannot contribute MPK.
+	if !mc.IsViewChangeEnabled() {
+		return
+	}
+
+	pn, err := mc.GetPhaseOfBlock(b)
+	if err != nil {
+		// Don't log error for ErrValueNotPresent - it just means no phase info in this block
+		return
+	}
+
+	if pn == nil {
+		return
+	}
+
+	logging.Logger.Debug("[mvc] SetLatestFinalizedBlock - send phase node for non-MB miner DKG participation",
+		zap.Int64("round", b.Round),
+		zap.Int64("start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
+	go mc.SendPhaseNode(ctx, chain.PhaseEvent{Phase: *pn})
 }
 
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
@@ -394,10 +418,14 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 			zap.Int64("gap", gap))
 
 		if gap > maxStartupSyncBlocks {
-			// Gap is too large - let block worker handle it after startup
-			logging.Logger.Info("load_lfb - gap too large for startup sync, block worker will catch up",
+			// Gap is too large - try to fast-forward to sharder's LFB
+			logging.Logger.Info("load_lfb - gap too large for startup sync, attempting fast-forward",
 				zap.Int64("gap", gap),
 				zap.Int("max_startup_sync", maxStartupSyncBlocks))
+			if err := mc.tryFetchCurrentLFBFromSharders(ctx); err != nil {
+				logging.Logger.Warn("load_lfb - fast-forward failed, block worker will sync sequentially",
+					zap.Error(err))
+			}
 		} else {
 			// Sync blocks from our LFB+1 to sharder's LFB
 			for r := b.Round + 1; r <= sharderLFB.Round; r++ {

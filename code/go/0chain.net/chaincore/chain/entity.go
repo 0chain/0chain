@@ -2535,11 +2535,38 @@ func (c *Chain) updateConfig(pb *block.Block) {
 
 	configMap, err := getConfigMap(clientState)
 	if err != nil {
-		logging.Logger.Error("cannot get global settings",
-			zap.Int64("start of round", pb.Round),
-			zap.Error(err),
-		)
-		return
+		// Try to repair state by fetching missing nodes from peers.
+		// This can happen when a non-MB miner joins and syncs from the network
+		// but the MPT doesn't have all nodes needed to traverse to GLOBALS_KEY.
+		missingKeys := clientState.GetMissingNodeKeys()
+		if len(missingKeys) > 0 {
+			logging.Logger.Info("updateConfig - fetching missing state nodes",
+				zap.Int64("round", pb.Round),
+				zap.Int("missing_keys", len(missingKeys)))
+
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			if fetchErr := c.GetStateNodes(ctx, missingKeys); fetchErr != nil {
+				logging.Logger.Warn("updateConfig - GetStateNodes failed",
+					zap.Int64("round", pb.Round),
+					zap.Error(fetchErr))
+			} else {
+				// Retry getConfigMap after fetching missing nodes
+				configMap, err = getConfigMap(clientState)
+				if err == nil {
+					logging.Logger.Info("updateConfig - state repaired successfully",
+						zap.Int64("round", pb.Round))
+				}
+			}
+			cancel()
+		}
+
+		if err != nil {
+			logging.Logger.Error("cannot get global settings",
+				zap.Int64("start of round", pb.Round),
+				zap.Error(err),
+			)
+			return
+		}
 	}
 
 	err = c.ChainConfig.Update(configMap.Fields, configMap.Version)
