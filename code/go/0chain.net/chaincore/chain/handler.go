@@ -416,27 +416,44 @@ func (c *Chain) roundHealthInATable(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "</tr>")
 
 	var (
-		crn     = c.GetCurrentRound()
-		ahead   = int64(config.GetLFBTicketAhead())
-		tk      = c.GetLatestLFBTicket(r.Context())
-		tkRound int64
-		class   = "active"
+		crn            = c.GetCurrentRound()
+		ahead          = int64(config.GetLFBTicketAhead())
+		tk             = c.GetLatestLFBTicket(r.Context())
+		networkTkRound int64
+		localTkRound   int64
+		class          = "active"
 	)
 
-	if tk != nil {
-		tkRound = tk.Round
+	// Get local LFB round - this is what the node broadcasts
+	if lfb := c.GetLatestFinalizedBlock(); lfb != nil {
+		localTkRound = lfb.Round
+	}
 
-		if tkRound+ahead <= crn {
+	// Get network ticket round - highest received ticket (for sync awareness)
+	if tk != nil {
+		networkTkRound = tk.Round
+		if networkTkRound+ahead <= crn {
 			class = "inactive"
 		}
 	}
 
+	// Display local LFB ticket (what this node broadcasts)
 	fmt.Fprintf(w, "<tr class='"+class+"'>")
 	fmt.Fprintf(w, "<td>")
-	fmt.Fprintf(w, "LFB Ticket")
+	fmt.Fprintf(w, "LFB Ticket (broadcast)")
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "<td class='number'>")
-	fmt.Fprintf(w, "%v", tkRound)
+	fmt.Fprintf(w, "%v", localTkRound)
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "</tr>")
+
+	// Display network ticket (highest received, for debugging)
+	fmt.Fprintf(w, "<tr class='active'>")
+	fmt.Fprintf(w, "<td>")
+	fmt.Fprintf(w, "LFB Ticket (network)")
+	fmt.Fprintf(w, "</td>")
+	fmt.Fprintf(w, "<td class='number'>")
+	fmt.Fprintf(w, "%v", networkTkRound)
 	fmt.Fprintf(w, "</td>")
 	fmt.Fprintf(w, "</tr>")
 
