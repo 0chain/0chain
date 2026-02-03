@@ -690,6 +690,22 @@ func (dkg *DKG) GetPublicKeyByID(id PartyID) PublicKey {
 	return dkg.gmpk[id]
 }
 
+// GetPublicKeyByIDFromMpks computes the expected public key for a party from the MPK strings.
+// This is used to validate that the local DKG keys match the magic block's MPKs.
+func (dkg *DKG) GetPublicKeyByIDFromMpks(id PartyID) (PublicKey, error) {
+	// First ensure MPK map is computed from the string representation
+	if dkg.mpksMap == nil {
+		mpks, err := dkg.getMpkMap()
+		if err != nil {
+			return PublicKey{}, err
+		}
+		dkg.mpksMap = mpks
+	}
+
+	// Aggregate the public key shares for the given party ID
+	return aggregatePublicKeysForID(dkg.mpksMap, id)
+}
+
 // DeleteFromSet - Each party aggregates the received shares from other party which is calculated for that party */
 func (dkg *DKG) DeleteFromSet(nodes []string) {
 	dkg.secretSharesMutex.Lock()

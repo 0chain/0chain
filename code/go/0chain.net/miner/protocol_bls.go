@@ -202,12 +202,28 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	logging.Logger.Debug("[dkg_timing] convert mpks",
 		zap.Duration("duration", time.Since(startAgg)))
 
-	startAgg = time.Now()
-	// if err := newDKG.AggregatePublicKeySharesParallel(mpks); err != nil {
-	// 	return err
-	// }
-	// logging.Logger.Debug("[dkg_timing] pub key aggregation",
-	// 	zap.Duration("duration", time.Since(startAgg)))
+	// Validate that Pi from secret shares matches the expected public key from magic block MPKs
+	// This prevents using stale/corrupted DKG keys that would cause VRF verification failures
+	startValidate := time.Now()
+	myPartyID := bls.ComputeIDdkg(selfNodeKey)
+	expectedPi, err := newDKG.GetPublicKeyByIDFromMpks(myPartyID)
+	if err != nil {
+		return common.NewErrorf("dkg_key_validation_failed",
+			"failed to compute expected public key from MPKs: %v", err)
+	}
+	if !newDKG.Pi.IsEqual(&expectedPi) {
+		logging.Logger.Error("[dkg] public key mismatch detected",
+			zap.String("pi_from_shares", newDKG.Pi.GetHexString()),
+			zap.String("pi_from_mpks", expectedPi.GetHexString()),
+			zap.Int64("mb_number", mb.MagicBlockNumber),
+			zap.Int64("mb_starting_round", mb.StartingRound))
+		return common.NewErrorf("dkg_key_mismatch",
+			"Pi from secret shares (%s) does not match Pi from magic block MPKs (%s) for MB %d - "+
+				"DKG summary may be corrupted or from a different view change process",
+			newDKG.Pi.GetHexString()[:16], expectedPi.GetHexString()[:16], mb.MagicBlockNumber)
+	}
+	logging.Logger.Debug("[dkg_timing] Pi validation",
+		zap.Duration("duration", time.Since(startValidate)))
 
 	// Time final DKG setting
 	startSet := time.Now()
