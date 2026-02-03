@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
@@ -256,13 +257,33 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 				zap.Int("using_threshold", threshold),
 				zap.Int("tickets", len(bvt)))
 		} else {
-			// Block's MB not found - use current MB's threshold
-			logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current MB threshold",
-				zap.Int64("round", round),
-				zap.Int64("block_mb_round", mbRound),
-				zap.Int64("local_mb_sr", mb.StartingRound),
-				zap.Int("threshold", threshold),
-				zap.Int("tickets", len(bvt)))
+			// Block's MB not found locally - try to fetch from sharders
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			blockMB, fetchErr := c.fetchMagicBlockByStartingRound(ctx, mbRound)
+			cancel()
+			if fetchErr == nil && blockMB != nil {
+				// Successfully fetched (already stored by fetchMagicBlockByStartingRound)
+				blockMBThreshold := c.GetThresholdFromState(blockMB.Miners.Size())
+				if blockMBThreshold < threshold {
+					threshold = blockMBThreshold
+					num = blockMB.Miners.Size()
+				}
+				logging.Logger.Info("reachedNotarization - fetched missing MB from sharders",
+					zap.Int64("round", round),
+					zap.Int64("block_mb_round", mbRound),
+					zap.Int("fetched_mb_miners", blockMB.Miners.Size()),
+					zap.Int("using_threshold", threshold),
+					zap.Int("tickets", len(bvt)))
+			} else {
+				// Block's MB not found - use current MB's threshold
+				logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current MB threshold",
+					zap.Int64("round", round),
+					zap.Int64("block_mb_round", mbRound),
+					zap.Int64("local_mb_sr", mb.StartingRound),
+					zap.Int("threshold", threshold),
+					zap.Int("tickets", len(bvt)),
+					zap.Error(fetchErr))
+			}
 		}
 	}
 
@@ -304,6 +325,105 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	}
 
 	return true
+}
+
+// fetchMagicBlockByStartingRound fetches a magic block from sharders by its starting round.
+// It searches in the appropriate direction based on whether the target is newer or older
+// than the current MB.
+func (c *Chain) fetchMagicBlockByStartingRound(ctx context.Context, startingRound int64) (*block.MagicBlock, error) {
+	currentMB := c.GetCurrentMagicBlock()
+	if currentMB == nil {
+		return nil, common.NewError("fetch_mb_by_starting_round", "no current magic block")
+	}
+
+	// If the current MB matches, return it directly
+	if currentMB.StartingRound == startingRound {
+		return currentMB, nil
+	}
+
+	sharderURLs := currentMB.Sharders.N2NURLs()
+	if len(sharderURLs) == 0 {
+		return nil, common.NewError("fetch_mb_by_starting_round", "no sharder URLs available")
+	}
+
+	// Determine search direction based on whether target is newer or older
+	searchUpward := startingRound > currentMB.StartingRound
+	startMBNumber := currentMB.MagicBlockNumber
+
+	logging.Logger.Debug("fetch_mb_by_starting_round - starting search",
+		zap.Int64("target_starting_round", startingRound),
+		zap.Int64("current_mb_sr", currentMB.StartingRound),
+		zap.Int64("current_mb_number", startMBNumber),
+		zap.Bool("search_upward", searchUpward))
+
+	// Limit search to prevent infinite loops (search up to 1000 MBs)
+	maxIterations := int64(1000)
+	for i := int64(0); i < maxIterations; i++ {
+		var mbNumber int64
+		if searchUpward {
+			mbNumber = startMBNumber + i
+		} else {
+			mbNumber = startMBNumber - i
+			if mbNumber < 0 {
+				break
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		// Fetch magic block by number from sharders
+		b, err := httpclientutil.FetchMagicBlockFromSharders(ctx, sharderURLs, mbNumber,
+			func(b *block.Block) bool {
+				// Basic verification - ensure block has magic block
+				return b != nil && b.MagicBlock != nil
+			})
+		if err != nil {
+			logging.Logger.Debug("fetch_mb_by_starting_round - fetch failed",
+				zap.Int64("mb_number", mbNumber),
+				zap.Error(err))
+			// If searching upward and fetch fails, we've likely gone past the latest MB
+			if searchUpward {
+				break
+			}
+			continue
+		}
+
+		if b != nil && b.MagicBlock != nil {
+			// Store the fetched MB locally for future use
+			c.mbMutex.Lock()
+			c.MagicBlockStorage.Put(b.MagicBlock, b.MagicBlock.StartingRound)
+			c.mbMutex.Unlock()
+
+			// Check if this is the magic block we're looking for
+			if b.MagicBlock.StartingRound == startingRound {
+				logging.Logger.Info("fetch_mb_by_starting_round - found magic block",
+					zap.Int64("starting_round", startingRound),
+					zap.Int64("mb_number", mbNumber),
+					zap.Int("miners", b.MagicBlock.Miners.Size()))
+				return b.MagicBlock, nil
+			}
+
+			// Check if we've gone past the target (in either direction)
+			if searchUpward && b.MagicBlock.StartingRound > startingRound {
+				logging.Logger.Debug("fetch_mb_by_starting_round - passed target round (upward), stopping search",
+					zap.Int64("target_starting_round", startingRound),
+					zap.Int64("found_starting_round", b.MagicBlock.StartingRound))
+				break
+			}
+			if !searchUpward && b.MagicBlock.StartingRound < startingRound {
+				logging.Logger.Debug("fetch_mb_by_starting_round - passed target round (downward), stopping search",
+					zap.Int64("target_starting_round", startingRound),
+					zap.Int64("found_starting_round", b.MagicBlock.StartingRound))
+				break
+			}
+		}
+	}
+
+	return nil, common.NewErrorf("fetch_mb_by_starting_round", "magic block with starting round %d not found", startingRound)
 }
 
 /*

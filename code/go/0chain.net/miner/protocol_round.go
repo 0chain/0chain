@@ -1914,31 +1914,42 @@ func (mc *Chain) verifyMBAndDKGForLFB(ctx context.Context) {
 		return
 	}
 
-	// ALWAYS update finalized MB to match sharders' LFMB.
-	// This ensures all miners converge to the same LFMB on startup.
+	// Only update finalized MB if expectedMB is newer or same as current.
+	// Never downgrade to an older MB - this can happen when LFB is behind the
+	// MB transition point but the current round has already advanced past it.
 	lfmb := mc.GetLatestFinalizedMagicBlock(ctx)
-	// Set the block's Round and Hash from the magic block so GetLatestFinalizedMagicBlockRound
-	// returns proper values for LatestFinalizedMagicBlockRound/Hash fields in proposed blocks
-	mbBlock := &block.Block{MagicBlock: expectedMB}
-	mbBlock.Round = expectedMB.StartingRound
-	mbBlock.Hash = expectedMB.Hash
-	mc.SetLatestFinalizedMagicBlock(mbBlock)
-	logging.Logger.Info("verifyMBAndDKGForLFB - set finalized MB from sharders",
-		zap.Int64("old_mb", func() int64 {
-			if lfmb != nil && lfmb.MagicBlock != nil {
-				return lfmb.MagicBlock.MagicBlockNumber
-			}
-			return 0
-		}()),
-		zap.Int64("old_mb_sr", func() int64 {
-			if lfmb != nil && lfmb.MagicBlock != nil {
-				return lfmb.MagicBlock.StartingRound
-			}
-			return 0
-		}()),
-		zap.Int64("new_mb", expectedMB.MagicBlockNumber),
-		zap.Int64("new_mb_sr", expectedMB.StartingRound),
-		zap.Int64("lfb_round", lfb.Round))
+	if lfmb != nil && lfmb.MagicBlock != nil && expectedMB.MagicBlockNumber < lfmb.MagicBlock.MagicBlockNumber {
+		logging.Logger.Debug("verifyMBAndDKGForLFB - skipping MB downgrade",
+			zap.Int64("current_mb", lfmb.MagicBlock.MagicBlockNumber),
+			zap.Int64("current_mb_sr", lfmb.MagicBlock.StartingRound),
+			zap.Int64("expected_mb", expectedMB.MagicBlockNumber),
+			zap.Int64("expected_mb_sr", expectedMB.StartingRound),
+			zap.Int64("lfb_round", lfb.Round))
+		// Don't downgrade - keep the current finalized MB
+	} else {
+		// Set the block's Round and Hash from the magic block so GetLatestFinalizedMagicBlockRound
+		// returns proper values for LatestFinalizedMagicBlockRound/Hash fields in proposed blocks
+		mbBlock := &block.Block{MagicBlock: expectedMB}
+		mbBlock.Round = expectedMB.StartingRound
+		mbBlock.Hash = expectedMB.Hash
+		mc.SetLatestFinalizedMagicBlock(mbBlock)
+		logging.Logger.Info("verifyMBAndDKGForLFB - set finalized MB",
+			zap.Int64("old_mb", func() int64 {
+				if lfmb != nil && lfmb.MagicBlock != nil {
+					return lfmb.MagicBlock.MagicBlockNumber
+				}
+				return 0
+			}()),
+			zap.Int64("old_mb_sr", func() int64 {
+				if lfmb != nil && lfmb.MagicBlock != nil {
+					return lfmb.MagicBlock.StartingRound
+				}
+				return 0
+			}()),
+			zap.Int64("new_mb", expectedMB.MagicBlockNumber),
+			zap.Int64("new_mb_sr", expectedMB.StartingRound),
+			zap.Int64("lfb_round", lfb.Round))
+	}
 
 	// If current MB matches expected, we're done
 	if currentMB.MagicBlockNumber == expectedMB.MagicBlockNumber {

@@ -55,6 +55,32 @@ func (m *MagicBlockData) Write(ctx context.Context) error {
 	return m.GetEntityMetadata().GetStore().Write(ctx, m)
 }
 
+// SaveMagicBlock saves a magic block to RocksDB with proper transaction handling.
+// This function creates a new transaction, writes the data, commits, and closes.
+// Use this instead of MagicBlockData.Write() when you need writes to persist.
+func SaveMagicBlock(ctx context.Context, mb *MagicBlock) error {
+	mbData := NewMagicBlockData(mb)
+	emd := mbData.GetEntityMetadata()
+	dctx := ememorystore.WithEntityConnection(ctx, emd)
+
+	// Write the data
+	if err := mbData.Write(dctx); err != nil {
+		ememorystore.Close(dctx, emd)
+		return fmt.Errorf("failed to write magic block %d: %v", mb.MagicBlockNumber, err)
+	}
+
+	// Commit the transaction to persist data
+	conn := ememorystore.GetEntityCon(dctx, emd)
+	if err := conn.Commit(); err != nil {
+		ememorystore.Close(dctx, emd)
+		return fmt.Errorf("failed to commit magic block %d: %v", mb.MagicBlockNumber, err)
+	}
+
+	// Close (will not rollback since we committed)
+	ememorystore.Close(dctx, emd)
+	return nil
+}
+
 func (m *MagicBlockData) Delete(ctx context.Context) error {
 	return m.GetEntityMetadata().GetStore().Delete(ctx, m)
 }

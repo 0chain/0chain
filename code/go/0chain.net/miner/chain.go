@@ -380,34 +380,45 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.Int64("round", b.Round),
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
-	// Check if sharders have a higher LFB - if so, sync to catch up
-	// This handles the case where miner restarted and sharders advanced
+	// Check if sharders have a higher LFB - if so, sync a limited number of blocks.
+	// Large gaps are handled by the block worker after startup completes.
+	// Limit startup sync to avoid blocking SetLFBLoadingComplete indefinitely.
+	const maxStartupSyncBlocks = 50
 	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
 	if len(fbs) > 0 && fbs[0].Block != nil && fbs[0].Block.Round > b.Round {
 		sharderLFB := fbs[0].Block
-		logging.Logger.Info("load_lfb - sharders have higher LFB, syncing forward",
+		gap := sharderLFB.Round - b.Round
+		logging.Logger.Info("load_lfb - sharders have higher LFB",
 			zap.Int64("local_lfb", b.Round),
-			zap.Int64("sharder_lfb", sharderLFB.Round))
+			zap.Int64("sharder_lfb", sharderLFB.Round),
+			zap.Int64("gap", gap))
 
-		// Sync blocks from our LFB+1 to sharder's LFB
-		for r := b.Round + 1; r <= sharderLFB.Round; r++ {
-			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			syncBlock, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
-			cancel()
-			if err != nil || syncBlock == nil {
-				logging.Logger.Warn("load_lfb - failed to sync block from sharders",
-					zap.Int64("round", r), zap.Error(err))
-				break
-			}
-			if err := mc.VerifyBlockNotarization(ctx, syncBlock); err != nil {
-				logging.Logger.Warn("load_lfb - sync block failed notarization",
-					zap.Int64("round", r), zap.Error(err))
-				break
-			}
-			// Push to block processor to finalize
-			if err := mc.PushToBlockProcessor(syncBlock); err != nil {
-				logging.Logger.Warn("load_lfb - failed to push sync block",
-					zap.Int64("round", r), zap.Error(err))
+		if gap > maxStartupSyncBlocks {
+			// Gap is too large - let block worker handle it after startup
+			logging.Logger.Info("load_lfb - gap too large for startup sync, block worker will catch up",
+				zap.Int64("gap", gap),
+				zap.Int("max_startup_sync", maxStartupSyncBlocks))
+		} else {
+			// Sync blocks from our LFB+1 to sharder's LFB
+			for r := b.Round + 1; r <= sharderLFB.Round; r++ {
+				fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				syncBlock, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+				cancel()
+				if err != nil || syncBlock == nil {
+					logging.Logger.Warn("load_lfb - failed to sync block from sharders",
+						zap.Int64("round", r), zap.Error(err))
+					break
+				}
+				if err := mc.VerifyBlockNotarization(ctx, syncBlock); err != nil {
+					logging.Logger.Warn("load_lfb - sync block failed notarization",
+						zap.Int64("round", r), zap.Error(err))
+					break
+				}
+				// Push to block processor to finalize
+				if err := mc.PushToBlockProcessor(syncBlock); err != nil {
+					logging.Logger.Warn("load_lfb - failed to push sync block",
+						zap.Int64("round", r), zap.Error(err))
+				}
 			}
 		}
 	}
@@ -582,93 +593,6 @@ func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
 	// Mark LFB loading as complete - workers can now call BumpLFBTicket
 	// and LFBTicketHandler can accept network tickets
 	mc.Chain.SetLFBLoadingComplete()
-
-	return nil
-}
-
-// ResyncLFBFromSharders re-queries sharders for their current LFB and adopts it.
-// This is called when the miner is stuck trying to sync blocks that don't exist.
-func (mc *Chain) ResyncLFBFromSharders(ctx context.Context) error {
-	// Query sharders for their current LFB
-	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
-	if len(fbs) == 0 {
-		return fmt.Errorf("no LFB available from sharders")
-	}
-
-	// Find the highest round block that passes notarization verification
-	var best *block.Block
-	for _, fb := range fbs {
-		if fb.Block == nil {
-			continue
-		}
-		if err := mc.VerifyBlockNotarization(ctx, fb.Block); err != nil {
-			continue
-		}
-		if best == nil || fb.Block.Round > best.Round {
-			best = fb.Block
-		}
-	}
-
-	if best == nil {
-		return fmt.Errorf("no valid LFB with sufficient verification tickets from sharders")
-	}
-
-	currentLFB := mc.GetLatestFinalizedBlock()
-	if best.Round > currentLFB.Round {
-		// Sharder LFB is ahead - sync blocks from local LFB+1 to sharder LFB
-		logging.Logger.Info("resync_lfb - sharder LFB ahead, syncing forward",
-			zap.Int64("sharder_lfb", best.Round),
-			zap.Int64("current_lfb", currentLFB.Round))
-
-		// Sync blocks one by one from sharders
-		for r := currentLFB.Round + 1; r <= best.Round; r++ {
-			fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			syncBlock, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
-			cancel()
-			if err != nil || syncBlock == nil {
-				logging.Logger.Warn("resync_lfb - failed to fetch block from sharders",
-					zap.Int64("round", r), zap.Error(err))
-				break
-			}
-			if err := mc.VerifyBlockNotarization(ctx, syncBlock); err != nil {
-				logging.Logger.Warn("resync_lfb - block failed notarization verification",
-					zap.Int64("round", r), zap.Error(err))
-				break
-			}
-			// Push to block processor for finalization
-			if err := mc.PushToBlockProcessor(syncBlock); err != nil {
-				logging.Logger.Warn("resync_lfb - failed to push block to processor",
-					zap.Int64("round", r), zap.Error(err))
-			}
-		}
-		return nil
-	}
-
-	if best.Round == currentLFB.Round {
-		// LFB matches - just reset ticket
-		logging.Logger.Info("resync_lfb - sharder LFB matches local LFB",
-			zap.Int64("lfb_round", best.Round))
-		mc.ResetLFBTicket(ctx, currentLFB)
-		return nil
-	}
-
-	logging.Logger.Info("resync_lfb - adopting lower LFB from sharders",
-		zap.Int64("old_lfb", currentLFB.Round),
-		zap.Int64("new_lfb", best.Round))
-
-	// Initialize block state
-	best.SetStateStatus(block.StateSuccessful)
-	if err := mc.InitBlockState(best); err != nil {
-		best.SetStateStatus(0)
-		return fmt.Errorf("can't initialize LFB state: %v", err)
-	}
-
-	// Set as new LFB
-	mc.SetLatestFinalizedBlock(ctx, best)
-	mc.SetCurrentRound(best.Round)
-
-	// Reset ticket to match new LFB
-	mc.ResetLFBTicket(ctx, best)
 
 	return nil
 }

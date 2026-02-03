@@ -196,8 +196,8 @@ func (mc *Chain) RoundWorker(ctx context.Context) {
 									zap.Int64("current_lfb", lfb.Round),
 									zap.Int64("ticket_round", lfbTk.Round),
 									zap.Int("failures", syncFailureCount))
-								// Re-fetch LFB from sharders and adopt it
-								if err := mc.ResyncLFBFromSharders(ctx); err != nil {
+								// Re-fetch LFB from sharders using existing logic
+								if err := mc.tryFetchCurrentLFBFromSharders(ctx); err != nil {
 									logging.Logger.Error("round worker: failed to resync LFB from sharders",
 										zap.Error(err))
 								}
@@ -286,10 +286,23 @@ func (mc *Chain) getPruneCountRoundStorage() func(storage round.RoundStorage) in
 }
 
 func (mc *Chain) MinerHealthCheck(ctx context.Context) {
-	gn, err := minersc.GetGlobalNode(mc.GetQueryStateContext())
-	if err != nil {
-		logging.Logger.Panic("miner health check - get global node failed", zap.Error(err))
-		return
+	// Wait for state to be ready before starting health check
+	var gn *minersc.GlobalNode
+	var err error
+	for {
+		gn, err = minersc.GetGlobalNode(mc.GetQueryStateContext())
+		if err == nil {
+			break
+		}
+		logging.Logger.Warn("miner health check - state not ready, syncing blocks",
+			zap.Error(err))
+		mc.NotifyBlockSync()
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(5 * time.Second):
+			// retry after sync
+		}
 	}
 
 	gnb := gn.MustBase()
