@@ -475,13 +475,24 @@ while true; do
 
     # Wait for chain to progress before next operation
     if ! vc_pause; then
-        log "${YELLOW}Chain stuck - ensuring all containers running and waiting longer...${NC}"
+        log "${YELLOW}Chain stuck - ensuring all containers running and waiting for recovery...${NC}"
         ensure_all_running
-        sleep 30
-        # Try again with longer timeout
-        if ! wait_for_chain_progress 5 120 10; then
-            log "${RED}Chain still stuck after recovery attempt - continuing anyway${NC}"
-        fi
+        # Keep waiting until chain recovers (loop with increasing waits)
+        local recovery_attempts=0
+        while true; do
+            recovery_attempts=$((recovery_attempts + 1))
+            sleep 30
+            if wait_for_chain_progress 5 120 10; then
+                log "${GREEN}Chain recovered after $recovery_attempts attempts${NC}"
+                break
+            fi
+            log "${YELLOW}Chain still stuck (attempt $recovery_attempts) - ensuring containers and retrying...${NC}"
+            ensure_all_running
+            # After 10 attempts (~20 min), still keep trying but less frequently
+            if [ $recovery_attempts -ge 10 ]; then
+                sleep 60
+            fi
+        done
     fi
 
     # Fixed sleep before next operation

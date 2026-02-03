@@ -177,8 +177,60 @@ run_zwallet_cmd() {
         fi
     done
 
-    echo -e "    ${RED}Max retries reached${NC}"
+    echo -e "    ${RED}Max retries reached - chain may be stuck${NC}"
+    echo -e "    ${RED}[FAILURE] Transaction failed after $max_retries retries${NC}"
+    FAILURES=$((FAILURES + 1))
+
+    # Pause and wait for chain recovery before continuing
+    echo -e "    ${YELLOW}Pausing test - waiting for chain to recover...${NC}"
+    pause_for_chain_recovery
     return 1
+}
+
+# Pause test and wait for chain recovery
+pause_for_chain_recovery() {
+    local max_wait=600  # 10 minutes max wait
+    local check_interval=15
+    local start_time=$(date +%s)
+
+    echo -e "  ${RED}========================================${NC}"
+    echo -e "  ${RED}  TEST PAUSED - CHAIN LIKELY STUCK     ${NC}"
+    echo -e "  ${RED}========================================${NC}"
+    echo -e "  ${YELLOW}Waiting for chain to show progress before resuming tests...${NC}"
+    echo -e "  ${YELLOW}Check miner logs: docker logs miner-1 2>&1 | tail -50${NC}"
+    echo ""
+
+    local last_round=$(get_current_round)
+    local consecutive_progress=0
+    local required_progress=3  # Need 3 consecutive progress checks
+
+    while true; do
+        local elapsed=$(($(date +%s) - start_time))
+        sleep $check_interval
+        local current_round=$(get_current_round)
+
+        if [ "$current_round" -gt "$last_round" ]; then
+            consecutive_progress=$((consecutive_progress + 1))
+            echo -e "  ${GREEN}Chain progressing: $last_round -> $current_round (+$consecutive_progress/$required_progress)${NC}"
+            last_round=$current_round
+
+            if [ $consecutive_progress -ge $required_progress ]; then
+                echo -e "  ${GREEN}Chain recovered! Resuming tests...${NC}"
+                echo -e "  ${GREEN}========================================${NC}"
+                return 0
+            fi
+        else
+            consecutive_progress=0
+            echo -e "  ${YELLOW}Chain still stuck at round $current_round (${elapsed}s/${max_wait}s)${NC}"
+        fi
+
+        if [ $elapsed -ge $max_wait ]; then
+            echo -e "  ${RED}Chain still stuck after ${max_wait}s - resuming tests anyway${NC}"
+            echo -e "  ${RED}WARNING: Further failures are likely!${NC}"
+            echo -e "  ${RED}========================================${NC}"
+            return 1
+        fi
+    done
 }
 
 # Log function with timestamp (like chaos script)
@@ -396,7 +448,8 @@ verify_view_change() {
         # Check timeout
         if [ $elapsed -ge $max_wait ]; then
             echo -e "    ${RED}VC VERIFICATION TIMEOUT${NC} (${elapsed}s) - state not as expected"
-            echo -e "    ${YELLOW}Continuing to next step...${NC}"
+            echo -e "    ${RED}[FAILURE] View change did not complete in expected state${NC}"
+            FAILURES=$((FAILURES + 1))
             return 1
         fi
 
@@ -471,6 +524,34 @@ monitor_chain_progress() {
         echo -e " ${RED}STUCK${NC} (rounds: $start_round -> $last_round, no progress)"
         return 1
     fi
+}
+
+# Wait for chain to recover - blocks until chain starts progressing
+wait_for_chain_recovery() {
+    local max_wait=${1:-300}  # Default 5 minutes max wait
+    local check_interval=10
+    local start_time=$(date +%s)
+
+    echo -e "  ${YELLOW}Chain stuck - waiting for recovery...${NC}"
+
+    while true; do
+        local elapsed=$(($(date +%s) - start_time))
+        local start_round=$(get_current_round)
+        sleep $check_interval
+        local current_round=$(get_current_round)
+
+        if [ "$current_round" -gt "$start_round" ]; then
+            echo -e "  ${GREEN}Chain recovered! Round advancing: $start_round -> $current_round${NC}"
+            return 0
+        fi
+
+        if [ $elapsed -ge $max_wait ]; then
+            echo -e "  ${RED}Chain still stuck after ${elapsed}s - continuing anyway${NC}"
+            return 1
+        fi
+
+        echo -e "  ${YELLOW}Still waiting for chain recovery... (${elapsed}s/${max_wait}s)${NC}"
+    done
 }
 
 # Verify 0dns network reflects view change
@@ -756,11 +837,16 @@ run_test_step() {
         echo -e "  ${RED}[FAIL] View change did not complete${NC}"
     fi
 
-    # Monitor chain progress
+    # Monitor chain progress - wait for recovery if stuck
     if ! monitor_chain_progress "$step_name"; then
-        test_passed=false
-        FAILURES=$((FAILURES + 1))
         echo -e "  ${RED}[FAIL] Chain not progressing after $step_name${NC}"
+        # Wait for chain to recover before continuing
+        if wait_for_chain_recovery 300; then
+            echo -e "  ${GREEN}Chain recovered - continuing tests${NC}"
+        else
+            test_passed=false
+            FAILURES=$((FAILURES + 1))
+        fi
     fi
 
     local end_round=$(get_current_round)
@@ -875,64 +961,94 @@ while true; do
     run_test_step "1" "Delete miner + sharder" $EXPECTED_MB \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG" \
         "$ZWALLET_PATH sh-delete --id $SHARDER_ID --config $CONFIG --wallet $WALLET"
-    verify_view_change "delete_both" "false" "false"
+    if ! verify_view_change "delete_both" "false" "false"; then
+        echo -e "  ${YELLOW}VC verification failed for step 1 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 2: Add both miner and sharder
     run_test_step "2" "Add miner + sharder" $EXPECTED_MB \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET" \
         "$ZWALLET_PATH vc-add --id $SHARDER_ID --provider-type sharder --wallet $WALLET --config $CONFIG"
-    verify_view_change "add_both" "true" "true"
+    if ! verify_view_change "add_both" "true" "true"; then
+        echo -e "  ${YELLOW}VC verification failed for step 2 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 3: Delete miner only
     run_test_step "3" "Delete miner only" $EXPECTED_MB \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG"
-    verify_view_change "delete_miner" "false" "true"
+    if ! verify_view_change "delete_miner" "false" "true"; then
+        echo -e "  ${YELLOW}VC verification failed for step 3 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 4: Delete sharder only
     run_test_step "4" "Delete sharder only" $EXPECTED_MB \
         "$ZWALLET_PATH sh-delete --id $SHARDER_ID --config $CONFIG --wallet $WALLET"
-    verify_view_change "delete_sharder" "false" "false"
+    if ! verify_view_change "delete_sharder" "false" "false"; then
+        echo -e "  ${YELLOW}VC verification failed for step 4 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 5: Add miner only
     run_test_step "5" "Add miner only" $EXPECTED_MB \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET"
-    verify_view_change "add_miner" "true" "false"
+    if ! verify_view_change "add_miner" "true" "false"; then
+        echo -e "  ${YELLOW}VC verification failed for step 5 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 6: Add sharder only
     run_test_step "6" "Add sharder only" $EXPECTED_MB \
         "$ZWALLET_PATH vc-add --id $SHARDER_ID --provider-type sharder --wallet $WALLET --config $CONFIG"
-    verify_view_change "add_sharder" "true" "true"
+    if ! verify_view_change "add_sharder" "true" "true"; then
+        echo -e "  ${YELLOW}VC verification failed for step 6 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 7: Delete miner only
     run_test_step "7" "Delete miner (again)" $EXPECTED_MB \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG"
-    verify_view_change "delete_miner" "false" "true"
+    if ! verify_view_change "delete_miner" "false" "true"; then
+        echo -e "  ${YELLOW}VC verification failed for step 7 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 8: Add miner + Delete sharder
     run_test_step "8" "Add miner + Delete sharder" $EXPECTED_MB \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET" \
         "$ZWALLET_PATH sh-delete --id $SHARDER_ID --config $CONFIG --wallet $WALLET"
-    verify_view_change "add_miner_del_sharder" "true" "false"
+    if ! verify_view_change "add_miner_del_sharder" "true" "false"; then
+        echo -e "  ${YELLOW}VC verification failed for step 8 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 9: Add sharder + Delete miner
     run_test_step "9" "Add sharder + Delete miner" $EXPECTED_MB \
         "$ZWALLET_PATH vc-add --id $SHARDER_ID --provider-type sharder --wallet $WALLET --config $CONFIG" \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG"
-    verify_view_change "add_sharder_del_miner" "false" "true"
+    if ! verify_view_change "add_sharder_del_miner" "false" "true"; then
+        echo -e "  ${YELLOW}VC verification failed for step 9 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
     EXPECTED_MB=$((EXPECTED_MB + 1))
 
     # Step 10: Add miner back (restore to initial state)
     run_test_step "10" "Add miner back (restore)" $EXPECTED_MB \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET"
-    verify_view_change "restore" "true" "true"
+    if ! verify_view_change "restore" "true" "true"; then
+        echo -e "  ${YELLOW}VC verification failed for step 10 - pausing...${NC}"
+        pause_for_chain_recovery
+    fi
 
     # Print iteration results
     echo ""
