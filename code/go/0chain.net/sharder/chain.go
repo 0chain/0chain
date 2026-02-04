@@ -390,41 +390,55 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 			"empty LatestFinalizedMagicBlockHash field") // fatal or genesis
 	}
 
+	// Check if block references itself as containing the LFMB
+	// Use MagicBlock.Hash for comparison (LatestFinalizedMagicBlockHash now stores MB hash, not block hash)
+	if lfb.MagicBlock != nil && lfb.LatestFinalizedMagicBlockHash == lfb.MagicBlock.Hash {
+		return lfb, nil // the same block contains its LFMB
+	}
+
+	// Also check legacy case where LatestFinalizedMagicBlockHash was block hash
 	if lfb.LatestFinalizedMagicBlockHash == lfb.Hash {
 		if lfb.MagicBlock == nil {
-			// fatal
 			return nil, common.NewError("load_lfb", "missing MagicBlock field")
 		}
-		return lfb, nil // the same
+		return lfb, nil // legacy: self-referencing by block hash
 	}
-
-	// load from store
 
 	logging.Logger.Debug("load_lfb (lfmb) from store",
-		zap.String("block_with_magic_block_hash",
-			lfb.LatestFinalizedMagicBlockHash),
-		zap.Int64("block_with_magic_block_round",
-			lfb.LatestFinalizedMagicBlockRound))
+		zap.String("lfmb_hash", lfb.LatestFinalizedMagicBlockHash),
+		zap.Int64("lfmb_round", lfb.LatestFinalizedMagicBlockRound))
 
-	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
-	if err != nil {
-		// fatality, can't find related LFMB
-		return nil, common.NewErrorf("load_lfb",
-			"related magic block not found: hash: %v, err: %v", lfb.LatestFinalizedMagicBlockHash, err)
+	// Primary: Try MagicBlockStorage lookup by round (works for both old and new blocks)
+	entity := sc.MagicBlockStorage.GetByStartingRound(lfb.LatestFinalizedMagicBlockRound)
+	if entity != nil {
+		mb := entity.(*block.MagicBlock)
+		// Create synthetic block wrapper for the magic block
+		lfmb = block.NewBlock("", mb.StartingRound)
+		lfmb.MagicBlock = mb
+		lfmb.Hash = mb.Hash
+		logging.Logger.Debug("load_lfb (lfmb) from MagicBlockStorage",
+			zap.Int64("round", lfmb.Round),
+			zap.String("mb_hash", mb.Hash))
+		return lfmb, nil
 	}
 
-	// with current implementation it's a case
+	// Fallback: Try blockstore read (backward compatibility with old blocks using block hash)
+	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
+	if err != nil {
+		return nil, common.NewErrorf("load_lfb",
+			"related magic block not found: hash: %v, round: %v, err: %v",
+			lfb.LatestFinalizedMagicBlockHash, lfb.LatestFinalizedMagicBlockRound, err)
+	}
+
 	if lfmb == nil {
-		// fatality, can't find related LFMB
 		return nil, common.NewError("load_lfb",
 			"related magic block not found (no error)")
 	}
 
-	logging.Logger.Debug("load_lfb (lfmb) from store", zap.Int64("round", lfmb.Round),
+	logging.Logger.Debug("load_lfb (lfmb) from blockstore", zap.Int64("round", lfmb.Round),
 		zap.String("hash", lfmb.Hash))
 
 	if lfmb.MagicBlock == nil {
-		// fatal
 		return nil, common.NewError("load_lfb", "missing MagicBlock field")
 	}
 
