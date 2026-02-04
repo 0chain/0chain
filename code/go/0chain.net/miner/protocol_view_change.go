@@ -841,7 +841,13 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
-		logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		logging.Logger.Error("[CRITICAL] set dkgs from store failed for CURRENT MB - VRF signing will fail",
+			zap.Int64("mb_number", lfmb.MagicBlockNumber),
+			zap.Int64("mb_starting_round", lfmb.StartingRound),
+			zap.String("mb_hash", lfmb.MagicBlock.Hash),
+			zap.Error(err))
+		logging.Logger.Error("[CRITICAL] Miner cannot participate in consensus without valid DKG. " +
+			"Use /_diagnostics/dkg/restore to restore from backup or restart with valid DKG data.")
 	}
 
 	if lfmb.MagicBlockNumber <= 1 {
@@ -859,9 +865,11 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 		// Fix: Load DKG from previous MB (pfmb), not current MB (lfmb)
 		// This was a copy-paste bug from 2020-08-28 commit 10c2e7df2d
 		if err := mc.SetDKGSFromStore(ctx, pfmb.MagicBlock); err != nil {
-			logging.Logger.Warn("set dkgs from store failed for previous MB", zap.Error(err),
+			logging.Logger.Warn("set dkgs from store failed for previous MB - rounds using previous MB may fail",
 				zap.Int64("pfmb_number", pfmb.MagicBlockNumber),
-				zap.Int64("pfmb_sr", pfmb.StartingRound))
+				zap.Int64("pfmb_sr", pfmb.StartingRound),
+				zap.String("pfmb_hash", pfmb.MagicBlock.Hash),
+				zap.Error(err))
 		}
 		mc.UpdateMagicBlocks(pfmb, lfmb)
 		return
