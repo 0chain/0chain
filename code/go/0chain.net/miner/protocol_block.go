@@ -206,7 +206,15 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 			"required MB missing or still not finalized")
 	}
 
-	if b.LatestFinalizedMagicBlockHash != lfmbr.Hash {
+	if b.LatestFinalizedMagicBlockHash != lfmbr.MagicBlock.Hash {
+		logging.Logger.Error("verify_block_mb_reference - hash mismatch",
+			zap.Int64("round", round),
+			zap.String("block_lfmb_hash", b.LatestFinalizedMagicBlockHash),
+			zap.Int64("block_lfmb_round", b.LatestFinalizedMagicBlockRound),
+			zap.String("local_lfmb_hash", lfmbr.MagicBlock.Hash),
+			zap.Int64("local_lfmb_round", lfmbr.Round),
+			zap.Int64("local_lfmb_sr", lfmbr.StartingRound),
+		)
 		return common.NewError("verify_block_mb_reference",
 			"unexpected latest_finalized_mb_hash")
 	}

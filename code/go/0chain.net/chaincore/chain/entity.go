@@ -1908,7 +1908,7 @@ func (c *Chain) ValidateMagicBlock(_ context.Context, mr *round.Round, b *block.
 	}
 
 	// If exact match with current LFMB, accept
-	if b.LatestFinalizedMagicBlockHash == mb.Hash {
+	if b.LatestFinalizedMagicBlockHash == mb.MagicBlock.Hash {
 		return true
 	}
 
@@ -2665,9 +2665,9 @@ func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
 			zap.Int64("old mb starting round", lfmb.StartingRound),
 			zap.Int64("new mb starting round", newMagicBlock.StartingRound))
 
-		if lfmb.Hash == newMagicBlock.PreviousMagicBlockHash {
+		if lfmb.MagicBlock.Hash == newMagicBlock.PreviousMagicBlockHash {
 			logging.Logger.Info("update magic block -- hashes match ",
-				zap.String("LFMB previous MB hash", lfmb.PreviousMagicBlockHash),
+				zap.String("LFMB MB hash", lfmb.MagicBlock.Hash),
 				zap.String("new MB previous MB hash", newMagicBlock.PreviousMagicBlockHash))
 			c.PreviousMagicBlock = lfmb.MagicBlock
 		}
@@ -2791,7 +2791,7 @@ func (c *Chain) SetLatestFinalizedMagicBlock(b *block.Block) {
 	// and GetLatestFinalizedMagicBlockRound falls back to LFMB channel which could be stale.
 	c.lfmbMutex.Lock()
 	c.magicBlockStartingRoundsMap[b.MagicBlock.StartingRound] = b
-	c.magicBlockStartingRounds.Add(b.StartingRound)
+	c.magicBlockStartingRounds.Add(b.MagicBlock.StartingRound)
 	c.lfmbMutex.Unlock()
 
 	latest := c.GetLatestFinalizedMagicBlock(common.GetRootContext())

@@ -512,13 +512,13 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 			"required MB missing or still not finalized")
 	}
 
-	b.LatestFinalizedMagicBlockHash = lfmbr.Hash
+	b.LatestFinalizedMagicBlockHash = lfmbr.MagicBlock.Hash
 	b.LatestFinalizedMagicBlockRound = lfmbr.Round
 
 	logging.Logger.Debug("Setting LFMB round/hash for a block",
 		zap.Int64("rn", r.GetRoundNumber()), zap.Int64("mc.crn", mc.GetCurrentRound()),
 		zap.Int64("rnoff", mbRoundOffset(rn)), zap.Int64("nvc", mc.NextViewChange()),
-		zap.Int64("r", lfmbr.Round), zap.String("h", lfmbr.Hash),
+		zap.Int64("r", lfmbr.Round), zap.String("mb_hash", lfmbr.MagicBlock.Hash),
 		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
 	)
 
@@ -1421,17 +1421,17 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 				logging.Logger.Error("can't get lfmb")
 				return
 			}
-			if lfmbr.Hash != b.LatestFinalizedMagicBlockHash {
+			if lfmbr.MagicBlock.Hash != b.LatestFinalizedMagicBlockHash {
 				logging.Logger.Error("handleNoProgress mismatch latest finalized magic block",
 					zap.Int64("round", b.Round),
 					zap.String("block miner", b.MinerID),
-					zap.String("lfmbr hash", lfmbr.Hash),
+					zap.String("lfmbr_mb_hash", lfmbr.MagicBlock.Hash),
 					zap.String("block lfmbr hash", b.LatestFinalizedMagicBlockHash),
 					zap.Int64("lfmbr starting round", lfmbr.Round),
 					zap.Int64("block lfmbr starting round", b.LatestFinalizedMagicBlockRound))
 			} else {
 				logging.Logger.Debug("handleNoProgress match latest finalized magic block",
-					zap.String("lfmbr hash", lfmbr.Hash),
+					zap.String("lfmbr_mb_hash", lfmbr.MagicBlock.Hash),
 					zap.Int64("lfmbr round", lfmbr.Round))
 			}
 			logging.Logger.Info("Sent proposal in handle NoProgress")
