@@ -451,6 +451,42 @@ func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 						zap.String("lfb_hash", lfb.Hash))
 					return lfb
 				}
+			} else {
+				// CRITICAL: Save the computed state to RocksDB so it persists.
+				// ComputeOrSyncState computes state in memory but doesn't persist it.
+				// Without saving, the state will be lost and block generation will fail.
+				if saveErr := bnb.SaveChanges(ctx, mc.Chain); saveErr != nil {
+					logging.Logger.Warn("get block to extend - failed to save computed state",
+						zap.Int64("round", r.GetRoundNumber()),
+						zap.String("block", bnb.Hash),
+						zap.Error(saveErr))
+				} else {
+					logging.Logger.Info("get block to extend - saved computed state to RocksDB",
+						zap.Int64("round", r.GetRoundNumber()),
+						zap.String("block", bnb.Hash))
+				}
+
+				// CRITICAL: Re-verify the state root exists after sync.
+				// ComputeOrSyncState may succeed in fetching the root node but not
+				// the entire state tree. Without this check, block generation will
+				// fail later with "node not found" errors.
+				if _, verifyErr := mc.GetStateDB().GetNode(bnb.ClientStateHash); verifyErr != nil {
+					logging.Logger.Warn("get block to extend - state still missing after sync, falling back to LFB",
+						zap.Int64("round", r.GetRoundNumber()),
+						zap.String("block", bnb.Hash),
+						zap.Error(verifyErr))
+
+					// Fall back to LFB which is guaranteed to have valid state
+					lfb := mc.GetLatestFinalizedBlock()
+					if lfb != nil && lfb.Round < bnb.Round {
+						logging.Logger.Info("get block to extend - using LFB after sync verification failure",
+							zap.Int64("round", r.GetRoundNumber()),
+							zap.String("orphaned_block", bnb.Hash),
+							zap.Int64("lfb_round", lfb.Round),
+							zap.String("lfb_hash", lfb.Hash))
+						return lfb
+					}
+				}
 			}
 		}
 	}
@@ -474,6 +510,19 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	if pb == nil {
 		logging.Logger.Error("generate round block - no block to extend", zap.Int64("round", roundNumber))
 		return nil, common.NewError("block_gen_no_block_to_extend", "Do not have the block to extend this round")
+	}
+
+	// Check if the previous block is from the correct round (roundNumber - 1).
+	// If we fell back to LFB due to missing state in intermediate rounds, pb.Round
+	// will be less than roundNumber - 1. In this case, we cannot generate a block
+	// because SetPreviousBlock will set b.Round = pb.Round + 1, creating a gap.
+	if pb.Round != roundNumber-1 {
+		logging.Logger.Error("generate round block - previous block round mismatch, cannot generate",
+			zap.Int64("round", roundNumber),
+			zap.Int64("pb_round", pb.Round),
+			zap.Int64("expected_pb_round", roundNumber-1))
+		return nil, common.NewError("block_gen_round_gap",
+			"Previous block is not from the expected round, cannot generate block")
 	}
 
 	if !pb.IsStateComputed() {

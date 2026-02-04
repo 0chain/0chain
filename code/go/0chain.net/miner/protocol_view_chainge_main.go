@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"math/rand"
 	"net/url"
+	"strconv"
+	"time"
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
@@ -479,31 +481,136 @@ func (mc *Chain) Wait(ctx context.Context,
 	vcdkg.T = magicBlock.T
 	vcdkg.N = magicBlock.N
 
-	// save DKG and MB
+	// Save DKG and MB with persistence verification and retry logic.
+	// CRITICAL: Both DKG and MB must be verified as persisted before sending wait() tx.
+	// This prevents the race condition where wait() tx is broadcast but miner crashes
+	// before data is actually persisted to disk, causing inconsistent state where
+	// view change completes but miner has no DKG.
+	const maxRetries = 3
+	const retryDelay = 100 * time.Millisecond
+
 	logging.Logger.Debug("[mvc] dkg_ss, get dkg summary")
 	dkgSum := vcdkg.GetDKGSummary()
-	logging.Logger.Debug("[mvc] dkg_ss, store dkg summary")
-	if err = StoreDKGSummary(ctx, dkgSum); err != nil {
-		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
+	mbID := strconv.FormatInt(magicBlock.MagicBlockNumber, 10)
+
+	// Store and verify DKG with retry
+	var dkgVerified bool
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		logging.Logger.Debug("[mvc] dkg_ss, store dkg summary",
+			zap.Int("attempt", attempt))
+
+		if err = StoreDKGSummary(ctx, dkgSum); err != nil {
+			logging.Logger.Warn("[mvc] dkg wait: failed to store DKG summary",
+				zap.Int("attempt", attempt),
+				zap.Error(err))
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			return nil, common.NewErrorf("vc_wait", "saving DKG summary failed after %d attempts: %v", maxRetries, err)
+		}
+
+		// Verify DKG persistence by loading it back
+		verifiedSum, loadErr := LoadDKGSummary(ctx, dkgSum.ID)
+		if loadErr != nil {
+			logging.Logger.Warn("[mvc] dkg wait: failed to verify DKG persistence",
+				zap.Int("attempt", attempt),
+				zap.Error(loadErr))
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			return nil, common.NewErrorf("vc_wait",
+				"DKG persistence verification failed after %d attempts: %v", maxRetries, loadErr)
+		}
+
+		if len(verifiedSum.SecretShares) != len(dkgSum.SecretShares) {
+			logging.Logger.Warn("[mvc] dkg wait: DKG share count mismatch",
+				zap.Int("attempt", attempt),
+				zap.Int("stored", len(dkgSum.SecretShares)),
+				zap.Int("verified", len(verifiedSum.SecretShares)))
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			return nil, common.NewErrorf("vc_wait",
+				"DKG persistence verification failed - share count mismatch after %d attempts", maxRetries)
+		}
+
+		dkgVerified = true
+		logging.Logger.Debug("[mvc] dkg wait: DKG persistence verified",
+			zap.String("id", dkgSum.ID),
+			zap.Int("attempt", attempt),
+			zap.Int("shares_count", len(verifiedSum.SecretShares)))
+		break
 	}
-	logging.Logger.Debug("[mvc] dkg wait: store dkg summary",
-		zap.String("id", dkgSum.ID),
-		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
-		zap.Int64("mb_sr", magicBlock.StartingRound),
-		zap.String("mb_hash", magicBlock.Hash),
-	)
 
-	logging.Logger.Debug("[mvc] dkg_ss, store dkg summary")
-	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
-		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
+	if !dkgVerified {
+		return nil, common.NewError("vc_wait", "DKG persistence could not be verified")
 	}
 
-	logging.Logger.Debug("[mvc] dkg wait: store mb",
-		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
-		zap.Int64("mb_sr", magicBlock.StartingRound),
-		zap.String("mb_hash", magicBlock.Hash))
+	// Store and verify magic block with retry
+	var mbVerified bool
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		logging.Logger.Debug("[mvc] dkg_ss, store magic block",
+			zap.Int("attempt", attempt))
 
-	// create 'wait' transaction
+		if err = StoreMagicBlock(ctx, magicBlock); err != nil {
+			logging.Logger.Warn("[mvc] dkg wait: failed to store magic block",
+				zap.Int("attempt", attempt),
+				zap.Error(err))
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			return nil, common.NewErrorf("vc_wait", "saving MB failed after %d attempts: %v", maxRetries, err)
+		}
+
+		// Verify MB persistence by loading it back
+		verifiedMB, loadErr := LoadMagicBlock(ctx, mbID)
+		if loadErr != nil {
+			logging.Logger.Warn("[mvc] dkg wait: failed to verify MB persistence",
+				zap.Int("attempt", attempt),
+				zap.Error(loadErr))
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			return nil, common.NewErrorf("vc_wait",
+				"MB persistence verification failed after %d attempts: %v", maxRetries, loadErr)
+		}
+
+		if verifiedMB.Hash != magicBlock.Hash {
+			logging.Logger.Warn("[mvc] dkg wait: MB hash mismatch",
+				zap.Int("attempt", attempt),
+				zap.String("stored", magicBlock.Hash),
+				zap.String("verified", verifiedMB.Hash))
+			if attempt < maxRetries {
+				time.Sleep(retryDelay)
+				continue
+			}
+			return nil, common.NewErrorf("vc_wait",
+				"MB persistence verification failed - hash mismatch after %d attempts", maxRetries)
+		}
+
+		mbVerified = true
+		logging.Logger.Debug("[mvc] dkg wait: MB persistence verified",
+			zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+			zap.Int64("mb_sr", magicBlock.StartingRound),
+			zap.String("mb_hash", magicBlock.Hash),
+			zap.Int("attempt", attempt))
+		break
+	}
+
+	if !mbVerified {
+		return nil, common.NewError("vc_wait", "MB persistence could not be verified")
+	}
+
+	logging.Logger.Info("[mvc] dkg wait: both DKG and MB persistence verified, sending wait transaction",
+		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+		zap.Int64("mb_sr", magicBlock.StartingRound))
+
+	// Create 'wait' transaction - ONLY after both DKG and MB persistence are verified
 	if tx, err = mc.waitTransaction(mb); err != nil {
 		return nil, common.NewErrorf("vc_wait",
 			"sending 'wait' transaction: %v", err)

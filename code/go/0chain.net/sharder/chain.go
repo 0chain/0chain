@@ -842,8 +842,34 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		logging.Logger.Debug("load_lfb - load from stateDB",
 			zap.Int64("round", lfbr.Round),
 			zap.String("block", lfbr.Hash))
+
+		// Use the highest MB number from RocksDB, not the one stored in LFB.
+		// This fixes a bug where a newer MB (e.g., MB 236) exists in RocksDB but
+		// lfbr.MagicBlockNumber is stale (e.g., 235) because GetCurrentMagicBlock()
+		// at the time of StoreLFBRound hadn't loaded the newer MB yet.
+		mbNumberForLoading := lfbr.MagicBlockNumber
+		highestMBM, mbErr := sc.GetHighestMagicBlockMap(ctx)
+		if mbErr != nil {
+			logging.Logger.Warn("load_lfb - could not get highest MB from RocksDB, using lfbr.MagicBlockNumber",
+				zap.Int64("lfbr_mb_number", lfbr.MagicBlockNumber),
+				zap.Error(mbErr))
+		} else {
+			// Parse the MB number from the ID field (stored as string)
+			highestMBNumber, parseErr := strconv.ParseInt(highestMBM.ID, 10, 64)
+			if parseErr != nil {
+				logging.Logger.Warn("load_lfb - could not parse highest MB number",
+					zap.String("highest_mb_id", highestMBM.ID),
+					zap.Error(parseErr))
+			} else if highestMBNumber > lfbr.MagicBlockNumber {
+				logging.Logger.Info("load_lfb - found newer MB in RocksDB than stored in LFB",
+					zap.Int64("highest_mb_number", highestMBNumber),
+					zap.Int64("lfbr_mb_number", lfbr.MagicBlockNumber))
+				mbNumberForLoading = highestMBNumber
+			}
+		}
+
 		// load and set up latest magic block
-		mbs := sc.LoadLatestMBs(ctx, lfbr.MagicBlockNumber)
+		mbs := sc.LoadLatestMBs(ctx, mbNumberForLoading)
 		if len(mbs) != 0 {
 			// Store all MBs in the MagicBlockStorage
 			for i := len(mbs) - 1; i >= 0; i-- {
