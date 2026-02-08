@@ -1063,15 +1063,12 @@ func (c *Chain) GetCurrentMagicBlock() *block.MagicBlock {
 
 func (c *Chain) GetLatestMagicBlock() *block.MagicBlock {
 	c.mbMutex.RLock()
+	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.GetLatest()
 	if entity == nil {
 		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
-	c.mbMutex.RUnlock()
-	mb := entity.(*block.MagicBlock)
-	// Ensure miners have ProtocolStats initialized (may not be set when loaded from storage)
-	c.InitializeMinerPoolIfNotSet(mb)
-	return mb
+	return entity.(*block.MagicBlock)
 }
 
 func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
@@ -1093,14 +1090,13 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	c.mbMutex.RUnlock()
 	// mb := entity.(*block.MagicBlock).Clone()
 	mb := entity.(*block.MagicBlock)
-	// Ensure miners have ProtocolStats initialized (may not be set when loaded from storage)
-	c.InitializeMinerPoolIfNotSet(mb)
 	return mb
 }
 
 // GetMagicBlockNoOffset returns magic block of a given round with out offset
 func (c *Chain) GetMagicBlockNoOffset(round int64) *block.MagicBlock {
 	c.mbMutex.RLock()
+	defer c.mbMutex.RUnlock()
 	entity := c.MagicBlockStorage.Get(round)
 	if entity == nil {
 		entity = c.MagicBlockStorage.GetLatest()
@@ -1108,11 +1104,7 @@ func (c *Chain) GetMagicBlockNoOffset(round int64) *block.MagicBlock {
 	if entity == nil {
 		logging.Logger.Panic("failed to get magic block from mb storage")
 	}
-	c.mbMutex.RUnlock()
-	mb := entity.(*block.MagicBlock)
-	// Ensure miners have ProtocolStats initialized (may not be set when loaded from storage)
-	c.InitializeMinerPoolIfNotSet(mb)
-	return mb
+	return entity.(*block.MagicBlock)
 }
 
 func (c *Chain) GetPrevMagicBlock(r int64) *block.MagicBlock {
@@ -3078,7 +3070,9 @@ func (c *Chain) LoadLatestFinalizedMagicBlockFromStore(ctx context.Context) {
 		prevMbStr := strconv.FormatInt(i-1, 10)
 		mb, err := block.LoadMagicBlock(ctx, mbStr)
 		if err != nil {
-			logging.Logger.Panic("load_latest_mb", zap.Error(err), zap.Int64("mb number", i))
+			logging.Logger.Error("load_latest_mb - corrupted MB in local store, skipping",
+				zap.Error(err), zap.Int64("mb number", i))
+			continue
 		}
 
 		var prevMb *block.MagicBlock
@@ -3088,7 +3082,9 @@ func (c *Chain) LoadLatestFinalizedMagicBlockFromStore(ctx context.Context) {
 		} else {
 			prevMb, err = block.LoadMagicBlock(ctx, prevMbStr)
 			if err != nil {
-				logging.Logger.Panic("load_latest_mb", zap.Error(err), zap.Int64("mb number", i))
+				logging.Logger.Error("load_latest_mb - corrupted prev MB in local store, skipping",
+					zap.Error(err), zap.Int64("mb number", i-1))
+				continue
 			}
 		}
 
@@ -3097,13 +3093,7 @@ func (c *Chain) LoadLatestFinalizedMagicBlockFromStore(ctx context.Context) {
 
 		// load and set prev mb if not in chain.MagicBlockStorage so that
 		// blocks fetch process can verify tickets
-		// if mc.MagicBlockStorage.GetByStartingRound(prevMb.StartingRound) == nil {
 		c.MagicBlockStorage.Put(prevMb, prevMb.StartingRound)
-		// } else {
-		// 	logging.Logger.Error("[mvc] load prev MB by magic bock number",
-		// 		zap.Int64("mb number", i),
-
-		// }
 
 		logging.Logger.Info("[mvc] load MB by magic bock number", zap.Int64("mb number", i))
 		for j := 0; j < retry; j++ {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -14,7 +13,6 @@ import (
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
-	"0chain.net/core/datastore"
 	"github.com/0chain/common/core/logging"
 	"github.com/0chain/common/core/util"
 	"go.uber.org/zap"
@@ -474,11 +472,6 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 				zap.Int64("lastRound", lastRound.round),
 				zap.String("state_hash", util.ToHex(lastRound.stateHash)),
 				zap.Duration("stuck time", ts))
-
-			// Try to recover by fetching latest magic block from miners
-			if err := c.tryRecoverMagicBlock(ctx); err != nil {
-				logging.Logger.Error("magic block recovery failed", zap.Error(err))
-			}
 		case mns := <-c.syncMissingNodesC:
 			func() {
 				var synced bool
@@ -518,202 +511,6 @@ func (c *Chain) SyncLFBStateWorker(ctx context.Context) {
 			return
 		}
 	}
-}
-
-// tryRecoverMagicBlock attempts to fetch the latest magic block from miners
-// and verify it by walking back to our current magic block.
-func (c *Chain) tryRecoverMagicBlock(ctx context.Context) error {
-	currentMB := c.GetCurrentMagicBlock()
-	if currentMB == nil {
-		return errors.New("no current magic block")
-	}
-
-	logging.Logger.Info("attempting magic block recovery",
-		zap.Int64("current_mb_number", currentMB.MagicBlockNumber),
-		zap.Int64("current_mb_starting_round", currentMB.StartingRound))
-
-	// Get miners from current magic block to query
-	miners := currentMB.Miners
-	if miners == nil || miners.Size() == 0 {
-		return errors.New("no miners in current magic block")
-	}
-
-	// Fetch latest finalized magic block from miners (returns the full block)
-	latestBlock, err := c.fetchLatestMagicBlockFromMiners(ctx, miners)
-	if err != nil {
-		return fmt.Errorf("failed to fetch latest magic block: %v", err)
-	}
-
-	// Ensure the magic block's StartingRound is not ahead of our LFB.
-	// LFMB should never be ahead of the sharders' LFMB or miner/sharder LFB.
-	// If the MB's StartingRound is ahead, we haven't finalized enough blocks yet.
-	lfb := c.GetLatestFinalizedBlock()
-	if lfb != nil && latestBlock.MagicBlock.StartingRound > lfb.Round {
-		logging.Logger.Debug("skipping magic block recovery: MB starting round ahead of LFB",
-			zap.Int64("mb_starting_round", latestBlock.MagicBlock.StartingRound),
-			zap.Int64("lfb_round", lfb.Round),
-			zap.Int64("mb_number", latestBlock.MagicBlockNumber))
-		return nil
-	}
-
-	if latestBlock.MagicBlockNumber <= currentMB.MagicBlockNumber {
-		logging.Logger.Debug("no newer magic block available",
-			zap.Int64("current", currentMB.MagicBlockNumber),
-			zap.Int64("fetched", latestBlock.MagicBlockNumber))
-		return nil
-	}
-
-	logging.Logger.Info("found newer magic block",
-		zap.Int64("current_mb", currentMB.MagicBlockNumber),
-		zap.Int64("new_mb", latestBlock.MagicBlockNumber))
-
-	// Verify by walking back from new MB to our current MB
-	// Pass the full block so SetLatestFinalizedMagicBlock can be called
-	if err := c.verifyMagicBlockChain(ctx, latestBlock.MagicBlock, currentMB, latestBlock, miners); err != nil {
-		return fmt.Errorf("magic block chain verification failed: %v", err)
-	}
-
-	logging.Logger.Info("magic block recovery successful",
-		zap.Int64("new_mb_number", latestBlock.MagicBlockNumber))
-
-	return nil
-}
-
-// fetchLatestMagicBlockFromMiners fetches the latest finalized magic block from miners
-// Returns the full block containing the magic block
-func (c *Chain) fetchLatestMagicBlockFromMiners(ctx context.Context, miners *node.Pool) (*block.Block, error) {
-	var (
-		latestBlock *block.Block
-		maxMBNumber int64
-		mu          sync.Mutex
-	)
-
-	handler := func(ctx context.Context, entity datastore.Entity) (interface{}, error) {
-		b, ok := entity.(*block.Block)
-		if !ok || b.MagicBlock == nil {
-			return nil, errors.New("invalid block entity")
-		}
-
-		mu.Lock()
-		defer mu.Unlock()
-		if b.MagicBlockNumber > maxMBNumber {
-			maxMBNumber = b.MagicBlockNumber
-			latestBlock = b
-		}
-		return b, nil
-	}
-
-	miners.RequestEntityFromAll(ctx, LatestFinalizedMagicBlockRequestor, nil, handler)
-
-	if latestBlock == nil {
-		return nil, errors.New("could not fetch magic block from any miner")
-	}
-
-	return latestBlock, nil
-}
-
-// verifyMagicBlockChain verifies the chain of magic blocks from newMB back to currentMB
-// and also accepts the latest block that contains the newMB for proper LFMB update
-func (c *Chain) verifyMagicBlockChain(ctx context.Context, newMB, currentMB *block.MagicBlock, latestBlock *block.Block, miners *node.Pool) error {
-	// Collect all magic block-containing blocks from new to current by walking back
-	// We need the full blocks to call SetLatestFinalizedMagicBlock later
-	blockChain := []*block.Block{latestBlock}
-
-	// Use sharders from the latest MB to fetch intermediate magic blocks
-	// (sharders from old MB may not have newer MBs, but sharders from latest MB have all MBs)
-	sharderURLs := newMB.Sharders.N2NURLs()
-	logging.Logger.Info("verifying magic block chain",
-		zap.Int64("from_mb", currentMB.MagicBlockNumber),
-		zap.Int64("to_mb", newMB.MagicBlockNumber),
-		zap.Int("sharder_count", len(sharderURLs)))
-
-	// Walk back from newMB to currentMB (or further if needed due to fork)
-	for blockChain[len(blockChain)-1].MagicBlock.MagicBlockNumber > currentMB.MagicBlockNumber+1 {
-		prevMBNum := blockChain[len(blockChain)-1].MagicBlock.MagicBlockNumber - 1
-
-		mb, err := httpclientutil.FetchMagicBlockFromSharders(ctx, sharderURLs, prevMBNum,
-			func(b *block.Block) bool { return true }) // We'll verify the chain ourselves
-		if err != nil {
-			return fmt.Errorf("failed to fetch magic block %d: %v", prevMBNum, err)
-		}
-
-		if mb.MagicBlock == nil {
-			return fmt.Errorf("magic block %d has no embedded magic block", prevMBNum)
-		}
-
-		// Verify hash chain
-		expectedPrevHash := blockChain[len(blockChain)-1].MagicBlock.PreviousMagicBlockHash
-		if mb.MagicBlock.Hash != expectedPrevHash {
-			return fmt.Errorf("magic block %d hash mismatch: expected %s, got %s",
-				prevMBNum, expectedPrevHash, mb.MagicBlock.Hash)
-		}
-
-		blockChain = append(blockChain, mb)
-	}
-
-	// Check if the chain connects to our current MB
-	lastInChain := blockChain[len(blockChain)-1].MagicBlock
-	if lastInChain.PreviousMagicBlockHash != currentMB.Hash {
-		// The chain doesn't connect - our current MB might be from a fork
-		// Fetch the correct MB from the network for the same number
-		logging.Logger.Warn("local MB does not match network chain, fetching correct MB from network",
-			zap.Int64("local_mb_number", currentMB.MagicBlockNumber),
-			zap.String("local_mb_hash", currentMB.Hash),
-			zap.String("expected_prev_hash", lastInChain.PreviousMagicBlockHash))
-
-		// Continue walking back to include the correct version of current MB
-		for {
-			prevMBNum := blockChain[len(blockChain)-1].MagicBlock.MagicBlockNumber - 1
-			if prevMBNum < 1 {
-				// Reached genesis, apply all blocks
-				logging.Logger.Info("walked back to genesis during fork recovery")
-				break
-			}
-
-			mb, err := httpclientutil.FetchMagicBlockFromSharders(ctx, sharderURLs, prevMBNum,
-				func(b *block.Block) bool { return true })
-			if err != nil {
-				return fmt.Errorf("failed to fetch magic block %d during fork recovery: %v", prevMBNum, err)
-			}
-
-			if mb.MagicBlock == nil {
-				return fmt.Errorf("magic block %d has no embedded magic block during fork recovery", prevMBNum)
-			}
-
-			// Verify hash chain
-			expectedPrevHash := blockChain[len(blockChain)-1].MagicBlock.PreviousMagicBlockHash
-			if mb.MagicBlock.Hash != expectedPrevHash {
-				return fmt.Errorf("magic block %d hash mismatch during fork recovery: expected %s, got %s",
-					prevMBNum, expectedPrevHash, mb.MagicBlock.Hash)
-			}
-
-			blockChain = append(blockChain, mb)
-
-			// Limit how far back we go (100 MBs should be enough to find common ancestor)
-			if len(blockChain) > 100 {
-				return fmt.Errorf("could not find common ancestor within 100 magic blocks")
-			}
-		}
-	}
-
-	// Apply magic blocks in order (from oldest to newest)
-	// Call both UpdateMagicBlock and SetLatestFinalizedMagicBlock to update all pools
-	for i := len(blockChain) - 1; i >= 0; i-- {
-		b := blockChain[i]
-		if err := c.UpdateMagicBlock(b.MagicBlock); err != nil {
-			// Log but continue - UpdateMagicBlock may fail if MB is older than current
-			logging.Logger.Debug("UpdateMagicBlock returned error (may be expected during fork recovery)",
-				zap.Int64("mb_number", b.MagicBlockNumber),
-				zap.Error(err))
-		}
-		// SetLatestFinalizedMagicBlock updates the LFMB channel that block fetcher uses
-		c.SetLatestFinalizedMagicBlock(b)
-		logging.Logger.Info("updated magic block",
-			zap.Int64("mb_number", b.MagicBlockNumber),
-			zap.Int64("starting_round", b.MagicBlock.StartingRound))
-	}
-
-	return nil
 }
 
 type MagicBlockSaveFunc func(context.Context, *block.Block) error
