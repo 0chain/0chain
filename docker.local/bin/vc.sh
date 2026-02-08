@@ -142,6 +142,16 @@ run_zwallet_cmd() {
             return 0
         fi
 
+        # Check for insufficient balance - fund and retry
+        if echo "$output" | grep -qiE "insufficient balance"; then
+            retry=$((retry + 1))
+            echo -e "    ${YELLOW}Insufficient balance, funding wallet with 100 tokens (retry $retry/$max_retries)...${NC}"
+            local fund_nonce=$(get_next_nonce)
+            cd "$ZWALLET_DIR" && $ZWALLET_PATH faucet --methodName pour --input "{}" --tokens 100 --wallet $WALLET --config $CONFIG --withNonce $fund_nonce 2>&1 | grep -E "success|error" || true
+            sleep 3
+            continue
+        fi
+
         # Check for nonce errors
         if echo "$output" | grep -qiE "nonce"; then
             retry=$((retry + 1))
@@ -948,9 +958,9 @@ while true; do
     # Initialize nonce on first iteration
     initialize_nonce
 
-    # Fund wallet with faucet before each iteration
-    echo -e "  ${CYAN}Funding wallet from faucet...${NC}"
-    run_zwallet_cmd "$ZWALLET_PATH faucet --methodName pour --input \"{}\" --tokens 10 --wallet $WALLET --config $CONFIG"
+    # Fund wallet with faucet before each iteration (100 tokens once)
+    echo -e "  ${CYAN}Funding wallet from faucet (100 tokens)...${NC}"
+    run_zwallet_cmd "$ZWALLET_PATH faucet --methodName pour --input \"{}\" --tokens 100 --wallet $WALLET --config $CONFIG"
     sleep 3  # Wait for faucet transaction to be confirmed
 
     # Record starting MB for verification
