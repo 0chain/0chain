@@ -1446,7 +1446,7 @@ func (mc *Chain) handleNoProgress(ctx context.Context, rn int64) {
 					logging.Logger.Info("Sending verification ticket in handle NoProgress",
 						zap.Int64("round", r.Number), zap.String("block", b.Hash))
 				}
-				go mc.SendVerificationTicket(ctx, b, r.OwnVerificationTicket())
+				go mc.SendVerificationTicket(context.Background(), b, r.OwnVerificationTicket())
 			}
 		}
 	}
