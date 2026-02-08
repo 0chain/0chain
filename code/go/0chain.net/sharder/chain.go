@@ -16,6 +16,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -707,6 +708,72 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 	return nil, common.NewError("load_lfb", "no valid lfb found")
 }
 
+// discoverNewerMBsFromSharders tries to fetch MBs newer than currentMBNumber
+// from peer sharders. For each found, it calls UpdateMagicBlock (which registers
+// nodes via SetupNodes) and SetLatestFinalizedMagicBlock. This handles the case
+// where the sharder missed a magic block transmission (e.g., was down when the
+// block containing the MB was created by miners).
+func (sc *Chain) discoverNewerMBsFromSharders(ctx context.Context, currentMBNumber int64, lfbRound int64) {
+	mb := sc.GetLatestMagicBlock()
+	if mb == nil {
+		return
+	}
+	sharderURLs := mb.Sharders.N2NURLs()
+	if len(sharderURLs) == 0 {
+		return
+	}
+
+	for nextMBNum := currentMBNumber + 1; ; nextMBNum++ {
+		fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		fetchedBlock, err := httpclientutil.FetchMagicBlockFromSharders(fetchCtx, sharderURLs, nextMBNum,
+			func(b *block.Block) bool {
+				return b != nil && b.MagicBlock != nil
+			})
+		cancel()
+
+		if err != nil || fetchedBlock == nil || fetchedBlock.MagicBlock == nil {
+			break // no more newer MBs available
+		}
+
+		// Only activate if the MB's starting round is not far ahead of LFB
+		if fetchedBlock.MagicBlock.StartingRound > lfbRound+500 {
+			logging.Logger.Debug("load_lfb - skipping MB too far ahead of LFB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Int64("mb_sr", fetchedBlock.MagicBlock.StartingRound),
+				zap.Int64("lfb_round", lfbRound))
+			break
+		}
+
+		logging.Logger.Info("load_lfb - discovered newer MB from peer sharders",
+			zap.Int64("mb_number", fetchedBlock.MagicBlock.MagicBlockNumber),
+			zap.Int64("mb_sr", fetchedBlock.MagicBlock.StartingRound),
+			zap.Int("miners", fetchedBlock.MagicBlock.Miners.Size()),
+			zap.Int("sharders", fetchedBlock.MagicBlock.Sharders.Size()))
+
+		if err := sc.UpdateMagicBlock(fetchedBlock.MagicBlock); err != nil {
+			logging.Logger.Error("load_lfb - failed to activate newer MB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Error(err))
+			break
+		}
+		sc.SetLatestFinalizedMagicBlock(fetchedBlock)
+
+		// Also persist the MB to MagicBlockMap store so it's available on next restart
+		bs := fetchedBlock.GetSummary()
+		if err := sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap()); err != nil {
+			logging.Logger.Error("load_lfb - failed to persist discovered MB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Error(err))
+		}
+
+		// Update sharder URLs for next fetch (new MB might have different sharders)
+		newMB := sc.GetLatestMagicBlock()
+		if newMB != nil {
+			sharderURLs = newMB.Sharders.N2NURLs()
+		}
+	}
+}
+
 func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, hash string, round int64) (*blocksLoaded, error) {
 	r, err := sc.GetRoundFromStore(ctx, round)
 	if err != nil {
@@ -921,6 +988,15 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 			// Now set up nodes and LFMB with the selected MB
 			sc.UpdateMagicBlock(selectedMB.MagicBlock)
 			sc.SetLatestFinalizedMagicBlock(selectedMB)
+
+			// Try to discover and activate newer MBs from peer sharders.
+			// This handles the case where this sharder missed a magic block
+			// (e.g., was down during chaos testing when the block containing
+			// the MB was created). Without this, the node registry won't
+			// include miners from newer MBs, causing "unknown_miner" errors.
+			if sc.IsViewChangeEnabled() && selectedMB.MagicBlock != nil {
+				sc.discoverNewerMBsFromSharders(ctx, selectedMB.MagicBlock.MagicBlockNumber, lfbRound)
+			}
 
 			if lfbr.Round <= lfbRound {
 				// use LFB from state DB when:
