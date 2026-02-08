@@ -18,6 +18,7 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -712,32 +713,76 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return // node leaves BC, don't do anything here
 	}
 
-	if mc.isSyncingBlocks() {
-		return nil
-	}
+	// Try to get the DKG summary. Prefer the in-memory viewChangeDKG if available,
+	// because the stored summary may be from a stale (failed) VC attempt whose
+	// shares don't match the finalized MB's MPKs.
+	var dkgSum *bls.DKGSummary
 
-	dkgSum, err := LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
-	if err != nil {
-		logging.Logger.Error("[mvc] view change failed to load dkg summary",
-			zap.Error(err),
-			zap.Int64("mb number", mb.MagicBlockNumber))
-		return nil
-	}
+	mc.viewChangeProcess.Lock()
+	vcDKG := mc.viewChangeProcess.viewChangeDKG
+	mc.viewChangeProcess.Unlock()
 
-	dkgSum.IsFinalized = true
-	if err := StoreDKGSummary(ctx, dkgSum); err != nil {
-		logging.Logger.Error("[mvc] view change failed to update dkg summary",
-			zap.Error(err),
-			zap.Int64("mb number", mb.MagicBlockNumber))
-		return err
+	if vcDKG != nil && vcDKG.MagicBlockNumber == mb.MagicBlockNumber {
+		// Use the in-memory DKG from the active VC process — this is guaranteed
+		// to have shares matching the current VC attempt's MPKs.
+		dkgSum = vcDKG.GetDKGSummary()
+		dkgSum.IsFinalized = true
+		if storeErr := StoreDKGSummary(ctx, dkgSum); storeErr != nil {
+			logging.Logger.Error("[mvc] view change - failed to store fresh DKG from viewChangeDKG",
+				zap.Error(storeErr),
+				zap.Int64("mb number", mb.MagicBlockNumber))
+		} else {
+			logging.Logger.Info("[mvc] view change - stored fresh DKG from in-memory viewChangeDKG",
+				zap.Int64("mb number", mb.MagicBlockNumber))
+		}
+	} else {
+		// Fall back to loading from store (e.g., when syncing blocks after restart)
+		var loadErr error
+		dkgSum, loadErr = LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+		if loadErr != nil {
+			logging.Logger.Error("[mvc] view change failed to load dkg summary",
+				zap.Error(loadErr),
+				zap.Int64("mb number", mb.MagicBlockNumber))
+			return nil
+		}
+
+		if !dkgSum.IsFinalized {
+			dkgSum.IsFinalized = true
+			if storeErr := StoreDKGSummary(ctx, dkgSum); storeErr != nil {
+				logging.Logger.Error("[mvc] view change failed to update dkg summary",
+					zap.Error(storeErr),
+					zap.Int64("mb number", mb.MagicBlockNumber))
+				return storeErr
+			}
+			logging.Logger.Info("[mvc] view change - DKG finalized",
+				zap.Int64("mb number", mb.MagicBlockNumber))
+		}
 	}
 
 	if err := SetDKG(ctx, mb, dkgSum); err != nil {
-		logging.Logger.Error("[mvc] view change set dkg failed",
+		// DKG setup failed for this magic block. Instead of blocking the chain,
+		// log the error and continue using the previous MB's DKG.
+		// This allows the chain to keep running even if view change DKG fails.
+		//
+		// CRITICAL: The MB was already added to MagicBlockStorage by UpdateMagicBlock
+		// in FinalizeBlock (chaincore). We must remove it so GetMagicBlock continues
+		// to return the previous MB. Otherwise, when trigger round arrives (StartingRound
+		// + ViewChangeOffset), GetMagicBlock would return this MB but DKG isn't available,
+		// causing VRF signing to fail.
+		logging.Logger.Error("[mvc] view change set dkg failed - removing MB from storage and continuing with previous MB DKG",
 			zap.Int64("mb number", mb.MagicBlockNumber),
 			zap.Int64("mb sr", mb.StartingRound),
 			zap.Error(err))
-		return err
+
+		// Remove the MB from in-memory storage. Use StartingRound-1 to delete all MBs
+		// with StartingRound > (mb.StartingRound - 1), i.e., delete this MB and any later ones.
+		if delErr := mc.DeleteMagicBlocksAfter(mb.StartingRound - 1); delErr != nil {
+			logging.Logger.Error("[mvc] failed to remove MB from storage after DKG failure",
+				zap.Int64("mb number", mb.MagicBlockNumber),
+				zap.Error(delErr))
+		}
+
+		return nil // Don't block finalization - continue with previous MB
 	}
 
 	// Update the latest finalized magic block - this is critical for the chain to

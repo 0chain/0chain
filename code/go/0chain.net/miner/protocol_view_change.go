@@ -2,7 +2,6 @@ package miner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -236,11 +235,35 @@ func (vcp *viewChangeProcess) clearViewChange() {
 //
 
 // DKGProcessStart represents 'start' phase function.
-func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
-	*block.MagicBlock) (*httpclientutil.Transaction, error) {
+func (mc *Chain) DKGProcessStart(ctx context.Context, _ *block.Block,
+	mb *block.MagicBlock) (*httpclientutil.Transaction, error) {
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
+
+	// Clear any stale DKG summary for the upcoming MB.
+	// When VC phases restart (e.g., after a failed view change attempt),
+	// the previous attempt's DKG summary may have shares computed from
+	// a different polynomial that won't match the new attempt's MPKs.
+	// Without this cleanup, a chaos restart between the failed attempt's
+	// Wait (which stored the stale summary) and the new attempt's Wait
+	// leaves the stale summary in RocksDB, causing Pi mismatch on next load.
+	if mb != nil {
+		upcomingMBNum := mb.MagicBlockNumber + 1
+		upcomingID := strconv.FormatInt(upcomingMBNum, 10)
+		if existing, err := LoadDKGSummary(ctx, upcomingID); err == nil && !existing.IsFinalized {
+			logging.Logger.Info("[mvc] DKGProcessStart - clearing stale non-finalized DKG summary",
+				zap.Int64("mb_number", upcomingMBNum))
+			emptySummary := &bls.DKGSummary{
+				SecretShares: nil,
+			}
+			emptySummary.ID = upcomingID
+			if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
+				logging.Logger.Error("[mvc] DKGProcessStart - failed to clear stale DKG summary",
+					zap.Error(storeErr))
+			}
+		}
+	}
 
 	mc.viewChangeProcess.clearViewChange()
 	return nil, nil
@@ -606,50 +629,6 @@ func LoadDKGKey(ctx context.Context, mbNum int64) (dkgKey *block.DKGKey, err err
 	return dkgKeyData.DKGKey, nil
 }
 
-// BackupDKGSummary creates a backup of an existing DKG summary to a JSON file.
-// The backup is stored in the data/dkg_backup directory with the format: dkg_summary_{id}_{timestamp}.json
-func BackupDKGSummary(ctx context.Context, id string, backupDir string) error {
-	// Load existing summary
-	existingSummary, err := LoadDKGSummary(ctx, id)
-	if err != nil {
-		// No existing summary to backup
-		logging.Logger.Debug("[dkg_backup] no existing summary to backup",
-			zap.String("id", id),
-			zap.Error(err))
-		return nil
-	}
-
-	// Create backup directory if it doesn't exist
-	if backupDir == "" {
-		backupDir = "data/dkg_backup"
-	}
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
-		return fmt.Errorf("failed to create backup directory: %v", err)
-	}
-
-	// Create backup file with timestamp
-	timestamp := time.Now().Format("20060102_150405")
-	backupFile := filepath.Join(backupDir, fmt.Sprintf("dkg_summary_%s_%s.json", id, timestamp))
-
-	// Marshal summary to JSON
-	data, err := json.Marshal(existingSummary)
-	if err != nil {
-		return fmt.Errorf("failed to marshal DKG summary: %v", err)
-	}
-
-	// Write to file
-	if err := os.WriteFile(backupFile, data, 0600); err != nil {
-		return fmt.Errorf("failed to write backup file: %v", err)
-	}
-
-	logging.Logger.Info("[dkg_backup] created backup of DKG summary",
-		zap.String("id", id),
-		zap.String("backup_file", backupFile),
-		zap.Int("shares", len(existingSummary.SecretShares)))
-
-	return nil
-}
-
 // StoreDKGSummary in DB.
 func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
 	var (
@@ -665,78 +644,6 @@ func StoreDKGSummary(ctx context.Context, summary *bls.DKGSummary) (err error) {
 
 	var con = ememorystore.GetEntityCon(dctx, dkgSummaryMetadata)
 	return con.Commit()
-}
-
-// StoreDKGSummaryWithBackup creates a backup of existing DKG before storing new one.
-func StoreDKGSummaryWithBackup(ctx context.Context, summary *bls.DKGSummary, backupDir string) error {
-	// Backup existing summary first
-	if err := BackupDKGSummary(ctx, summary.ID, backupDir); err != nil {
-		logging.Logger.Warn("[dkg] failed to backup existing DKG summary",
-			zap.String("id", summary.ID),
-			zap.Error(err))
-		// Continue anyway - backup failure shouldn't block recovery
-	}
-
-	// Store new summary
-	return StoreDKGSummary(ctx, summary)
-}
-
-// ListDKGBackups returns a list of available DKG backup files
-func ListDKGBackups(backupDir string) ([]string, error) {
-	if backupDir == "" {
-		backupDir = "data/dkg_backup"
-	}
-
-	files, err := os.ReadDir(backupDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []string{}, nil
-		}
-		return nil, err
-	}
-
-	var backups []string
-	for _, f := range files {
-		if !f.IsDir() && filepath.Ext(f.Name()) == ".json" {
-			backups = append(backups, filepath.Join(backupDir, f.Name()))
-		}
-	}
-	return backups, nil
-}
-
-// RestoreDKGFromBackup restores a DKG summary from a backup file
-func RestoreDKGFromBackup(ctx context.Context, backupFile string) error {
-	// Read the backup file
-	data, err := os.ReadFile(backupFile)
-	if err != nil {
-		return fmt.Errorf("failed to read backup file: %v", err)
-	}
-
-	// Parse the DKG summary
-	summary := &bls.DKGSummary{SecretShares: make(map[string]string)}
-	if err := json.Unmarshal(data, summary); err != nil {
-		return fmt.Errorf("failed to parse backup file: %v", err)
-	}
-
-	if summary.ID == "" {
-		return common.NewError("restore_dkg", "backup file has no ID")
-	}
-
-	if summary.SecretShares == nil || len(summary.SecretShares) == 0 {
-		return common.NewError("restore_dkg", "backup file has no secret shares")
-	}
-
-	// Store the restored summary (this will backup current one first)
-	if err := StoreDKGSummaryWithBackup(ctx, summary, ""); err != nil {
-		return fmt.Errorf("failed to store restored DKG: %v", err)
-	}
-
-	logging.Logger.Info("[dkg_restore] successfully restored DKG from backup",
-		zap.String("backup_file", backupFile),
-		zap.String("id", summary.ID),
-		zap.Int("shares", len(summary.SecretShares)))
-
-	return nil
 }
 
 // LoadDKGSummary loads DKG summary by stored DKG (that stores DKG summary).
