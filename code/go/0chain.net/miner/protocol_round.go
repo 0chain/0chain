@@ -144,6 +144,8 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 		return false // context is done, can't wait anymore
 	}
 
+	// Use the LOWER of network ticket and local LFB.
+	// This ensures miners throttle when sharders are behind (ticket < LFB).
 	if tk.Round > lfb.Round {
 		tkRound = lfb.Round
 	} else {
@@ -191,10 +193,10 @@ func (mc *Chain) waitNotAhead(ctx context.Context, round int64) (ok bool) {
 
 		case ntk := <-tksubq: // the ntk can't be nil
 			lfb = mc.GetLatestFinalizedBlock()
-			if ntk.Round > lfb.Round { // ntk is ahead, use lfb
+			if ntk.Round > lfb.Round {
 				tkRound = lfb.Round
 			} else {
-				tkRound = ntk.Round // lfb is ahead, use ntk?
+				tkRound = ntk.Round
 			}
 
 			if round+1 <= tkRound+int64(ahead) {
@@ -241,6 +243,14 @@ func (mc *Chain) startNextRound(ctx context.Context, r *Round) *Round {
 	)
 	mc.SetCurrentRound(er.GetRoundNumber())
 	mc.finalizeRound(ctx, r) // finalize the notarized block round
+
+	if er != mr && mc.isStarted() && er.HasRandomSeed() {
+		logging.Logger.Info("StartNextRound found next round with RRS. No VRFShares Sent",
+			zap.Int64("er_round", er.GetRoundNumber()),
+			zap.Int64("rrs", er.GetRandomSeed()),
+			zap.Bool("is_started", mc.isStarted()))
+		return er
+	}
 
 	if r.HasRandomSeed() && er.VrfShare() == nil {
 		logging.Logger.Info("StartNextRound - add VRF", zap.Int64("round", er.GetRoundNumber()))
@@ -420,77 +430,6 @@ func (mc *Chain) getBlockToExtend(ctx context.Context, r round.RoundI) (
 		}
 	}
 
-	// CRITICAL FIX: Even if IsStateComputed() returns true (in-memory flag), verify
-	// the state root actually exists in RocksDB. This handles the case where a block
-	// was notarized but never finalized, so state was computed in memory but never
-	// persisted to disk. Without this check, the chain can get stuck trying to use
-	// a block whose state doesn't actually exist.
-	if bnb.ClientStateHash != nil && len(bnb.ClientStateHash) > 0 {
-		if _, err := mc.GetStateDB().GetNode(bnb.ClientStateHash); err != nil {
-			logging.Logger.Warn("get block to extend - state root not found in DB despite IsStateComputed=true",
-				zap.Int64("round", r.GetRoundNumber()),
-				zap.String("block", bnb.Hash),
-				zap.String("state_hash", util.ToHex(bnb.ClientStateHash)),
-				zap.Error(err))
-
-			// Try to sync the state from peers
-			syncErr := mc.ComputeOrSyncState(ctx, bnb)
-			if syncErr != nil {
-				logging.Logger.Warn("get block to extend - failed to sync missing state, falling back to LFB",
-					zap.Int64("round", r.GetRoundNumber()),
-					zap.String("block", bnb.Hash),
-					zap.Error(syncErr))
-
-				// Fall back to LFB which is guaranteed to have valid state
-				lfb := mc.GetLatestFinalizedBlock()
-				if lfb != nil && lfb.Round < bnb.Round {
-					logging.Logger.Warn("get block to extend - using LFB due to missing state",
-						zap.Int64("round", r.GetRoundNumber()),
-						zap.String("orphaned_block", bnb.Hash),
-						zap.Int64("lfb_round", lfb.Round),
-						zap.String("lfb_hash", lfb.Hash))
-					return lfb
-				}
-			} else {
-				// CRITICAL: Save the computed state to RocksDB so it persists.
-				// ComputeOrSyncState computes state in memory but doesn't persist it.
-				// Without saving, the state will be lost and block generation will fail.
-				if saveErr := bnb.SaveChanges(ctx, mc.Chain); saveErr != nil {
-					logging.Logger.Warn("get block to extend - failed to save computed state",
-						zap.Int64("round", r.GetRoundNumber()),
-						zap.String("block", bnb.Hash),
-						zap.Error(saveErr))
-				} else {
-					logging.Logger.Info("get block to extend - saved computed state to RocksDB",
-						zap.Int64("round", r.GetRoundNumber()),
-						zap.String("block", bnb.Hash))
-				}
-
-				// CRITICAL: Re-verify the state root exists after sync.
-				// ComputeOrSyncState may succeed in fetching the root node but not
-				// the entire state tree. Without this check, block generation will
-				// fail later with "node not found" errors.
-				if _, verifyErr := mc.GetStateDB().GetNode(bnb.ClientStateHash); verifyErr != nil {
-					logging.Logger.Warn("get block to extend - state still missing after sync, falling back to LFB",
-						zap.Int64("round", r.GetRoundNumber()),
-						zap.String("block", bnb.Hash),
-						zap.Error(verifyErr))
-
-					// Fall back to LFB which is guaranteed to have valid state
-					lfb := mc.GetLatestFinalizedBlock()
-					if lfb != nil && lfb.Round < bnb.Round {
-						logging.Logger.Info("get block to extend - using LFB after sync verification failure",
-							zap.Int64("round", r.GetRoundNumber()),
-							zap.String("orphaned_block", bnb.Hash),
-							zap.Int64("lfb_round", lfb.Round),
-							zap.String("lfb_hash", lfb.Hash))
-						return lfb
-					}
-				}
-			}
-		}
-	}
-
 	return // bnb
 }
 
@@ -562,12 +501,15 @@ func (mc *Chain) generateRoundBlock(ctx context.Context, r *Round) (*block.Block
 	}
 
 	b.LatestFinalizedMagicBlockHash = lfmbr.MagicBlock.Hash
-	b.LatestFinalizedMagicBlockRound = lfmbr.Round
+	// Use MB's StartingRound, NOT the containing block's Round.
+	// reachedNotarization compares b.LatestFinalizedMagicBlockRound with mb.StartingRound,
+	// so we must use the MB's StartingRound to avoid false MB mismatch errors.
+	b.LatestFinalizedMagicBlockRound = lfmbr.MagicBlock.StartingRound
 
 	logging.Logger.Debug("Setting LFMB round/hash for a block",
 		zap.Int64("rn", r.GetRoundNumber()), zap.Int64("mc.crn", mc.GetCurrentRound()),
 		zap.Int64("rnoff", mbRoundOffset(rn)), zap.Int64("nvc", mc.NextViewChange()),
-		zap.Int64("r", lfmbr.Round), zap.String("mb_hash", lfmbr.MagicBlock.Hash),
+		zap.Int64("mb_sr", lfmbr.MagicBlock.StartingRound), zap.String("mb_hash", lfmbr.MagicBlock.Hash),
 		zap.Int64("b.lfmbr", b.LatestFinalizedMagicBlockRound), zap.String("b.lfmbh", b.LatestFinalizedMagicBlockHash),
 	)
 
@@ -964,13 +906,26 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 	verifyAndSend := func(ctx context.Context, r *Round, b *block.Block) bool {
 		logging.Logger.Debug("verifyAndSend - started", zap.String("block", b.Hash))
 		b.SetBlockState(block.StateVerificationAccepted)
-		miner := mc.GetMiners(r.GetRoundNumber()).GetNode(b.MinerID)
+		mb := mc.GetMagicBlock(r.GetRoundNumber())
+		minersPool := mb.Miners
+		miner := minersPool.GetNode(b.MinerID)
 		if miner == nil || miner.ProtocolStats == nil {
-			logging.Logger.Error("verifyAndSend -- failed miner",
-				zap.Int64("round", r.Number), zap.String("block", b.Hash),
-				zap.String("miner", b.MinerID))
-			b.SetBlockState(block.StateVerificationFailed)
-			return false
+			// If ProtocolStats is nil but miner exists, initialize it
+			if miner != nil && miner.ProtocolStats == nil {
+				mc.InitializeMinerPoolIfNotSet(mb)
+				miner = minersPool.GetNode(b.MinerID)
+			}
+			if miner == nil || miner.ProtocolStats == nil {
+				logging.Logger.Error("verifyAndSend -- failed miner",
+					zap.Int64("round", r.Number), zap.String("block", b.Hash),
+					zap.String("miner", b.MinerID),
+					zap.Bool("miner_nil", miner == nil),
+					zap.Int("pool_size", minersPool.Size()),
+					zap.Int64("mb_number", mb.MagicBlockNumber),
+					zap.Int64("mb_sr", mb.StartingRound))
+				b.SetBlockState(block.StateVerificationFailed)
+				return false
+			}
 		}
 		minerStats := miner.ProtocolStats.(*chain.MinerStats)
 
@@ -1881,6 +1836,21 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 					zap.Int64("mb_number", prevMBNum),
 					zap.Int64("mb_sr", prevMB.StartingRound))
 			}
+		} else if prevMBNum == 1 {
+			// Genesis MB is not stored in mb/ rocksdb — it's loaded from config file.
+			// Use the genesis MB already in the chain's magic block storage.
+			genesisMB := mc.GetMagicBlock(0)
+			if genesisMB != nil && genesisMB.MagicBlockNumber == 1 {
+				if err := mc.SetDKGSFromStore(ctx, genesisMB); err != nil {
+					logging.Logger.Warn("load_mbs_and_dkg -- loading genesis DKG failed",
+						zap.Error(err))
+				} else {
+					logging.Logger.Info("load_mbs_and_dkg -- loaded genesis DKG from config MB",
+						zap.Int64("mb_sr", genesisMB.StartingRound))
+				}
+			} else {
+				logging.Logger.Warn("load_mbs_and_dkg -- genesis MB not available in memory")
+			}
 		} else {
 			logging.Logger.Debug("load_mbs_and_dkg -- no previous MB found",
 				zap.Int64("mb_number", prevMBNum))
@@ -1892,42 +1862,79 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 	newMB, err := LoadMagicBlock(ctx, strconv.FormatInt(newMBNum, 10))
 	if err != nil {
 		logging.Logger.Debug("load_mbs_and_dkg -- see no newer MB")
+		mc.validateMBDKGConsistency(lfbr.Round, current)
 		return
 	}
 
-	// Don't load a newer MB if LFB round hasn't reached its starting round yet.
-	// This prevents loading orphan MBs that were stored during DKG Wait phase
-	// but never finalized by the network.
-	if newMB.StartingRound > lfbr.Round {
-		logging.Logger.Info("load_mbs_and_dkg -- skip orphan MB (LFB round not reached)",
-			zap.Int64("mb_number", newMB.MagicBlockNumber),
-			zap.Int64("mb_starting_round", newMB.StartingRound),
-			zap.Int64("lfb_round", lfbr.Round))
+	if err := mc.SetDKGSFromStore(ctx, newMB); err != nil {
+		logging.Logger.Info("load_mbs_and_dkg -- see no newer DKG")
+		mc.validateMBDKGConsistency(lfbr.Round, current)
 		return
-	}
-
-	// LFB round has reached the newer MB's starting round, so we MUST use the newer MB.
-	// Try to load its DKG. If DKG loading fails, we still set the MB but log a warning.
-	// Without the DKG, VRF operations will fail, but at least the miner knows it should
-	// be using the newer MB and can potentially recover by fetching DKG during operation.
-	dkgErr := mc.SetDKGSFromStore(ctx, newMB)
-	if dkgErr != nil {
-		logging.Logger.Warn("load_mbs_and_dkg -- newer MB DKG loading failed, VRF operations will fail until DKG is available",
-			zap.Int64("mb_number", newMB.MagicBlockNumber),
-			zap.Int64("mb_starting_round", newMB.StartingRound),
-			zap.Int64("lfb_round", lfbr.Round),
-			zap.Error(dkgErr))
 	}
 
 	logging.Logger.Debug("load_mbs_and_dkg -- load newer MB and DKG",
 		zap.Int64("mb number", newMB.MagicBlockNumber),
 		zap.Int64("mb sr", newMB.StartingRound),
-		zap.String("mb hash", newMB.Hash),
-		zap.Bool("dkg_loaded", dkgErr == nil))
+		zap.String("mb hash", newMB.Hash))
 
 	mc.SetMagicBlock(newMB)
 
-	// everything is OK
+	// Final validation: ensure MB and DKG are consistent for the LFB round
+	mc.validateMBDKGConsistency(lfbr.Round, newMB)
+}
+
+// validateMBDKGConsistency verifies that for the given LFB round, the MB and DKG
+// are consistent. The MB used for a round R is determined by mbRoundOffset(R),
+// and the DKG must have the same StartingRound as the MB.
+func (mc *Chain) validateMBDKGConsistency(lfbRound int64, currentMB *block.MagicBlock) {
+	// Calculate which MB should be active for the LFB round
+	// mbRoundOffset(R) = R - ViewChangeOffset (typically R - 20)
+	// The active MB is the one with largest StartingRound <= mbRoundOffset(R)
+	offsetRound := mbRoundOffset(lfbRound)
+	triggerRound := currentMB.StartingRound + chain.ViewChangeOffset
+
+	// Get the MB that would be returned by GetMagicBlock(lfbRound)
+	activeMB := mc.GetMagicBlock(lfbRound)
+	if activeMB == nil {
+		logging.Logger.Error("validateMBDKGConsistency - no active MB for LFB round",
+			zap.Int64("lfb_round", lfbRound),
+			zap.Int64("offset_round", offsetRound))
+		return
+	}
+
+	// Get the DKG that would be returned by GetDKG(lfbRound)
+	activeDKG := mc.GetDKG(lfbRound)
+	if activeDKG == nil {
+		logging.Logger.Error("validateMBDKGConsistency - no DKG for LFB round, VRF signing will fail",
+			zap.Int64("lfb_round", lfbRound),
+			zap.Int64("offset_round", offsetRound),
+			zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
+			zap.Int64("active_mb_sr", activeMB.StartingRound))
+		return
+	}
+
+	// Verify MB and DKG have matching StartingRound
+	if activeMB.StartingRound != activeDKG.StartingRound {
+		logging.Logger.Error("validateMBDKGConsistency - MB/DKG MISMATCH DETECTED",
+			zap.Int64("lfb_round", lfbRound),
+			zap.Int64("offset_round", offsetRound),
+			zap.Int64("trigger_round", triggerRound),
+			zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
+			zap.Int64("active_mb_sr", activeMB.StartingRound),
+			zap.Int64("active_dkg_sr", activeDKG.StartingRound),
+			zap.Int64("active_dkg_mb_number", activeDKG.MagicBlockNumber),
+			zap.Int64("current_mb_number", currentMB.MagicBlockNumber),
+			zap.Int64("current_mb_sr", currentMB.StartingRound))
+		return
+	}
+
+	logging.Logger.Info("validateMBDKGConsistency - MB and DKG are consistent",
+		zap.Int64("lfb_round", lfbRound),
+		zap.Int64("offset_round", offsetRound),
+		zap.Int64("trigger_round", triggerRound),
+		zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
+		zap.Int64("active_mb_sr", activeMB.StartingRound),
+		zap.Int64("dkg_sr", activeDKG.StartingRound))
 }
 
 // verifyMBAndDKGForLFB verifies that the current MB and DKG are consistent with the LFB.
