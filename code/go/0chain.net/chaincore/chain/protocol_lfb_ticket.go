@@ -214,16 +214,7 @@ func (c *Chain) BumpLFBTicket(ctx context.Context) {
 		return
 	}
 
-	// Check if local LFB is at round 0 (fresh startup or stale state)
-	// If so, DON'T bump the ticket - let the miner start from genesis and sync incrementally
-	// Setting ticket high when at genesis causes filtering issues that prevent syncing
-	localLFB := c.GetLatestFinalizedBlock()
-	if localLFB == nil || localLFB.Round == 0 {
-		logging.Logger.Debug("BumpLFBTicket - skipping (local LFB is nil or at round 0, will sync from genesis)")
-		return
-	}
-
-	// Normal operation - fetch and bump ticket
+	// Fetch LFB from peer sharders and bump ticket if ahead of local
 	list := c.GetLatestFinalizedBlockFromSharder(ctx)
 
 	if len(list) == 0 {
@@ -486,6 +477,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// loop locals
 		ticket *LFBTicket
 		b      *block.Block
+
 	)
 
 	defer close(c.lfbTickerWorkerIsDone)
@@ -527,6 +519,20 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			}
 
 			ticket = prev // the latest in the channel
+
+			// Cap received ticket to prevent inflation beyond local LFB + ahead.
+			// Inflated tickets push `latest` too far ahead, which false-triggers
+			// IsBlockSyncing and drops all consensus messages via StopOnBlockSyncingHandler.
+			if capLFB := c.GetLatestFinalizedBlock(); capLFB != nil {
+				maxRound := capLFB.Round + int64(config.GetLFBTicketAhead())
+				if ticket.Round > maxRound {
+					logging.Logger.Warn("update lfb ticket - capping inflated ticket",
+						zap.Int64("original_round", ticket.Round),
+						zap.Int64("lfb_round", capLFB.Round),
+						zap.Int64("capped_to", maxRound))
+					ticket = &LFBTicket{Round: maxRound}
+				}
+			}
 
 			if ticket.Round <= latest.Round {
 				logging.Logger.Debug("update lfb ticket - SKIPPING (ticket.Round <= latest.Round)",
@@ -749,7 +755,9 @@ func (c *Chain) updateLatestFinalizedMagicBlock(ctx context.Context, lfmb *block
 	}
 }
 
-// IsBlockSyncing checks if the miner is syncing blocks
+// IsBlockSyncing checks if the miner is syncing blocks.
+// Returns true when the node is significantly behind the network and should
+// sync blocks rather than participate in consensus.
 func (c *Chain) IsBlockSyncing() bool {
 	var (
 		lfb          = c.GetLatestFinalizedBlock()
@@ -758,7 +766,13 @@ func (c *Chain) IsBlockSyncing() bool {
 		currentRound = c.GetCurrentRound()
 	)
 
-	if currentRound < lfbTkt.Round ||
+	// Condition 1: node is significantly behind the network ticket.
+	// Use aheadN tolerance so that normal finalization depth (where
+	// currentRound ≈ LFB and ticket is a few rounds ahead) does NOT
+	// trigger sync mode — that would drop all VRF shares and deadlock.
+	// Condition 2: LFB is more than aheadN rounds behind the ticket.
+	// Condition 3: current round is far ahead of LFB (computing but not finalizing).
+	if currentRound+aheadN < lfbTkt.Round ||
 		lfb.Round+aheadN < lfbTkt.Round ||
 		lfb.Round+int64(config.GetLFBTicketAhead()) < currentRound {
 		return true
