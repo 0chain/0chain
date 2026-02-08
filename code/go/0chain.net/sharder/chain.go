@@ -962,7 +962,29 @@ loop:
 			zap.String("block", lfbHash))
 		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
 		if err != nil {
-			return err
+			logging.Logger.Error("load_lfb - loadLFBRoundAndBlocks failed, rolling back",
+				zap.Int64("round", lfbRound),
+				zap.Error(err))
+			if lfbRound <= 0 {
+				return err
+			}
+			i++
+			if i >= maxRollbackRounds {
+				logging.Logger.Warn("load_lfb - rollback max count reached, falling back to genesis",
+					zap.Int("max", maxRollbackRounds))
+				sc.Chain.SetLFBLoadingComplete()
+				return nil
+			}
+			// Try the previous round — get its block hash from the round store
+			lfbRound = lfbRound - 1
+			prevR, prevErr := sc.GetRoundFromStore(ctx, lfbRound)
+			if prevErr != nil {
+				// Previous round also corrupted — use empty hash and keep rolling back
+				lfbHash = ""
+			} else {
+				lfbHash = prevR.BlockHash
+			}
+			continue
 		}
 
 		// Set current round to LFB round (handles both forward sync and rollback)

@@ -174,8 +174,53 @@ func (sc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 
 	pn, err := sc.GetPhaseOfBlock(b)
 	if err != nil && err != util.ErrValueNotPresent {
-		logging.Logger.Error("[mvc] update finalized block - get phase of block failed", zap.Error(err))
-		return err
+		// Try to recover missing state nodes from peers before giving up.
+		// This can happen when a sharder is catching up with incomplete state
+		// (e.g., after genesis fallback) — intermediate MPT nodes from earlier
+		// blocks may be missing from the local state DB.
+		const maxRecoveryAttempts = 5
+		for attempt := 0; attempt < maxRecoveryAttempts; attempt++ {
+			var missingKeys []util.Key
+			if b.ClientState != nil {
+				missingKeys = b.ClientState.GetMissingNodeKeys()
+			}
+			if len(missingKeys) == 0 {
+				break
+			}
+
+			logging.Logger.Warn("[mvc] update finalized block - syncing missing state nodes from peers",
+				zap.Int64("round", b.Round),
+				zap.Int("attempt", attempt+1),
+				zap.Int("missing_keys", len(missingKeys)))
+
+			syncCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			syncErr := sc.GetStateNodes(syncCtx, missingKeys)
+			cancel()
+			if syncErr != nil {
+				logging.Logger.Warn("[mvc] update finalized block - sync missing nodes failed",
+					zap.Int64("round", b.Round),
+					zap.Error(syncErr))
+				break
+			}
+
+			// Retry after syncing
+			pn, err = sc.GetPhaseOfBlock(b)
+			if err == nil || err == util.ErrValueNotPresent {
+				break
+			}
+		}
+
+		if err != nil && err != util.ErrValueNotPresent {
+			// Recovery failed — continue finalization without phase node.
+			// Failing here prevents SetLatestFinalizedBlock from being called
+			// in the outer finalizeBlock, causing the in-memory LFB to stay
+			// stale while the on-disk LFB advances. This makes the sharder
+			// serve stale LFB data to miners, causing chain stuck.
+			logging.Logger.Warn("[mvc] update finalized block - phase recovery failed, continuing finalization",
+				zap.Int64("round", b.Round),
+				zap.Error(err))
+			pn = nil
+		}
 	}
 
 	if pn == nil {
