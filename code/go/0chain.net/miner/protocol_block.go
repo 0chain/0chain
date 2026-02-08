@@ -212,14 +212,20 @@ func (mc *Chain) VerifyBlockMagicBlockReference(b *block.Block) (err error) {
 			zap.String("block_lfmb_hash", b.LatestFinalizedMagicBlockHash),
 			zap.Int64("block_lfmb_round", b.LatestFinalizedMagicBlockRound),
 			zap.String("local_lfmb_hash", lfmbr.MagicBlock.Hash),
-			zap.Int64("local_lfmb_round", lfmbr.Round),
-			zap.Int64("local_lfmb_sr", lfmbr.StartingRound),
+			zap.Int64("local_lfmb_sr", lfmbr.MagicBlock.StartingRound),
 		)
 		return common.NewError("verify_block_mb_reference",
 			"unexpected latest_finalized_mb_hash")
 	}
 
-	if b.LatestFinalizedMagicBlockRound != lfmbr.Round {
+	// Compare with MB's StartingRound, not the containing block's Round.
+	// b.LatestFinalizedMagicBlockRound is set to lfmbr.MagicBlock.StartingRound in block generation.
+	if b.LatestFinalizedMagicBlockRound != lfmbr.MagicBlock.StartingRound {
+		logging.Logger.Error("verify_block_mb_reference - round mismatch",
+			zap.Int64("round", round),
+			zap.Int64("block_lfmb_round", b.LatestFinalizedMagicBlockRound),
+			zap.Int64("local_lfmb_sr", lfmbr.MagicBlock.StartingRound),
+		)
 		return common.NewError("verify_block_mb_reference",
 			"unexpected latest_finalized_mb_round")
 	}
@@ -1052,13 +1058,16 @@ func (mc *Chain) generateBlock(ctx context.Context, b *block.Block,
 	b.Txns = make([]*transaction.Transaction, 0, 100)
 
 	var (
+		blockState      = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		iterInfo        = newTxnIterInfo(int32(cap(b.Txns)))
 		txnProcessor    = txnProcessorHandlerFunc(mc, b)
-		blockState      = block.CreateStateWithPreviousBlock(b.PrevBlock, mc.GetStateDB(), b.Round)
 		blockStateCache = statecache.NewBlockCache(mc.GetStateCache(), statecache.Block{Round: b.Round, Hash: b.Hash, PrevHash: b.PrevHash})
 		beginState      = blockState.GetRoot()
 		txnIterHandler  = txnIterHandlerFunc(mc, b, lfb, blockState, txnProcessor, iterInfo, blockStateCache, waitC)
 	)
+	// Store blockState on the block early so that on failure the caller
+	// can inspect GetMissingNodeKeys() for state recovery.
+	b.SetClientState(blockState)
 
 	iterInfo.roundTimeoutCount = mc.GetRoundTimeoutCount()
 
