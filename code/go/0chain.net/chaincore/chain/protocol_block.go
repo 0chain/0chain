@@ -226,11 +226,30 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
-		mb        = c.GetMagicBlock(round)
-		num       = mb.Miners.Size()
-		threshold = c.GetThresholdFromState(num) // Calculate from t_percent in smart contract state
-		err       error
+		mb           = c.GetMagicBlock(round)
+		num          = mb.Miners.Size()
+		numTickets   = len(bvt)
+		// First try with fast default threshold (no MPT read)
+		fastThreshold = c.GetNotarizationThresholdCount(num)
+		threshold     = fastThreshold
+		err           error
 	)
+
+	// Fast path: if we have enough tickets with default threshold, no MPT read needed
+	// Only read from MPT if verification fails (t_percent might be lower than default)
+	if c.ThresholdByCount() > 0 && numTickets >= fastThreshold && mb.StartingRound == mbRound {
+		logging.Logger.Debug("reachedNotarization - fast path success",
+			zap.Int64("round", round),
+			zap.Int("tickets", numTickets),
+			zap.Int("fast_threshold", fastThreshold))
+		return true
+	}
+
+	// Slow path: need to check MPT state for actual t_percent
+	// This handles cases where:
+	// 1. We don't have enough tickets (t_percent might be lower)
+	// 2. MB mismatch (need accurate thresholds for both MBs)
+	threshold = c.GetThresholdFromState(num)
 
 	// MB mismatch: block was created under different MB configuration.
 	// Use minimum threshold between current MB and block's MB for safety.
@@ -255,7 +274,7 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 				zap.Int("current_mb_threshold", threshold),
 				zap.Int("block_mb_threshold", blockMBThreshold),
 				zap.Int("using_threshold", threshold),
-				zap.Int("tickets", len(bvt)))
+				zap.Int("tickets", numTickets))
 		} else {
 			// Block's MB not found locally - try to fetch from sharders
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -273,7 +292,7 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 					zap.Int64("block_mb_round", mbRound),
 					zap.Int("fetched_mb_miners", blockMB.Miners.Size()),
 					zap.Int("using_threshold", threshold),
-					zap.Int("tickets", len(bvt)))
+					zap.Int("tickets", numTickets))
 			} else {
 				// Block's MB not found - use current MB's threshold
 				logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current MB threshold",
@@ -281,20 +300,19 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 					zap.Int64("block_mb_round", mbRound),
 					zap.Int64("local_mb_sr", mb.StartingRound),
 					zap.Int("threshold", threshold),
-					zap.Int("tickets", len(bvt)),
+					zap.Int("tickets", numTickets),
 					zap.Error(fetchErr))
 			}
 		}
 	}
 
 	if c.ThresholdByCount() > 0 {
-		var numSignatures = len(bvt)
-		if numSignatures < threshold {
+		if numTickets < threshold {
 			logging.Logger.Info("not reached notarization",
 				zap.Int64("mb_sr", mb.StartingRound),
 				zap.Int("active_miners", num),
 				zap.Int("threshold", threshold),
-				zap.Int("num_signatures", numSignatures),
+				zap.Int("num_signatures", numTickets),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
 			return false
@@ -316,7 +334,7 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 				zap.Uint64("verify stake", verifiersStake),
 				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
-				zap.Int("num_signatures", len(bvt)),
+				zap.Int("num_signatures", numTickets),
 				zap.Int("signature threshold", threshold),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
@@ -808,9 +826,15 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	// Calculate threshold from t_percent in smart contract state
+	numExtensions := len(b.GetUniqueBlockExtensions())
+	// Fast path: check with default threshold first (no MPT read)
+	fastThreshold := c.GetNotarizationThresholdCount(mb.Miners.Size())
+	if numExtensions >= fastThreshold {
+		return true
+	}
+	// Slow path: only read from MPT if fast check failed (t_percent might be lower)
 	threshold := c.GetThresholdFromState(mb.Miners.Size())
-	if len(b.GetUniqueBlockExtensions()) >= threshold {
+	if numExtensions >= threshold {
 		return true
 	}
 	return false

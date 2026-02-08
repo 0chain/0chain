@@ -345,7 +345,7 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 
 	gnb := gn.MustBase()
 	logging.Logger.Debug("miner health check - start", zap.Any("period", gnb.HealthCheckPeriod))
-	HEALTH_CHECK_TIMER := gnb.HealthCheckPeriod
+	healthCheckPeriod := gnb.HealthCheckPeriod
 
 	for {
 		select {
@@ -369,7 +369,18 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
 
 				mc.ConfirmTransaction(ctx, txn, 30)
 			}()
+
+			// Re-read health check period from state in case it was updated
+			if gn, err := minersc.GetGlobalNode(mc.GetQueryStateContext()); err == nil {
+				newPeriod := gn.MustBase().HealthCheckPeriod
+				if newPeriod != healthCheckPeriod {
+					logging.Logger.Info("miner health check - period updated",
+						zap.Any("old_period", healthCheckPeriod),
+						zap.Any("new_period", newPeriod))
+					healthCheckPeriod = newPeriod
+				}
+			}
 		}
-		time.Sleep(HEALTH_CHECK_TIMER)
+		time.Sleep(healthCheckPeriod)
 	}
 }

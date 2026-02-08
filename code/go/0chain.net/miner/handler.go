@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"0chain.net/chaincore/block"
@@ -15,33 +14,6 @@ import (
 	"0chain.net/core/config"
 	"0chain.net/smartcontract/dbs/event"
 )
-
-// LocalhostOnly wraps a handler to only allow requests from localhost
-func LocalhostOnly(handler common.ReqRespHandlerf) common.ReqRespHandlerf {
-	return func(w http.ResponseWriter, r *http.Request) {
-		host := r.Host
-		remoteAddr := r.RemoteAddr
-
-		// Check if request is from localhost
-		isLocalhost := false
-		for _, local := range []string{"localhost", "127.0.0.1", "[::1]", "::1"} {
-			if strings.HasPrefix(host, local) || strings.HasPrefix(remoteAddr, local) ||
-				strings.HasPrefix(remoteAddr, "127.0.0.1") || strings.HasPrefix(remoteAddr, "[::1]") {
-				isLocalhost = true
-				break
-			}
-		}
-
-		if !isLocalhost {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusForbidden)
-			_, _ = w.Write([]byte(`{"error": "This endpoint is only accessible from localhost"}`))
-			return
-		}
-
-		handler(w, r)
-	}
-}
 
 /*SetupHandlers - setup miner handlers */
 func SetupHandlers() {
@@ -56,13 +28,6 @@ func SetupHandlers() {
 	))
 	http.HandleFunc("/_txn_stats", common.WithCORS(
 		common.UserRateLimit(TxnStatsWriter),
-	))
-	// DKG backup/restore handlers
-	http.HandleFunc("/_diagnostics/dkg/backups", common.WithCORS(
-		common.UserRateLimit(common.ToJSONResponse(DKGListBackupsHandler)),
-	))
-	http.HandleFunc("/_diagnostics/dkg/restore", common.WithCORS(
-		common.UserRateLimit(LocalhostOnly(common.ToJSONResponse(DKGRestoreHandler))),
 	))
 }
 
@@ -220,57 +185,6 @@ func MinerStatsHandler(ctx context.Context, r *http.Request) (interface{}, error
 		AverageBlockSize:   node.Self.Underlying().Info.AvgBlockTxns,
 		NetworkTime:        networkTimes,
 	}, nil
-}
-
-// DKGBackupsResponse lists available DKG backups
-type DKGBackupsResponse struct {
-	BackupDir string   `json:"backup_dir"`
-	Backups   []string `json:"backups"`
-	Count     int      `json:"count"`
-}
-
-// DKGListBackupsHandler lists available DKG backup files
-func DKGListBackupsHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	backups, err := ListDKGBackups("")
-	if err != nil {
-		return nil, err
-	}
-
-	return DKGBackupsResponse{
-		BackupDir: "data/dkg_backup",
-		Backups:   backups,
-		Count:     len(backups),
-	}, nil
-}
-
-// DKGRestoreResponse contains the result of a restore operation
-type DKGRestoreResponse struct {
-	Success    bool   `json:"success"`
-	Message    string `json:"message"`
-	BackupFile string `json:"backup_file"`
-}
-
-// DKGRestoreHandler restores DKG from a backup file
-// Usage: /_diagnostics/dkg/restore?file=data/dkg_backup/dkg_summary_19_20260123_120000.json
-func DKGRestoreHandler(ctx context.Context, r *http.Request) (interface{}, error) {
-	backupFile := r.URL.Query().Get("file")
-	if backupFile == "" {
-		return nil, common.NewError("restore", "missing 'file' parameter")
-	}
-
-	resp := DKGRestoreResponse{
-		BackupFile: backupFile,
-	}
-
-	if err := RestoreDKGFromBackup(ctx, backupFile); err != nil {
-		resp.Success = false
-		resp.Message = fmt.Sprintf("restore failed: %v", err)
-		return resp, nil
-	}
-
-	resp.Success = true
-	resp.Message = "DKG restored successfully from backup"
-	return resp, nil
 }
 
 // TxnStatsWriter - display the current txn stats
