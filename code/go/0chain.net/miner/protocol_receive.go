@@ -17,6 +17,23 @@ import (
 // handleVRFShare - handles the vrf share.
 func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
 
+	if msg.VRFShare.Round > mc.GetCurrentRound() {
+		// Future round — cache in existing round if available,
+		// but do NOT create the round. Creating rounds prematurely
+		// prevents StartNextRound from being called by the round
+		// worker, which is what advances current_round.
+		// Dropped shares will be re-sent by peers via handleNoProgress.
+		mr := mc.GetMinerRound(msg.VRFShare.Round)
+		if mr != nil {
+			mr.vrfSharesCache.add(msg.VRFShare)
+		}
+		logging.Logger.Debug("received VRF share for the future round",
+			zap.Int64("current_round", mc.GetCurrentRound()),
+			zap.Int64("vrf_share_round", msg.VRFShare.Round),
+			zap.Bool("cached", mr != nil))
+		return
+	}
+
 	var mr = mc.getOrCreateRound(ctx, msg.VRFShare.Round)
 	if mr == nil {
 		return
@@ -28,13 +45,6 @@ func (mc *Chain) handleVRFShare(ctx context.Context, msg *BlockMessage) {
 		zap.Int("vrf_timeout_count", msg.VRFShare.GetRoundTimeoutCount()),
 		zap.Int("sender_index", msg.Sender.SetIndex),
 	)
-
-	if msg.VRFShare.Round > mc.GetCurrentRound() {
-		logging.Logger.Debug("received VRF share for the future round, caching it",
-			zap.Int64("current_round", mc.GetCurrentRound()), zap.Int64("vrf_share_round", msg.VRFShare.Round))
-		mr.vrfSharesCache.add(msg.VRFShare)
-		return
-	}
 
 	mc.AddVRFShare(ctx, mr, msg.VRFShare)
 }
