@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -96,14 +97,20 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	// Time loading DKG summary
 	startLoad := time.Now()
 
+	nyxActive := mc.isHardforkActive("Nyx", mc.GetCurrentRound())
+
 	if len(dkgSum) > 0 {
 		summary = dkgSum[0]
 	} else {
 		summary, err = LoadDKGSummary(ctx, id)
 		if err != nil {
-			logging.Logger.Error("[dkg] failed to load DKG summary - use /_diagnostics/dkg/restore to restore from backup",
-				zap.Int64("mb_number", mb.MagicBlockNumber),
-				zap.Error(err))
+			if nyxActive {
+				logging.Logger.Warn("[dkg] no DKG summary found, will attempt VRF-seeded recovery after HTTP server starts",
+					zap.Int64("mb_number", mb.MagicBlockNumber),
+					zap.Error(err))
+				mc.scheduleVRFRecovery(ctx, mb)
+				return
+			}
 			return
 		}
 	}
@@ -111,18 +118,25 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 		zap.Duration("duration", time.Since(startLoad)))
 
 	if mb.StartingRound > 0 && !summary.IsFinalized {
-		// Don't reject non-finalized summaries outright — the Pi validation below
-		// is a stronger check. If the shares produce the correct public key, the
-		// DKG is valid even if the finalization flag wasn't set (e.g., chaos test
-		// interrupted before ViewChange could mark it as finalized).
-		logging.Logger.Warn("[dkg] DKG summary not finalized, will validate via Pi check",
-			zap.Int64("mb_number", mb.MagicBlockNumber),
-			zap.Int64("mb_starting_round", mb.StartingRound))
+		if nyxActive {
+			// Nyx: don't reject non-finalized summaries — Pi validation below is a stronger check.
+			logging.Logger.Warn("[dkg] DKG summary not finalized, will validate via Pi check",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Int64("mb_starting_round", mb.StartingRound))
+		} else {
+			// Pre-Nyx: reject non-finalized summaries
+			return errors.New("DKG summary is not finalized")
+		}
 	}
 
 	if summary.SecretShares == nil {
-		return common.NewError("failed to set dkg from store",
-			"no saved shares for dkg")
+		if nyxActive {
+			logging.Logger.Warn("[dkg] empty DKG summary, scheduling VRF-seeded recovery",
+				zap.Int64("mb_number", mb.MagicBlockNumber))
+			mc.scheduleVRFRecovery(ctx, mb)
+			return nil
+		}
+		return common.NewError("failed to set dkg from store", "no saved shares for dkg")
 	}
 
 	// Time DKG creation
@@ -207,120 +221,112 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	logging.Logger.Debug("[dkg_timing] convert mpks",
 		zap.Duration("duration", time.Since(startAgg)))
 
-	// Validate that Pi from secret shares matches the expected public key from magic block MPKs
-	// This prevents using stale/corrupted DKG keys that would cause VRF verification failures
-	startValidate := time.Now()
-	myPartyID := bls.ComputeIDdkg(selfNodeKey)
-	expectedPi, err := newDKG.GetPublicKeyByIDFromMpks(myPartyID)
-	if err != nil {
-		return common.NewErrorf("dkg_key_validation_failed",
-			"failed to compute expected public key from MPKs: %v", err)
-	}
-	if !newDKG.Pi.IsEqual(&expectedPi) {
-		logging.Logger.Warn("[dkg] public key mismatch from stored shares, retrying with magic block ShareOrSigns",
-			zap.Int64("mb_number", mb.MagicBlockNumber),
-			zap.Int64("mb_starting_round", mb.StartingRound))
-
-		// Stored DKG summary has corrupted shares (e.g., from a failed/different view change).
-		// Retry using ONLY the magic block's ShareOrSigns — the network-agreed correct shares.
-		retryDKG := bls.MakeDKG(mb.T, mb.N, selfNodeKey)
-		retryDKG.MagicBlockNumber = mb.MagicBlockNumber
-		retryDKG.StartingRound = mb.StartingRound
-
-		retryMiners := mb.Miners.CopyNodesMap()
-		for k := range retryMiners {
-			if v, ok := mb.GetShareOrSigns().Get(k); ok {
-				if share, ok := v.ShareOrSigns[selfNodeKey]; ok && share.Share != "" {
-					if addErr := retryDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, true); addErr != nil {
-						logging.Logger.Error("[dkg] retry: failed to add share from MB",
-							zap.String("from", k[:8]),
-							zap.Error(addErr))
-					}
-				}
-			}
+	if nyxActive {
+		// Nyx: Validate that Pi from secret shares matches the expected public key from magic block MPKs.
+		// This prevents using stale/corrupted DKG keys that would cause VRF verification failures.
+		startValidate := time.Now()
+		myPartyID := bls.ComputeIDdkg(selfNodeKey)
+		expectedPi, err := newDKG.GetPublicKeyByIDFromMpks(myPartyID)
+		if err != nil {
+			return common.NewErrorf("dkg_key_validation_failed",
+				"failed to compute expected public key from MPKs: %v", err)
 		}
+		if !newDKG.Pi.IsEqual(&expectedPi) {
+			logging.Logger.Warn("[dkg] public key mismatch from stored shares, retrying with magic block ShareOrSigns",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Int64("mb_starting_round", mb.StartingRound))
 
-		if retryDKG.HasAllSecretShares() {
-			retryDKG.AggregateSecretKeyShares()
-			retryDKG.Pi = retryDKG.Si.GetPublicKey()
-			retryDKG.SetMpksMap(mpks)
+			// Stored DKG summary has corrupted shares (e.g., from a failed/different view change).
+			// Retry using ONLY the magic block's ShareOrSigns — the network-agreed correct shares.
+			retryDKG := bls.MakeDKG(mb.T, mb.N, selfNodeKey)
+			retryDKG.MagicBlockNumber = mb.MagicBlockNumber
+			retryDKG.StartingRound = mb.StartingRound
 
-			if retryDKG.Pi.IsEqual(&expectedPi) {
-				logging.Logger.Info("[dkg] recovered DKG from magic block ShareOrSigns",
-					zap.Int64("mb_number", mb.MagicBlockNumber))
-
-				// Update stored summary with correct shares for future restarts
-				newShares := make(map[string]string)
-				for k := range retryMiners {
-					if v, ok := mb.GetShareOrSigns().Get(k); ok {
-						if share, ok := v.ShareOrSigns[selfNodeKey]; ok && share.Share != "" {
-							newShares[ComputeBlsID(k)] = share.Share
+			retryMiners := mb.Miners.CopyNodesMap()
+			for k := range retryMiners {
+				if v, ok := mb.GetShareOrSigns().Get(k); ok {
+					if share, ok := v.ShareOrSigns[selfNodeKey]; ok && share.Share != "" {
+						if addErr := retryDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, true); addErr != nil {
+							logging.Logger.Error("[dkg] retry: failed to add share from MB",
+								zap.String("from", k[:8]),
+								zap.Error(addErr))
 						}
 					}
 				}
-				summary.SecretShares = newShares
-				if !summary.IsFinalized {
-					summary.IsFinalized = true
-				}
-				if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
-					logging.Logger.Error("[dkg] failed to update corrected DKG summary",
-						zap.Error(storeErr))
-				}
+			}
 
-				newDKG = retryDKG
+			if retryDKG.HasAllSecretShares() {
+				retryDKG.AggregateSecretKeyShares()
+				retryDKG.Pi = retryDKG.Si.GetPublicKey()
+				retryDKG.SetMpksMap(mpks)
+
+				if retryDKG.Pi.IsEqual(&expectedPi) {
+					logging.Logger.Info("[dkg] recovered DKG from magic block ShareOrSigns",
+						zap.Int64("mb_number", mb.MagicBlockNumber))
+
+					// Update stored summary with correct shares for future restarts
+					newShares := make(map[string]string)
+					for k := range retryMiners {
+						if v, ok := mb.GetShareOrSigns().Get(k); ok {
+							if share, ok := v.ShareOrSigns[selfNodeKey]; ok && share.Share != "" {
+								newShares[ComputeBlsID(k)] = share.Share
+							}
+						}
+					}
+					summary.SecretShares = newShares
+					if !summary.IsFinalized {
+						summary.IsFinalized = true
+					}
+					if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
+						logging.Logger.Error("[dkg] failed to update corrected DKG summary",
+							zap.Error(storeErr))
+					}
+
+					newDKG = retryDKG
+				} else {
+					logging.Logger.Warn("[dkg] retry also produced key mismatch, scheduling VRF-seeded recovery",
+						zap.String("retry_pi", retryDKG.Pi.GetHexString()[:16]),
+						zap.String("expected_pi", expectedPi.GetHexString()[:16]),
+						zap.Int64("mb_number", mb.MagicBlockNumber))
+					// Clear corrupted summary and schedule async recovery
+					emptySummary := &bls.DKGSummary{SecretShares: nil}
+					emptySummary.ID = id
+					if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
+						logging.Logger.Error("[dkg] failed to clear corrupted DKG summary",
+							zap.Error(storeErr),
+							zap.Int64("mb_number", mb.MagicBlockNumber))
+					}
+					mc.scheduleVRFRecovery(ctx, mb)
+					return nil
+				}
 			} else {
-				logging.Logger.Error("[dkg] retry also produced key mismatch",
-					zap.String("retry_pi", retryDKG.Pi.GetHexString()[:16]),
-					zap.String("expected_pi", expectedPi.GetHexString()[:16]),
+				logging.Logger.Warn("[dkg] not enough shares in MB ShareOrSigns, scheduling VRF-seeded recovery",
 					zap.Int64("mb_number", mb.MagicBlockNumber))
-				// Clear the corrupted summary so subsequent restarts don't
-				// re-validate stale shares and instead fall back to previous MB's DKG
+				// Clear corrupted summary and schedule async recovery
 				emptySummary := &bls.DKGSummary{SecretShares: nil}
 				emptySummary.ID = id
 				if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
 					logging.Logger.Error("[dkg] failed to clear corrupted DKG summary",
 						zap.Error(storeErr),
 						zap.Int64("mb_number", mb.MagicBlockNumber))
-				} else {
-					logging.Logger.Info("[dkg] cleared corrupted DKG summary after Pi mismatch",
-						zap.Int64("mb_number", mb.MagicBlockNumber))
 				}
-				return common.NewErrorf("dkg_key_mismatch",
-					"Pi mismatch for MB %d - both stored shares and MB ShareOrSigns produce wrong keys",
-					mb.MagicBlockNumber)
+				mc.scheduleVRFRecovery(ctx, mb)
+				return nil
 			}
-		} else {
-			logging.Logger.Error("[dkg] not enough shares in magic block ShareOrSigns for recovery",
-				zap.Int64("mb_number", mb.MagicBlockNumber))
-			// Clear the corrupted summary so subsequent restarts don't
-			// re-validate stale shares and instead fall back to previous MB's DKG
-			emptySummary := &bls.DKGSummary{SecretShares: nil}
-			emptySummary.ID = id
-			if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
-				logging.Logger.Error("[dkg] failed to clear corrupted DKG summary",
-					zap.Error(storeErr),
-					zap.Int64("mb_number", mb.MagicBlockNumber))
-			} else {
-				logging.Logger.Info("[dkg] cleared corrupted DKG summary after recovery failure",
-					zap.Int64("mb_number", mb.MagicBlockNumber))
-			}
-			return common.NewErrorf("dkg_key_mismatch",
-				"Pi from stored shares doesn't match for MB %d and MB ShareOrSigns insufficient for recovery",
-				mb.MagicBlockNumber)
 		}
-	}
-	logging.Logger.Debug("[dkg_timing] Pi validation",
-		zap.Duration("duration", time.Since(startValidate)))
+		logging.Logger.Debug("[dkg_timing] Pi validation",
+			zap.Duration("duration", time.Since(startValidate)))
 
-	// If Pi validated but summary wasn't finalized, finalize it now
-	if !summary.IsFinalized {
-		summary.IsFinalized = true
-		if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
-			logging.Logger.Error("[dkg] failed to finalize DKG summary after Pi validation",
-				zap.Error(storeErr))
-		} else {
-			logging.Logger.Info("[dkg] DKG summary finalized after Pi validation",
-				zap.Int64("mb_number", mb.MagicBlockNumber))
+		// If Pi validated but summary wasn't finalized, finalize it now
+		if !summary.IsFinalized {
+			summary.IsFinalized = true
+			if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
+				logging.Logger.Error("[dkg] failed to finalize DKG summary after Pi validation",
+					zap.Error(storeErr))
+			} else {
+				logging.Logger.Info("[dkg] DKG summary finalized after Pi validation",
+					zap.Int64("mb_number", mb.MagicBlockNumber))
+			}
 		}
 	}
 
@@ -332,6 +338,14 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	}
 	logging.Logger.Debug("[dkg_timing] Final DKG setting",
 		zap.Duration("duration", time.Since(startSet)))
+
+	// Nyx: Schedule VRF-seeded recovery to run in background after HTTP server starts.
+	// Even though we loaded a "valid" old DKG, it may be CSPRNG-based and incompatible
+	// with peers that have already recovered to VRF-seeded DKGs. The async recovery
+	// will replace it once all peers are reachable.
+	if nyxActive && len(dkgSum) == 0 && mb.StartingRound > 0 {
+		mc.scheduleVRFRecovery(ctx, mb)
+	}
 
 	return
 }

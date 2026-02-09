@@ -241,14 +241,11 @@ func (mc *Chain) DKGProcessStart(ctx context.Context, _ *block.Block,
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
 
-	// Clear any stale DKG summary for the upcoming MB.
+	// Nyx: Clear any stale DKG summary for the upcoming MB.
 	// When VC phases restart (e.g., after a failed view change attempt),
 	// the previous attempt's DKG summary may have shares computed from
 	// a different polynomial that won't match the new attempt's MPKs.
-	// Without this cleanup, a chaos restart between the failed attempt's
-	// Wait (which stored the stale summary) and the new attempt's Wait
-	// leaves the stale summary in RocksDB, causing Pi mismatch on next load.
-	if mb != nil {
+	if mc.isHardforkActive("Nyx", mc.GetCurrentRound()) && mb != nil {
 		upcomingMBNum := mb.MagicBlockNumber + 1
 		upcomingID := strconv.FormatInt(upcomingMBNum, 10)
 		if existing, err := LoadDKGSummary(ctx, upcomingID); err == nil && !existing.IsFinalized {

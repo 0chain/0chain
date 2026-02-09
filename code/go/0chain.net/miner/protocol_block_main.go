@@ -65,12 +65,15 @@ func (mc *Chain) UpdateFinalizedBlock(ctx context.Context, b *block.Block) error
 
 	pn, err := mc.GetPhaseOfBlock(b)
 	if err != nil && err != util.ErrValueNotPresent {
-		// Non-fatal: phase info is for DKG view change tracking, not required for finalization.
-		// Missing MPT nodes (e.g., after restart with incomplete state) should not block
-		// finalization, as that prevents LFB from advancing and keeps the chain stuck.
-		logging.Logger.Warn("update finalized block - get phase of block failed (non-fatal)",
-			zap.Int64("round", b.Round), zap.Error(err))
-		return nil
+		if mc.isHardforkActive("Nyx", b.Round) {
+			// Nyx: Non-fatal. Missing MPT nodes should not block finalization.
+			logging.Logger.Warn("update finalized block - get phase of block failed (non-fatal)",
+				zap.Int64("round", b.Round), zap.Error(err))
+			return nil
+		}
+		// Pre-Nyx: phase error blocks finalization
+		logging.Logger.Error("update finalized block - get phase of block failed", zap.Error(err))
+		return err
 	}
 
 	if pn == nil {
