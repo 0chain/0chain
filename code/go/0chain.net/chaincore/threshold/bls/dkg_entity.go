@@ -10,9 +10,10 @@ import (
 
 type DKGKeyShare struct {
 	datastore.IDField
-	Message string `json:"message"`
-	Share   string `json:"share"`
-	Sign    string `json:"sign"`
+	Message string   `json:"message"`
+	Share   string   `json:"share"`
+	Sign    string   `json:"sign"`
+	MpksHex []string `json:"mpks_hex,omitempty"` // VRF-seeded MPKs for recovery
 }
 
 func (dks *DKGKeyShare) Encode() []byte {

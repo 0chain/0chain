@@ -4,6 +4,7 @@ package bls
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -94,6 +95,56 @@ func MakeDKG(t, n int, id string) *DKG {
 	dkg.mpksMapStr = make(map[PartyID][]string)
 	dkg.gmpk = make(map[PartyID]PublicKey)
 	return dkg
+}
+
+// MakeDKGSeeded creates a DKG object with a deterministic polynomial derived from
+// the given seed. Same seed + same (t,n,id) = same polynomial = same MPKs = same shares.
+// This enables DKG recovery: a miner can regenerate its polynomial at any time and
+// recompute shares for any peer on demand.
+//
+// The seed should be derived from VRF: seed = Sign(node_private_key, "DKG-SEED:<MB_number>")
+// This ensures: different polynomial per miner (different keys), different per MB (different input),
+// deterministic for same miner+MB, unpredictable to others.
+func MakeDKGSeeded(t, n int, id string, seed []byte) *DKG {
+	dkg := &DKG{
+		T:                    t,
+		N:                    n,
+		sij:                  make(map[PartyID]Key),
+		receivedSecretShares: make(map[PartyID]Key),
+		secretSharesMutex:    &sync.RWMutex{},
+		sijMutex:             &sync.Mutex{},
+		Si:                   Key{},
+		ID:                   PartyID{},
+		gmpkMutex:            &sync.RWMutex{},
+		mpksMutex:            &sync.Mutex{},
+	}
+
+	dkg.ID = ComputeIDdkg(id)
+
+	// Derive t polynomial coefficients deterministically from the seed.
+	// Each coefficient is derived by hashing: SHA-256(seed || "coeff" || index).
+	// SetLittleEndianMod reduces the hash output mod the curve order, ensuring a valid key.
+	dkg.msk = make([]Key, t)
+	for i := 0; i < t; i++ {
+		coeffSeed := deriveCoefficientSeed(seed, i)
+		if err := dkg.msk[i].SetLittleEndianMod(coeffSeed); err != nil {
+			// Should never happen — SetLittleEndianMod accepts any input
+			panic(fmt.Sprintf("MakeDKGSeeded: failed to set coefficient %d: %v", i, err))
+		}
+	}
+
+	dkg.mpks = bls.GetMasterPublicKey(dkg.msk)
+	dkg.mpksMapStr = make(map[PartyID][]string)
+	dkg.gmpk = make(map[PartyID]PublicKey)
+	return dkg
+}
+
+// deriveCoefficientSeed produces a deterministic 32-byte seed for polynomial coefficient i.
+func deriveCoefficientSeed(seed []byte, index int) []byte {
+	h := sha256.New()
+	h.Write(seed)
+	h.Write([]byte(fmt.Sprintf(":coeff:%d", index)))
+	return h.Sum(nil)
 }
 
 // SetDKG - to create a dkg object
@@ -349,6 +400,18 @@ func (dkg *DKG) GetSecretShare(key string) (Key, bool) {
 	defer dkg.secretSharesMutex.RUnlock()
 	share, ok := dkg.receivedSecretShares[ComputeIDdkg(key)]
 	return share, ok
+}
+
+// GetReceivedSharesMap returns a copy of received secret shares as a map of
+// PartyID hex string -> share hex string. Used by DKG recovery to build DKGSummary.
+func (dkg *DKG) GetReceivedSharesMap() map[string]string {
+	dkg.secretSharesMutex.RLock()
+	defer dkg.secretSharesMutex.RUnlock()
+	result := make(map[string]string, len(dkg.receivedSecretShares))
+	for k, v := range dkg.receivedSecretShares {
+		result[k.GetHexString()] = v.GetHexString()
+	}
+	return result
 }
 
 // Sign - sign using the group secret key share
