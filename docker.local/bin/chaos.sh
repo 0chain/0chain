@@ -179,13 +179,13 @@ wait_for_chain_progress() {
 
 # Pause for view change transactions with chain progress verification
 vc_pause() {
-    log "${MAGENTA}=== Waiting for View Change Window (3 minutes) ===${NC}"
+    log "${MAGENTA}=== Waiting for View Change Window (20 seconds) ===${NC}"
 
     # Ensure all containers are running before waiting
     ensure_all_running
 
-    # Wait minimum 3 minutes for view change to complete
-    local min_wait=180
+    # Wait minimum 20 seconds for view change to complete
+    local min_wait=20
     local start_time=$(date +%s)
     local start_lfb=$(get_lfb)
 
@@ -1119,8 +1119,8 @@ while true; do
         done
     fi
 
-    # Fixed sleep before next operation
-    run_time=$MIN_RUN_TIME
-    log "${BLUE}Next operation in $run_time seconds...${NC}"
+    # Fixed 4-minute gap between iterations to let chain stabilize
+    run_time=240
+    log "${BLUE}Next operation in $run_time seconds (4 min)...${NC}"
     sleep $run_time
 done
