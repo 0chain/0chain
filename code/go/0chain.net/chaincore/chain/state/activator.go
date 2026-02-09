@@ -21,7 +21,10 @@ func NewHardFork(name string, round int64) *HardFork {
 
 func (h *HardFork) GetKey() string {
 	return "hardfork:" + h.name
+}
 
+func (h *HardFork) Round() int64 {
+	return h.round
 }
 
 func GetRoundByName(c CommonStateContextI, name string) (int64, error) {

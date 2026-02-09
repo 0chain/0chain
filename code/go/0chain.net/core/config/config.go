@@ -32,7 +32,7 @@ func SetupDefaultConfig() {
 	viper.SetDefault("server_chain.transaction.transfer_cost", 10)
 	viper.SetDefault("server_chain.transaction.cost_fee_coeff", 100000)
 	viper.SetDefault("server_chain.transaction.future_nonce", 10)
-	viper.SetDefault("server_chain.state.prune_below_count", 1000)
+	viper.SetDefault("server_chain.state.prune_below_count", 100)
 	viper.SetDefault("server_chain.block.consensus.threshold_by_count", 66)
 	viper.SetDefault("server_chain.block.generation.timeout", 37)
 	viper.SetDefault("server_chain.state.sync.timeout", 10)

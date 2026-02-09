@@ -308,10 +308,10 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 					break
 				}
 				// If sharder fetch failed and block is recent, try miners
-				// Miners keep recent blocks in memory (1000 rounds)
+				// Miners keep recent blocks in memory (50 rounds)
 				if err != nil {
 					currentRound := c.GetCurrentRound()
-					if currentRound-r < 1000 {
+					if currentRound-r < 50 {
 						logging.Logger.Info("sharder falling back to miners for recent block",
 							zap.Int64("round", r),
 							zap.Int64("current_round", currentRound))
@@ -1874,14 +1874,9 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 	}
 }
 
-/*PruneChain - prunes the chain
-Keeps 1000 rounds of blocks in memory to support:
-- Self-healing: sharders can sync recent blocks from miners
-- Faster catch-up after brief outages
-- State sync fallbacks
-*/
+/*PruneChain - prunes the chain */
 func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
-	c.DeleteBlocksBelowRound(b.Round - 1000)
+	c.DeleteBlocksBelowRound(b.Round - 50)
 }
 
 /*
@@ -2142,7 +2137,7 @@ func (c *Chain) deleteRoundsBelow(roundNumber int64) {
 	defer c.roundsMutex.Unlock()
 	rounds := make([]round.RoundI, 0, 1)
 	for _, r := range c.rounds {
-		if r.GetRoundNumber() < roundNumber-1000 && r.GetRoundNumber() != 0 {
+		if r.GetRoundNumber() < roundNumber-10 && r.GetRoundNumber() != 0 {
 			rounds = append(rounds, r)
 		}
 	}

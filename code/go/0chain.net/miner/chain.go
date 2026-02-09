@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/encryption"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -24,6 +26,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 const (
@@ -158,6 +161,21 @@ type Chain struct {
 	mergeBlockVRFSharesWorker            *common.WithContextFunc
 	verifyCachedVRFSharesWorker          *common.WithContextFunc
 	generateBlockWorker                  *common.WithContextFunc
+}
+
+// isHardforkActive checks if a named hardfork is active for the given round
+// by reading the activation round from the LFB's MPT state.
+func (mc *Chain) isHardforkActive(name string, round int64) bool {
+	lfb := mc.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		return false
+	}
+	fork := cstate.NewHardFork(name, 0)
+	path := util.Path(encryption.Hash(fork.GetKey()))
+	if err := lfb.ClientState.GetNodeValue(path, fork); err != nil {
+		return false
+	}
+	return round >= fork.Round()
 }
 
 type ViewChangeEvent struct {
