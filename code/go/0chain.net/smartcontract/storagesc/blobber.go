@@ -1029,6 +1029,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error marshalling allocation blobber details")
 	}
 
+	// Early check: reject commits from killed/shutdown blobbers before write marker validation
+	blobber, err := sc.getBlobber(blobAlloc.BlobberID, balances)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"error fetching blobber: %v", err)
+	}
+
+	if blobber.IsKilled() || blobber.IsShutDown() {
+		return "", common.NewError("commit_connection_failed",
+			"blobber is killed or shutdown")
+	}
+
 	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid signature for write marker")
@@ -1129,17 +1141,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 					"Previous allocation root does not match the latest allocation root")
 			}
 		}
-	}
-
-	blobber, err := sc.getBlobber(blobAlloc.BlobberID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"error fetching blobber: %v", err)
-	}
-
-	if blobber.IsKilled() || blobber.IsShutDown() {
-		return "", common.NewError("commit_connection_failed",
-			"blobber is killed or shutdown")
 	}
 
 	if blobAlloc.Stats.UsedSize == 0 {
