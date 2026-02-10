@@ -709,27 +709,47 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 }
 
 // discoverNewerMBsFromSharders tries to fetch MBs newer than currentMBNumber
-// from peer sharders. For each found, it calls UpdateMagicBlock (which registers
-// nodes via SetupNodes) and SetLatestFinalizedMagicBlock. This handles the case
-// where the sharder missed a magic block transmission (e.g., was down when the
-// block containing the MB was created by miners).
+// from peer sharders and miners. For each found, it calls UpdateMagicBlock
+// (which registers nodes via SetupNodes) and SetLatestFinalizedMagicBlock.
+// This handles the case where the sharder missed a magic block transmission
+// (e.g., was down when the block containing the MB was created by miners).
+// Miners are tried as fallback when no peer sharder has the MB.
 func (sc *Chain) discoverNewerMBsFromSharders(ctx context.Context, currentMBNumber int64, lfbRound int64) {
 	mb := sc.GetLatestMagicBlock()
 	if mb == nil {
 		return
 	}
 	sharderURLs := mb.Sharders.N2NURLs()
-	if len(sharderURLs) == 0 {
+	minerURLs := mb.Miners.N2NURLs()
+	if len(sharderURLs) == 0 && len(minerURLs) == 0 {
 		return
 	}
 
+	verifyFn := func(b *block.Block) bool {
+		return b != nil && b.MagicBlock != nil
+	}
+
 	for nextMBNum := currentMBNumber + 1; ; nextMBNum++ {
-		fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		fetchedBlock, err := httpclientutil.FetchMagicBlockFromSharders(fetchCtx, sharderURLs, nextMBNum,
-			func(b *block.Block) bool {
-				return b != nil && b.MagicBlock != nil
-			})
-		cancel()
+		var fetchedBlock *block.Block
+		var err error
+
+		// Try peer sharders first
+		if len(sharderURLs) > 0 {
+			fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			fetchedBlock, err = httpclientutil.FetchMagicBlockFromSharders(fetchCtx, sharderURLs, nextMBNum, verifyFn)
+			cancel()
+		}
+
+		// If sharders don't have it, try miners (they serve /v1/block/magic/get too)
+		if (fetchedBlock == nil || fetchedBlock.MagicBlock == nil) && len(minerURLs) > 0 {
+			fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			fetchedBlock, err = httpclientutil.FetchMagicBlockFromSharders(fetchCtx, minerURLs, nextMBNum, verifyFn)
+			cancel()
+			if err == nil && fetchedBlock != nil && fetchedBlock.MagicBlock != nil {
+				logging.Logger.Info("load_lfb - fetched MB from miners (not available on peer sharders)",
+					zap.Int64("mb_number", nextMBNum))
+			}
+		}
 
 		if err != nil || fetchedBlock == nil || fetchedBlock.MagicBlock == nil {
 			break // no more newer MBs available
@@ -744,7 +764,7 @@ func (sc *Chain) discoverNewerMBsFromSharders(ctx context.Context, currentMBNumb
 			break
 		}
 
-		logging.Logger.Info("load_lfb - discovered newer MB from peer sharders",
+		logging.Logger.Info("load_lfb - discovered newer MB",
 			zap.Int64("mb_number", fetchedBlock.MagicBlock.MagicBlockNumber),
 			zap.Int64("mb_sr", fetchedBlock.MagicBlock.StartingRound),
 			zap.Int("miners", fetchedBlock.MagicBlock.Miners.Size()),
@@ -766,10 +786,60 @@ func (sc *Chain) discoverNewerMBsFromSharders(ctx context.Context, currentMBNumb
 				zap.Error(err))
 		}
 
-		// Update sharder URLs for next fetch (new MB might have different sharders)
+		// Update URLs for next fetch (new MB might have different nodes)
 		newMB := sc.GetLatestMagicBlock()
 		if newMB != nil {
 			sharderURLs = newMB.Sharders.N2NURLs()
+			minerURLs = newMB.Miners.N2NURLs()
+		}
+	}
+}
+
+// waitForMinersAndDiscover polls miners and sharders indefinitely until a
+// newer MB is discovered or the chain starts progressing. Without the newer
+// MB the sharder can't validate blocks, so there's no point giving up.
+func (sc *Chain) waitForMinersAndDiscover(minerURLs []string, mbNum, lfbRound int64) {
+	if len(minerURLs) == 0 {
+		return
+	}
+
+	verifyFn := func(b *block.Block) bool {
+		return b != nil && b.MagicBlock != nil
+	}
+
+	const pollInterval = 10 * time.Second
+
+	for {
+		time.Sleep(pollInterval)
+
+		// Check if a newer MB was already discovered (e.g., by block processing)
+		currentMB := sc.GetLatestMagicBlock()
+		if currentMB != nil && currentMB.MagicBlockNumber > mbNum {
+			logging.Logger.Info("waitForMinersAndDiscover - newer MB already discovered",
+				zap.Int64("current_mb", currentMB.MagicBlockNumber),
+				zap.Int64("original_mb", mbNum))
+			return
+		}
+
+		// Try to reach any miner and run discovery
+		fetchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		b, _ := httpclientutil.FetchMagicBlockFromSharders(fetchCtx, minerURLs, mbNum, verifyFn)
+		cancel()
+
+		if b != nil && b.MagicBlock != nil {
+			logging.Logger.Info("waitForMinersAndDiscover - miner is reachable, running MB discovery",
+				zap.Int64("from_mb", mbNum))
+			sc.discoverNewerMBsFromSharders(context.Background(), mbNum, lfbRound)
+
+			// Check if discovery found a newer MB
+			newMB := sc.GetLatestMagicBlock()
+			if newMB != nil && newMB.MagicBlockNumber > mbNum {
+				logging.Logger.Info("waitForMinersAndDiscover - discovered newer MB",
+					zap.Int64("new_mb", newMB.MagicBlockNumber))
+				return
+			}
+			// Miners are up but don't have the newer MB yet (DKG recovery
+			// may still be running). Keep polling.
 		}
 	}
 }
@@ -940,7 +1010,9 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		if len(mbs) != 0 {
 			// Store all MBs in the MagicBlockStorage
 			for i := len(mbs) - 1; i >= 0; i-- {
+				if mbs[i].MagicBlock != nil {
 				sc.SetMagicBlock(mbs[i].MagicBlock)
+			}
 			}
 
 			// Determine which MB to use as LFMB based on LFB round from state DB.
@@ -994,8 +1066,18 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 			// (e.g., was down during chaos testing when the block containing
 			// the MB was created). Without this, the node registry won't
 			// include miners from newer MBs, causing "unknown_miner" errors.
-			if sc.IsViewChangeEnabled() && selectedMB.MagicBlock != nil {
+			if selectedMB.MagicBlock != nil && selectedMB.MagicBlock.MagicBlockNumber > 1 {
 				sc.discoverNewerMBsFromSharders(ctx, selectedMB.MagicBlock.MagicBlockNumber, lfbRound)
+
+				// Schedule MB discovery retry after miners are up. During startup,
+				// miners may not have their HTTP servers ready yet, so the miner
+				// URL fallback in discoverNewerMBsFromSharders fails. Poll until
+				// at least one miner is reachable, then run discovery.
+				mbNum := selectedMB.MagicBlock.MagicBlockNumber
+				minerURLs := selectedMB.MagicBlock.Miners.N2NURLs()
+				go func() {
+					sc.waitForMinersAndDiscover(minerURLs, mbNum, lfbRound)
+				}()
 			}
 
 			if lfbr.Round <= lfbRound {

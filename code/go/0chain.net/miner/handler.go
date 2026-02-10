@@ -29,6 +29,28 @@ func SetupHandlers() {
 	http.HandleFunc("/_txn_stats", common.WithCORS(
 		common.UserRateLimit(TxnStatsWriter),
 	))
+	http.HandleFunc("/v1/block/magic/get", common.WithCORS(
+		common.UserRateLimit(common.ToJSONResponse(MagicBlockHandler)),
+	))
+}
+
+// MagicBlockHandler serves magic blocks by number from the miner's RocksDB.
+// Uses the same URL path as sharders so FetchMagicBlockFromSharders works
+// with both miner and sharder URLs.
+func MagicBlockHandler(ctx context.Context, r *http.Request) (interface{}, error) {
+	mbNumber := r.FormValue("magic_block_number")
+	if mbNumber == "" {
+		return nil, common.NewError("invalid_params", "magic_block_number is required")
+	}
+	mb, err := LoadMagicBlock(ctx, mbNumber)
+	if err != nil {
+		return nil, err
+	}
+	// Wrap in synthetic block for compatibility with FetchMagicBlockFromSharders
+	b := block.NewBlock("", mb.StartingRound)
+	b.MagicBlock = mb
+	b.MagicBlockNumber = mb.MagicBlockNumber
+	return b, nil
 }
 
 // swagger:route GET /v1/chain/get/stats miner GetChainStats
