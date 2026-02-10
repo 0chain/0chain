@@ -281,13 +281,18 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 			blockMB, fetchErr := c.fetchMagicBlockByStartingRound(ctx, mbRound)
 			cancel()
 			if fetchErr == nil && blockMB != nil {
-				// Successfully fetched (already stored by fetchMagicBlockByStartingRound)
+				// Register miners from the fetched MB so their signatures can be verified
+				if updateErr := c.UpdateMagicBlock(blockMB); updateErr != nil {
+					logging.Logger.Error("reachedNotarization - failed to update fetched MB",
+						zap.Int64("mb_sr", blockMB.StartingRound),
+						zap.Error(updateErr))
+				}
 				blockMBThreshold := c.GetThresholdFromState(blockMB.Miners.Size())
 				if blockMBThreshold < threshold {
 					threshold = blockMBThreshold
 					num = blockMB.Miners.Size()
 				}
-				logging.Logger.Info("reachedNotarization - fetched missing MB from sharders",
+				logging.Logger.Info("reachedNotarization - fetched missing MB",
 					zap.Int64("round", round),
 					zap.Int64("block_mb_round", mbRound),
 					zap.Int("fetched_mb_miners", blockMB.Miners.Size()),
@@ -360,8 +365,13 @@ func (c *Chain) fetchMagicBlockByStartingRound(ctx context.Context, startingRoun
 	}
 
 	sharderURLs := currentMB.Sharders.N2NURLs()
-	if len(sharderURLs) == 0 {
-		return nil, common.NewError("fetch_mb_by_starting_round", "no sharder URLs available")
+	minerURLs := currentMB.Miners.N2NURLs()
+	if len(sharderURLs) == 0 && len(minerURLs) == 0 {
+		return nil, common.NewError("fetch_mb_by_starting_round", "no URLs available")
+	}
+
+	verifyFn := func(b *block.Block) bool {
+		return b != nil && b.MagicBlock != nil
 	}
 
 	// Determine search direction based on whether target is newer or older
@@ -393,13 +403,16 @@ func (c *Chain) fetchMagicBlockByStartingRound(ctx context.Context, startingRoun
 		default:
 		}
 
-		// Fetch magic block by number from sharders
-		b, err := httpclientutil.FetchMagicBlockFromSharders(ctx, sharderURLs, mbNumber,
-			func(b *block.Block) bool {
-				// Basic verification - ensure block has magic block
-				return b != nil && b.MagicBlock != nil
-			})
-		if err != nil {
+		// Fetch magic block by number from sharders first, then miners
+		var b *block.Block
+		var err error
+		if len(sharderURLs) > 0 {
+			b, err = httpclientutil.FetchMagicBlockFromSharders(ctx, sharderURLs, mbNumber, verifyFn)
+		}
+		if (b == nil || b.MagicBlock == nil) && len(minerURLs) > 0 {
+			b, err = httpclientutil.FetchMagicBlockFromSharders(ctx, minerURLs, mbNumber, verifyFn)
+		}
+		if err != nil || b == nil || b.MagicBlock == nil {
 			logging.Logger.Debug("fetch_mb_by_starting_round - fetch failed",
 				zap.Int64("mb_number", mbNumber),
 				zap.Error(err))
