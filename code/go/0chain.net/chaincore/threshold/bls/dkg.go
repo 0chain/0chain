@@ -385,7 +385,9 @@ func (dkg *DKG) GetSecretSharesSize() int {
 func (dkg *DKG) HasAllSecretShares() bool {
 	dkg.secretSharesMutex.RLock()
 	defer dkg.secretSharesMutex.RUnlock()
-	return len(dkg.receivedSecretShares) >= dkg.T
+	// Additive DKG requires shares from ALL N miners: Si = sum(S_j_self for ALL j).
+	// Missing any share produces a wrong secret key.
+	return len(dkg.receivedSecretShares) >= dkg.N
 }
 
 func (dkg *DKG) HasSecretShare(key string) bool {
