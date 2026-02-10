@@ -15,33 +15,94 @@ import (
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/encryption"
+	"0chain.net/core/viper"
 
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
 )
 
+// waitForPeerMiners polls peer miner HTTP endpoints until at least one responds.
+// Returns true if a peer was reached, false if we timed out.
+func waitForPeerMiners(mb *block.MagicBlock, maxWait time.Duration) bool {
+	if mb == nil || mb.Miners == nil {
+		return false
+	}
+
+	selfKey := node.Self.Underlying().GetKey()
+	miners := mb.Miners.CopyNodesMap()
+
+	const pollInterval = 3 * time.Second
+	deadline := time.Now().Add(maxWait)
+
+	for time.Now().Before(deadline) {
+		time.Sleep(pollInterval)
+
+		for id, n := range miners {
+			if id == selfKey {
+				continue
+			}
+			statusURL := n.GetStatusURL()
+			client := &http.Client{Timeout: 2 * time.Second}
+			resp, err := client.Get(statusURL)
+			if err == nil {
+				resp.Body.Close()
+				logging.Logger.Info("waitForPeerMiners - peer miner is reachable",
+					zap.String("miner", id[:8]),
+					zap.String("url", statusURL))
+				return true
+			}
+		}
+	}
+
+	logging.Logger.Warn("waitForPeerMiners - timed out waiting for peer miners",
+		zap.Duration("max_wait", maxWait))
+	return false
+}
+
 // scheduleVRFRecovery launches RecoverDKG as a background goroutine.
 // This is necessary because RecoverDKG loops indefinitely waiting for peers,
 // but during startup the HTTP server (which serves recovery shares) hasn't
 // started yet. Running synchronously would deadlock all miners.
-// The goroutine waits briefly for the HTTP server to start, then begins recovery.
-func (mc *Chain) scheduleVRFRecovery(ctx context.Context, mb *block.MagicBlock) {
+// The goroutine waits for peer miners to be reachable, then begins recovery.
+// Uses context.Background() — the recovery must survive the caller's context lifecycle.
+func (mc *Chain) scheduleVRFRecovery(_ context.Context, mb *block.MagicBlock) {
 	go func() {
-		// Wait for HTTP server to start before attempting recovery.
-		// LoadMagicBlocksAndDKG -> ... -> ListenAndServe() takes a few seconds.
-		time.Sleep(30 * time.Second)
+		// Wait for peer miners' HTTP servers to be reachable before attempting recovery.
+		waitForPeerMiners(mb, 3*time.Minute)
 
-		logging.Logger.Info("[dkg_recovery] starting scheduled VRF recovery",
-			zap.Int64("mb_num", mb.MagicBlockNumber),
-			zap.Int64("mb_sr", mb.StartingRound))
+		// Use background context — the caller's context may be canceled before
+		// the 30s delay completes (e.g., startup context canceled on restart).
+		ctx := context.Background()
 
-		if err := mc.RecoverDKG(ctx, mb); err != nil {
-			logging.Logger.Error("[dkg_recovery] scheduled VRF recovery failed",
+		// 20 retries * 30s = 10 min window. Must exceed the 3-minute LFB age
+		// guard in RecoverDKG so that force recovery can trigger even if the
+		// chain was recently active when the goroutine first runs.
+		const maxRetries = 20
+		const retryDelay = 30 * time.Second
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			logging.Logger.Info("[dkg_recovery] starting scheduled VRF recovery",
 				zap.Int64("mb_num", mb.MagicBlockNumber),
-				zap.Error(err))
-		} else {
-			logging.Logger.Info("[dkg_recovery] scheduled VRF recovery succeeded",
-				zap.Int64("mb_num", mb.MagicBlockNumber))
+				zap.Int64("mb_sr", mb.StartingRound),
+				zap.Int("attempt", attempt),
+				zap.Int("max_retries", maxRetries))
+
+			if err := mc.RecoverDKG(ctx, mb); err != nil {
+				logging.Logger.Error("[dkg_recovery] scheduled VRF recovery failed",
+					zap.Int64("mb_num", mb.MagicBlockNumber),
+					zap.Int("attempt", attempt),
+					zap.Error(err))
+				if attempt < maxRetries {
+					logging.Logger.Info("[dkg_recovery] retrying after delay",
+						zap.Int64("mb_num", mb.MagicBlockNumber),
+						zap.Int("next_attempt", attempt+1))
+					time.Sleep(retryDelay)
+					continue
+				}
+			} else {
+				logging.Logger.Info("[dkg_recovery] scheduled VRF recovery succeeded",
+					zap.Int64("mb_num", mb.MagicBlockNumber))
+			}
+			break
 		}
 	}()
 }
@@ -64,14 +125,19 @@ func computeDKGSeed(mbNumber int64) ([]byte, error) {
 // The peer regenerates its VRF-seeded polynomial and computes the share on the fly.
 //
 // Endpoint: /v1/_m2m/dkg/recover_share
-// Params: mb_num (magic block number), requester_id (requesting miner's node ID)
+// Params:
+//
+//	mb_num (required): magic block number
+//	requester_id (required): requesting miner's node ID
+//	new_t, new_n, exclude_hash (optional): emergency recovery mode params
+//
+// In emergency mode, the handler validates the exclude_hash against its own config,
+// builds a reduced miner set, and computes shares with the new T/N values.
 func RecoverShareRequestHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
 
-	mc := GetMinerChain()
-	if !mc.isHardforkActive("Nyx", mc.GetCurrentRound()) {
-		return nil, common.NewError("recover_share", "Nyx hardfork not active")
-	}
+	// Recovery handler is always active — VRF-seeded recovery is a startup mechanism
+	// with no consensus impact, safe to serve regardless of hardfork status.
 
 	mbNumStr := r.FormValue("mb_num")
 	requesterID := r.FormValue("requester_id")
@@ -85,7 +151,17 @@ func RecoverShareRequestHandler(ctx context.Context, r *http.Request) (
 		return nil, common.NewErrorf("recover_share", "invalid mb_num: %v", err)
 	}
 
-	// Load the magic block to get T, N, miner list
+	// Check for emergency recovery mode params
+	newTStr := r.FormValue("new_t")
+	newNStr := r.FormValue("new_n")
+	peerExcludeHash := r.FormValue("exclude_hash")
+	isEmergencyMode := newTStr != "" && newNStr != "" && peerExcludeHash != ""
+
+	if isEmergencyMode {
+		return handleEmergencyRecoveryShare(ctx, mbNum, mbNumStr, requesterID, newTStr, newNStr, peerExcludeHash)
+	}
+
+	// Normal recovery mode — load the existing MB and compute share for it
 	mb, loadErr := LoadMagicBlock(ctx, mbNumStr)
 	if loadErr != nil {
 		return nil, common.NewErrorf("recover_share", "magic block %d not found: %v", mbNum, loadErr)
@@ -149,6 +225,97 @@ func RecoverShareRequestHandler(ctx context.Context, r *http.Request) (
 	logging.Logger.Info("[dkg_recovery] sent share to recovering miner",
 		zap.Int64("mb_num", mbNum),
 		zap.String("requester", requesterID[:8]))
+
+	return result, nil
+}
+
+// handleEmergencyRecoveryShare handles the emergency recovery mode of share requests.
+// The requester is asking for a share for a NEW MB (mbNum) with reduced T/N.
+// We validate the exclude_hash against our own config, then compute the share
+// using the new T/N and the VRF seed for the new MB number.
+func handleEmergencyRecoveryShare(ctx context.Context, mbNum int64, mbNumStr, requesterID,
+	newTStr, newNStr, peerExcludeHash string) (interface{}, error) {
+
+	// Validate our own emergency recovery config
+	excludeMiners := viper.GetStringSlice("server_chain.emergency_recovery.exclude_miners")
+	if len(excludeMiners) == 0 {
+		return nil, common.NewError("recover_share",
+			"emergency mode requested but no exclude_miners in local config")
+	}
+
+	localExcludeHash := computeExcludeHash(excludeMiners)
+	if localExcludeHash != peerExcludeHash {
+		return nil, common.NewErrorf("recover_share",
+			"exclude_hash mismatch: local=%s, peer=%s", localExcludeHash[:16], peerExcludeHash[:16])
+	}
+
+	newT, err := strconv.Atoi(newTStr)
+	if err != nil {
+		return nil, common.NewErrorf("recover_share", "invalid new_t: %v", err)
+	}
+	newN, err := strconv.Atoi(newNStr)
+	if err != nil {
+		return nil, common.NewErrorf("recover_share", "invalid new_n: %v", err)
+	}
+
+	selfKey := node.Self.Underlying().GetKey()
+
+	// Verify self and requester are not excluded
+	excludeSet := make(map[string]bool, len(excludeMiners))
+	for _, id := range excludeMiners {
+		excludeSet[id] = true
+	}
+	if excludeSet[selfKey] {
+		return nil, common.NewError("recover_share", "self is in exclude list")
+	}
+	if excludeSet[requesterID] {
+		return nil, common.NewErrorf("recover_share",
+			"requester %s is in exclude list", requesterID[:8])
+	}
+
+	// Compute VRF-seeded polynomial for the NEW MB number with new T/N
+	seed, err := computeDKGSeed(mbNum)
+	if err != nil {
+		return nil, common.NewErrorf("recover_share", "seed computation failed: %v", err)
+	}
+
+	tempDKG := bls.MakeDKGSeeded(newT, newN, selfKey, seed)
+
+	// Compute share for the requester
+	requesterPartyID := bls.ComputeIDdkg(requesterID)
+	share, err := tempDKG.ComputeDKGKeyShare(requesterPartyID)
+	if err != nil {
+		return nil, common.NewErrorf("recover_share",
+			"failed to compute emergency share for %s: %v", requesterID[:8], err)
+	}
+
+	// Return signed response
+	shareHex := share.GetHexString()
+	message := encryption.Hash(shareHex + mbNumStr)
+	sign, err := node.Self.Sign(message)
+	if err != nil {
+		return nil, common.NewErrorf("recover_share", "failed to sign: %v", err)
+	}
+
+	// Include VRF-seeded MPKs
+	mpks := tempDKG.GetMPKs()
+	mpksHex := make([]string, len(mpks))
+	for i, pk := range mpks {
+		mpksHex[i] = pk.GetHexString()
+	}
+
+	result := datastore.GetEntityMetadata("dkg_share").Instance().(*bls.DKGKeyShare)
+	result.Message = message
+	result.Sign = sign
+	result.Share = shareHex
+	result.MpksHex = mpksHex
+
+	logging.Logger.Info("[dkg_recovery] sent emergency share to recovering miner",
+		zap.Int64("mb_num", mbNum),
+		zap.String("requester", requesterID[:8]),
+		zap.Int("new_t", newT),
+		zap.Int("new_n", newN),
+		zap.String("exclude_hash", peerExcludeHash[:16]))
 
 	return result, nil
 }
@@ -291,39 +458,71 @@ func (mc *Chain) RecoverDKG(ctx context.Context, mb *block.MagicBlock) error {
 	newDKG.AggregateSecretKeyShares()
 	newDKG.Pi = newDKG.Si.GetPublicKey()
 
-	// Step 5: Try validation against existing MB MPKs first
-	forceRecovery := false
+	// Step 5: Check if chain is active or stuck.
+	// Force recovery must be all-or-nothing: ALL miners must switch to VRF-seeded
+	// MPKs together. If the chain is active, some miners have valid DKGs and
+	// won't restart — force recovery on a subset causes an MPK split.
+	// When the chain is stuck, ALL miners must restart, so all force-recover together.
+	lfb := mc.GetLatestFinalizedBlock()
+	chainStuck := false
+	if lfb != nil {
+		lfbAge := time.Since(time.Unix(int64(lfb.CreationDate), 0))
+		chainStuck = lfbAge >= 3*time.Minute
+		if chainStuck {
+			logging.Logger.Info("[dkg_recovery] chain appears stuck",
+				zap.Int64("mb_num", mb.MagicBlockNumber),
+				zap.Int64("lfb_round", lfb.Round),
+				zap.Duration("lfb_age", lfbAge))
+		}
+	} else {
+		chainStuck = true // no LFB = definitely stuck
+	}
+
+	// Step 6: Validate Pi against existing MB MPKs
+	piMatch := false
 	if mb.Mpks != nil {
 		mpks, mpkErr := mb.Mpks.GetMpkMap()
 		if mpkErr == nil {
 			if err := newDKG.AggregatePublicKeyShares(mpks); err == nil {
 				newDKG.SetMpksMap(mb.Mpks.GetMpkMapStrings())
 				expectedPi := newDKG.GetPublicKeyByID(selfPartyID)
-				if newDKG.Pi.IsEqual(&expectedPi) {
+				piMatch = newDKG.Pi.IsEqual(&expectedPi)
+				if piMatch {
 					logging.Logger.Info("[dkg_recovery] Pi validated against existing MB MPKs",
 						zap.Int64("mb_num", mb.MagicBlockNumber))
 				} else {
-					logging.Logger.Warn("[dkg_recovery] Pi mismatch with existing MB MPKs, attempting force recovery",
+					logging.Logger.Warn("[dkg_recovery] Pi mismatch with existing MB MPKs",
 						zap.Int64("mb_num", mb.MagicBlockNumber),
 						zap.String("got_pi", newDKG.Pi.GetHexString()[:16]),
 						zap.String("expected_pi", expectedPi.GetHexString()[:16]))
-					forceRecovery = true
 				}
-			} else {
-				forceRecovery = true
 			}
-		} else {
-			forceRecovery = true
 		}
-	} else {
-		forceRecovery = true
 	}
 
-	// Step 6: Force recovery - update MB's MPKs to VRF-seeded ones
-	// Force recovery requires ALL N miners' MPKs because the group public key
-	// is computed from all miners' mpk[0] values. Partial MPKs produce a
-	// different group key, causing VRF verification failures.
-	if forceRecovery {
+	// Step 7: Decide action based on Pi match and chain state.
+	//
+	// Pi match + chain active  → use existing DKG (normal operation)
+	// Pi match + chain stuck   → force-recover (ensure ALL miners have VRF-seeded MPKs)
+	// Pi mismatch + chain active → stay silent (can't force-recover alone)
+	// Pi mismatch + chain stuck  → force-recover
+	forceRecovery := false
+	if piMatch && !chainStuck {
+		// Normal case: DKG is valid and chain is running. Done.
+		logging.Logger.Info("[dkg_recovery] using existing DKG (chain active, Pi valid)",
+			zap.Int64("mb_num", mb.MagicBlockNumber))
+	} else if !piMatch && !chainStuck {
+		// Pi mismatch but chain active — can't force-recover alone.
+		logging.Logger.Warn("[dkg_recovery] chain is active, skipping force recovery to avoid MPK split",
+			zap.Int64("mb_num", mb.MagicBlockNumber))
+		return fmt.Errorf("Pi mismatch but chain is active — staying silent for MB#%d",
+			mb.MagicBlockNumber)
+	} else {
+		// Chain is stuck — ALL miners must force-recover to VRF-seeded MPKs.
+		// This applies whether Pi matched (CSPRNG DKG valid) or not (no DKG).
+		// Without this, miners with valid CSPRNG DKGs keep old MPKs while
+		// miners without DKGs force-recover to VRF-seeded MPKs → split.
+		forceRecovery = true
 		if len(collectedMPKs) < mb.N {
 			return fmt.Errorf("force recovery needs MPKs from all %d miners, got %d",
 				mb.N, len(collectedMPKs))
@@ -361,7 +560,8 @@ func (mc *Chain) RecoverDKG(ctx context.Context, mb *block.MagicBlock) error {
 		mb.Mpks = newMpks
 		logging.Logger.Info("[dkg_recovery] force recovery - updated MB MPKs to VRF-seeded",
 			zap.Int64("mb_num", mb.MagicBlockNumber),
-			zap.Int("mpks_count", len(newMpks.Mpks)))
+			zap.Int("mpks_count", len(newMpks.Mpks)),
+			zap.Bool("pi_was_valid", piMatch))
 
 		// Persist the updated MB
 		if err := StoreMagicBlock(ctx, mb); err != nil {
