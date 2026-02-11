@@ -905,7 +905,11 @@ func (c *Chain) printNodePool(w http.ResponseWriter, np *node.Pool) {
 			fmt.Fprintf(w, "<td class='number'>%.2f</td>", olmt)
 		}
 		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Description, nd.Description)
-		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", nd.Info.BuildTag, nd.Info.BuildTag)
+		buildTag := nd.Info.BuildTag
+		if node.Self.IsEqual(nd) {
+			buildTag = build.BuildTag
+		}
+		fmt.Fprintf(w, "<td><div class='fixed-text' style='width:100px;' title='%s'>%s</div></td>", buildTag, buildTag)
 		// if nd.Info.GetStateMissingNodes() < 0 {
 		// 	fmt.Fprintf(w, "<td>pending</td>")
 		// } else {
