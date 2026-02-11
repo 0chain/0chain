@@ -2,6 +2,7 @@ package miner
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -96,42 +97,36 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	// Time loading DKG summary
 	startLoad := time.Now()
 
+	nyxActive := mc.isHardforkActive("Nyx", mc.GetCurrentRound())
+
 	if len(dkgSum) > 0 {
 		summary = dkgSum[0]
 	} else {
 		summary, err = LoadDKGSummary(ctx, id)
 		if err != nil {
-			// No summary found — schedule VRF-seeded recovery.
-			// Recovery is a startup-only mechanism with no consensus impact.
-			if mb.StartingRound > 0 {
-				logging.Logger.Warn("[dkg] no DKG summary found, scheduling VRF-seeded recovery",
-					zap.Int64("mb_number", mb.MagicBlockNumber),
-					zap.Error(err))
-				mc.scheduleVRFRecovery(ctx, mb)
-			}
+			logging.Logger.Warn("[dkg] no DKG summary found",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Error(err))
 			return
 		}
 	}
 	logging.Logger.Debug("[dkg_timing] Loading DKG summary",
 		zap.Duration("duration", time.Since(startLoad)))
 
-	// Check for corrupted/empty summary (e.g., wiped by previous code version).
-	// Schedule recovery for corrupted/empty summaries — this is a startup recovery path.
-	if summary.SecretShares == nil || len(summary.SecretShares) == 0 {
-		if mb.StartingRound > 0 {
-			logging.Logger.Warn("[dkg] empty DKG summary (corrupted), scheduling VRF-seeded recovery",
-				zap.Int64("mb_number", mb.MagicBlockNumber))
-			mc.scheduleVRFRecovery(ctx, mb)
-			return nil
+	if mb.StartingRound > 0 && !summary.IsFinalized {
+		if nyxActive {
+			// Nyx: don't reject non-finalized summaries — Pi validation below is a stronger check.
+			logging.Logger.Warn("[dkg] DKG summary not finalized, will validate via Pi check",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Int64("mb_starting_round", mb.StartingRound))
+		} else {
+			// Pre-Nyx: reject non-finalized summaries
+			return errors.New("DKG summary is not finalized")
 		}
-		return common.NewError("failed to set dkg from store", "no saved shares for dkg")
 	}
 
-	if mb.StartingRound > 0 && !summary.IsFinalized {
-		// Don't reject non-finalized summaries — Pi validation below is a stronger check.
-		logging.Logger.Warn("[dkg] DKG summary not finalized, will validate via Pi check",
-			zap.Int64("mb_number", mb.MagicBlockNumber),
-			zap.Int64("mb_starting_round", mb.StartingRound))
+	if summary.SecretShares == nil {
+		return common.NewError("failed to set dkg from store", "no saved shares for dkg")
 	}
 
 	// Time DKG creation
@@ -216,10 +211,9 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	logging.Logger.Debug("[dkg_timing] convert mpks",
 		zap.Duration("duration", time.Since(startAgg)))
 
-	{
-		// Validate that Pi from secret shares matches the expected public key from magic block MPKs.
+	if nyxActive {
+		// Nyx: Validate that Pi from secret shares matches the expected public key from magic block MPKs.
 		// This prevents using stale/corrupted DKG keys that would cause VRF verification failures.
-		// Always active — Pi validation is a local safety check with no consensus impact.
 		startValidate := time.Now()
 		myPartyID := bls.ComputeIDdkg(selfNodeKey)
 		expectedPi, err := newDKG.GetPublicKeyByIDFromMpks(myPartyID)
@@ -292,13 +286,12 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 							zap.Error(storeErr),
 							zap.Int64("mb_number", mb.MagicBlockNumber))
 					}
-					mc.scheduleVRFRecovery(ctx, mb)
-					return nil
+					return fmt.Errorf("DKG Pi mismatch for MB#%d after ShareOrSigns retry, cleared corrupted summary", mb.MagicBlockNumber)
 				}
 			} else {
-				logging.Logger.Warn("[dkg] not enough shares in MB ShareOrSigns, scheduling VRF-seeded recovery",
+				logging.Logger.Warn("[dkg] not enough shares in MB ShareOrSigns for recovery",
 					zap.Int64("mb_number", mb.MagicBlockNumber))
-				// Clear corrupted summary and schedule async recovery
+				// Clear corrupted summary so miner falls back to previous MB's DKG
 				emptySummary := &bls.DKGSummary{SecretShares: nil}
 				emptySummary.ID = id
 				if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
@@ -306,8 +299,7 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 						zap.Error(storeErr),
 						zap.Int64("mb_number", mb.MagicBlockNumber))
 				}
-				mc.scheduleVRFRecovery(ctx, mb)
-				return nil
+				return fmt.Errorf("DKG Pi mismatch for MB#%d, not enough shares in ShareOrSigns", mb.MagicBlockNumber)
 			}
 		}
 		logging.Logger.Debug("[dkg_timing] Pi validation",
@@ -334,18 +326,6 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	}
 	logging.Logger.Debug("[dkg_timing] Final DKG setting",
 		zap.Duration("duration", time.Since(startSet)))
-
-	// Schedule VRF-seeded recovery to run in background after HTTP server starts.
-	// Even though we loaded a "valid" old DKG, it may be CSPRNG-based and incompatible
-	// with peers that have already recovered to VRF-seeded DKGs. The async recovery
-	// will replace it once all peers are reachable. Always active — recovery is a
-	// startup-only mechanism with no consensus impact.
-	// Note: Must run for BOTH store-loaded and live-VC-set DKGs. Without this,
-	// miners that set DKG via live VC never trigger force recovery, causing MPK
-	// splits when other miners force-recover on restart.
-	if mb.StartingRound > 0 {
-		mc.scheduleVRFRecovery(ctx, mb)
-	}
 
 	return
 }

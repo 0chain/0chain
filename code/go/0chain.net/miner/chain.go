@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/encryption"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -24,6 +26,7 @@ import (
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 const (
@@ -160,6 +163,20 @@ type Chain struct {
 	generateBlockWorker                  *common.WithContextFunc
 }
 
+// isHardforkActive checks if a named hardfork is active for the given round
+// by reading the activation round from the LFB's MPT state.
+func (mc *Chain) isHardforkActive(name string, round int64) bool {
+	lfb := mc.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		return false
+	}
+	fork := cstate.NewHardFork(name, 0)
+	path := util.Path(encryption.Hash(fork.GetKey()))
+	if err := lfb.ClientState.GetNodeValue(path, fork); err != nil {
+		return false
+	}
+	return round >= fork.Round()
+}
 
 type ViewChangeEvent struct {
 	MagicBlock *block.MagicBlock
@@ -714,27 +731,45 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return // node leaves BC, don't do anything here
 	}
 
+	nyxActive := mc.isHardforkActive("Nyx", b.Round)
+
 	var dkgSum *bls.DKGSummary
 
-	// Prefer the in-memory viewChangeDKG if available,
-	// because the stored summary may be from a stale (failed) VC attempt whose
-	// shares don't match the finalized MB's MPKs.
-	mc.viewChangeProcess.Lock()
-	vcDKG := mc.viewChangeProcess.viewChangeDKG
-	mc.viewChangeProcess.Unlock()
+	if nyxActive {
+		// Nyx: Prefer the in-memory viewChangeDKG if available,
+		// because the stored summary may be from a stale (failed) VC attempt whose
+		// shares don't match the finalized MB's MPKs.
+		mc.viewChangeProcess.Lock()
+		vcDKG := mc.viewChangeProcess.viewChangeDKG
+		mc.viewChangeProcess.Unlock()
 
-	if vcDKG != nil && vcDKG.MagicBlockNumber == mb.MagicBlockNumber {
-		dkgSum = vcDKG.GetDKGSummary()
-		dkgSum.IsFinalized = true
-		if storeErr := StoreDKGSummary(ctx, dkgSum); storeErr != nil {
-			logging.Logger.Error("[mvc] view change - failed to store fresh DKG from viewChangeDKG",
-				zap.Error(storeErr),
-				zap.Int64("mb number", mb.MagicBlockNumber))
+		if vcDKG != nil && vcDKG.MagicBlockNumber == mb.MagicBlockNumber {
+			dkgSum = vcDKG.GetDKGSummary()
+			dkgSum.IsFinalized = true
+			if storeErr := StoreDKGSummary(ctx, dkgSum); storeErr != nil {
+				logging.Logger.Error("[mvc] view change - failed to store fresh DKG from viewChangeDKG",
+					zap.Error(storeErr),
+					zap.Int64("mb number", mb.MagicBlockNumber))
+			} else {
+				logging.Logger.Info("[mvc] view change - stored fresh DKG from in-memory viewChangeDKG",
+					zap.Int64("mb number", mb.MagicBlockNumber))
+			}
 		} else {
-			logging.Logger.Info("[mvc] view change - stored fresh DKG from in-memory viewChangeDKG",
-				zap.Int64("mb number", mb.MagicBlockNumber))
+			var loadErr error
+			dkgSum, loadErr = LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+			if loadErr != nil {
+				logging.Logger.Error("[mvc] view change failed to load dkg summary",
+					zap.Error(loadErr),
+					zap.Int64("mb number", mb.MagicBlockNumber))
+				return nil
+			}
+			// Don't finalize here — SetDKGSFromStore validates Pi first.
+			logging.Logger.Info("[mvc] view change - loaded DKG from store",
+				zap.Int64("mb number", mb.MagicBlockNumber),
+				zap.Bool("is_finalized", dkgSum.IsFinalized))
 		}
 	} else {
+		// Pre-Nyx (staging behavior): load from store, mark finalized immediately
 		var loadErr error
 		dkgSum, loadErr = LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
 		if loadErr != nil {
@@ -743,21 +778,32 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 				zap.Int64("mb number", mb.MagicBlockNumber))
 			return nil
 		}
-		// Don't finalize here — SetDKGSFromStore validates Pi first.
-		logging.Logger.Info("[mvc] view change - loaded DKG from store",
-			zap.Int64("mb number", mb.MagicBlockNumber),
-			zap.Bool("is_finalized", dkgSum.IsFinalized))
+		dkgSum.IsFinalized = true
+		if storeErr := StoreDKGSummary(ctx, dkgSum); storeErr != nil {
+			logging.Logger.Error("[mvc] view change failed to update dkg summary",
+				zap.Error(storeErr),
+				zap.Int64("mb number", mb.MagicBlockNumber))
+			return storeErr
+		}
 	}
 
 	if err := SetDKG(ctx, mb, dkgSum); err != nil {
-		// DKG failure is non-fatal. Keep the MB so GetMagicBlock returns
-		// the correct MB. GetDKG will return nil, causing the miner to skip
-		// VRF signing (both GetBlsShare and AddVRFShare handle nil DKG).
-		logging.Logger.Error("[mvc] view change set dkg failed - miner will skip VRF signing for this MB's rounds",
+		if nyxActive {
+			// Nyx: DKG failure is non-fatal. Keep the MB so GetMagicBlock returns
+			// the correct MB. GetDKG will return nil, causing the miner to skip
+			// VRF signing (both GetBlsShare and AddVRFShare handle nil DKG).
+			logging.Logger.Error("[mvc] view change set dkg failed - miner will skip VRF signing for this MB's rounds",
+				zap.Int64("mb number", mb.MagicBlockNumber),
+				zap.Int64("mb sr", mb.StartingRound),
+				zap.Error(err))
+			return nil // Don't block finalization
+		}
+		// Pre-Nyx: DKG failure blocks finalization
+		logging.Logger.Error("[mvc] view change set dkg failed",
 			zap.Int64("mb number", mb.MagicBlockNumber),
 			zap.Int64("mb sr", mb.StartingRound),
 			zap.Error(err))
-		return nil // Don't block finalization
+		return err
 	}
 
 	// Update the latest finalized magic block - this is critical for the chain to
