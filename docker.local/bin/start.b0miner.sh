@@ -9,9 +9,9 @@ if [[ "$*" == *"--debug"* ]]
 then
     echo Starting miner"$MINER_ID" in debug mode ...
 
-    MINER=$MINER_ID docker-compose -p miner"$MINER_ID" -f ../build.miner/b0docker-compose-debug.yml up --force-recreate
+    MINER=$MINER_ID docker compose -p miner"$MINER_ID" -f ../build.miner/b0docker-compose-debug.yml up -d --force-recreate
 else
     echo Starting miner"$MINER_ID" ...
 
-    MINER=$MINER_ID docker-compose -p miner"$MINER_ID" -f ../build.miner/b0docker-compose.yml up --force-recreate
+    MINER=$MINER_ID docker compose -p miner"$MINER_ID" -f ../build.miner/b0docker-compose.yml up -d --force-recreate
 fi

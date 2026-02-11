@@ -9,9 +9,9 @@ if [[ "$*" == *"--debug"* ]]
 then
     echo Starting sharder"$SHARDER_ID" in debug mode ...
 
-    SHARDER=$SHARDER_ID docker-compose -p sharder"$SHARDER_ID" -f ../build.sharder/b0docker-compose-debug.yml up --force-recreate
+    SHARDER=$SHARDER_ID docker compose -p sharder"$SHARDER_ID" -f ../build.sharder/b0docker-compose-debug.yml up -d --force-recreate
 else
     echo Starting sharder"$SHARDER_ID" ...
 
-    SHARDER=$SHARDER_ID docker-compose -p sharder"$SHARDER_ID" -f ../build.sharder/b0docker-compose.yml up --force-recreate
+    SHARDER=$SHARDER_ID docker compose -p sharder"$SHARDER_ID" -f ../build.sharder/b0docker-compose.yml up -d --force-recreate
 fi

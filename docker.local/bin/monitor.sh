@@ -195,9 +195,11 @@ echo "Logging to $LOG"
 
 # Initial snapshot
 PREV_ROUND=$(get_round)
+[[ "$PREV_ROUND" =~ ^[0-9]+$ ]] || PREV_ROUND=0
 PREV_TIME=$(date +%s)
 mb_info=$(get_mb_info)
 PREV_MB_NUM=$(echo "$mb_info" | awk '{print $1}')
+[[ "$PREV_MB_NUM" =~ ^[0-9]+$ ]] || PREV_MB_NUM=0
 
 while true; do
     REPORT_NUM=$((REPORT_NUM + 1))
