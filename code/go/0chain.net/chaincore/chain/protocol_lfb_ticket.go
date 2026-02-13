@@ -264,48 +264,34 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 		return
 	}
 
-	shardersN2NURLs := mb.Sharders.N2NURLs()
-	if len(shardersN2NURLs) == 0 {
+	// Query current MB's sharders
+	blocks := c.queryShardersForLFB(ctx, mb)
+
+	// If no responses (e.g., only sharder in MB is self), fall back to previous MB's sharders
+	if len(blocks) == 0 {
+		c.mbMutex.RLock()
+		prevMB := c.PreviousMagicBlock
+		c.mbMutex.RUnlock()
+		if prevMB != nil && prevMB.Sharders != nil && prevMB.MagicBlockNumber != mb.MagicBlockNumber {
+			logging.Logger.Info("GetLatestFinalizedBlockFromSharder - no responses from current MB sharders, trying previous MB",
+				zap.Int64("current_mb", mb.MagicBlockNumber),
+				zap.Int("current_mb_sharders", mb.Sharders.Size()),
+				zap.Int64("prev_mb", prevMB.MagicBlockNumber),
+				zap.Int("prev_mb_sharders", prevMB.Sharders.Size()))
+			blocks = c.queryShardersForLFB(ctx, prevMB)
+		}
+	}
+
+	if len(blocks) == 0 {
 		return
 	}
 
-	fbs = make([]*BlockConsensus, 0, len(shardersN2NURLs))
-	fbc := make(chan *block.Block, len(shardersN2NURLs))
-
-	var handler = func(ctx context.Context, entity datastore.Entity) (
-		resp interface{}, err error) {
-
-		var fb, ok = entity.(*block.Block)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		if fb.Round == 0 {
-			return
-		}
-
-		if err = fb.Validate(ctx); err != nil {
-			logging.Logger.Error("lfb from sharder - invalid",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			return
-		}
-		select {
-		case fbc <- fb:
-		default:
-		}
-
-		return fb, nil
-	}
-
-	// Use RequestEntityFromShardersOnMB directly with our magic block
-	// to avoid the LFMB channel lookup in RequestEntityFromSharders
-	c.RequestEntityFromShardersOnMB(ctx, mb, MinerLatestFinalizedBlockRequestor, nil, handler)
-	close(fbc)
+	// Build consensus and filter
+	fbs = make([]*BlockConsensus, 0, len(blocks))
 
 	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
-	for fb := range fbc {
+	for _, fb := range blocks {
 		// increase consensus
 		for i, b := range fbs {
 			if b.Hash == fb.Hash {
@@ -370,47 +356,30 @@ func (c *Chain) GetLatestFinalizedBlockFromSharderNoFilter(ctx context.Context) 
 		return
 	}
 
-	shardersN2NURLs := mb.Sharders.N2NURLs()
-	if len(shardersN2NURLs) == 0 {
-		logging.Logger.Warn("GetLatestFinalizedBlockFromSharderNoFilter - no sharders in magic block")
+	// Query current MB's sharders
+	blocks := c.queryShardersForLFB(ctx, mb)
+
+	// If no responses, fall back to previous MB's sharders
+	if len(blocks) == 0 {
+		c.mbMutex.RLock()
+		prevMB := c.PreviousMagicBlock
+		c.mbMutex.RUnlock()
+		if prevMB != nil && prevMB.Sharders != nil && prevMB.MagicBlockNumber != mb.MagicBlockNumber {
+			logging.Logger.Info("GetLatestFinalizedBlockFromSharderNoFilter - no responses, trying previous MB",
+				zap.Int64("current_mb", mb.MagicBlockNumber),
+				zap.Int64("prev_mb", prevMB.MagicBlockNumber))
+			blocks = c.queryShardersForLFB(ctx, prevMB)
+		}
+	}
+
+	if len(blocks) == 0 {
+		logging.Logger.Debug("GetLatestFinalizedBlockFromSharderNoFilter - no blocks received")
 		return
 	}
 
-	fbs = make([]*BlockConsensus, 0, len(shardersN2NURLs))
-	fbc := make(chan *block.Block, len(shardersN2NURLs))
+	fbs = make([]*BlockConsensus, 0, len(blocks))
 
-	var handler = func(ctx context.Context, entity datastore.Entity) (
-		resp interface{}, err error) {
-
-		var fb, ok = entity.(*block.Block)
-		if !ok {
-			return nil, datastore.ErrInvalidEntity
-		}
-
-		if fb.Round == 0 {
-			return
-		}
-
-		if err = fb.Validate(ctx); err != nil {
-			logging.Logger.Error("lfb from sharder (no filter) - invalid",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Error(err))
-			return
-		}
-		select {
-		case fbc <- fb:
-		default:
-		}
-
-		return fb, nil
-	}
-
-	// Use RequestEntityFromShardersOnMB directly with our magic block
-	// to avoid the LFMB channel lookup in RequestEntityFromSharders
-	c.RequestEntityFromShardersOnMB(ctx, mb, MinerLatestFinalizedBlockRequestor, nil, handler)
-	close(fbc)
-
-	for fb := range fbc {
+	for _, fb := range blocks {
 		// increase consensus
 		found := false
 		for i, b := range fbs {
@@ -445,6 +414,52 @@ func (c *Chain) GetLatestFinalizedBlockFromSharderNoFilter(ctx context.Context) 
 		zap.Int("count", len(fbs)))
 
 	return
+}
+
+// queryShardersForLFB queries the sharders in the given magic block's pool for
+// their latest finalized block. Returns validated blocks, or nil if no sharder
+// responded (e.g., when the only sharder in the pool is self).
+func (c *Chain) queryShardersForLFB(ctx context.Context, mb *block.MagicBlock) []*block.Block {
+	if mb == nil || mb.Sharders == nil || mb.Sharders.Size() == 0 {
+		return nil
+	}
+
+	fbc := make(chan *block.Block, mb.Sharders.Size())
+
+	var handler = func(ctx context.Context, entity datastore.Entity) (
+		resp interface{}, err error) {
+
+		var fb, ok = entity.(*block.Block)
+		if !ok {
+			return nil, datastore.ErrInvalidEntity
+		}
+
+		if fb.Round == 0 {
+			return
+		}
+
+		if err = fb.Validate(ctx); err != nil {
+			logging.Logger.Error("lfb from sharder - invalid",
+				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+				zap.Error(err))
+			return
+		}
+		select {
+		case fbc <- fb:
+		default:
+		}
+
+		return fb, nil
+	}
+
+	c.RequestEntityFromShardersOnMB(ctx, mb, MinerLatestFinalizedBlockRequestor, nil, handler)
+	close(fbc)
+
+	var blocks []*block.Block
+	for fb := range fbc {
+		blocks = append(blocks, fb)
+	}
+	return blocks
 }
 
 func (c *Chain) sendLFBTicketEventToSubscribers(

@@ -1016,16 +1016,21 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil && lfb.Round == b.Round-1 && lfb.IsStateComputed() {
 		// previous round is latest finalized round
-		if b.PrevHash != lfb.Hash {
-			logging.Logger.Error("get_previous_block - can't set lfb as previous block, hash mismatch")
-			return nil
+		if b.PrevHash == lfb.Hash {
+			b.SetPreviousBlock(lfb)
+			logging.Logger.Info("get_previous_block - previous block is lfb",
+				zap.Int64("round", b.Round),
+				zap.Int64("lfb_round", lfb.Round),
+				zap.String("block", b.Hash))
+			return lfb
 		}
-		b.SetPreviousBlock(lfb)
-		logging.Logger.Info("get_previous_block - previous block is lfb",
+		// Hash mismatch: LFB at this round has a different hash than what the
+		// block expects. This can happen when the LFB is from a fork. Fall
+		// through to SyncPreviousBlocks to fetch the correct block from peers.
+		logging.Logger.Warn("get_previous_block - lfb hash mismatch, will try syncing from peers",
 			zap.Int64("round", b.Round),
-			zap.Int64("lfb_round", lfb.Round),
-			zap.String("block", b.Hash))
-		return lfb
+			zap.String("block_prev_hash", b.PrevHash),
+			zap.String("lfb_hash", lfb.Hash))
 	}
 
 	maxSyncDepth := int64(config.GetLFBTicketAhead())

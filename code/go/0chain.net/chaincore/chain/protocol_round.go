@@ -263,6 +263,22 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		return
 	}
 
+	if lfb.Round == plfb.Round {
+		// Fork replacement: the canonical chain has a different block at the
+		// LFB round. This happens when the node finalized a fork block but the
+		// rest of the network built on the canonical block. Switch to the
+		// canonical block so subsequent rounds can finalize normally.
+		logging.Logger.Warn("finalize round - fork replacement at LFB round",
+			zap.Int64("round", lfb.Round),
+			zap.String("old_lfb_hash", plfb.Hash),
+			zap.String("canonical_hash", lfb.Hash))
+		c.SetLatestFinalizedBlock(lfb)
+		if rr := c.GetRound(lfb.Round); rr != nil {
+			rr.Finalize(lfb)
+		}
+		return
+	}
+
 	if lfb.Round > plfb.Round {
 
 		if roundNumber-lfb.Round >= int64(2*config.GetLFBTicketAhead()) {

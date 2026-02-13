@@ -308,10 +308,10 @@ func (c *Chain) requestBlocks(ctx context.Context, startRound, reqNum int64) {
 					break
 				}
 				// If sharder fetch failed and block is recent, try miners
-				// Miners keep recent blocks in memory (50 rounds)
+				// Miners keep recent blocks in memory (1000 rounds)
 				if err != nil {
 					currentRound := c.GetCurrentRound()
-					if currentRound-r < 50 {
+					if currentRound-r < 1000 {
 						logging.Logger.Info("sharder falling back to miners for recent block",
 							zap.Int64("round", r),
 							zap.Int64("current_round", currentRound))
@@ -453,7 +453,13 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 
 			endRound = lfbTk.Round + aheadN
 
-			if endRound <= cr || lfb.Round >= lfbTk.Round {
+			// Only skip sync when BOTH:
+			// 1. Current round is past the target end round
+			// 2. LFB has caught up to the ticket
+			// Using AND ensures that when LFB is behind the ticket
+			// (e.g., after restart with high cr from loaded blocks),
+			// requestBlocks still runs to fill the gap.
+			if endRound <= cr && lfb.Round >= lfbTk.Round {
 				if timingSync {
 					// syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
 					timingSync = false
@@ -1874,9 +1880,13 @@ func (c *Chain) DeleteBlocks(blocks []*block.Block) {
 	}
 }
 
-/*PruneChain - prunes the chain */
+/*PruneChain - prunes the chain
+Keeps 1000 rounds of blocks in memory to support:
+- Sharder self-healing: when only sharder in MB is self, fall back to miners for recent blocks
+- Faster catch-up after brief outages or chaos restarts
+*/
 func (c *Chain) PruneChain(_ context.Context, b *block.Block) {
-	c.DeleteBlocksBelowRound(b.Round - 50)
+	c.DeleteBlocksBelowRound(b.Round - 1000)
 }
 
 /*
