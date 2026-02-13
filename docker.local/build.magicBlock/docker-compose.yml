@@ -9,3 +9,8 @@ services:
       - ../config/magicBlock:/config
 
     command: ./bin/magicBlock --mainnet --config_file nodes
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"

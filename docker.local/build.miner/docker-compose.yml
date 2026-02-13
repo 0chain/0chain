@@ -11,6 +11,11 @@ services:
     sysctls:
       net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/state.redis.conf
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
 
   redis_txns:
     image: "redis:alpine"
@@ -23,6 +28,11 @@ services:
     sysctls:
       net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/transactions.redis.conf
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
 
   miner:
     image: "miner"
@@ -48,6 +58,11 @@ services:
       testnet0:
         ipv4_address: 198.18.0.7${MINER}
     command: ./bin/miner  --deployment_mode 0 --keys_file config/b0mnode${MINER}_keys.txt --dkg_file config/b0mnode${MINER}_dkg.json
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
 
 networks:
   default:

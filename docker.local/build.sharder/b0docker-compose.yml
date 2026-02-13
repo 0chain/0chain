@@ -15,9 +15,15 @@ services:
     volumes:
       - ../config/postgresql.conf:/etc/postgresql/postgresql.conf
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
+      - ../sharder${SHARDER}/data/postgresql2:/var/lib/postgresql/hdd_ts
       - ../sql_script/:/docker-entrypoint-initdb.d/
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       default:
   sharder:
@@ -44,6 +50,11 @@ services:
         ipv4_address: 198.18.0.8${SHARDER}
     command: ./bin/sharder --deployment_mode 0 --keys_file config${KEYS_CONFIG_PATH}/b0snode${SHARDER}_keys.txt ${CLI_ARGS}
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
 
 networks:
   default:

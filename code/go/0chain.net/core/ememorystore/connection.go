@@ -62,6 +62,9 @@ func defaultDBOptions() *grocksdb.Options {
 	bbto.SetBlockCache(grocksdb.NewLRUCache(3 << 30))
 	opts := grocksdb.NewDefaultOptions()
 	opts.SetKeepLogFileNum(5)
+	opts.SetMaxLogFileSize(100 * 1024 * 1024) // rotate info log at 100 MB
+	opts.SetMaxTotalWalSize(32 * 1024 * 1024) // 32 MB logical WAL cap
+	opts.SetWriteBufferSize(4 * 1024 * 1024)  // 4 MB — reduces WAL pre-allocation from 64 MB to ~4 MB per file
 	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
 	return opts
