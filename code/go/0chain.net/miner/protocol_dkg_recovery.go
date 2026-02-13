@@ -332,23 +332,14 @@ func (mc *Chain) RecoverDKG(ctx context.Context, mb *block.MagicBlock) error {
 	startTime := time.Now()
 	selfKey := node.Self.Underlying().GetKey()
 
-	// Read excluded miners from emergency recovery config.
-	// These miners are known to be absent and should not be waited for.
-	excludeMiners := viper.GetStringSlice("server_chain.emergency_recovery.exclude_miners")
-	excludeSet := make(map[string]bool, len(excludeMiners))
-	for _, id := range excludeMiners {
-		excludeSet[id] = true
-	}
-	requiredN := mb.N - len(excludeMiners)
-	if requiredN < mb.T {
-		requiredN = mb.T // never go below threshold
-	}
+	// Regular DKG recovery uses ALL miners in the MB — no exclusions.
+	// The exclude_miners config is only for emergency recovery (creating smaller MBs).
+	requiredN := mb.N
 
 	logging.Logger.Info("[dkg_recovery] starting recovery",
 		zap.Int64("mb_num", mb.MagicBlockNumber),
 		zap.Int64("mb_sr", mb.StartingRound),
 		zap.Int("total_n", mb.N),
-		zap.Int("excluded", len(excludeMiners)),
 		zap.Int("required_n", requiredN))
 
 	// Step 1: Regenerate own polynomial from VRF seed
@@ -419,10 +410,6 @@ func (mc *Chain) RecoverDKG(ctx context.Context, mb *block.MagicBlock) error {
 			if minerID == selfKey {
 				continue
 			}
-			// Skip excluded miners — they are known to be absent
-			if excludeSet[minerID] {
-				continue
-			}
 
 			n := node.GetNode(minerID)
 			if n == nil {
@@ -460,7 +447,6 @@ func (mc *Chain) RecoverDKG(ctx context.Context, mb *block.MagicBlock) error {
 			zap.Int("received", received),
 			zap.Int("required_n", requiredN),
 			zap.Int("total_miners", mb.N),
-			zap.Int("excluded", len(excludeMiners)),
 			zap.Int("mpks_collected", len(collectedMPKs)),
 			zap.Int("failed", len(failedPeers)),
 			zap.Duration("elapsed", time.Since(startTime)))

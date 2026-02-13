@@ -975,7 +975,11 @@ func (mc *Chain) CollectBlocksForVerification(ctx context.Context, r *Round) {
 		if bnb == nil || bnb.Hash == b.Hash {
 			logging.Logger.Info("verifyAndSend - sending verification ticket", zap.Int64("round", r.Number), zap.String("block", b.Hash),
 				zap.Int("block_rank", b.RoundRank), zap.Int64("RRS", b.RoundRandomSeed))
-			go mc.SendVerificationTicket(ctx, b, bvt)
+			// Use context.Background() because the round context (ctx) may be
+			// canceled shortly after handleRoundTimeout returns, killing the
+			// goroutine's HTTP send. Same bug class as the one fixed in
+			// handleNoProgress's SendVerificationTicket call.
+			go mc.SendVerificationTicket(context.Background(), b, bvt)
 			r.SetOwnVerificationTicket(bvt)
 		}
 		if bnb == nil {
@@ -1587,6 +1591,15 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 	}
 	mc.RoundTimeoutsCount++
 
+	// Check for stored-but-unactivated MBs in local RocksDB.
+	// Wait() persists the MB to mb/ store independently of finalization.
+	// If chaos kills miners between Wait() and UpdateFinalizedBlock, the MB
+	// is stored but never activated → LFMB split. After 2+ timeouts, check
+	// if the next MB exists locally and activate it.
+	if mc.GetRoundTimeoutCount() >= 2 {
+		mc.activateStoredMBIfNeeded(ctx, rn)
+	}
+
 	// March 2019 behavior: broadcast the previous round's notarized block to all miners
 	// This helps miners on different rounds sync up - if we have a notarized block
 	// for the previous round, push it to all miners so they can advance
@@ -1671,6 +1684,61 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		logging.Logger.Info("Received notarization with different RRS, use it and make transition")
 	}
 	mc.ProgressOnNotarization(r)
+}
+
+// activateStoredMBIfNeeded checks local mb/ RocksDB for a next MB that was
+// stored by Wait() but never activated (because UpdateFinalizedBlock/ViewChange
+// didn't run — e.g., chaos killed miners between Wait and finalization). If
+// found, activates it so LFMB converges across miners.
+func (mc *Chain) activateStoredMBIfNeeded(ctx context.Context, rn int64) {
+	currentMB := mc.GetLatestMagicBlock()
+	if currentMB == nil {
+		return
+	}
+
+	nextMBNum := currentMB.MagicBlockNumber + 1
+	nextMB, err := LoadMagicBlock(ctx, strconv.FormatInt(nextMBNum, 10))
+	if err != nil || nextMB == nil {
+		return // no stored next MB — nothing to activate
+	}
+
+	// Only activate if the MB's starting round is relevant to where we're stuck.
+	// If the stored MB is for a round far in the future, skip it.
+	if nextMB.StartingRound > rn+100 {
+		return
+	}
+
+	logging.Logger.Info("restartRound - found stored-but-unactivated MB, activating",
+		zap.Int64("round", rn),
+		zap.Int64("current_mb", currentMB.MagicBlockNumber),
+		zap.Int64("next_mb", nextMB.MagicBlockNumber),
+		zap.Int64("next_mb_sr", nextMB.StartingRound))
+
+	// Mirror the activation sequence from discoverNewerMBsFromPeers:
+	// setupLoadedMagicBlock → SetMagicBlock → SetLatestFinalizedMagicBlock → SetDKGSFromStore
+	if err := mc.setupLoadedMagicBlock(nextMB); err != nil {
+		logging.Logger.Error("restartRound - failed to setup stored MB",
+			zap.Int64("mb_number", nextMBNum),
+			zap.Error(err))
+		return
+	}
+
+	mc.SetMagicBlock(nextMB)
+
+	mbBlock := block.NewBlock("", nextMB.StartingRound)
+	mbBlock.MagicBlock = nextMB
+	mc.SetLatestFinalizedMagicBlock(mbBlock)
+
+	if err := mc.SetDKGSFromStore(ctx, nextMB); err != nil {
+		logging.Logger.Warn("restartRound - DKG setup for stored MB",
+			zap.Int64("mb_number", nextMB.MagicBlockNumber),
+			zap.Error(err))
+		// Continue — DKG recovery will handle asynchronously
+	}
+
+	logging.Logger.Info("restartRound - stored MB activated successfully",
+		zap.Int64("mb_number", nextMB.MagicBlockNumber),
+		zap.Int64("mb_sr", nextMB.StartingRound))
 }
 
 func (mc *Chain) startProtocolOnLFB(ctx context.Context, lfb *block.Block) (
@@ -1866,96 +1934,172 @@ func (mc *Chain) LoadMagicBlocksAndDKG(ctx context.Context) {
 		}
 	}
 
-	// check if there are new MB which is possible, load them into memory store if any
+	// Discover all newer MBs (local store + peers). First try local store,
+	// then fall back to peer miners/sharders for any that are missing.
 	newMBNum := lfbr.MagicBlockNumber + 1
-	newMB, err := LoadMagicBlock(ctx, strconv.FormatInt(newMBNum, 10))
-	if err != nil {
-		logging.Logger.Debug("load_mbs_and_dkg -- no newer MB in local store, trying peer miners")
-		// Try to discover newer MB from peer miners via /v1/block/magic/get
-		newMB = mc.discoverMBFromPeerMiners(ctx, current, newMBNum)
-		if newMB == nil {
-			logging.Logger.Debug("load_mbs_and_dkg -- no newer MB found from peers either")
-			// Schedule background discovery for when more peers come online
-			mc.scheduleDelayedMBDiscovery(current, newMBNum, lfbr.Round)
-			mc.validateMBDKGConsistency(lfbr.Round, current)
-			return
+
+	// Try loading from local store first
+	localFound := false
+	for mbNum := newMBNum; ; mbNum++ {
+		mb, loadErr := LoadMagicBlock(ctx, strconv.FormatInt(mbNum, 10))
+		if loadErr != nil || mb == nil {
+			break
 		}
+		localFound = true
+		logging.Logger.Debug("load_mbs_and_dkg -- loaded newer MB from local store",
+			zap.Int64("mb_number", mb.MagicBlockNumber),
+			zap.Int64("mb_sr", mb.StartingRound))
+
+		if err := mc.setupLoadedMagicBlock(mb); err != nil {
+			logging.Logger.Error("load_mbs_and_dkg -- failed to setup local MB",
+				zap.Int64("mb_number", mb.MagicBlockNumber), zap.Error(err))
+			break
+		}
+		mc.SetMagicBlock(mb)
+		mbBlock := block.NewBlock("", mb.StartingRound)
+		mbBlock.MagicBlock = mb
+		mc.SetLatestFinalizedMagicBlock(mbBlock)
+		if err := mc.SetDKGSFromStore(ctx, mb); err != nil {
+			logging.Logger.Warn("load_mbs_and_dkg -- DKG setup for local MB",
+				zap.Int64("mb_number", mb.MagicBlockNumber), zap.Error(err))
+		}
+		latestMB = mb
 	}
 
-	if err := mc.SetDKGSFromStore(ctx, newMB); err != nil {
-		logging.Logger.Info("load_mbs_and_dkg -- see no newer DKG")
-		mc.validateMBDKGConsistency(lfbr.Round, current)
-		return
+	// Now try discovering additional MBs from peers (covers MBs missed during downtime)
+	currentLatest := mc.GetLatestMagicBlock()
+	peerStartMBNum := currentLatest.MagicBlockNumber + 1
+	mc.discoverNewerMBsFromPeers(ctx, peerStartMBNum, lfbr.Round)
+
+	// Check if we found any newer MBs (locally or from peers)
+	afterDiscovery := mc.GetLatestMagicBlock()
+	if afterDiscovery != nil && afterDiscovery.MagicBlockNumber > current.MagicBlockNumber {
+		latestMB = afterDiscovery
+	} else if !localFound {
+		logging.Logger.Debug("load_mbs_and_dkg -- no newer MBs found, scheduling background discovery")
+		mc.scheduleDelayedMBDiscovery(newMBNum, lfbr.Round)
 	}
-
-	logging.Logger.Debug("load_mbs_and_dkg -- load newer MB and DKG",
-		zap.Int64("mb number", newMB.MagicBlockNumber),
-		zap.Int64("mb sr", newMB.StartingRound),
-		zap.String("mb hash", newMB.Hash))
-
-	mc.SetMagicBlock(newMB)
-	latestMB = newMB
 
 	// Final validation: ensure MB and DKG are consistent for the LFB round
-	mc.validateMBDKGConsistency(lfbr.Round, newMB)
+	finalMB := mc.GetLatestMagicBlock()
+	mc.validateMBDKGConsistency(lfbr.Round, finalMB)
 }
 
-// discoverMBFromPeerMiners tries to fetch a newer magic block from peer miners
-// via the /v1/block/magic/get endpoint. This handles the case where a miner
-// missed an MB during downtime (e.g., chaos restart) and didn't store it locally.
-func (mc *Chain) discoverMBFromPeerMiners(ctx context.Context, currentMB *block.MagicBlock, mbNum int64) *block.MagicBlock {
-	if currentMB == nil || currentMB.Miners == nil {
-		return nil
+// discoverNewerMBsFromPeers iteratively fetches all MBs newer than startMBNum
+// from peer miners and sharders. For each found MB, it persists, sets up nodes,
+// activates, and loads DKG. This handles the case where a miner missed one or
+// more MBs during downtime (e.g., chaos restart, network partition).
+// Modeled after sharder's discoverNewerMBsFromSharders.
+func (mc *Chain) discoverNewerMBsFromPeers(ctx context.Context, startMBNum, lfbRound int64) {
+	mb := mc.GetLatestMagicBlock()
+	if mb == nil {
+		return
 	}
-	// Collect peer miner URLs
-	minerURLs := currentMB.Miners.N2NURLs()
-	if len(minerURLs) == 0 {
-		return nil
+	minerURLs := mb.Miners.N2NURLs()
+	sharderURLs := mb.Sharders.N2NURLs()
+	if len(minerURLs) == 0 && len(sharderURLs) == 0 {
+		return
 	}
 
 	verifyFn := func(b *block.Block) bool {
 		return b != nil && b.MagicBlock != nil
 	}
 
-	fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+	for nextMBNum := startMBNum; ; nextMBNum++ {
+		var fetchedBlock *block.Block
+		var err error
 
-	b, err := httpclientutil.FetchMagicBlockFromSharders(fetchCtx, minerURLs, mbNum, verifyFn)
-	if err != nil || b == nil || b.MagicBlock == nil {
-		return nil
-	}
+		// Try peer miners first (more likely to have latest MBs)
+		if len(minerURLs) > 0 {
+			fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			fetchedBlock, err = httpclientutil.FetchMagicBlockFromSharders(fetchCtx, minerURLs, nextMBNum, verifyFn)
+			cancel()
+		}
 
-	newMB := b.MagicBlock
-	logging.Logger.Info("load_mbs_and_dkg -- discovered newer MB from peer miner",
-		zap.Int64("mb_number", newMB.MagicBlockNumber),
-		zap.Int64("mb_sr", newMB.StartingRound),
-		zap.Int("miners", newMB.Miners.Size()))
+		// If miners don't have it, try sharders
+		if (fetchedBlock == nil || fetchedBlock.MagicBlock == nil) && len(sharderURLs) > 0 {
+			fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			fetchedBlock, err = httpclientutil.FetchMagicBlockFromSharders(fetchCtx, sharderURLs, nextMBNum, verifyFn)
+			cancel()
+			if err == nil && fetchedBlock != nil && fetchedBlock.MagicBlock != nil {
+				logging.Logger.Info("discover_mbs -- fetched MB from sharders (not available on peer miners)",
+					zap.Int64("mb_number", nextMBNum))
+			}
+		}
 
-	// Persist the discovered MB
-	if err := StoreMagicBlock(ctx, newMB); err != nil {
-		logging.Logger.Error("load_mbs_and_dkg -- failed to store discovered MB",
+		if err != nil || fetchedBlock == nil || fetchedBlock.MagicBlock == nil {
+			if nextMBNum > startMBNum {
+				logging.Logger.Info("discover_mbs -- no more newer MBs available",
+					zap.Int64("last_found", nextMBNum-1),
+					zap.Int64("tried", nextMBNum))
+			}
+			break // no more newer MBs available
+		}
+
+		newMB := fetchedBlock.MagicBlock
+
+		// Only activate if the MB's starting round is not far ahead of LFB
+		if newMB.StartingRound > lfbRound+500 {
+			logging.Logger.Debug("discover_mbs -- skipping MB too far ahead of LFB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Int64("mb_sr", newMB.StartingRound),
+				zap.Int64("lfb_round", lfbRound))
+			break
+		}
+
+		logging.Logger.Info("discover_mbs -- discovered newer MB",
 			zap.Int64("mb_number", newMB.MagicBlockNumber),
-			zap.Error(err))
+			zap.Int64("mb_sr", newMB.StartingRound),
+			zap.Int("miners", newMB.Miners.Size()),
+			zap.Int("sharders", newMB.Sharders.Size()))
+
+		// Persist the discovered MB to RocksDB
+		if err := StoreMagicBlock(ctx, newMB); err != nil {
+			logging.Logger.Error("discover_mbs -- failed to store MB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Error(err))
+			break
+		}
+
+		// Setup node pools (registers miners/sharders from the new MB)
+		if err := mc.setupLoadedMagicBlock(newMB); err != nil {
+			logging.Logger.Error("discover_mbs -- failed to setup MB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Error(err))
+			break
+		}
+
+		// Activate in MagicBlockStorage (for GetMagicBlock lookups)
+		mc.SetMagicBlock(newMB)
+
+		// Update magicBlockStartingRoundsMap (for GetLatestFinalizedMagicBlockRound)
+		// Create a synthetic block wrapper since SetLatestFinalizedMagicBlock expects *block.Block
+		mbBlock := block.NewBlock("", newMB.StartingRound)
+		mbBlock.MagicBlock = newMB
+		mc.SetLatestFinalizedMagicBlock(mbBlock)
+
+		// Load DKG for this MB
+		if err := mc.SetDKGSFromStore(ctx, newMB); err != nil {
+			logging.Logger.Warn("discover_mbs -- DKG setup for MB",
+				zap.Int64("mb_number", newMB.MagicBlockNumber),
+				zap.Error(err))
+			// Continue — DKG recovery will handle this asynchronously
+		}
+
+		// Update URLs for next fetch (new MB might have different nodes)
+		updatedMB := mc.GetLatestMagicBlock()
+		if updatedMB != nil {
+			minerURLs = updatedMB.Miners.N2NURLs()
+			sharderURLs = updatedMB.Sharders.N2NURLs()
+		}
 	}
-	return newMB
 }
 
 // scheduleDelayedMBDiscovery launches a background goroutine that waits for peer
-// miners to come online and then discovers newer MBs. This handles the case where
-// the miner starts before its peers (who have the newer MB) are up.
-func (mc *Chain) scheduleDelayedMBDiscovery(currentMB *block.MagicBlock, mbNum, lfbRound int64) {
-	if currentMB == nil || currentMB.Miners == nil || currentMB.MagicBlockNumber <= 1 {
-		return
-	}
-	minerURLs := currentMB.Miners.N2NURLs()
-	if len(minerURLs) == 0 {
-		return
-	}
-
+// miners/sharders to come online and then discovers all missed MBs. This handles
+// the case where the miner starts before its peers are up.
+func (mc *Chain) scheduleDelayedMBDiscovery(startMBNum, lfbRound int64) {
 	go func() {
-		verifyFn := func(b *block.Block) bool {
-			return b != nil && b.MagicBlock != nil
-		}
 		const pollInterval = 10 * time.Second
 
 		for {
@@ -1963,39 +2107,21 @@ func (mc *Chain) scheduleDelayedMBDiscovery(currentMB *block.MagicBlock, mbNum, 
 
 			// Check if a newer MB was already discovered by another path
 			latestMB := mc.GetLatestMagicBlock()
-			if latestMB != nil && latestMB.MagicBlockNumber >= mbNum {
+			if latestMB != nil && latestMB.MagicBlockNumber >= startMBNum {
 				logging.Logger.Info("delayed_mb_discovery -- newer MB already active",
 					zap.Int64("active_mb", latestMB.MagicBlockNumber),
-					zap.Int64("target_mb", mbNum))
+					zap.Int64("target_mb", startMBNum))
 				return
 			}
 
-			fetchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			b, _ := httpclientutil.FetchMagicBlockFromSharders(fetchCtx, minerURLs, mbNum, verifyFn)
-			cancel()
-			if b != nil && b.MagicBlock != nil {
-				newMB := b.MagicBlock
-				logging.Logger.Info("delayed_mb_discovery -- found newer MB from peer miner",
-					zap.Int64("mb_number", newMB.MagicBlockNumber),
-					zap.Int64("mb_sr", newMB.StartingRound))
+			// Try iterative discovery
+			mc.discoverNewerMBsFromPeers(context.Background(), startMBNum, lfbRound)
 
-				// Store and activate the MB
-				if err := StoreMagicBlock(context.Background(), newMB); err != nil {
-					logging.Logger.Error("delayed_mb_discovery -- failed to store MB", zap.Error(err))
-					continue
-				}
-				if err := mc.setupLoadedMagicBlock(newMB); err != nil {
-					logging.Logger.Error("delayed_mb_discovery -- failed to setup MB", zap.Error(err))
-					continue
-				}
-				mc.SetMagicBlock(newMB)
-				if err := mc.SetDKGSFromStore(context.Background(), newMB); err != nil {
-					logging.Logger.Warn("delayed_mb_discovery -- DKG recovery for new MB",
-						zap.Int64("mb_number", newMB.MagicBlockNumber),
-						zap.Error(err))
-				}
-				logging.Logger.Info("delayed_mb_discovery -- MB activated",
-					zap.Int64("mb_number", newMB.MagicBlockNumber))
+			// Check if discovery succeeded
+			latestMB = mc.GetLatestMagicBlock()
+			if latestMB != nil && latestMB.MagicBlockNumber >= startMBNum {
+				logging.Logger.Info("delayed_mb_discovery -- MBs discovered and activated",
+					zap.Int64("latest_mb", latestMB.MagicBlockNumber))
 				return
 			}
 		}
