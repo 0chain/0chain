@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Local Container Chaos Test Script
-# Randomly stops and starts miner/sharder containers to test resilience and view change
-# For local development environment with 4 miners and 3 sharders
+# Light Container Chaos Test Script
+# Randomly stops and starts miner/sharder containers to test resilience and view change.
+# Unlike chaos.sh, this script NEVER stops more than 1 miner + 1 sharder simultaneously,
+# ensuring the chain always has enough nodes for consensus.
 
 # Do NOT use set -e: expressions like [ -n "$var" ] && cmd return 1 when $var
 # is empty, which causes set -e to kill the script unexpectedly.
@@ -285,6 +286,8 @@ get_stopped_sharder() {
     echo ""
 }
 
+# === Operations (max 1 miner + 1 sharder stopped at any time) ===
+
 # Operation: Stop a random miner (if safe)
 op_stop_random_miner() {
     log "${CYAN}Operation: STOP RANDOM MINER${NC}"
@@ -315,7 +318,7 @@ op_stop_random_sharder() {
     fi
 }
 
-# Operation: Stop miner and sharder together
+# Operation: Stop one miner and one sharder together
 op_stop_miner_and_sharder() {
     log "${CYAN}Operation: STOP ONE MINER AND ONE SHARDER${NC}"
     local miner=$(get_stoppable_miner)
@@ -339,24 +342,6 @@ op_stop_miner_and_sharder() {
     else
         log "${YELLOW}Cannot stop any more containers safely${NC}"
     fi
-}
-
-# Operation: Rolling restart of miners
-op_rolling_restart_miners() {
-    log "${CYAN}Operation: ROLLING RESTART MINERS${NC}"
-
-    for m in "${MINERS[@]}"; do
-        if is_running "$m"; then
-            stop_container "$m" || true
-            local stop_time=10
-            log "${BLUE}$m stopped, waiting $stop_time seconds${NC}"
-            sleep $stop_time
-            start_container "$m"
-            sleep 3
-        fi
-    done
-
-    log "${GREEN}Rolling restart of miners complete${NC}"
 }
 
 # Operation: Restart a stopped container
@@ -405,55 +390,6 @@ op_quick_bounce_sharder() {
     fi
 }
 
-# Operation: Stop 2 miners simultaneously
-op_stop_two_miners() {
-    log "${CYAN}Operation: STOP TWO MINERS${NC}"
-    local running=$(count_running_miners)
-    if [ $running -le $((MIN_MINERS_RUNNING + 1)) ]; then
-        log "${YELLOW}Cannot stop 2 miners - need at least $((MIN_MINERS_RUNNING + 2)) running${NC}"
-        return
-    fi
-
-    local stopped=()
-    for m in "${MINERS[@]}"; do
-        if [ ${#stopped[@]} -ge 2 ]; then
-            break
-        fi
-        if is_running "$m"; then
-            stop_container "$m" || true
-            stopped+=("$m")
-        fi
-    done
-
-    if [ ${#stopped[@]} -gt 0 ]; then
-        local stop_time=$MIN_STOP_TIME
-        log "${BLUE}${#stopped[@]} miners down for $stop_time seconds${NC}"
-        sleep $stop_time
-        for m in "${stopped[@]}"; do
-            start_container "$m"
-            sleep 2
-        done
-    fi
-}
-
-# Operation: Rolling restart of sharders
-op_rolling_restart_sharders() {
-    log "${CYAN}Operation: ROLLING RESTART SHARDERS${NC}"
-
-    for s in "${SHARDERS[@]}"; do
-        if is_running "$s"; then
-            stop_container "$s" || true
-            local stop_time=10
-            log "${BLUE}$s stopped, waiting $stop_time seconds${NC}"
-            sleep $stop_time
-            start_container "$s"
-            sleep 5
-        fi
-    done
-
-    log "${GREEN}Rolling restart of sharders complete${NC}"
-}
-
 # Operation: Long stop miner (60 seconds)
 op_long_stop_miner() {
     log "${CYAN}Operation: LONG STOP MINER (60s)${NC}"
@@ -484,183 +420,6 @@ op_long_stop_sharder() {
     fi
 }
 
-# Operation: Very long stop miner (120 seconds)
-op_very_long_stop_miner() {
-    log "${CYAN}Operation: VERY LONG STOP MINER (120s)${NC}"
-    local miner=$(get_stoppable_miner)
-    if [ -n "$miner" ]; then
-        stop_container "$miner"
-        local stop_time=120
-        log "${BLUE}Miner $miner will restart in $stop_time seconds${NC}"
-        sleep $stop_time
-        start_container "$miner"
-    else
-        log "${YELLOW}Cannot stop - minimum miners required${NC}"
-    fi
-}
-
-# Operation: Staggered miner stops (stop one, wait, stop another)
-op_staggered_miner_stops() {
-    log "${CYAN}Operation: STAGGERED MINER STOPS${NC}"
-    local running=$(count_running_miners)
-    if [ $running -le $((MIN_MINERS_RUNNING + 1)) ]; then
-        log "${YELLOW}Cannot do staggered stops - need more miners running${NC}"
-        return
-    fi
-
-    local first_miner=$(get_stoppable_miner)
-    if [ -n "$first_miner" ]; then
-        stop_container "$first_miner"
-        log "${BLUE}First miner $first_miner stopped, waiting 15s before stopping another${NC}"
-        sleep 15
-
-        local second_miner=$(get_stoppable_miner)
-        if [ -n "$second_miner" ]; then
-            stop_container "$second_miner"
-            log "${BLUE}Second miner $second_miner stopped, waiting 20s${NC}"
-            sleep 20
-            start_container "$second_miner"
-            sleep 2
-        fi
-        start_container "$first_miner"
-    fi
-}
-
-# Operation: Stop all stoppable miners (down to minimum)
-op_stop_all_stoppable_miners() {
-    log "${CYAN}Operation: STOP ALL STOPPABLE MINERS${NC}"
-    local stopped=()
-
-    while true; do
-        local miner=$(get_stoppable_miner)
-        if [ -z "$miner" ]; then
-            break
-        fi
-        stop_container "$miner" || true
-        stopped+=("$miner")
-        sleep 1
-    done
-
-    if [ ${#stopped[@]} -gt 0 ]; then
-        log "${BLUE}Stopped ${#stopped[@]} miners, waiting $MIN_STOP_TIME seconds${NC}"
-        sleep $MIN_STOP_TIME
-        for m in "${stopped[@]}"; do
-            start_container "$m"
-            sleep 2
-        done
-    else
-        log "${YELLOW}No miners could be stopped${NC}"
-    fi
-}
-
-# Operation: Stop all stoppable sharders (down to minimum)
-op_stop_all_stoppable_sharders() {
-    log "${CYAN}Operation: STOP ALL STOPPABLE SHARDERS${NC}"
-    local stopped=()
-
-    while true; do
-        local sharder=$(get_stoppable_sharder)
-        if [ -z "$sharder" ]; then
-            break
-        fi
-        stop_container "$sharder" || true
-        stopped+=("$sharder")
-        sleep 1
-    done
-
-    if [ ${#stopped[@]} -gt 0 ]; then
-        log "${BLUE}Stopped ${#stopped[@]} sharders, waiting $MIN_STOP_TIME seconds${NC}"
-        sleep $MIN_STOP_TIME
-        for s in "${stopped[@]}"; do
-            start_container "$s"
-            sleep 2
-        done
-    else
-        log "${YELLOW}No sharders could be stopped${NC}"
-    fi
-}
-
-# Operation: Kill (force stop) random miner
-op_kill_random_miner() {
-    log "${CYAN}Operation: KILL RANDOM MINER (force stop)${NC}"
-    local miner=$(get_stoppable_miner)
-    if [ -n "$miner" ]; then
-        log "${RED}Force killing $miner${NC}"
-        docker kill "$miner" 2>/dev/null || true
-        local stop_time=$MIN_STOP_TIME
-        log "${BLUE}Miner $miner will restart in $stop_time seconds${NC}"
-        sleep $stop_time
-        start_container "$miner"
-    else
-        log "${YELLOW}Cannot kill - minimum miners required${NC}"
-    fi
-}
-
-# Operation: Kill (force stop) random sharder
-op_kill_random_sharder() {
-    log "${CYAN}Operation: KILL RANDOM SHARDER (force stop)${NC}"
-    local sharder=$(get_stoppable_sharder)
-    if [ -n "$sharder" ]; then
-        log "${RED}Force killing $sharder${NC}"
-        docker kill "$sharder" 2>/dev/null || true
-        local stop_time=$MIN_STOP_TIME
-        log "${BLUE}Sharder $sharder will restart in $stop_time seconds${NC}"
-        sleep $stop_time
-        start_container "$sharder"
-    else
-        log "${YELLOW}Cannot kill - minimum sharders required${NC}"
-    fi
-}
-
-# Operation: Stop ALL miners (chain will halt!)
-op_stop_all_miners() {
-    log "${RED}Operation: STOP ALL MINERS (chain will halt!)${NC}"
-    local stopped=()
-
-    for m in "${MINERS[@]}"; do
-        if is_running "$m"; then
-            stop_container "$m" || true
-            stopped+=("$m")
-        fi
-    done
-
-    if [ ${#stopped[@]} -gt 0 ]; then
-        local stop_time=$MIN_STOP_TIME
-        log "${RED}ALL ${#stopped[@]} miners stopped! Chain halted. Waiting $stop_time seconds${NC}"
-        sleep $stop_time
-        # Start sharders first, then miners
-        for m in "${stopped[@]}"; do
-            start_container "$m"
-            sleep 2
-        done
-        log "${GREEN}All miners restarted${NC}"
-    fi
-}
-
-# Operation: Stop ALL sharders
-op_stop_all_sharders() {
-    log "${RED}Operation: STOP ALL SHARDERS${NC}"
-    local stopped=()
-
-    for s in "${SHARDERS[@]}"; do
-        if is_running "$s"; then
-            stop_container "$s" || true
-            stopped+=("$s")
-        fi
-    done
-
-    if [ ${#stopped[@]} -gt 0 ]; then
-        local stop_time=$MIN_STOP_TIME
-        log "${RED}ALL ${#stopped[@]} sharders stopped! Waiting $stop_time seconds${NC}"
-        sleep $stop_time
-        for s in "${stopped[@]}"; do
-            start_container "$s"
-            sleep 3
-        done
-        log "${GREEN}All sharders restarted${NC}"
-    fi
-}
-
 # Operation: Long stop miner and sharder together (60s)
 op_long_stop_miner_and_sharder() {
     log "${CYAN}Operation: LONG STOP MINER AND SHARDER (60s)${NC}"
@@ -687,29 +446,18 @@ op_long_stop_miner_and_sharder() {
     fi
 }
 
-# Operation: Rapid bounce miner (1 second stop)
-op_rapid_bounce_miner() {
-    log "${CYAN}Operation: RAPID BOUNCE MINER (1s)${NC}"
+# Operation: Very long stop miner (120 seconds)
+op_very_long_stop_miner() {
+    log "${CYAN}Operation: VERY LONG STOP MINER (120s)${NC}"
     local miner=$(get_stoppable_miner)
     if [ -n "$miner" ]; then
         stop_container "$miner"
-        sleep 1
+        local stop_time=120
+        log "${BLUE}Miner $miner will restart in $stop_time seconds${NC}"
+        sleep $stop_time
         start_container "$miner"
     else
-        log "${YELLOW}Cannot bounce - minimum miners required${NC}"
-    fi
-}
-
-# Operation: Rapid bounce sharder (1 second stop)
-op_rapid_bounce_sharder() {
-    log "${CYAN}Operation: RAPID BOUNCE SHARDER (1s)${NC}"
-    local sharder=$(get_stoppable_sharder)
-    if [ -n "$sharder" ]; then
-        stop_container "$sharder"
-        sleep 1
-        start_container "$sharder"
-    else
-        log "${YELLOW}Cannot bounce - minimum sharders required${NC}"
+        log "${YELLOW}Cannot stop - minimum miners required${NC}"
     fi
 }
 
@@ -784,6 +532,38 @@ op_very_extended_stop_miner() {
     fi
 }
 
+# Operation: Kill (force stop) random miner
+op_kill_random_miner() {
+    log "${CYAN}Operation: KILL RANDOM MINER (force stop)${NC}"
+    local miner=$(get_stoppable_miner)
+    if [ -n "$miner" ]; then
+        log "${RED}Force killing $miner${NC}"
+        docker kill "$miner" 2>/dev/null || true
+        local stop_time=$MIN_STOP_TIME
+        log "${BLUE}Miner $miner will restart in $stop_time seconds${NC}"
+        sleep $stop_time
+        start_container "$miner"
+    else
+        log "${YELLOW}Cannot kill - minimum miners required${NC}"
+    fi
+}
+
+# Operation: Kill (force stop) random sharder
+op_kill_random_sharder() {
+    log "${CYAN}Operation: KILL RANDOM SHARDER (force stop)${NC}"
+    local sharder=$(get_stoppable_sharder)
+    if [ -n "$sharder" ]; then
+        log "${RED}Force killing $sharder${NC}"
+        docker kill "$sharder" 2>/dev/null || true
+        local stop_time=$MIN_STOP_TIME
+        log "${BLUE}Sharder $sharder will restart in $stop_time seconds${NC}"
+        sleep $stop_time
+        start_container "$sharder"
+    else
+        log "${YELLOW}Cannot kill - minimum sharders required${NC}"
+    fi
+}
+
 # Operation: Kill miner and leave down for 3 minutes (simulates hard crash + slow recovery)
 op_kill_extended_miner() {
     log "${RED}Operation: KILL + EXTENDED DOWN MINER (180s)${NC}"
@@ -800,216 +580,56 @@ op_kill_extended_miner() {
     fi
 }
 
-# --- Multi-node long-stop combo operations ---
-# These intentionally go below MIN_MINERS_RUNNING to test recovery.
-# Chain WILL halt during these but must recover after restart.
-
-# Helper: stop N random running miners, returns names in STOPPED_MINERS array
-stop_n_miners() {
-    local n=$1
-    STOPPED_MINERS=()
-    for m in "${MINERS[@]}"; do
-        if [ ${#STOPPED_MINERS[@]} -ge $n ]; then break; fi
-        if is_running "$m"; then
-            stop_container "$m" || true
-            STOPPED_MINERS+=("$m")
-        fi
-    done
-}
-
-# Helper: stop N random running sharders, returns names in STOPPED_SHARDERS array
-stop_n_sharders() {
-    local n=$1
-    STOPPED_SHARDERS=()
-    for s in "${SHARDERS[@]}"; do
-        if [ ${#STOPPED_SHARDERS[@]} -ge $n ]; then break; fi
-        if is_running "$s"; then
-            stop_container "$s" || true
-            STOPPED_SHARDERS+=("$s")
-        fi
-    done
-}
-
-# Helper: restart stopped miners and sharders (sharders first)
-restart_stopped_combo() {
-    for s in "${STOPPED_SHARDERS[@]}"; do
-        start_container "$s"
-        sleep 2
-    done
-    for m in "${STOPPED_MINERS[@]}"; do
-        start_container "$m"
-        sleep 2
-    done
-}
-
-# --- 2 miners down ---
-
-op_combo_2miners_2m() {
-    log "${RED}Operation: 2 MINERS DOWN (120s) — chain may lose consensus${NC}"
-    stop_n_miners 2
-    if [ ${#STOPPED_MINERS[@]} -ge 2 ]; then
-        log "${RED}${STOPPED_MINERS[*]} down for 120s (2 min)${NC}"
-        sleep 120
+# Operation: Rapid bounce miner (1 second stop)
+op_rapid_bounce_miner() {
+    log "${CYAN}Operation: RAPID BOUNCE MINER (1s)${NC}"
+    local miner=$(get_stoppable_miner)
+    if [ -n "$miner" ]; then
+        stop_container "$miner"
+        sleep 1
+        start_container "$miner"
+    else
+        log "${YELLOW}Cannot bounce - minimum miners required${NC}"
     fi
-    restart_stopped_combo
 }
 
-op_combo_2miners_3m() {
-    log "${RED}Operation: 2 MINERS DOWN (180s) — chain may lose consensus${NC}"
-    stop_n_miners 2
-    if [ ${#STOPPED_MINERS[@]} -ge 2 ]; then
-        log "${RED}${STOPPED_MINERS[*]} down for 180s (3 min)${NC}"
-        sleep 180
+# Operation: Rapid bounce sharder (1 second stop)
+op_rapid_bounce_sharder() {
+    log "${CYAN}Operation: RAPID BOUNCE SHARDER (1s)${NC}"
+    local sharder=$(get_stoppable_sharder)
+    if [ -n "$sharder" ]; then
+        stop_container "$sharder"
+        sleep 1
+        start_container "$sharder"
+    else
+        log "${YELLOW}Cannot bounce - minimum sharders required${NC}"
     fi
-    restart_stopped_combo
 }
 
-op_combo_2miners_4m() {
-    log "${RED}Operation: 2 MINERS DOWN (240s) — chain may lose consensus${NC}"
-    stop_n_miners 2
-    if [ ${#STOPPED_MINERS[@]} -ge 2 ]; then
-        log "${RED}${STOPPED_MINERS[*]} down for 240s (4 min)${NC}"
-        sleep 240
-    fi
-    restart_stopped_combo
-}
-
-# --- 2 miners + 1 sharder down ---
-
-op_combo_2miners_1sharder_2m() {
-    log "${RED}Operation: 2 MINERS + 1 SHARDER DOWN (120s)${NC}"
-    stop_n_miners 2
-    stop_n_sharders 1
-    log "${RED}Miners: ${STOPPED_MINERS[*]}, Sharders: ${STOPPED_SHARDERS[*]} — down for 120s (2 min)${NC}"
-    sleep 120
-    restart_stopped_combo
-}
-
-op_combo_2miners_1sharder_3m() {
-    log "${RED}Operation: 2 MINERS + 1 SHARDER DOWN (180s)${NC}"
-    stop_n_miners 2
-    stop_n_sharders 1
-    log "${RED}Miners: ${STOPPED_MINERS[*]}, Sharders: ${STOPPED_SHARDERS[*]} — down for 180s (3 min)${NC}"
-    sleep 180
-    restart_stopped_combo
-}
-
-op_combo_2miners_1sharder_4m() {
-    log "${RED}Operation: 2 MINERS + 1 SHARDER DOWN (240s)${NC}"
-    stop_n_miners 2
-    stop_n_sharders 1
-    log "${RED}Miners: ${STOPPED_MINERS[*]}, Sharders: ${STOPPED_SHARDERS[*]} — down for 240s (4 min)${NC}"
-    sleep 240
-    restart_stopped_combo
-}
-
-# --- 2 sharders down (all sharders) ---
-
-op_combo_2sharders_2m() {
-    log "${RED}Operation: 2 SHARDERS DOWN (120s) — no sharders available${NC}"
-    stop_n_sharders 2
-    if [ ${#STOPPED_SHARDERS[@]} -ge 2 ]; then
-        log "${RED}${STOPPED_SHARDERS[*]} down for 120s (2 min)${NC}"
-        sleep 120
-    fi
-    restart_stopped_combo
-}
-
-op_combo_2sharders_3m() {
-    log "${RED}Operation: 2 SHARDERS DOWN (180s) — no sharders available${NC}"
-    stop_n_sharders 2
-    if [ ${#STOPPED_SHARDERS[@]} -ge 2 ]; then
-        log "${RED}${STOPPED_SHARDERS[*]} down for 180s (3 min)${NC}"
-        sleep 180
-    fi
-    restart_stopped_combo
-}
-
-op_combo_2sharders_4m() {
-    log "${RED}Operation: 2 SHARDERS DOWN (240s) — no sharders available${NC}"
-    stop_n_sharders 2
-    if [ ${#STOPPED_SHARDERS[@]} -ge 2 ]; then
-        log "${RED}${STOPPED_SHARDERS[*]} down for 240s (4 min)${NC}"
-        sleep 240
-    fi
-    restart_stopped_combo
-}
-
-# --- 2 sharders + 1 miner down ---
-
-op_combo_2sharders_1miner_2m() {
-    log "${RED}Operation: 2 SHARDERS + 1 MINER DOWN (120s)${NC}"
-    stop_n_sharders 2
-    stop_n_miners 1
-    log "${RED}Sharders: ${STOPPED_SHARDERS[*]}, Miners: ${STOPPED_MINERS[*]} — down for 120s (2 min)${NC}"
-    sleep 120
-    restart_stopped_combo
-}
-
-op_combo_2sharders_1miner_3m() {
-    log "${RED}Operation: 2 SHARDERS + 1 MINER DOWN (180s)${NC}"
-    stop_n_sharders 2
-    stop_n_miners 1
-    log "${RED}Sharders: ${STOPPED_SHARDERS[*]}, Miners: ${STOPPED_MINERS[*]} — down for 180s (3 min)${NC}"
-    sleep 180
-    restart_stopped_combo
-}
-
-op_combo_2sharders_1miner_4m() {
-    log "${RED}Operation: 2 SHARDERS + 1 MINER DOWN (240s)${NC}"
-    stop_n_sharders 2
-    stop_n_miners 1
-    log "${RED}Sharders: ${STOPPED_SHARDERS[*]}, Miners: ${STOPPED_MINERS[*]} — down for 240s (4 min)${NC}"
-    sleep 240
-    restart_stopped_combo
-}
-
-# Sequential operations list — multi-node long-stop combos placed EARLY
-# to stress-test DKG/MB recovery after missing multiple VC cycles
+# Sequential operations list — only operations that stop at most 1 miner + 1 sharder
 OPERATIONS=(
-    # --- Phase 1: Multi-node long-stop combos (2+ min) ---
-    "op_stop_random_miner"              #  1: warm-up — quick stop
-    "op_combo_2miners_2m"               #  2: 2 miners down 2 min
-    "op_combo_2sharders_2m"             #  3: 2 sharders down 2 min
-    "op_combo_2miners_1sharder_2m"      #  4: 2 miners + 1 sharder down 2 min
-    "op_combo_2sharders_1miner_2m"      #  5: 2 sharders + 1 miner down 2 min
-    "op_combo_2miners_3m"               #  6: 2 miners down 3 min
-    "op_combo_2sharders_3m"             #  7: 2 sharders down 3 min
-    "op_combo_2miners_1sharder_3m"      #  8: 2 miners + 1 sharder down 3 min
-    "op_combo_2sharders_1miner_3m"      #  9: 2 sharders + 1 miner down 3 min
-    "op_combo_2miners_4m"               # 10: 2 miners down 4 min
-    "op_combo_2miners_1sharder_4m"      # 11: 2 miners + 1 sharder down 4 min
-    "op_combo_2sharders_4m"             # 12: 2 sharders down 4 min
-    "op_combo_2sharders_1miner_4m"      # 13: 2 sharders + 1 miner down 4 min
-    # --- Phase 2: Single-node extended stops ---
-    "op_extended_stop_miner"            # 14: 3 min miner down
-    "op_extended_stop_sharder"          # 15: 3 min sharder down
-    "op_extended_stop_miner_and_sharder" # 16: 3 min miner+sharder down
-    "op_very_extended_stop_miner"       # 17: 5 min miner down
-    "op_kill_extended_miner"            # 18: hard kill + 3 min down
-    # --- Phase 3: Medium-length stops ---
-    "op_very_long_stop_miner"           # 19: 120s miner
-    "op_long_stop_miner_and_sharder"    # 20: 60s miner+sharder
-    "op_long_stop_miner"               # 21: 60s miner
-    "op_long_stop_sharder"             # 22: 60s sharder
-    # --- Phase 4: Short stops and misc ---
-    "op_stop_two_miners"                # 23: two miners at once (short)
-    "op_staggered_miner_stops"          # 24: staggered stops
-    "op_rolling_restart_miners"         # 25: rolling restart all miners
-    "op_rolling_restart_sharders"       # 26: rolling restart sharders
-    "op_stop_miner_and_sharder"         # 27: quick miner+sharder
-    "op_stop_random_sharder"            # 28: quick sharder stop
-    "op_stop_all_stoppable_miners"     # 29: max miners down
-    "op_stop_all_stoppable_sharders"   # 30: max sharders down
-    "op_kill_random_miner"             # 31: force kill miner
-    "op_kill_random_sharder"           # 32: force kill sharder
-    "op_stop_all_miners"               # 33: all miners down (chain halts)
-    "op_stop_all_sharders"             # 34: all sharders down
-    "op_quick_bounce_miner"            # 35: quick bounce
-    "op_quick_bounce_sharder"          # 36: quick bounce
-    "op_rapid_bounce_miner"            # 37: 1s bounce
-    "op_rapid_bounce_sharder"          # 38: 1s bounce
-    "op_restart_stopped"               # 39: restart any stopped
+    # --- Phase 1: Extended single-node stops ---
+    "op_stop_random_miner"                #  1: warm-up — quick stop
+    "op_extended_stop_miner"              #  2: 3 min miner down
+    "op_extended_stop_sharder"            #  3: 3 min sharder down
+    "op_extended_stop_miner_and_sharder"  #  4: 3 min miner+sharder down
+    "op_very_extended_stop_miner"         #  5: 5 min miner down
+    "op_kill_extended_miner"              #  6: hard kill + 3 min down
+    # --- Phase 2: Medium-length stops ---
+    "op_very_long_stop_miner"             #  7: 120s miner
+    "op_long_stop_miner_and_sharder"      #  8: 60s miner+sharder
+    "op_long_stop_miner"                  #  9: 60s miner
+    "op_long_stop_sharder"                # 10: 60s sharder
+    # --- Phase 3: Short stops ---
+    "op_stop_miner_and_sharder"           # 11: quick miner+sharder
+    "op_stop_random_sharder"              # 12: quick sharder stop
+    "op_kill_random_miner"                # 13: force kill miner
+    "op_kill_random_sharder"              # 14: force kill sharder
+    "op_quick_bounce_miner"               # 15: quick bounce
+    "op_quick_bounce_sharder"             # 16: quick bounce
+    "op_rapid_bounce_miner"               # 17: 1s bounce
+    "op_rapid_bounce_sharder"             # 18: 1s bounce
+    "op_restart_stopped"                  # 19: restart any stopped
 )
 CURRENT_OP=0
 
@@ -1054,7 +674,7 @@ trap cleanup SIGINT SIGTERM
 
 # Main
 echo ""
-log "${GREEN}=== Local Container Chaos Test ===${NC}"
+log "${GREEN}=== Light Container Chaos Test (max 1 miner + 1 sharder) ===${NC}"
 log "Miners: ${MINERS[*]}"
 log "Sharders: ${SHARDERS[*]}"
 log "Stop time range: ${MIN_STOP_TIME}-${MAX_STOP_TIME} seconds"

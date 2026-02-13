@@ -20,30 +20,36 @@ NC='\033[0m'
 
 PREV_ROUND=0
 PREV_TIME=$(date +%s)
-PREV_MB_NUM=1
+PREV_MB_NUM=0
+HIGHEST_MB_NUM=0
+HIGHEST_MB_SR=0
+HIGHEST_MB_N=0
+HIGHEST_MB_T=0
+HIGHEST_MB_S=0
 REPORT_NUM=0
 
 get_round() {
-    for port in 7171 7172; do
-        local r=$(curl -s "http://localhost:${port}/v1/block/get/latest_finalized" 2>/dev/null | \
+    local best=0
+    for port in 7171 7172 7071 7072 7073 7074; do
+        local r=$(curl -s --connect-timeout 2 "http://localhost:${port}/v1/block/get/latest_finalized" 2>/dev/null | \
             python3 -c "import json,sys; print(json.load(sys.stdin).get('round',0))" 2>/dev/null)
-        if [ -n "$r" ] && [ "$r" != "0" ]; then
-            echo "$r"
-            return
+        if [ -n "$r" ] && [ "$r" -gt "$best" ] 2>/dev/null; then
+            best=$r
         fi
     done
-    echo "0"
+    echo "${best:-0}"
 }
 
 get_mb_info() {
-    # Get MB info from sharder API (try both sharders for resilience)
-    local mb_json=""
-    for port in 7171 7172; do
-        mb_json=$(curl -s "http://localhost:${port}/v1/block/get/latest_finalized_magic_block" 2>/dev/null)
+    # Get MB info from sharder or miner API (try sharders first, then miners)
+    local mb_num="" mb_sr="" miners="" sharders=""
+    for port in 7171 7172 7071 7072 7073 7074; do
+        local mb_json=$(curl -s --connect-timeout 2 "http://localhost:${port}/v1/block/get/latest_finalized_magic_block" 2>/dev/null)
         if [ -n "$mb_json" ]; then
-            local mb_num=$(echo "$mb_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('magic_block',{}).get('magic_block_number',0))" 2>/dev/null)
-            local mb_sr=$(echo "$mb_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('magic_block',{}).get('starting_round',0))" 2>/dev/null)
-            local miners=$(echo "$mb_json" | python3 -c "import json,sys; d=json.load(sys.stdin); mb=d.get('magic_block',{}); print(len(mb.get('miners',{}).get('nodes',[])))" 2>/dev/null)
+            mb_num=$(echo "$mb_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('magic_block',{}).get('magic_block_number',0))" 2>/dev/null)
+            mb_sr=$(echo "$mb_json" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('magic_block',{}).get('starting_round',0))" 2>/dev/null)
+            miners=$(echo "$mb_json" | python3 -c "import json,sys; d=json.load(sys.stdin); mb=d.get('magic_block',{}); print(len(mb.get('miners',{}).get('nodes',[])))" 2>/dev/null)
+            sharders=$(echo "$mb_json" | python3 -c "import json,sys; d=json.load(sys.stdin); mb=d.get('magic_block',{}); print(len(mb.get('sharders',{}).get('nodes',[])))" 2>/dev/null)
             if [ -n "$mb_num" ] && [ "$mb_num" != "0" ]; then
                 break
             fi
@@ -52,9 +58,10 @@ get_mb_info() {
     [ -z "$mb_num" ] && mb_num="?"
     [ -z "$mb_sr" ] && mb_sr=0
     [ -z "$miners" ] && miners=4
+    [ -z "$sharders" ] && sharders=2
     # T = ceil(N * 0.6) for default config
     local t=$(echo "($miners * 6 + 9) / 10" | bc 2>/dev/null || echo 3)
-    echo "$mb_num $mb_sr $miners $t"
+    echo "$mb_num $mb_sr $miners $t $sharders"
 }
 
 get_dkg_status() {
@@ -110,11 +117,27 @@ print_chain_stats() {
     local mb_sr=$(echo "$mb_info" | awk '{print $2}')
     local mb_n=$(echo "$mb_info" | awk '{print $3}')
     local mb_t=$(echo "$mb_info" | awk '{print $4}')
+    local mb_s=$(echo "$mb_info" | awk '{print $5}')
     # Guard against non-numeric values when sharders are down
     [[ "$mb_num" =~ ^[0-9]+$ ]] || mb_num=0
     [[ "$mb_sr" =~ ^[0-9]+$ ]] || mb_sr=0
     [[ "$mb_n" =~ ^[0-9]+$ ]] || mb_n=0
     [[ "$mb_t" =~ ^[0-9]+$ ]] || mb_t=0
+    [[ "$mb_s" =~ ^[0-9]+$ ]] || mb_s=0
+    # High-water mark: never report a lower MB than previously seen
+    if [ "$mb_num" -gt "$HIGHEST_MB_NUM" ]; then
+        HIGHEST_MB_NUM=$mb_num
+        HIGHEST_MB_SR=$mb_sr
+        HIGHEST_MB_N=$mb_n
+        HIGHEST_MB_T=$mb_t
+        HIGHEST_MB_S=$mb_s
+    elif [ "$mb_num" -lt "$HIGHEST_MB_NUM" ]; then
+        mb_num=$HIGHEST_MB_NUM
+        mb_sr=$HIGHEST_MB_SR
+        mb_n=$HIGHEST_MB_N
+        mb_t=$HIGHEST_MB_T
+        mb_s=$HIGHEST_MB_S
+    fi
     local mb_boundary=$((mb_sr + 90))
 
     local mb_delta=$((mb_num - PREV_MB_NUM))
@@ -126,7 +149,7 @@ print_chain_stats() {
     echo -e "\n${CYAN}── Chain Stats ──${NC}"
     printf "  %-25s %s\n" "Current Round:" "$round"
     printf "  %-25s %s blocks in %ss = %s blocks/s\n" "Blocks Since Last:" "$blocks_produced" "$elapsed" "$bps"
-    printf "  %-25s MB#%s (SR=%s, N=%s, T=%s)\n" "Latest MB:" "$mb_num" "$mb_sr" "$mb_n" "$mb_t"
+    printf "  %-25s MB#%s (SR=%s, M=%s, S=%s, T=%s)\n" "Latest MB:" "$mb_num" "$mb_sr" "$mb_n" "$mb_s" "$mb_t"
     printf "  %-25s %s\n" "MB Boundary (SR+90):" "$mb_boundary"
     printf "  %-25s +%s MBs (%s MB/s)\n" "MB Changes:" "$mb_delta" "$mb_rate"
 

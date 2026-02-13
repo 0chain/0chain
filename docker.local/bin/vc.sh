@@ -104,8 +104,13 @@ initialize_nonce() {
     NONCE_INITIALIZED=true
 }
 
-# Get next nonce and increment
+# Get next nonce: refresh from sharder first, then increment
 get_next_nonce() {
+    # Always check sharder for the latest nonce to avoid stale local counter
+    local sharder_nonce=$(get_current_nonce)
+    if [ "$sharder_nonce" -gt "$CURRENT_NONCE" ] 2>/dev/null; then
+        CURRENT_NONCE=$sharder_nonce
+    fi
     CURRENT_NONCE=$((CURRENT_NONCE + 1))
     echo "$CURRENT_NONCE"
 }
@@ -152,11 +157,17 @@ run_zwallet_cmd() {
             continue
         fi
 
-        # Check for nonce errors
+        # Check for nonce errors — re-sync from sharder instead of guessing
         if echo "$output" | grep -qiE "nonce"; then
             retry=$((retry + 1))
-            echo -e "    ${YELLOW}Nonce error, jumping ahead (retry $retry/$max_retries)...${NC}"
-            CURRENT_NONCE=$((CURRENT_NONCE + 3))
+            local fresh_nonce=$(get_current_nonce)
+            echo -e "    ${YELLOW}Nonce error, refreshing from sharder: $CURRENT_NONCE -> $fresh_nonce (retry $retry/$max_retries)${NC}"
+            if [ "$fresh_nonce" -gt "$CURRENT_NONCE" ] 2>/dev/null; then
+                CURRENT_NONCE=$fresh_nonce
+            else
+                # Sharder nonce didn't help — nudge forward by 1
+                CURRENT_NONCE=$((CURRENT_NONCE + 1))
+            fi
             sleep 2
             continue
         fi
@@ -259,23 +270,27 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 # Get current round from diagnostics
 get_current_round() {
-    local round=$(curl -s "$MINER_DIAG" 2>/dev/null | grep -oE "</span>[0-9]+</a>" | grep -oE "[0-9]+" | head -1)
-    if [ -z "$round" ]; then
-        round=$(curl -s "$MINER4_DIAG" 2>/dev/null | grep -oE "</span>[0-9]+</a>" | grep -oE "[0-9]+" | head -1)
-    fi
-    echo "${round:-0}"
+    local best=0
+    for port in 7071 7072 7073 7074 7171 7172; do
+        local r=$(curl -s --connect-timeout 2 "http://localhost:${port}/_diagnostics" 2>/dev/null | grep -oE "Latest Finalized Round</td><td[^>]*>([0-9]+)" | grep -oE "[0-9]+")
+        if [ -n "$r" ] && [ "$r" -gt "$best" ] 2>/dev/null; then
+            best=$r
+        fi
+    done
+    echo "${best:-0}"
 }
 
-# Get current magic block number from diagnostics
+# Get current magic block number from 0dns (accurate) with diagnostics fallback
 get_current_mb() {
-    local mb=$(curl -s "$MINER_DIAG" 2>/dev/null | grep -oE "LFMB</td><td[^>]*>([0-9]+)" | grep -oE "[0-9]+" | head -1)
-    if [ -z "$mb" ]; then
-        mb=$(curl -s "$MINER_DIAG" 2>/dev/null | sed 's/<[^>]*>/\n/g' | grep -A1 "^LFMB$" | tail -1 | grep -oE "^[0-9]+" | head -1)
+    # Primary: 0dns magic_block endpoint has the actual MB number
+    local mb=$(get_0dns_magic_block_number)
+    if [ -n "$mb" ] && [ "$mb" != "null" ] && [ "$mb" -gt 0 ] 2>/dev/null; then
+        echo "$mb"
+        return
     fi
-    if [ -z "$mb" ]; then
-        mb=$(curl -s "$MINER4_DIAG" 2>/dev/null | grep -oE "LFMB</td><td[^>]*>([0-9]+)" | grep -oE "[0-9]+" | head -1)
-    fi
-    echo "${mb:-0}"
+    # Fallback: diagnostics page (WARNING: LFMB field shows starting round, not MB number)
+    local round=$(curl -s "$MINER_DIAG" 2>/dev/null | grep -oE "LFMB</td><td[^>]*>([0-9]+)" | grep -oE "[0-9]+" | head -1)
+    echo "${round:-0}"
 }
 
 # Get number of miners in current magic block
@@ -459,7 +474,6 @@ verify_view_change() {
         if [ $elapsed -ge $max_wait ]; then
             echo -e "    ${RED}VC VERIFICATION TIMEOUT${NC} (${elapsed}s) - state not as expected"
             echo -e "    ${RED}[FAILURE] View change did not complete in expected state${NC}"
-            FAILURES=$((FAILURES + 1))
             return 1
         fi
 
@@ -815,12 +829,16 @@ verify_with_retry() {
     return 1
 }
 
-# Run a test step with chain progress monitoring
+# Run a test step with transaction checking, verification, and chain progress monitoring
+# Args: step_num step_name expected_mb expected_miner_in expected_sharder_in cmd1 [cmd2...]
+#   expected_miner_in/expected_sharder_in: "true"/"false" = verify state, "skip" = don't check
 run_test_step() {
     local step_num=$1
     local step_name=$2
     local expected_mb=$3
-    shift 3
+    local expected_miner_in=$4
+    local expected_sharder_in=$5
+    shift 5
     local commands=("$@")
 
     echo ""
@@ -829,33 +847,45 @@ run_test_step() {
     local start_round=$(get_current_round)
     local start_mb=$(get_current_mb)
     local test_passed=true
+    local txn_failed=false
 
-    # Execute commands using nonce-aware function
+    # Execute commands and CHECK return values
     echo -e "  ${CYAN}Executing commands:${NC}"
     for cmd in "${commands[@]}"; do
-        run_zwallet_cmd "$cmd"
+        if ! run_zwallet_cmd "$cmd"; then
+            txn_failed=true
+        fi
         sleep 2  # Brief pause between commands
     done
+
+    if [ "$txn_failed" = true ]; then
+        echo -e "  ${RED}[FAIL] One or more transactions failed${NC}"
+        test_passed=false
+    fi
 
     echo "  Sleeping ${SLEEP_TIME}s..."
     sleep $SLEEP_TIME
 
-    # Wait for view change
+    # Wait for view change (MB number must advance)
     if ! wait_for_view_change $expected_mb; then
         test_passed=false
-        FAILURES=$((FAILURES + 1))
         echo -e "  ${RED}[FAIL] View change did not complete${NC}"
+    fi
+
+    # Verify expected miner/sharder state via 0dns magic block
+    if [ "$expected_miner_in" != "skip" ] || [ "$expected_sharder_in" != "skip" ]; then
+        if ! verify_view_change "$step_name" "$expected_miner_in" "$expected_sharder_in"; then
+            test_passed=false
+        fi
     fi
 
     # Monitor chain progress - wait for recovery if stuck
     if ! monitor_chain_progress "$step_name"; then
         echo -e "  ${RED}[FAIL] Chain not progressing after $step_name${NC}"
-        # Wait for chain to recover before continuing
         if wait_for_chain_recovery 300; then
             echo -e "  ${GREEN}Chain recovered - continuing tests${NC}"
         else
             test_passed=false
-            FAILURES=$((FAILURES + 1))
         fi
     fi
 
@@ -864,12 +894,13 @@ run_test_step() {
     local rounds_delta=$((end_round - start_round))
     local mb_delta=$((end_mb - start_mb))
 
-    # Record result
+    # Record result - FAILURES counted here ONLY
     if [ "$test_passed" = true ]; then
         TEST_RESULTS+=("PASS")
         echo -e "  ${GREEN}[RESULT] $step_name: PASS${NC} (rounds +$rounds_delta, MB +$mb_delta)"
     else
         TEST_RESULTS+=("FAIL")
+        FAILURES=$((FAILURES + 1))
         echo -e "  ${RED}[RESULT] $step_name: FAIL${NC} (rounds +$rounds_delta, MB +$mb_delta)"
     fi
     TEST_NAMES+=("$step_name")
@@ -964,101 +995,60 @@ while true; do
     sleep 3  # Wait for faucet transaction to be confirmed
 
     # Record starting MB for verification
-    START_MB=$(get_current_mb)
-    EXPECTED_MB=$((START_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 1: Delete both miner and sharder
-    run_test_step "1" "Delete miner + sharder" $EXPECTED_MB \
+    run_test_step "1" "Delete miner + sharder" $EXPECTED_MB "false" "false" \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG" \
         "$ZWALLET_PATH sh-delete --id $SHARDER_ID --config $CONFIG --wallet $WALLET"
-    if ! verify_view_change "delete_both" "false" "false"; then
-        echo -e "  ${YELLOW}VC verification failed for step 1 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 2: Add both miner and sharder
-    run_test_step "2" "Add miner + sharder" $EXPECTED_MB \
+    run_test_step "2" "Add miner + sharder" $EXPECTED_MB "true" "true" \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET" \
         "$ZWALLET_PATH vc-add --id $SHARDER_ID --provider-type sharder --wallet $WALLET --config $CONFIG"
-    if ! verify_view_change "add_both" "true" "true"; then
-        echo -e "  ${YELLOW}VC verification failed for step 2 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 3: Delete miner only
-    run_test_step "3" "Delete miner only" $EXPECTED_MB \
+    run_test_step "3" "Delete miner only" $EXPECTED_MB "false" "true" \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG"
-    if ! verify_view_change "delete_miner" "false" "true"; then
-        echo -e "  ${YELLOW}VC verification failed for step 3 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 4: Delete sharder only
-    run_test_step "4" "Delete sharder only" $EXPECTED_MB \
+    run_test_step "4" "Delete sharder only" $EXPECTED_MB "false" "false" \
         "$ZWALLET_PATH sh-delete --id $SHARDER_ID --config $CONFIG --wallet $WALLET"
-    if ! verify_view_change "delete_sharder" "false" "false"; then
-        echo -e "  ${YELLOW}VC verification failed for step 4 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 5: Add miner only
-    run_test_step "5" "Add miner only" $EXPECTED_MB \
+    run_test_step "5" "Add miner only" $EXPECTED_MB "true" "false" \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET"
-    if ! verify_view_change "add_miner" "true" "false"; then
-        echo -e "  ${YELLOW}VC verification failed for step 5 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 6: Add sharder only
-    run_test_step "6" "Add sharder only" $EXPECTED_MB \
+    run_test_step "6" "Add sharder only" $EXPECTED_MB "true" "true" \
         "$ZWALLET_PATH vc-add --id $SHARDER_ID --provider-type sharder --wallet $WALLET --config $CONFIG"
-    if ! verify_view_change "add_sharder" "true" "true"; then
-        echo -e "  ${YELLOW}VC verification failed for step 6 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 7: Delete miner only
-    run_test_step "7" "Delete miner (again)" $EXPECTED_MB \
+    run_test_step "7" "Delete miner (again)" $EXPECTED_MB "false" "true" \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG"
-    if ! verify_view_change "delete_miner" "false" "true"; then
-        echo -e "  ${YELLOW}VC verification failed for step 7 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 8: Add miner + Delete sharder
-    run_test_step "8" "Add miner + Delete sharder" $EXPECTED_MB \
+    run_test_step "8" "Add miner + Delete sharder" $EXPECTED_MB "true" "false" \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET" \
         "$ZWALLET_PATH sh-delete --id $SHARDER_ID --config $CONFIG --wallet $WALLET"
-    if ! verify_view_change "add_miner_del_sharder" "true" "false"; then
-        echo -e "  ${YELLOW}VC verification failed for step 8 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 9: Add sharder + Delete miner
-    run_test_step "9" "Add sharder + Delete miner" $EXPECTED_MB \
+    run_test_step "9" "Add sharder + Delete miner" $EXPECTED_MB "false" "true" \
         "$ZWALLET_PATH vc-add --id $SHARDER_ID --provider-type sharder --wallet $WALLET --config $CONFIG" \
         "$ZWALLET_PATH mn-delete --id $MINER_ID --wallet $WALLET --config $CONFIG"
-    if ! verify_view_change "add_sharder_del_miner" "false" "true"; then
-        echo -e "  ${YELLOW}VC verification failed for step 9 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
-    EXPECTED_MB=$((EXPECTED_MB + 1))
+    EXPECTED_MB=$(($(get_current_mb) + 1))
 
     # Step 10: Add miner back (restore to initial state)
-    run_test_step "10" "Add miner back (restore)" $EXPECTED_MB \
+    run_test_step "10" "Add miner back (restore)" $EXPECTED_MB "true" "true" \
         "$ZWALLET_PATH vc-add --id $MINER_ID --provider-type miner --config $CONFIG --wallet $WALLET"
-    if ! verify_view_change "restore" "true" "true"; then
-        echo -e "  ${YELLOW}VC verification failed for step 10 - pausing...${NC}"
-        pause_for_chain_recovery
-    fi
 
     # Print iteration results
     echo ""
