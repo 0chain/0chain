@@ -10,4 +10,4 @@ HDD_PATH="${2:-..}"
 
 echo Starting sharder"$SHARDER_ID" in daemon mode ...
 
-SHARDER=$SHARDER_ID SSD_PATH=$PROJECT_ROOT_SSD HDD_PATH=$PROJECT_ROOT_HDD docker-compose -p sharder"$SHARDER_ID" -f ../build.sharder/p0docker-compose.yml up -d
+SHARDER=$SHARDER_ID SSD_PATH=$PROJECT_ROOT_SSD HDD_PATH=$PROJECT_ROOT_HDD docker-compose -p sharder"$SHARDER_ID" -f ../build.sharder/p0docker-compose.yml up -d --force-recreate
