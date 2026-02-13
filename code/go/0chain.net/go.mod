@@ -40,12 +40,11 @@ require (
 )
 
 require (
-	github.com/0chain/common v1.13.1-0.20250205123128-6d02be357b6b
+	github.com/0chain/common v1.13.1-0.20260211230758-d92d800ef980
 	github.com/0chain/gosdk v1.16.0
 	github.com/IBM/sarama v1.42.2
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/go-faker/faker/v4 v4.2.0
-	github.com/herumi/bls v1.37.0
 	github.com/herumi/bls-go-binary v1.33.0
 	github.com/jackc/pgx/v5 v5.4.3
 	github.com/lib/pq v1.10.9

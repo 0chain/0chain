@@ -540,6 +540,23 @@ func (sc *Chain) LoadLatestMBs(ctx context.Context, fromMBNumber int64) (mbs []*
 				zap.Int64("round", mb.BlockRound),
 				zap.String("hash", mb.Hash))
 		}
+		// If the block's MagicBlock field is nil, try to load the MB directly
+		// from mb/ RocksDB. This happens when the block is fetched from the
+		// network without embedded MB data.
+		if b.MagicBlock == nil {
+			mbData, mbErr := block.LoadMagicBlock(ctx, mbStr)
+			if mbErr == nil && mbData != nil {
+				b.MagicBlock = mbData
+				logging.Logger.Info("load_latest_mb populated MagicBlock from mb/ store",
+					zap.Int64("mb number", i),
+					zap.Int64("mb_sr", mbData.StartingRound))
+			} else {
+				logging.Logger.Warn("load_latest_mb block has nil MagicBlock and mb/ load failed, skipping",
+					zap.Int64("mb number", i),
+					zap.Error(mbErr))
+				continue
+			}
+		}
 		mbs = append(mbs, b)
 	}
 
@@ -1058,26 +1075,28 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 			}
 
 			// Now set up nodes and LFMB with the selected MB
-			sc.UpdateMagicBlock(selectedMB.MagicBlock)
-			sc.SetLatestFinalizedMagicBlock(selectedMB)
+			if selectedMB.MagicBlock == nil {
+				logging.Logger.Warn("load_lfb - selected MB block has nil MagicBlock, skipping UpdateMagicBlock",
+					zap.Int64("round", selectedMB.Round),
+					zap.String("hash", selectedMB.Hash))
+			} else {
+				sc.UpdateMagicBlock(selectedMB.MagicBlock)
+				sc.SetLatestFinalizedMagicBlock(selectedMB)
 
-			// Try to discover and activate newer MBs from peer sharders.
-			// This handles the case where this sharder missed a magic block
-			// (e.g., was down during chaos testing when the block containing
-			// the MB was created). Without this, the node registry won't
-			// include miners from newer MBs, causing "unknown_miner" errors.
-			if selectedMB.MagicBlock != nil && selectedMB.MagicBlock.MagicBlockNumber > 1 {
-				sc.discoverNewerMBsFromSharders(ctx, selectedMB.MagicBlock.MagicBlockNumber, lfbRound)
+				// Try to discover and activate newer MBs from peer sharders.
+				if selectedMB.MagicBlock.MagicBlockNumber > 1 {
+					sc.discoverNewerMBsFromSharders(ctx, selectedMB.MagicBlock.MagicBlockNumber, lfbRound)
 
-				// Schedule MB discovery retry after miners are up. During startup,
-				// miners may not have their HTTP servers ready yet, so the miner
-				// URL fallback in discoverNewerMBsFromSharders fails. Poll until
-				// at least one miner is reachable, then run discovery.
-				mbNum := selectedMB.MagicBlock.MagicBlockNumber
-				minerURLs := selectedMB.MagicBlock.Miners.N2NURLs()
-				go func() {
-					sc.waitForMinersAndDiscover(minerURLs, mbNum, lfbRound)
-				}()
+					// Schedule MB discovery retry after miners are up. During startup,
+					// miners may not have their HTTP servers ready yet, so the miner
+					// URL fallback in discoverNewerMBsFromSharders fails. Poll until
+					// at least one miner is reachable, then run discovery.
+					mbNum := selectedMB.MagicBlock.MagicBlockNumber
+					minerURLs := selectedMB.MagicBlock.Miners.N2NURLs()
+					go func() {
+						sc.waitForMinersAndDiscover(minerURLs, mbNum, lfbRound)
+					}()
+				}
 			}
 
 			if lfbr.Round <= lfbRound {
