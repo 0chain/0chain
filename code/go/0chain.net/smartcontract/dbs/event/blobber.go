@@ -300,7 +300,7 @@ type Result struct {
 }
 
 func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
-	return edb.Store.Get().Create(&blobbers).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{UpdateAll: true}).Create(&blobbers).Error
 }
 
 func (edb *EventDb) updateBlobber(blobbers []Blobber) error {

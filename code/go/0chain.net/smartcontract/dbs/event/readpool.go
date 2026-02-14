@@ -5,6 +5,7 @@ import (
 
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
+	"gorm.io/gorm/clause"
 )
 
 // swagger:model readPool
@@ -33,7 +34,7 @@ func mergeUpdateReadPoolEvents() *eventsMergerImpl[ReadPool] {
 }
 
 func (edb *EventDb) InsertReadPool(rps []ReadPool) error {
-	return edb.Store.Get().Create(&rps).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&rps).Error
 }
 
 func (edb *EventDb) updateReadPool(rps []ReadPool) error {

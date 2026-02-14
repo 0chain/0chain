@@ -103,7 +103,7 @@ func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
 				zap.Int("num", len(wms)))
 		}
 	}()
-	return edb.Store.Get().Create(&wms).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&wms).Error
 }
 
 func mergeAddWriteMarkerEvents() *eventsMergerImpl[WriteMarker] {

@@ -156,7 +156,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 }
 
 func (edb *EventDb) addChallenges(chlgs []Challenge) error {
-	return edb.Store.Get().Create(&chlgs).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&chlgs).Error
 }
 
 func (edb *EventDb) updateChallenges(chs []Challenge) error {
