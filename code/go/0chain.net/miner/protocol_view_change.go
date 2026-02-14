@@ -171,7 +171,13 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		lfmb := mc.GetCurrentMagicBlock()
+		// Use GetLatestMagicBlock (no offset) instead of GetCurrentMagicBlock
+		// (which applies mbRoundOffset). The VC process needs the LATEST finalized MB
+		// to correctly compute nextMBNum = latestMB.MagicBlockNumber + 1.
+		// GetCurrentMagicBlock applies a 20-round offset which causes it to return
+		// the OLD MB after a VC, making ContributeMpk create a duplicate DKG for
+		// the just-finalized MB number instead of the next one.
+		lfmb := mc.GetLatestMagicBlock()
 		if lfmb == nil {
 			logging.Logger.Error("[mvc] dkg process: can't get lfmb")
 			continue
@@ -181,7 +187,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.String("name", phaseFuncName),
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.String("next_phase", pn.Phase.String()),
-			zap.Int64("lfb round", lfb.Round))
+			zap.Int64("lfb round", lfb.Round),
+			zap.Int64("lfmb_number", lfmb.MagicBlockNumber))
 
 		txn, err := phaseFunc(ctx, lfb, lfmb)
 		if err != nil {

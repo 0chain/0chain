@@ -2128,69 +2128,52 @@ func (mc *Chain) scheduleDelayedMBDiscovery(startMBNum, lfbRound int64) {
 	}()
 }
 
-// validateMBDKGConsistency verifies that for the given LFB round, the MB and DKG
-// are consistent. The MB used for a round R is determined by mbRoundOffset(R),
-// and the DKG must have the same StartingRound as the MB.
+// validateMBDKGConsistency verifies that the latest MB has a matching DKG.
+// Uses currentMB (from GetLatestMagicBlock) directly instead of GetMagicBlock(lfbRound)
+// because GetMagicBlock applies mbRoundOffset and at startup with a sparse MB pool
+// (e.g., only MB#1 and MB#413, no intermediates), the offset causes it to return
+// a wrong/old MB (e.g., MB#1) while the actual latest is MB#413.
 func (mc *Chain) validateMBDKGConsistency(lfbRound int64, currentMB *block.MagicBlock) {
-	// Calculate which MB should be active for the LFB round
-	// mbRoundOffset(R) = R - ViewChangeOffset (typically R - 20)
-	// The active MB is the one with largest StartingRound <= mbRoundOffset(R)
-	offsetRound := mbRoundOffset(lfbRound)
-	triggerRound := currentMB.StartingRound + chain.ViewChangeOffset
-
-	// Get the MB that would be returned by GetMagicBlock(lfbRound)
-	activeMB := mc.GetMagicBlock(lfbRound)
-	if activeMB == nil {
-		logging.Logger.Error("validateMBDKGConsistency - no active MB for LFB round",
-			zap.Int64("lfb_round", lfbRound),
-			zap.Int64("offset_round", offsetRound))
+	if currentMB == nil {
+		logging.Logger.Error("validateMBDKGConsistency - currentMB is nil")
 		return
 	}
 
-	// Get the DKG that would be returned by GetDKG(lfbRound)
-	activeDKG := mc.GetDKG(lfbRound)
+	// Look up DKG directly by the current MB's starting round (no offset)
+	activeDKG := mc.GetDKGByStartingRound(currentMB.StartingRound)
 	if activeDKG == nil {
-		logging.Logger.Error("validateMBDKGConsistency - no DKG for LFB round, triggering recovery",
+		logging.Logger.Error("validateMBDKGConsistency - no DKG for current MB, triggering recovery",
 			zap.Int64("lfb_round", lfbRound),
-			zap.Int64("offset_round", offsetRound),
-			zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
-			zap.Int64("active_mb_sr", activeMB.StartingRound))
+			zap.Int64("current_mb_number", currentMB.MagicBlockNumber),
+			zap.Int64("current_mb_sr", currentMB.StartingRound))
 
-		// Trigger recovery for the active MB
 		selfNodeKey := node.Self.Underlying().GetKey()
-		if activeMB.Miners != nil && activeMB.Miners.HasNode(selfNodeKey) {
-			mc.scheduleVRFRecovery(context.Background(), activeMB)
+		if currentMB.Miners != nil && currentMB.Miners.HasNode(selfNodeKey) {
+			mc.scheduleVRFRecovery(context.Background(), currentMB)
 		}
 		return
 	}
 
 	// Verify MB and DKG have matching StartingRound
-	if activeMB.StartingRound != activeDKG.StartingRound {
+	if currentMB.StartingRound != activeDKG.StartingRound {
 		logging.Logger.Error("validateMBDKGConsistency - MB/DKG MISMATCH DETECTED, triggering recovery",
 			zap.Int64("lfb_round", lfbRound),
-			zap.Int64("offset_round", offsetRound),
-			zap.Int64("trigger_round", triggerRound),
-			zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
-			zap.Int64("active_mb_sr", activeMB.StartingRound),
-			zap.Int64("active_dkg_sr", activeDKG.StartingRound),
-			zap.Int64("active_dkg_mb_number", activeDKG.MagicBlockNumber),
 			zap.Int64("current_mb_number", currentMB.MagicBlockNumber),
-			zap.Int64("current_mb_sr", currentMB.StartingRound))
+			zap.Int64("current_mb_sr", currentMB.StartingRound),
+			zap.Int64("active_dkg_sr", activeDKG.StartingRound),
+			zap.Int64("active_dkg_mb_number", activeDKG.MagicBlockNumber))
 
-		// Trigger recovery for the active MB (the one that needs DKG)
 		selfNodeKey := node.Self.Underlying().GetKey()
-		if activeMB.Miners != nil && activeMB.Miners.HasNode(selfNodeKey) {
-			mc.scheduleVRFRecovery(context.Background(), activeMB)
+		if currentMB.Miners != nil && currentMB.Miners.HasNode(selfNodeKey) {
+			mc.scheduleVRFRecovery(context.Background(), currentMB)
 		}
 		return
 	}
 
 	logging.Logger.Info("validateMBDKGConsistency - MB and DKG are consistent",
 		zap.Int64("lfb_round", lfbRound),
-		zap.Int64("offset_round", offsetRound),
-		zap.Int64("trigger_round", triggerRound),
-		zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
-		zap.Int64("active_mb_sr", activeMB.StartingRound),
+		zap.Int64("current_mb_number", currentMB.MagicBlockNumber),
+		zap.Int64("current_mb_sr", currentMB.StartingRound),
 		zap.Int64("dkg_sr", activeDKG.StartingRound))
 }
 
