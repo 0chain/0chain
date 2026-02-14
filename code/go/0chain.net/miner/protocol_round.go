@@ -2150,17 +2150,23 @@ func (mc *Chain) validateMBDKGConsistency(lfbRound int64, currentMB *block.Magic
 	// Get the DKG that would be returned by GetDKG(lfbRound)
 	activeDKG := mc.GetDKG(lfbRound)
 	if activeDKG == nil {
-		logging.Logger.Error("validateMBDKGConsistency - no DKG for LFB round, VRF signing will fail",
+		logging.Logger.Error("validateMBDKGConsistency - no DKG for LFB round, triggering recovery",
 			zap.Int64("lfb_round", lfbRound),
 			zap.Int64("offset_round", offsetRound),
 			zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
 			zap.Int64("active_mb_sr", activeMB.StartingRound))
+
+		// Trigger recovery for the active MB
+		selfNodeKey := node.Self.Underlying().GetKey()
+		if activeMB.Miners != nil && activeMB.Miners.HasNode(selfNodeKey) {
+			mc.scheduleVRFRecovery(context.Background(), activeMB)
+		}
 		return
 	}
 
 	// Verify MB and DKG have matching StartingRound
 	if activeMB.StartingRound != activeDKG.StartingRound {
-		logging.Logger.Error("validateMBDKGConsistency - MB/DKG MISMATCH DETECTED",
+		logging.Logger.Error("validateMBDKGConsistency - MB/DKG MISMATCH DETECTED, triggering recovery",
 			zap.Int64("lfb_round", lfbRound),
 			zap.Int64("offset_round", offsetRound),
 			zap.Int64("trigger_round", triggerRound),
@@ -2170,6 +2176,12 @@ func (mc *Chain) validateMBDKGConsistency(lfbRound int64, currentMB *block.Magic
 			zap.Int64("active_dkg_mb_number", activeDKG.MagicBlockNumber),
 			zap.Int64("current_mb_number", currentMB.MagicBlockNumber),
 			zap.Int64("current_mb_sr", currentMB.StartingRound))
+
+		// Trigger recovery for the active MB (the one that needs DKG)
+		selfNodeKey := node.Self.Underlying().GetKey()
+		if activeMB.Miners != nil && activeMB.Miners.HasNode(selfNodeKey) {
+			mc.scheduleVRFRecovery(context.Background(), activeMB)
+		}
 		return
 	}
 

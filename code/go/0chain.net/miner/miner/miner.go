@@ -256,6 +256,16 @@ func main() {
 	memorystore.GetInfo()
 	initN2NHandlers(mc)
 
+	// Start HTTP server early so N2N handlers (including DKG recovery share)
+	// are available during LoadMagicBlocksAndDKG. Without this, simultaneous
+	// miner restarts deadlock: each miner's DKG recovery needs peers' HTTP
+	// servers, but peers are also blocked in recovery before ListenAndServe.
+	go func() {
+		logging.Logger.Info("Ready to listen to the requests")
+		err2 := server.ListenAndServe()
+		logging.Logger.Info("Http server shut down", zap.Error(err2))
+	}()
+
 	initWorkers(ctx)
 
 	// load previous MB and related DKG if any. Don't load the latest, since
@@ -331,12 +341,6 @@ func main() {
 	}
 
 	initHandlers(mc)
-
-	go func() {
-		logging.Logger.Info("Ready to listen to the requests")
-		err2 := server.ListenAndServe()
-		logging.Logger.Info("Http server shut down", zap.Error(err2))
-	}()
 
 	// go mc.RegisterClient()
 	chain.StartTime = time.Now().UTC()
