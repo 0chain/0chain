@@ -127,7 +127,10 @@ func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 }
 
 func (edb *EventDb) addAllocations(allocs []Allocation) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&allocs).Error
+	return edb.Store.Get().Omit(clause.Associations).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		UpdateAll: true,
+	}).Create(&allocs).Error
 }
 
 func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {
