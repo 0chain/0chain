@@ -104,15 +104,14 @@ initialize_nonce() {
     NONCE_INITIALIZED=true
 }
 
-# Get next nonce: refresh from sharder first, then increment
-get_next_nonce() {
-    # Always check sharder for the latest nonce to avoid stale local counter
+# Advance nonce: refresh from sharder first, then increment
+# Updates CURRENT_NONCE directly — do NOT call via $() subshell
+advance_nonce() {
     local sharder_nonce=$(get_current_nonce)
     if [ "$sharder_nonce" -gt "$CURRENT_NONCE" ] 2>/dev/null; then
         CURRENT_NONCE=$sharder_nonce
     fi
     CURRENT_NONCE=$((CURRENT_NONCE + 1))
-    echo "$CURRENT_NONCE"
 }
 
 # Execute zwallet command with nonce management and retry
@@ -123,7 +122,8 @@ run_zwallet_cmd() {
     local backoff=3
 
     while [ $retry -lt $max_retries ]; do
-        local nonce=$(get_next_nonce)
+        advance_nonce
+        local nonce=$CURRENT_NONCE
         local full_cmd="$cmd --withNonce $nonce"
 
         echo -e "    ${CYAN}> $cmd (nonce=$nonce)${NC}"
@@ -151,8 +151,8 @@ run_zwallet_cmd() {
         if echo "$output" | grep -qiE "insufficient balance"; then
             retry=$((retry + 1))
             echo -e "    ${YELLOW}Insufficient balance, funding wallet with 100 tokens (retry $retry/$max_retries)...${NC}"
-            local fund_nonce=$(get_next_nonce)
-            cd "$ZWALLET_DIR" && $ZWALLET_PATH faucet --methodName pour --input "{}" --tokens 100 --wallet $WALLET --config $CONFIG --withNonce $fund_nonce 2>&1 | grep -E "success|error" || true
+            advance_nonce
+            cd "$ZWALLET_DIR" && $ZWALLET_PATH faucet --methodName pour --input "{}" --tokens 100 --wallet $WALLET --config $CONFIG --withNonce $CURRENT_NONCE 2>&1 | grep -E "success|error" || true
             sleep 3
             continue
         fi

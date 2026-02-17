@@ -20,8 +20,8 @@ MINERS=("miner-1" "miner-2" "miner-3" "miner-4")
 SHARDERS=("sharder-1" "sharder-2")
 
 # Consensus requirements: T=3 for N=4 miners, need at least 3 miners for consensus
-MIN_MINERS_RUNNING=3
-MIN_SHARDERS_RUNNING=1
+MIN_MINERS_RUNNING=0
+MIN_SHARDERS_RUNNING=0
 
 # Diagnostics URL for monitoring
 MINER_DIAG="http://localhost:7071/_diagnostics"
@@ -1120,8 +1120,8 @@ while true; do
         done
     fi
 
-    # Fixed 4-minute gap between iterations to let chain stabilize
-    run_time=240
-    log "${BLUE}Next operation in $run_time seconds (4 min)...${NC}"
+    # Fixed 1-minute gap between iterations to let chain stabilize
+    run_time=60
+    log "${BLUE}Next operation in $run_time seconds (1 min)...${NC}"
     sleep $run_time
 done

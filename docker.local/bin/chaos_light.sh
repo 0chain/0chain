@@ -740,8 +740,8 @@ while true; do
         done
     fi
 
-    # Fixed 4-minute gap between iterations to let chain stabilize
-    run_time=240
-    log "${BLUE}Next operation in $run_time seconds (4 min)...${NC}"
+    # Fixed 1-minute gap between iterations to let chain stabilize
+    run_time=60
+    log "${BLUE}Next operation in $run_time seconds (1 min)...${NC}"
     sleep $run_time
 done
