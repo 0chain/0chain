@@ -40,9 +40,9 @@ type Blobber struct {
 	// todo update
 	TotalServiceCharge currency.Coin `json:"total_service_charge"`
 
-	ChallengesPassed    uint64        `json:"challenges_passed"`
-	ChallengesCompleted uint64        `json:"challenges_completed"`
-	OpenChallenges      uint64        `json:"open_challenges"`
+	ChallengesPassed    int64         `json:"challenges_passed"`
+	ChallengesCompleted int64         `json:"challenges_completed"`
+	OpenChallenges      int64         `json:"open_challenges"`
 	RankMetric          float64       `json:"rank_metric"` // currently ChallengesPassed / ChallengesCompleted
 	TotalBlockRewards   currency.Coin `json:"total_block_rewards"`
 	TotalStorageIncome  currency.Coin `json:"total_storage_income"`
