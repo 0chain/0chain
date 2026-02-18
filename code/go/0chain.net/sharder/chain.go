@@ -1124,7 +1124,7 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 					node.RegisterNodes(allMBNodes)
 					logging.Logger.Info("load_lfb - registered nodes from loaded MBs",
 						zap.Int("total_nodes", len(allMBNodes)),
-						zap.Int("loaded_mbs", min(maxMBs, len(mbs))))
+						zap.Int("loaded_mbs", len(mbs)))
 				}
 
 				// Try to discover and activate newer MBs from peer sharders.
