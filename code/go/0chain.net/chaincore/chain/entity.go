@@ -456,26 +456,43 @@ func (c *Chain) BlockWorker(ctx context.Context) {
 			// Only skip sync when BOTH:
 			// 1. Current round is past the target end round
 			// 2. LFB has caught up to the ticket
+			// 3. LFB is not far behind the current round (no gap from kick blocks)
 			// Using AND ensures that when LFB is behind the ticket
 			// (e.g., after restart with high cr from loaded blocks),
 			// requestBlocks still runs to fill the gap.
 			if endRound <= cr && lfb.Round >= lfbTk.Round {
-				if timingSync {
-					// syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
-					timingSync = false
-				}
+				// Check for gap: sharder may receive ahead blocks (kicks) that
+				// set cr high while LFB hasn't advanced. In that case we need
+				// to fill the gap between LFB and cr.
+				if lfb.Round+aheadN < cr {
+					logging.Logger.Info("process block, gap detected between LFB and current round, syncing from LFB",
+						zap.Int64("lfb", lfb.Round),
+						zap.Int64("cr", cr),
+						zap.Int64("lfbTk", lfbTk.Round))
+					// Reset cr to LFB so we fetch gap blocks
+					cr = lfb.Round
+					endRound = cr + 2*aheadN
+				} else {
+					if timingSync {
+						// syncCatchupTime.Update(time.Since(syncTimer).Microseconds())
+						timingSync = false
+					}
 
-				logging.Logger.Debug("process block, synced already, continue...")
-				continue
+					logging.Logger.Debug("process block, synced already, continue...")
+					continue
+				}
 			}
 
-			// When LFB is behind ticket, sync from LFB+1 to catch up finalization
-			if lfb.Round < lfbTk.Round && lfb.Round < cr {
-				logging.Logger.Debug("process block, LFB behind ticket, syncing from LFB",
+			// When LFB is behind ticket or behind current round, sync from LFB
+			if lfb.Round < cr && (lfb.Round < lfbTk.Round || lfb.Round+aheadN < cr) {
+				logging.Logger.Debug("process block, LFB behind, syncing from LFB",
 					zap.Int64("lfb", lfb.Round),
 					zap.Int64("lfb_ticket", lfbTk.Round),
 					zap.Int64("current_round", cr))
 				cr = lfb.Round
+				if endRound < cr+2*aheadN {
+					endRound = cr + 2*aheadN
+				}
 			}
 
 			r := c.GetRound(cr)

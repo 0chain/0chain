@@ -34,6 +34,7 @@ type Chainer interface {
 	GetBlock(ctx context.Context, hash datastore.Key) (*block.Block, error)
 	PushToBlockProcessor(b *block.Block) error
 	ForceFinalizeRound()
+	NotifyBlockSync()
 }
 
 // AcceptMessage - implement the node.MessageFilterI interface
@@ -113,6 +114,17 @@ func NotarizedBlockKickHandler(sc Chainer) datastore.JSONEntityReqResponderF {
 		if err := sc.PushToBlockProcessor(b); err != nil {
 			Logger.Debug("Notarized block kick, push block to process channel failed",
 				zap.Int64("round", b.Round), zap.Error(err))
+		}
+
+		// If kick block is ahead of LFB, trigger block sync to fill the gap.
+		// This ensures the sharder fetches missing intermediate blocks from
+		// peers/miners instead of waiting for them to arrive naturally.
+		if b.Round > lfb.Round+1 {
+			Logger.Info("NotarizedBlockKickHandler - kick block ahead of LFB, triggering sync",
+				zap.Int64("lfb", lfb.Round),
+				zap.Int64("kick_round", b.Round),
+				zap.Int64("gap", b.Round-lfb.Round-1))
+			sc.NotifyBlockSync()
 		}
 
 		return true, nil
