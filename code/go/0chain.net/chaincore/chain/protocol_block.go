@@ -276,8 +276,8 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 				zap.Int("using_threshold", threshold),
 				zap.Int("tickets", numTickets))
 		} else {
-			// Block's MB not found locally - try to fetch from sharders
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			// Block's MB not found locally - try to fetch from sharders/miners
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			blockMB, fetchErr := c.fetchMagicBlockByStartingRound(ctx, mbRound)
 			cancel()
 			if fetchErr == nil && blockMB != nil {
@@ -287,6 +287,20 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 						zap.Int64("mb_sr", blockMB.StartingRound),
 						zap.Error(updateErr))
 				}
+
+				// On sharders, also activate the MB so subsequent block processing
+				// uses the correct DKG/miner set. Without this, the sharder knows
+				// about the MB but doesn't use it as the active MB.
+				if node.Self.IsSharder() && blockMB.StartingRound > mb.StartingRound {
+					syntheticBlock := block.NewBlock("", blockMB.StartingRound)
+					syntheticBlock.MagicBlock = blockMB
+					syntheticBlock.MagicBlockNumber = blockMB.MagicBlockNumber
+					c.SetLatestFinalizedMagicBlock(syntheticBlock)
+					logging.Logger.Info("reachedNotarization - sharder activated newer MB",
+						zap.Int64("mb_number", blockMB.MagicBlockNumber),
+						zap.Int64("mb_sr", blockMB.StartingRound))
+				}
+
 				blockMBThreshold := c.GetThresholdFromState(blockMB.Miners.Size())
 				if blockMBThreshold < threshold {
 					threshold = blockMBThreshold
