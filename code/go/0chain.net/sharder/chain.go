@@ -17,7 +17,6 @@ import (
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
 	"0chain.net/chaincore/httpclientutil"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -1034,38 +1033,25 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 			}
 
 			// Determine which MB to use as LFMB based on LFB round from state DB.
-			// The MB is finalized in a block approximately ViewChangeOffset rounds
-			// before its StartingRound. If that finalization round is <= LFB round,
-			// the sharder already processed the VC block and should use this MB.
-			// Downgrading to a previous MB would cause the sharder to lose track of
-			// miners that joined in the newer MB, preventing block validation.
+			// The LFMB starting round should not exceed the LFB round, otherwise
+			// block validation will fail for blocks between LFB and LFMB because
+			// the miner pool won't include all miners that created those blocks.
 			selectedMB := mbs[0]
-			if mbs[0].MagicBlock != nil {
-				mbFinalizationRound := mbs[0].MagicBlock.StartingRound - chain.ViewChangeOffset
-				if mbFinalizationRound > lfbr.Round {
-					logging.Logger.Warn("load_lfb - LFMB finalization round ahead of LFB, finding appropriate MB",
-						zap.Int64("lfmb_sr", mbs[0].MagicBlock.StartingRound),
-						zap.Int64("lfmb_finalization_round", mbFinalizationRound),
-						zap.Int64("lfb_round", lfbr.Round),
-						zap.Int64("lfmb_number", mbs[0].MagicBlock.MagicBlockNumber))
-					// Find the MB whose finalization round is <= lfbr.Round
-					for i := 1; i < len(mbs); i++ {
-						if mbs[i].MagicBlock != nil &&
-							mbs[i].MagicBlock.StartingRound-chain.ViewChangeOffset <= lfbr.Round {
-							logging.Logger.Info("load_lfb - using appropriate MB for LFB round",
-								zap.Int64("lfb_round", lfbr.Round),
-								zap.Int64("mb_sr", mbs[i].MagicBlock.StartingRound),
-								zap.Int64("mb_number", mbs[i].MagicBlock.MagicBlockNumber))
-							selectedMB = mbs[i]
-							break
-						}
+			if mbs[0].MagicBlock != nil && mbs[0].MagicBlock.StartingRound > lfbr.Round {
+				logging.Logger.Warn("load_lfb - LFMB starting round ahead of LFB, finding appropriate MB",
+					zap.Int64("lfmb_sr", mbs[0].MagicBlock.StartingRound),
+					zap.Int64("lfb_round", lfbr.Round),
+					zap.Int64("lfmb_number", mbs[0].MagicBlock.MagicBlockNumber))
+				// Find the MB whose starting round is <= lfbr.Round (state DB)
+				for i := 1; i < len(mbs); i++ {
+					if mbs[i].MagicBlock != nil && mbs[i].MagicBlock.StartingRound <= lfbr.Round {
+						logging.Logger.Info("load_lfb - using appropriate MB for LFB round",
+							zap.Int64("lfb_round", lfbr.Round),
+							zap.Int64("mb_sr", mbs[i].MagicBlock.StartingRound),
+							zap.Int64("mb_number", mbs[i].MagicBlock.MagicBlockNumber))
+						selectedMB = mbs[i]
+						break
 					}
-				} else {
-					logging.Logger.Info("load_lfb - using latest MB (finalized before LFB)",
-						zap.Int64("lfmb_sr", mbs[0].MagicBlock.StartingRound),
-						zap.Int64("lfmb_finalization_round", mbFinalizationRound),
-						zap.Int64("lfb_round", lfbr.Round),
-						zap.Int64("lfmb_number", mbs[0].MagicBlock.MagicBlockNumber))
 				}
 			}
 
@@ -1096,36 +1082,6 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 			} else {
 				sc.UpdateMagicBlock(selectedMB.MagicBlock)
 				sc.SetLatestFinalizedMagicBlock(selectedMB)
-
-				// Register nodes from up to 3 loaded MBs so the sharder can validate
-				// blocks generated under a recently-active MB. UpdateMagicBlock only
-				// registers the selected MB + its previous MB, but RegisterNodes
-				// replaces the entire node map, so we re-register from 3 MBs here.
-				var allMBNodes []*node.Node
-				maxMBs := 3
-				for i, mb := range mbs {
-					if i >= maxMBs {
-						break
-					}
-					if mb.MagicBlock != nil {
-						for _, mn := range mb.MagicBlock.Miners.CopyNodes() {
-							if err := node.Setup(mn); err == nil {
-								allMBNodes = append(allMBNodes, mn)
-							}
-						}
-						for _, sh := range mb.MagicBlock.Sharders.CopyNodes() {
-							if err := node.Setup(sh); err == nil {
-								allMBNodes = append(allMBNodes, sh)
-							}
-						}
-					}
-				}
-				if len(allMBNodes) > 0 {
-					node.RegisterNodes(allMBNodes)
-					logging.Logger.Info("load_lfb - registered nodes from loaded MBs",
-						zap.Int("total_nodes", len(allMBNodes)),
-						zap.Int("loaded_mbs", len(mbs)))
-				}
 
 				// Try to discover and activate newer MBs from peer sharders.
 				if selectedMB.MagicBlock.MagicBlockNumber > 1 {

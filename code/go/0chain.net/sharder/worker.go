@@ -40,7 +40,6 @@ func SetupWorkers(ctx context.Context) {
 	go sc.SharderHealthCheck(ctx)
 
 	go sc.TrackTransactionErrors(ctx)
-	go sc.MBDiscoveryWorker(ctx)
 }
 
 func (sc *Chain) hasRoundSummary(ctx context.Context, rNum int64) (*round.Round, bool) {
@@ -215,68 +214,6 @@ func (sc *Chain) TrackTransactionErrors(ctx context.Context) {
 			if err != nil {
 				logging.Logger.Error("TrackTransactionErrors: ", zap.Error(err))
 			}
-		}
-	}
-}
-
-// MBDiscoveryWorker periodically checks if the sharder is behind on magic blocks
-// and discovers newer MBs from miners. This handles the case where a view change
-// completes on miners but the sharder doesn't adopt the new MB, causing the chain
-// to stall because the sharder can't validate blocks signed under the new DKG.
-func (sc *Chain) MBDiscoveryWorker(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
-
-	var lastLFBRound int64
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			lfb := sc.GetLatestFinalizedBlock()
-			if lfb == nil {
-				continue
-			}
-
-			// Only trigger discovery when the chain is stuck (LFB hasn't advanced)
-			if lfb.Round != lastLFBRound {
-				lastLFBRound = lfb.Round
-				continue
-			}
-
-			// Chain is stuck — first check if we have a stored MB that's newer
-			// than the active one. This happens when the sharder loads an LFB
-			// whose round is before the latest MB's starting round, causing it
-			// to downgrade the active MB during startup.
-			latestStoredMB := sc.GetLatestMagicBlock()
-			if latestStoredMB == nil {
-				continue
-			}
-
-			lfmb := sc.GetLatestFinalizedMagicBlock(context.Background())
-			activeMB := lfmb.MagicBlock
-			if activeMB != nil && latestStoredMB.MagicBlockNumber > activeMB.MagicBlockNumber {
-				logging.Logger.Info("mb_discovery_worker - activating stored MB that's newer than active MB",
-					zap.Int64("active_mb_number", activeMB.MagicBlockNumber),
-					zap.Int64("active_mb_sr", activeMB.StartingRound),
-					zap.Int64("stored_mb_number", latestStoredMB.MagicBlockNumber),
-					zap.Int64("stored_mb_sr", latestStoredMB.StartingRound),
-					zap.Int64("lfb_round", lfb.Round))
-
-				syntheticBlock := block.NewBlock("", latestStoredMB.StartingRound)
-				syntheticBlock.MagicBlock = latestStoredMB
-				syntheticBlock.MagicBlockNumber = latestStoredMB.MagicBlockNumber
-				sc.SetLatestFinalizedMagicBlock(syntheticBlock)
-				continue
-			}
-
-			logging.Logger.Info("mb_discovery_worker - chain stuck, checking for newer MBs from miners",
-				zap.Int64("lfb_round", lfb.Round),
-				zap.Int64("current_mb_number", latestStoredMB.MagicBlockNumber),
-				zap.Int64("current_mb_sr", latestStoredMB.StartingRound))
-
-			sc.discoverNewerMBsFromSharders(ctx, latestStoredMB.MagicBlockNumber, lfb.Round)
 		}
 	}
 }
