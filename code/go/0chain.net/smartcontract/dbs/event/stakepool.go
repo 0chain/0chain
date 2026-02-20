@@ -278,7 +278,7 @@ func (edb *EventDb) penaltyProviderDelegates(dps map[string]map[string]currency.
 
 	ret := CreateBuilder("delegate_pools", "pool_id", poolIds).
 		AddCompositeId("provider_id", providerIds).
-		AddUpdate("balance", slash, "delegate_pools.balance - t.balance").
+		AddUpdate("balance", slash, "GREATEST(delegate_pools.balance - t.balance, 0)").
 		AddUpdate("total_penalty", slash, "t.total_penalty + delegate_pools.total_penalty").
 		AddUpdate("round_pool_last_updated", lastUpdated).
 		Exec(edb)

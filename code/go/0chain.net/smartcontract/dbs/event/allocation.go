@@ -52,7 +52,7 @@ type Allocation struct {
 	OwnerSigningPublicKey string `json:"owner_signing_public_key"`
 
 	//ref
-	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User  User                    `gorm:"foreignKey:Owner;references:UserID"`
 	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:ID"`
 }
 

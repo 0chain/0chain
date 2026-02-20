@@ -33,7 +33,7 @@ type WriteMarker struct {
 	MovedTokens currency.Coin `json:"-" gorm:"-"`
 
 	//ref
-	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
 }
 
 func (edb *EventDb) GetWriteMarker(txnID string) (*WriteMarker, error) {

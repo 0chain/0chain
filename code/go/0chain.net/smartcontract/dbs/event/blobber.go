@@ -300,7 +300,21 @@ type Result struct {
 }
 
 func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
-	return edb.Store.Get().Clauses(clause.OnConflict{UpdateAll: true}).Create(&blobbers).Error
+	// Delete any existing blobbers that have a conflicting base_url but different ID.
+	// This handles the case where a killed/shutdown blobber's URL is reused by a new blobber.
+	// The SC already validates URL ownership at the MPT level, so if we reach here,
+	// the old blobber is necessarily killed/removed.
+	for _, b := range blobbers {
+		if b.BaseURL != "" {
+			edb.Store.Get().
+				Where("base_url = ? AND id != ?", b.BaseURL, b.ID).
+				Delete(&Blobber{})
+		}
+	}
+	return edb.Store.Get().Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "id"}},
+		UpdateAll: true,
+	}).Create(&blobbers).Error
 }
 
 func (edb *EventDb) updateBlobber(blobbers []Blobber) error {
