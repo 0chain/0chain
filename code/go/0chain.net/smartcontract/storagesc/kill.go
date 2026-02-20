@@ -22,7 +22,7 @@ import (
 // killBlobber
 // punitively disables a blobber. it will no longer be used for new allocations
 // or receive further rewards. Stakeholders will have their stakes slashed.
-func (_ *StorageSmartContract) killBlobber(
+func (sc *StorageSmartContract) killBlobber(
 	tx *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
@@ -99,6 +99,12 @@ func (_ *StorageSmartContract) killBlobber(
 		return "", actErr
 	}
 
+	// Release the blobber's URL so it can be reused by new blobbers.
+	// Without this, killed blobbers permanently block their URL from being registered.
+	if bb.BaseURL != "" {
+		_, _ = balances.DeleteTrieNode(blobber.GetUrlKey(sc.ID))
+	}
+
 	// delete the blobber from MPT if it's empty and has no stake pools
 	if bb.SavedData <= 0 && len(sp.GetPools()) == 0 {
 
@@ -125,7 +131,7 @@ func (_ *StorageSmartContract) killBlobber(
 // killValidator
 // punitively disables a validator. it will no longer be used for new validations
 // or receive further rewards. Stakeholders will have their stakes slashed.
-func (_ *StorageSmartContract) killValidator(
+func (sc *StorageSmartContract) killValidator(
 	tx *transaction.Transaction,
 	input []byte,
 	balances cstate.StateContextI,
@@ -196,6 +202,11 @@ func (_ *StorageSmartContract) killValidator(
 		return nil
 	}); actErr != nil {
 		return "", actErr
+	}
+
+	// Release the validator's URL so it can be reused by new validators.
+	if validator.BaseURL != "" {
+		_, _ = balances.DeleteTrieNode(validator.GetUrlKey(sc.ID))
 	}
 
 	// delete the validator from MPT if its stake pools is empty

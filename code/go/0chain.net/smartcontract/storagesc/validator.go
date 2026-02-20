@@ -76,7 +76,9 @@ func (sc *StorageSmartContract) addValidator(t *transaction.Transaction, input [
 			}
 
 			if has {
-				return fmt.Errorf("invalid validator, url: %s already used", newValidatorObject.BaseURL)
+				// URL is held by a killed/deleted validator whose URL was never released.
+				// Release the stale key so this new validator can claim it.
+				_, _ = balances.DeleteTrieNode(newValidatorObject.GetUrlKey(sc.ID))
 			}
 
 			// Save url
@@ -332,7 +334,7 @@ func (sc *StorageSmartContract) validatorHealthCheck(t *transaction.Transaction,
 
 	var (
 		validator *ValidationNode
-		downtime  uint64
+		downtime  int64
 		err       error
 	)
 
@@ -379,7 +381,9 @@ func (sc *StorageSmartContract) fixValidatorBaseUrl(t *transaction.Transaction, 
 	}
 
 	if has {
-		return "", common.NewError("fix_validator_failed", "invalid validator, url already used")
+		// URL key exists but may be held by a killed/deleted validator.
+		// Release the stale key so this validator can reclaim it.
+		_, _ = balances.DeleteTrieNode(validator.GetUrlKey(sc.ID))
 	}
 
 	// Save url
