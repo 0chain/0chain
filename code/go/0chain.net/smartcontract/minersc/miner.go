@@ -128,8 +128,13 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 		return "", common.NewErrorf("vc_add", "unknown node type to add: %d", rnr.Type)
 	}
 
+	if inMB {
+		return "", common.NewError("vc_add", "node to add is already in MB")
+	}
+
 	// Remove node from delete list if present (cancel pending deletion).
-	// Mirrors deleteNode() which removes from register list before adding to delete list.
+	// Only for nodes NOT in MB — prevents deadlock when both sharders are
+	// on the delete list (violates min_s, DKG can't complete, VCAdd rejected).
 	deleteIDs, err := getDeleteNodes(balances, rnr.Type)
 	if err != nil {
 		return "", common.NewErrorf("vc_add", "could not get delete nodes list: %v", err)
@@ -149,10 +154,6 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 		logging.Logger.Info("[mvc] vc_add: removed node from delete list",
 			zap.String("node type", rnr.Type.String()),
 			zap.String("id", rnr.ID))
-	}
-
-	if inMB {
-		return "", common.NewError("vc_add", "node to add is already in MB")
 	}
 
 	// add id to the register node list
