@@ -3,11 +3,23 @@
 # View Change Loop Script
 # Continuously tests miner/sharder deletion and addition with verification
 
-MINER_ID="31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929"
-SHARDER_ID="57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4"
+# Miner and sharder pools for random selection each iteration
+MINER_IDS=(
+    "31810bd1258ae95955fb40c7ef72498a556d3587121376d9059119d280f34929"
+    "585732eb076d07455fbebcf3388856b6fd00449a25c47c0f72d961c7c4e7e7c2"
+    "8877e3da19b4cb51e59b4646ec7c0cf4849bc7b860257d69ddbf753b9a981e1b"
+    "bfa64c67f49bceec8be618b1b6f558bdbaf9c100fd95d55601fa2190a4e548d8"
+)
+SHARDER_IDS=(
+    "57b416fcda1cf82b8a7e1fc3a47c68a94e617be873b5383ea2606bda757d3ce4"
+    "b098d2d56b087ee910f3ee2d2df173630566babb69f0be0e2e9a0c98d63f0b0b"
+)
+# Selected randomly at the start of each iteration
+MINER_ID=""
+SHARDER_ID=""
 ZWALLET_DIR="/Users/saswatabasu/Code/zwalletcli"
 ZWALLET_PATH="$ZWALLET_DIR/zwallet"
-WALLET="local.json"
+WALLET="owner_wallet.json"
 CONFIG="local.yaml"
 SLEEP_TIME=30
 VC_WAIT_TIME=120  # Max time to wait for view change
@@ -985,6 +997,12 @@ while true; do
     # Clear results for this iteration
     TEST_RESULTS=()
     TEST_NAMES=()
+
+    # Randomly select a miner and sharder for this iteration
+    MINER_ID=${MINER_IDS[$((RANDOM % ${#MINER_IDS[@]}))]}
+    SHARDER_ID=${SHARDER_IDS[$((RANDOM % ${#SHARDER_IDS[@]}))]}
+    echo -e "  ${CYAN}Selected miner:  ${MINER_ID:0:16}...${NC}"
+    echo -e "  ${CYAN}Selected sharder: ${SHARDER_ID:0:16}...${NC}"
 
     # Initialize nonce on first iteration
     initialize_nonce

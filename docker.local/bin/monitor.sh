@@ -28,6 +28,11 @@ HIGHEST_MB_T=0
 HIGHEST_MB_S=0
 REPORT_NUM=0
 
+# Track MB composition for diff reporting
+MB_COMP_FILE="/tmp/monitor_mb_composition.txt"
+# Format: mb_num|miners_csv|sharders_csv
+# e.g.: 24|31810bd1,8877e3da,bfa64c67|57b416fc
+
 get_round() {
     local best=0
     for port in 7171 7172 7071 7072 7073 7074; do
@@ -62,6 +67,164 @@ get_mb_info() {
     # T = ceil(N * 0.6) for default config
     local t=$(echo "($miners * 6 + 9) / 10" | bc 2>/dev/null || echo 3)
     echo "$mb_num $mb_sr $miners $t $sharders"
+}
+
+get_mb_composition() {
+    # Returns: mb_num|miner_id1,miner_id2,...|sharder_id1,sharder_id2,...
+    for port in 7171 7172 7071 7072 7073 7074; do
+        local result=$(curl -s --connect-timeout 2 "http://localhost:${port}/v1/block/get/latest_finalized_magic_block" 2>/dev/null | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    mb=d.get('magic_block',{})
+    num=mb.get('magic_block_number',0)
+    sr=mb.get('starting_round',0)
+    miners=mb.get('miners',{}).get('nodes',[])
+    sharders=mb.get('sharders',{}).get('nodes',[])
+    m_ids=[]
+    for n in miners:
+        if isinstance(n,dict): m_ids.append(n.get('id','')[:16])
+        else: m_ids.append(str(n)[:16])
+    s_ids=[]
+    for n in sharders:
+        if isinstance(n,dict): s_ids.append(n.get('id','')[:16])
+        else: s_ids.append(str(n)[:16])
+    print('%s|%s|%s|%s' % (num, sr, ','.join(sorted(m_ids)), ','.join(sorted(s_ids))))
+except:
+    pass
+" 2>/dev/null)
+        if [ -n "$result" ]; then
+            echo "$result"
+            return
+        fi
+    done
+    echo ""
+}
+
+save_mb_composition() {
+    local comp="$1"
+    if [ -n "$comp" ]; then
+        local mb_num=$(echo "$comp" | cut -d'|' -f1)
+        # Append if this is a new MB number (avoid duplicates)
+        if [ -f "$MB_COMP_FILE" ]; then
+            local last_saved=$(tail -1 "$MB_COMP_FILE" | cut -d'|' -f1)
+            if [ "$mb_num" != "$last_saved" ]; then
+                echo "$comp" >> "$MB_COMP_FILE"
+            fi
+        else
+            echo "$comp" >> "$MB_COMP_FILE"
+        fi
+        # Keep only last 20 entries
+        if [ -f "$MB_COMP_FILE" ]; then
+            local lines=$(wc -l < "$MB_COMP_FILE")
+            if [ "$lines" -gt 20 ]; then
+                tail -20 "$MB_COMP_FILE" > "${MB_COMP_FILE}.tmp" && mv "${MB_COMP_FILE}.tmp" "$MB_COMP_FILE"
+            fi
+        fi
+    fi
+}
+
+print_mb_changes() {
+    # Show miner/sharder membership changes across recent MBs since last report
+    echo -e "\n${CYAN}── View Change Membership ──${NC}"
+
+    local comp=$(get_mb_composition)
+    if [ -z "$comp" ]; then
+        echo "  (could not fetch MB composition)"
+        return
+    fi
+
+    local cur_num=$(echo "$comp" | cut -d'|' -f1)
+    local cur_sr=$(echo "$comp" | cut -d'|' -f2)
+    local cur_miners=$(echo "$comp" | cut -d'|' -f3)
+    local cur_sharders=$(echo "$comp" | cut -d'|' -f4)
+
+    # Current MB composition
+    printf "  ${BOLD}Current MB#%s${NC} (SR=%s)\n" "$cur_num" "$cur_sr"
+    printf "    Miners:   %s\n" "$(echo "$cur_miners" | tr ',' ' ')"
+    printf "    Sharders: %s\n" "$(echo "$cur_sharders" | tr ',' ' ')"
+
+    # Load previous compositions and diff
+    if [ -f "$MB_COMP_FILE" ]; then
+        local prev_num="" prev_miners="" prev_sharders=""
+        local changes_found=false
+
+        # Read all stored MBs and show diffs between consecutive ones
+        # that haven't been reported yet (since last monitor report)
+        local all_entries=$(cat "$MB_COMP_FILE")
+        # Add current if it's new
+        local last_stored=$(tail -1 "$MB_COMP_FILE" | cut -d'|' -f1)
+        if [ "$cur_num" != "$last_stored" ]; then
+            all_entries="$all_entries
+$comp"
+        fi
+
+        local prev_line=""
+        echo "$all_entries" | while IFS= read -r line; do
+            if [ -z "$line" ]; then continue; fi
+            if [ -z "$prev_line" ]; then
+                prev_line="$line"
+                continue
+            fi
+
+            local p_num=$(echo "$prev_line" | cut -d'|' -f1)
+            local p_miners=$(echo "$prev_line" | cut -d'|' -f3)
+            local p_sharders=$(echo "$prev_line" | cut -d'|' -f4)
+            local c_num=$(echo "$line" | cut -d'|' -f1)
+            local c_sr=$(echo "$line" | cut -d'|' -f2)
+            local c_miners=$(echo "$line" | cut -d'|' -f3)
+            local c_sharders=$(echo "$line" | cut -d'|' -f4)
+
+            # Find added/removed miners
+            local added_m="" removed_m=""
+            for id in $(echo "$c_miners" | tr ',' '\n'); do
+                if ! echo "$p_miners" | tr ',' '\n' | grep -q "^${id}$"; then
+                    added_m="$added_m $id"
+                fi
+            done
+            for id in $(echo "$p_miners" | tr ',' '\n'); do
+                if ! echo "$c_miners" | tr ',' '\n' | grep -q "^${id}$"; then
+                    removed_m="$removed_m $id"
+                fi
+            done
+
+            # Find added/removed sharders
+            local added_s="" removed_s=""
+            for id in $(echo "$c_sharders" | tr ',' '\n'); do
+                if ! echo "$p_sharders" | tr ',' '\n' | grep -q "^${id}$"; then
+                    added_s="$added_s $id"
+                fi
+            done
+            for id in $(echo "$p_sharders" | tr ',' '\n'); do
+                if ! echo "$c_sharders" | tr ',' '\n' | grep -q "^${id}$"; then
+                    removed_s="$removed_s $id"
+                fi
+            done
+
+            if [ -n "$added_m" ] || [ -n "$removed_m" ] || [ -n "$added_s" ] || [ -n "$removed_s" ]; then
+                printf "  ${YELLOW}MB#%s → MB#%s (SR=%s):${NC}\n" "$p_num" "$c_num" "$c_sr"
+                for id in $added_m; do
+                    printf "    ${GREEN}+ MINER  %s${NC}\n" "$id"
+                done
+                for id in $removed_m; do
+                    printf "    ${RED}- MINER  %s${NC}\n" "$id"
+                done
+                for id in $added_s; do
+                    printf "    ${GREEN}+ SHARDER %s${NC}\n" "$id"
+                done
+                for id in $removed_s; do
+                    printf "    ${RED}- SHARDER %s${NC}\n" "$id"
+                done
+            fi
+
+            prev_line="$line"
+        done
+    else
+        echo "  (first report — no previous MB to compare)"
+    fi
+
+    # Save current composition
+    save_mb_composition "$comp"
 }
 
 get_dkg_status() {
@@ -209,6 +372,8 @@ print_recent_events() {
     else
         echo "  (none)"
     fi
+
+    print_mb_changes
 }
 
 # ─── Main Loop ──────────────────────────────────────────────────────────────
@@ -235,7 +400,7 @@ while true; do
         print_dkg_table
         print_recent_events
         echo ""
-    } 2>&1 | tee -a "$LOG"
+    }
 
     sleep "$INTERVAL"
 done
