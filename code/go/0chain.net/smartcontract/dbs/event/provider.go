@@ -44,7 +44,7 @@ type Provider struct {
 	ServiceCharge   float64          `json:"service_charge"`
 	TotalStake      currency.Coin    `json:"total_stake"`
 	Rewards         ProviderRewards  `json:"rewards" gorm:"foreignKey:ProviderID"`
-	Downtime        uint64           `json:"downtime"`
+	Downtime        int64            `json:"downtime"`
 	LastHealthCheck common.Timestamp `json:"last_health_check"`
 	IsKilled        bool             `json:"is_killed"`
 	IsShutdown      bool             `json:"is_shutdown"`

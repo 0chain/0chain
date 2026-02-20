@@ -90,7 +90,7 @@ func (vn *ValidationNode) emitAddOrOverwrite(sp *stakePool, balances cstate.Stat
 	return nil
 }
 
-func emitValidatorHealthCheck(vn *ValidationNode, downtime uint64, balances cstate.StateContextI) {
+func emitValidatorHealthCheck(vn *ValidationNode, downtime int64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              vn.ID,
 		LastHealthCheck: vn.LastHealthCheck,

@@ -100,7 +100,7 @@ func emitAddSharder(sn *MinerNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddSharder, sn.ID, sharderNodeToSharderTable(sn, balances.GetBlock().Round))
 }
 
-func emitSharderHealthCheck(sn *MinerNode, downtime uint64, balances cstate.StateContextI) {
+func emitSharderHealthCheck(sn *MinerNode, downtime int64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              sn.ID,
 		LastHealthCheck: sn.LastHealthCheck,

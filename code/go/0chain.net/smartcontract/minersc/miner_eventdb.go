@@ -136,7 +136,7 @@ func emitAddMiner(mn *MinerNode, balances cstate.StateContextI) {
 	balances.EmitEvent(event.TypeStats, event.TagAddMiner, mn.ID, minerNodeToMinerTable(mn, balances.GetBlock().Round))
 }
 
-func emitMinerHealthCheck(mn *MinerNode, downtime uint64, balances cstate.StateContextI) {
+func emitMinerHealthCheck(mn *MinerNode, downtime int64, balances cstate.StateContextI) {
 	data := dbs.DbHealthCheck{
 		ID:              mn.ID,
 		LastHealthCheck: mn.LastHealthCheck,
