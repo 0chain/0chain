@@ -1600,6 +1600,32 @@ func (mc *Chain) restartRound(ctx context.Context, rn int64) {
 		mc.activateStoredMBIfNeeded(ctx, rn)
 	}
 
+	// Self-heal inactive sharders: when CanShardBlocks fails, all sharders are
+	// marked Inactive (error count >= 5) from accumulated ping failures during
+	// chaos/restarts. Miners can generate blocks and VRF shares but refuse to
+	// sign them in VerifyRoundBlock, creating a permanent deadlock. Reset error
+	// counts and re-ping sharders — equivalent to what a container restart does.
+	if !mc.CanShardBlocks(rn) {
+		lmb := mc.GetCurrentMagicBlock()
+		if lmb != nil && lmb.Sharders != nil {
+			var reactivated int
+			for _, s := range lmb.Sharders.CopyNodesMap() {
+				if s.GetStatus() == node.NodeStatusInactive {
+					s.SetStatus(node.NodeStatusActive)
+					s.SetErrorCount(0)
+					reactivated++
+				}
+			}
+			if reactivated > 0 {
+				logging.Logger.Warn("restartRound - reactivated inactive sharders",
+					zap.Int64("round", rn),
+					zap.Int("reactivated", reactivated),
+					zap.Int("total_sharders", lmb.Sharders.Size()))
+				lmb.Sharders.OneTimeStatusMonitor(ctx, lmb.StartingRound)
+			}
+		}
+	}
+
 	// March 2019 behavior: broadcast the previous round's notarized block to all miners
 	// This helps miners on different rounds sync up - if we have a notarized block
 	// for the previous round, push it to all miners so they can advance
