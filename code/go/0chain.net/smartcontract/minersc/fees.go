@@ -736,6 +736,9 @@ func (msc *MinerSmartContract) payShardersAndDelegates(
 	balances cstate.StateContextI,
 ) error {
 	n := int64(len(rewardSharders))
+	if n == 0 {
+		return nil
+	}
 	sharderShare, totalCoinLeft, err := currency.DistributeCoin(reward, n)
 	if err != nil {
 		return err
