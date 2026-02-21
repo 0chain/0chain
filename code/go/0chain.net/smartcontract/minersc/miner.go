@@ -128,29 +128,6 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 		return "", common.NewErrorf("vc_add", "unknown node type to add: %d", rnr.Type)
 	}
 
-	// Remove node from delete list if present (cancel pending deletion).
-	// Mirrors deleteNode() which removes from register list before adding to delete list.
-	deleteIDs, err := getDeleteNodes(balances, rnr.Type)
-	if err != nil {
-		return "", common.NewErrorf("vc_add", "could not get delete nodes list: %v", err)
-	}
-
-	newDeleteIDs := make(NodeIDs, 0, len(deleteIDs))
-	for _, did := range deleteIDs {
-		if did != rnr.ID {
-			newDeleteIDs = append(newDeleteIDs, did)
-		}
-	}
-
-	if len(newDeleteIDs) != len(deleteIDs) {
-		if err := updateDeleteNodeIDs(balances, rnr.Type, newDeleteIDs); err != nil {
-			return "", common.NewErrorf("vc_add", "failed to update delete list: %v", err)
-		}
-		logging.Logger.Info("[mvc] vc_add: removed node from delete list",
-			zap.String("node type", rnr.Type.String()),
-			zap.String("id", rnr.ID))
-	}
-
 	if inMB {
 		return "", common.NewError("vc_add", "node to add is already in MB")
 	}
@@ -164,6 +141,18 @@ func (msc *MinerSmartContract) VCAdd(t *transaction.Transaction,
 	for _, rid := range rids {
 		if rid == rnr.ID {
 			return "", common.NewError("vc_add", "node already registered")
+		}
+	}
+
+	// return if the node is in remove list
+	deleteIDs, err := getDeleteNodes(balances, rnr.Type)
+	if err != nil {
+		return "", common.NewErrorf("vc_add", "could not get delete nodes list: %v", err)
+	}
+
+	for _, did := range deleteIDs {
+		if did == rnr.ID {
+			return "", common.NewError("vc_add", "node is in remove list")
 		}
 	}
 

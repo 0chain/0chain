@@ -637,7 +637,7 @@ func getGroupShareOrSigns(state cstate.StateContextI) (*block.GroupSharesOrSigns
 
 // getShardersKeepList returns the sharder list
 func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
-	nIDs, err := getNodeIDs(balances, ShardersKeepKey)
+	sharders, err := getNodesList(getSharderNode, balances, ShardersKeepKey)
 	if err != nil {
 		if err != util.ErrValueNotPresent {
 			return nil, err
@@ -645,20 +645,7 @@ func getShardersKeepList(balances cstate.StateContextI) (*MinerNodes, error) {
 		return &MinerNodes{}, nil
 	}
 
-	// Fetch each sharder individually, skipping any whose trie data was
-	// already removed by viewChangeDeleteNodes (which can clear the delete
-	// list AND delete node data before the DKG rebuilds the keep list).
-	nodes := make([]*MinerNode, 0, len(nIDs))
-	for _, id := range nIDs {
-		sn, err := getSharderNode(id, balances)
-		if err != nil {
-			// Node data missing (deleted) — skip silently
-			continue
-		}
-		nodes = append(nodes, sn)
-	}
-
-	return &MinerNodes{Nodes: nodes}, nil
+	return sharders, nil
 }
 
 func updateShardersKeepList(state cstate.StateContextI, nodeIDs NodeIDs) error {
