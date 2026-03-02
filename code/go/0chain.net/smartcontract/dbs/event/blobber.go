@@ -13,6 +13,7 @@ import (
 	common2 "0chain.net/smartcontract/common"
 	"0chain.net/smartcontract/dbs"
 	"0chain.net/smartcontract/stakepool/spenum"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"github.com/0chain/common/core/currency"
@@ -300,15 +301,17 @@ type Result struct {
 }
 
 func (edb *EventDb) addBlobbers(blobbers []Blobber) error {
-	// Delete any existing blobbers that have a conflicting base_url but different ID.
+	// Clear the base_url of any existing blobber that has a conflicting base_url but different ID.
 	// This handles the case where a killed/shutdown blobber's URL is reused by a new blobber.
 	// The SC already validates URL ownership at the MPT level, so if we reach here,
 	// the old blobber is necessarily killed/removed.
+	// We UPDATE (not DELETE) to avoid violating FK constraints from allocation_blobber_terms.
+	// base_url has a uniqueIndex so we use CONCAT('deprecated:', id) to ensure uniqueness.
 	for _, b := range blobbers {
 		if b.BaseURL != "" {
-			edb.Store.Get().
+			edb.Store.Get().Model(&Blobber{}).
 				Where("base_url = ? AND id != ?", b.BaseURL, b.ID).
-				Delete(&Blobber{})
+				Update("base_url", gorm.Expr("CONCAT('deprecated:', id)"))
 		}
 	}
 	return edb.Store.Get().Clauses(clause.OnConflict{
