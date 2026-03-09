@@ -15,7 +15,7 @@ COPY ./code/go/0chain.net $SRC_DIR
 # Set workdir
 WORKDIR $SRC_DIR
 
-RUN go mod vendor -v
+RUN go mod vendor -v -e
 
 RUN rm -r ./vendor/github.com/valyala/gozstd
 
