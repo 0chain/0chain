@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
 	"sync"
 	"time"
 
@@ -478,6 +479,21 @@ func (edb *EventDb) WorkEvents(
 
 	logging.Logger.Debug("work events - processing events", zap.Int64("round", blockEvents.round),
 		zap.Int("len_events", len(blockEvents.events)))
+
+	// Ensure allocation creation events are processed before write/read markers
+	// to avoid FK constraint violations (write_markers.allocation_id → allocations).
+	sort.SliceStable(blockEvents.events, func(i, j int) bool {
+		iPriority := 1
+		if blockEvents.events[i].Tag == TagAddAllocation {
+			iPriority = 0
+		}
+		jPriority := 1
+		if blockEvents.events[j].Tag == TagAddAllocation {
+			jPriority = 0
+		}
+		return iPriority < jPriority
+	})
+
 	tags := make([]string, 0, len(blockEvents.events))
 	for _, event := range blockEvents.events {
 		tags, err = edb.processEvent(event, tags, blockEvents.round, blockEvents.block, blockEvents.blockSize)
