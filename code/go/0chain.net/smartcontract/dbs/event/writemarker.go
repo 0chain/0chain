@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -8,6 +9,7 @@ import (
 	"0chain.net/smartcontract/dbs/model"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 	"gorm.io/gorm/clause"
 )
@@ -103,7 +105,22 @@ func (edb *EventDb) addWriteMarkers(wms []WriteMarker) error {
 				zap.Int("num", len(wms)))
 		}
 	}()
-	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&wms).Error
+	err := edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&wms).Error
+	if err != nil {
+		var pgErr *pq.Error
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			// FK violation: write_marker references an allocation that no longer exists.
+			// This is a known race condition — allocation expires/finalizes and its row
+			// is deleted before a late write_marker arrives at the sharder. Skip these
+			// write_markers rather than failing block finalization.
+			logging.Logger.Warn("write_markers: skipping FK violation - allocation expired before write_marker arrived",
+				zap.Error(err),
+				zap.Int("num_write_markers", len(wms)))
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 func mergeAddWriteMarkerEvents() *eventsMergerImpl[WriteMarker] {
