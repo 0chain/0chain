@@ -136,11 +136,16 @@ func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, e
 
 	var err error
 	r := sc.GetSharderRound(roundNumber)
-	if r == nil {
-		r, err = sc.GetRoundFromStore(ctx, roundNumber)
-		if err != nil {
-			return "", err
-		}
+	if r != nil && r.BlockHash != "" {
+		return r.BlockHash, nil
+	}
+
+	// In-memory round may have empty BlockHash because UpdateFinalizedBlock
+	// finalizes a clone (not the original). Fall through to the store which
+	// has the finalized round with the correct BlockHash.
+	r, err = sc.GetRoundFromStore(ctx, roundNumber)
+	if err != nil {
+		return "", err
 	}
 	if r.BlockHash == "" {
 		return "", fmt.Errorf("round %d has empty block hash", roundNumber)

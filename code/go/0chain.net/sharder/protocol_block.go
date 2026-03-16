@@ -577,6 +577,12 @@ func (sc *Chain) storeRoundSummaries(ctx context.Context, rs *RoundSummaries) {
 
 	for _, roundS := range rs.RSummaryList {
 		if roundS != nil {
+			if !sc.isValidRound(roundS) {
+				Logger.Debug("HC-StoreRoundSummaries skip invalid round",
+					zap.Int64("round", roundS.Number),
+					zap.String("hash", roundS.BlockHash))
+				continue
+			}
 			_, present := sc.hasRoundSummary(ctx, roundS.Number)
 			// Store only rounds that are not present.
 			if !present {
