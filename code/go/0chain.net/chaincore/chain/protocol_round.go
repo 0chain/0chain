@@ -253,6 +253,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			" or don't have all the necessary blocks",
 			zap.Int64("round", roundNumber),
 			zap.Int("notarized_blocks_count", nbCount))
+		r.ResetFinalizingStateIfNotFinalized()
 		return
 	}
 	if lfb.Hash == plfb.Hash {
@@ -260,6 +261,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			zap.Int64("round", roundNumber),
 			zap.Int64("lfb round", lfb.Round),
 			zap.Int64("plfb round", plfb.Round))
+		r.ResetFinalizingStateIfNotFinalized()
 		return
 	}
 
@@ -276,6 +278,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		if rr := c.GetRound(lfb.Round); rr != nil {
 			rr.Finalize(lfb)
 		}
+		r.ResetFinalizingStateIfNotFinalized()
 		return
 	}
 
