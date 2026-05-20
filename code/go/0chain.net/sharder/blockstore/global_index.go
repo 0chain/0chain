@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"syscall"
 
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -32,15 +33,28 @@ type globalIndex struct {
 	count     int      // number of entries
 }
 
-// loadGlobalIndex loads the global index from disk.
+// loadGlobalIndex loads the global index from disk using mmap for zero-copy access.
 func loadGlobalIndex(packsDir string) (*globalIndex, error) {
 	path := filepath.Join(packsDir, "global.idx")
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
-	if len(data) < globalTrailerSize {
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	size := int(fi.Size())
+	if size < globalTrailerSize {
 		return nil, fmt.Errorf("global index too small")
+	}
+
+	// mmap the file for zero-copy access
+	data, err := syscall.Mmap(int(f.Fd()), 0, size, syscall.PROT_READ, syscall.MAP_PRIVATE)
+	if err != nil {
+		return nil, fmt.Errorf("mmap global index: %w", err)
 	}
 
 	// Read trailer
