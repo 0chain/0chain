@@ -75,6 +75,9 @@ func main() {
 	initEntities(workdir)
 	sViper := viper.Sub("storage")
 	blockstore.Init(workdir, sViper)
+	if ps, ok := blockstore.GetStore().(*blockstore.PackBlockStore); ok {
+		ps.StartCompaction(ctx)
+	}
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
 
