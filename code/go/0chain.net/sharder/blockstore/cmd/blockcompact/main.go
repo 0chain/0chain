@@ -11,6 +11,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"flag"
@@ -67,19 +68,63 @@ func main() {
 		scanDir = filepath.Join(*blocksDir, *prefix)
 	}
 
-	// Scan + pack one batch at a time (avoids loading all 150M files into memory)
+	// Phase 1: single full scan, sorted by inode, saved to file
+	scanFile := filepath.Join(packsDir, "scan.txt")
+	if *prefix != "" {
+		scanFile = filepath.Join(packsDir, fmt.Sprintf("scan_%s.txt", *prefix))
+	}
+
+	fmt.Printf("Phase 1: scanning all files in %s by inode...\n", scanDir)
+	scanStart := time.Now()
+	cmdStr := fmt.Sprintf(
+		"find %s -name '*.%s' -not -path '*/packs/*' -printf '%%i %%p\\n' | sort -n > %s",
+		scanDir, extension, scanFile)
+	cmd := exec.Command("bash", "-c", cmdStr)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		fmt.Fprintf(os.Stderr, "scan error: %s %v\n", string(out), err)
+		os.Exit(1)
+	}
+
+	// Count lines
+	countCmd := exec.Command("wc", "-l", scanFile)
+	countOut, _ := countCmd.Output()
+	totalFiles := 0
+	fmt.Sscanf(string(countOut), "%d", &totalFiles)
+	fmt.Printf("  scanned %d files in %v\n", totalFiles, time.Since(scanStart).Round(time.Second))
+
+	// Phase 2: read batches from the sorted file
+	sf, err := os.Open(scanFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "open scan file: %v\n", err)
+		os.Exit(1)
+	}
+	defer sf.Close()
+	scanner := bufio.NewScanner(sf)
+
 	seq := detectNextSeq(packsDir)
 	totalPacked := 0
 
 	for i := 0; i < *numPacks; i++ {
-		fmt.Printf("[%d/%d] scanning %d files...\n", i+1, *numPacks, *batchSize)
-		scanStart := time.Now()
-		files, err := scanByInode(*blocksDir, scanDir, *batchSize)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "scan error: %v\n", err)
-			os.Exit(1)
+		fmt.Printf("[%d/%d] reading %d files from scan...\n", i+1, *numPacks, *batchSize)
+		batchStart := time.Now()
+		var files []inodeFile
+		for scanner.Scan() && len(files) < *batchSize {
+			line := scanner.Text()
+			parts := strings.SplitN(line, " ", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			inode, err := strconv.ParseUint(parts[0], 10, 64)
+			if err != nil {
+				continue
+			}
+			hash := extractHash(*blocksDir, parts[1])
+			if hash == "" {
+				continue
+			}
+			files = append(files, inodeFile{inode: inode, path: parts[1], hash: hash})
 		}
-		scanTime := time.Since(scanStart).Round(time.Second)
+		scanTime := time.Since(batchStart).Round(time.Second)
 
 		if len(files) < *batchSize {
 			fmt.Printf("  only %d files (need %d), done.\n", len(files), *batchSize)
@@ -115,13 +160,18 @@ func main() {
 	fmt.Printf("Done. %d blocks packed into %d files.\n", totalPacked, seq-detectNextSeq(packsDir)+int(totalPacked/(*batchSize)))
 }
 
-// scanByInode uses `find -printf` to get inode + path, then sorts by inode.
-// This is the fastest way to enumerate files on Linux HDD.
-func scanByInode(blocksDir, scanDir string, limit int) ([]inodeFile, error) {
-	// Use find with -printf for inode. Limit output with head.
-	cmdStr := fmt.Sprintf(
-		"find %s -name '*.%s' -not -path '*/packs/*' -printf '%%i %%p\\n' | head -%d",
-		scanDir, extension, limit)
+// scanByInodeAfter scans files with inode > afterInode, sorted by inode.
+func scanByInodeAfter(blocksDir, scanDir string, limit int, afterInode uint64) ([]inodeFile, error) {
+	var cmdStr string
+	if afterInode == 0 {
+		cmdStr = fmt.Sprintf(
+			"find %s -name '*.%s' -not -path '*/packs/*' -printf '%%i %%p\\n' | head -%d",
+			scanDir, extension, limit)
+	} else {
+		cmdStr = fmt.Sprintf(
+			"find %s -name '*.%s' -not -path '*/packs/*' -printf '%%i %%p\\n' | awk '$1 > %d' | head -%d",
+			scanDir, extension, afterInode, limit)
+	}
 
 	cmd := exec.Command("bash", "-c", cmdStr)
 	out, err := cmd.Output()
