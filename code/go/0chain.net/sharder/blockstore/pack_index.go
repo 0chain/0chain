@@ -18,25 +18,41 @@ type packRange struct {
 	maxHash string
 }
 
-// packManifest is an in-memory index of all pack files, sorted by minHash.
-// It enables quick lookup of which pack file(s) might contain a given hash.
+// packManifest is an in-memory index of all pack files.
+// Uses a global index (hash → pack) for O(log N) lookup.
 type packManifest struct {
-	mu    sync.RWMutex
-	packs []packRange
+	mu       sync.RWMutex
+	packs    []packRange
+	packsDir string
+
+	// Global index for direct hash→pack lookup
+	gIdx *globalIndex
 
 	// cache of opened pack indices (path → *packReader)
 	cacheMu sync.RWMutex
 	cache   map[string]*packReader
 }
 
-func newPackManifest() *packManifest {
+func newPackManifest(packsDir string) *packManifest {
 	return &packManifest{
-		cache: make(map[string]*packReader),
+		packsDir: packsDir,
+		cache:    make(map[string]*packReader),
 	}
 }
 
-// load scans the packs directory and builds the manifest from pack files.
+// load loads the global index if available, otherwise scans pack files.
 func (m *packManifest) load(packsDir string) error {
+	// Try loading the global index first (fast path)
+	gIdx, err := loadGlobalIndex(packsDir)
+	if err == nil && gIdx != nil {
+		m.gIdx = gIdx
+		logging.Logger.Info("pack manifest loaded via global index",
+			zap.Int("blocks", gIdx.count),
+			zap.Int("packs", len(gIdx.packPaths)))
+		return nil
+	}
+
+	// Fallback: scan pack files for min/max hash ranges
 	entries, err := os.ReadDir(packsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -114,9 +130,24 @@ func (m *packManifest) findCandidates(hash string) []string {
 	return candidates
 }
 
-// lookup searches all candidate packs for a block hash.
-// Returns the raw compressed bytes or nil if not found.
+// lookup searches for a block hash using the global index (fast) or
+// falls back to scanning candidate packs by hash range.
 func (m *packManifest) lookup(hash string) ([]byte, error) {
+	// Fast path: global index
+	if m.gIdx != nil {
+		packName := m.gIdx.lookup(hash)
+		if packName == "" {
+			return nil, nil
+		}
+		fullPath := filepath.Join(m.packsDir, packName)
+		pr, err := m.getReader(fullPath)
+		if err != nil {
+			return nil, err
+		}
+		return pr.lookup(hash)
+	}
+
+	// Slow path: scan by hash range
 	candidates := m.findCandidates(hash)
 	for _, path := range candidates {
 		pr, err := m.getReader(path)

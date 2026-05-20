@@ -32,7 +32,7 @@ func NewPackBlockStore(basePath string, cache cacher, metaProvider datastore.Ent
 	packsPath := filepath.Join(basePath, "packs")
 	os.MkdirAll(packsPath, 0700)
 
-	manifest := newPackManifest()
+	manifest := newPackManifest(packsPath)
 	if err := manifest.load(packsPath); err != nil {
 		logging.Logger.Error("failed to load pack manifest", zap.Error(err))
 	}
