@@ -51,25 +51,20 @@ func (m *packManifest) load(packsDir string) error {
 			continue
 		}
 		path := filepath.Join(packsDir, e.Name())
-		pr, err := openPackIndex(path)
+		minH, maxH, err := readPackHashRange(path)
 		if err != nil {
 			logging.Logger.Warn("skipping corrupt pack file",
 				zap.String("path", path), zap.Error(err))
 			continue
 		}
-		if len(pr.entries) == 0 {
+		if minH == "" {
 			continue
 		}
 		ranges = append(ranges, packRange{
 			path:    path,
-			minHash: pr.minHash(),
-			maxHash: pr.maxHash(),
+			minHash: minH,
+			maxHash: maxH,
 		})
-
-		// Cache the index
-		m.cacheMu.Lock()
-		m.cache[path] = pr
-		m.cacheMu.Unlock()
 	}
 
 	sort.Slice(ranges, func(i, j int) bool {

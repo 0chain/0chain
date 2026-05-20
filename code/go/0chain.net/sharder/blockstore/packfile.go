@@ -212,6 +212,55 @@ func (pr *packReader) maxHash() string {
 	return pr.entries[len(pr.entries)-1].Hash
 }
 
+// readPackHashRange reads only the first and last hash from a pack's index.
+// This avoids loading the full index into memory — only 2 reads per pack.
+func readPackHashRange(path string) (minHash, maxHash string, err error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", "", err
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		return "", "", err
+	}
+	if fi.Size() < int64(trailerSize) {
+		return "", "", fmt.Errorf("pack file too small: %s", path)
+	}
+
+	var trailer [trailerSize]byte
+	if _, err := f.ReadAt(trailer[:], fi.Size()-int64(trailerSize)); err != nil {
+		return "", "", err
+	}
+	if string(trailer[12:16]) != packMagic {
+		return "", "", fmt.Errorf("invalid pack magic: %s", path)
+	}
+
+	indexOffset := binary.LittleEndian.Uint64(trailer[:8])
+	indexCount := binary.LittleEndian.Uint32(trailer[8:12])
+	if indexCount == 0 {
+		return "", "", nil
+	}
+
+	// Read first entry hash
+	var firstBuf [hashLen]byte
+	if _, err := f.ReadAt(firstBuf[:], int64(indexOffset)); err != nil {
+		return "", "", err
+	}
+	minH := string(bytes.TrimRight(firstBuf[:], "\x00"))
+
+	// Read last entry hash
+	lastOff := int64(indexOffset) + int64(indexCount-1)*int64(indexEntrySize)
+	var lastBuf [hashLen]byte
+	if _, err := f.ReadAt(lastBuf[:], lastOff); err != nil {
+		return "", "", err
+	}
+	maxH := string(bytes.TrimRight(lastBuf[:], "\x00"))
+
+	return minH, maxH, nil
+}
+
 // readRawBlock reads a raw block file from disk (the zlib-compressed bytes).
 func readRawBlock(path string) ([]byte, error) {
 	f, err := os.Open(path)
