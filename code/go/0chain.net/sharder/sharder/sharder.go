@@ -75,9 +75,6 @@ func main() {
 	initEntities(workdir)
 	sViper := viper.Sub("storage")
 	blockstore.Init(workdir, sViper)
-	if ps, ok := blockstore.GetStore().(*blockstore.PackBlockStore); ok {
-		ps.StartCompaction(ctx)
-	}
 	serverChain := chain.NewChainFromConfig()
 	signatureScheme := serverChain.GetSignatureScheme()
 
@@ -97,6 +94,19 @@ func main() {
 
 	if err := serverChain.SetupEventDatabase(); err != nil {
 		logging.Logger.Panic("Error setting up events database", zap.Error(err))
+	}
+
+	// Wire up auto-compactor with the events database
+	if ps, ok := blockstore.GetStore().(*blockstore.PackBlockStore); ok {
+		if serverChain.EventDb != nil {
+			sqlDB, err := serverChain.EventDb.Store.Get().DB()
+			if err == nil {
+				ps.SetCompactorDB(sqlDB)
+				ps.StartCompaction(ctx)
+			} else {
+				logging.Logger.Error("failed to get sql.DB for compactor", zap.Error(err))
+			}
+		}
 	}
 
 	sharder.SetupSharderChain(serverChain)

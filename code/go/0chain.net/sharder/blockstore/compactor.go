@@ -59,6 +59,24 @@ func (c *compactor) start(ctx context.Context) {
 		logging.Logger.Warn("compactor: no db connection, background compaction disabled")
 		return
 	}
+
+	// If bulk inode-sorted packs exist, skip ahead to near the latest round
+	// to avoid scanning millions of already-packed blocks.
+	if c.manifest.packCount() > 0 {
+		var maxRound int64
+		err := c.db.QueryRow("SELECT COALESCE(MAX(round), 0) FROM blocks").Scan(&maxRound)
+		if err == nil && maxRound > 0 && c.lastPackedRd < maxRound-20000 {
+			c.lastPackedRd = maxRound - 20000
+			logging.Logger.Info("compactor: skipped to recent rounds (bulk packs exist)",
+				zap.Int64("last_packed_round", c.lastPackedRd),
+				zap.Int64("max_round", maxRound))
+		}
+	}
+
+	logging.Logger.Info("compactor started",
+		zap.Int64("last_packed_round", c.lastPackedRd),
+		zap.Int("existing_packs", c.manifest.packCount()))
+
 	go func() {
 		timer := time.NewTimer(30 * time.Second)
 		defer timer.Stop()

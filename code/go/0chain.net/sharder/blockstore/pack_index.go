@@ -191,5 +191,8 @@ func (m *packManifest) getReader(path string) (*packReader, error) {
 func (m *packManifest) packCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
+	if m.gIdx != nil {
+		return len(m.gIdx.packPaths)
+	}
 	return len(m.packs)
 }
