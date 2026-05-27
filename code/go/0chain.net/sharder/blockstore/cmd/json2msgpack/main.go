@@ -91,6 +91,15 @@ func main() {
 		time.Since(start).Round(time.Second))
 }
 
+var debugOnce sync.Once
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func convertFile(inPath, outPath string) bool {
 	f, err := os.Open(inPath)
 	if err != nil {
@@ -110,9 +119,21 @@ func convertFile(inPath, outPath string) bool {
 		return false
 	}
 
+	// Unwrap {"block": {...}} if present
+	var wrapper struct {
+		Block json.RawMessage `json:"block"`
+	}
+	blockJSON := jsonData
+	if err := json.Unmarshal(jsonData, &wrapper); err == nil && len(wrapper.Block) > 0 {
+		blockJSON = wrapper.Block
+	}
+
 	// Decode JSON to block.Block
 	b := &block.Block{}
-	if err := json.Unmarshal(jsonData, b); err != nil {
+	if err := json.Unmarshal(blockJSON, b); err != nil {
+		debugOnce.Do(func() {
+			fmt.Fprintf(os.Stderr, "DEBUG unmarshal error on %s: %v\nJSON prefix: %s\n", inPath, err, string(blockJSON[:minInt(200, len(blockJSON))]))
+		})
 		return false
 	}
 
