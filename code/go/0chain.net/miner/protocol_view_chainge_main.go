@@ -192,6 +192,7 @@ func (mc *Chain) PublishShareOrSigns(ctx context.Context, lfb *block.Block,
 	data.InputArgs = sos.Clone()
 
 	tx = httpclientutil.NewSmartContractTxn(selfNodeKey, mc.ID, selfNode.PublicKey, minersc.ADDRESS)
+
 	var minerUrls []string
 	// DEBUG: only send VC transaction to self node
 	for _, v := range dmn.Nodes {
@@ -273,9 +274,24 @@ func (mc *Chain) ContributeMpk(ctx context.Context, lfb *block.Block,
 				"failed to contribute mpk: dkg is not set yet")
 		}
 
-		logging.Logger.Debug("[mvc] contribute_mpk set VC")
-		var vc = bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
-		vc.MagicBlockNumber = mb.MagicBlockNumber + 1
+		nextMBNum := mb.MagicBlockNumber + 1
+		var vc *bls.DKG
+		if mc.isHardforkActive("Nyx", mc.GetCurrentRound()) {
+			seed, seedErr := computeDKGSeed(nextMBNum)
+			if seedErr != nil {
+				return nil, common.NewErrorf("contribute_mpk",
+					"VRF seed computation failed for MB#%d (Nyx active, no CSPRNG fallback): %v",
+					nextMBNum, seedErr)
+			}
+			vc = bls.MakeDKGSeeded(dmn.T, dmn.N, selfNodeKey, seed)
+			logging.Logger.Info("[mvc] contribute_mpk using VRF-seeded DKG",
+				zap.Int64("mb_number", nextMBNum))
+		} else {
+			vc = bls.MakeDKG(dmn.T, dmn.N, selfNodeKey)
+			logging.Logger.Info("[mvc] contribute_mpk using CSPRNG DKG (pre-Nyx)",
+				zap.Int64("mb_number", nextMBNum))
+		}
+		vc.MagicBlockNumber = nextMBNum
 		mc.viewChangeProcess.viewChangeDKG = vc
 	}
 
@@ -382,13 +398,31 @@ func (mc *Chain) Wait(ctx context.Context,
 		return // error
 	}
 
-	if magicBlock.MagicBlockNumber != mb.MagicBlockNumber+1 {
-		logging.Logger.Error("[mvc] dkg wait failed, not new magic block",
-			zap.Int64("mb_num", magicBlock.MagicBlockNumber),
-			zap.Int64("mb_sr", magicBlock.StartingRound),
-			zap.String("mb_hash", magicBlock.Hash),
-			zap.Int64("current_mb_num", mb.MagicBlockNumber))
-		return nil, common.NewError("vc_wait", "not new magic block")
+	// Note: We intentionally do NOT skip based on local DKG summary existence.
+	// The Wait transaction must be sent to the smart contract even if we have
+	// a local DKG summary, otherwise the miner won't be marked as "waited"
+	// and the view change will fail with "miner not waited" error.
+
+	if mc.isHardforkActive("Nyx", mc.GetCurrentRound()) {
+		// Nyx: accept any newer MB (allows non-sequential MB transitions)
+		if magicBlock.MagicBlockNumber < mb.MagicBlockNumber {
+			logging.Logger.Error("[mvc] dkg wait failed, magic block from SC is older than current",
+				zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+				zap.Int64("mb_sr", magicBlock.StartingRound),
+				zap.String("mb_hash", magicBlock.Hash),
+				zap.Int64("current_mb_num", mb.MagicBlockNumber))
+			return nil, common.NewError("vc_wait", "not new magic block")
+		}
+	} else {
+		// Pre-Nyx: require exactly +1
+		if magicBlock.MagicBlockNumber != mb.MagicBlockNumber+1 {
+			logging.Logger.Error("[mvc] dkg wait failed, not new magic block",
+				zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+				zap.Int64("mb_sr", magicBlock.StartingRound),
+				zap.String("mb_hash", magicBlock.Hash),
+				zap.Int64("current_mb_num", mb.MagicBlockNumber))
+			return nil, common.NewError("vc_wait", "not new magic block")
+		}
 	}
 
 	if !magicBlock.Miners.HasNode(node.Self.Underlying().GetKey()) {
@@ -473,29 +507,55 @@ func (mc *Chain) Wait(ctx context.Context,
 	vcdkg.T = magicBlock.T
 	vcdkg.N = magicBlock.N
 
-	// save DKG and MB
 	logging.Logger.Debug("[mvc] dkg_ss, get dkg summary")
 	dkgSum := vcdkg.GetDKGSummary()
-	logging.Logger.Debug("[mvc] dkg_ss, store dkg summary")
-	if err = StoreDKGSummary(ctx, dkgSum); err != nil {
-		return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
-	}
-	logging.Logger.Debug("[mvc] dkg wait: store dkg summary",
-		zap.String("id", dkgSum.ID),
-		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
-		zap.Int64("mb_sr", magicBlock.StartingRound),
-		zap.String("mb_hash", magicBlock.Hash),
-	)
 
-	logging.Logger.Debug("[mvc] dkg_ss, store dkg summary")
-	if err = StoreMagicBlock(ctx, magicBlock); err != nil {
-		return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
+	// Nyx: never overwrite a finalized DKG with a non-finalized one.
+	// When VC restarts (e.g., after chaos), a new attempt produces different shares.
+	// If the previous attempt already finalized, overwriting would corrupt the DKG.
+	// However, we must validate that the existing DKG matches THIS magic block's MPKs —
+	// stale DKG from a previous chain run (e.g., clean.sh doesn't clear dkg/ RocksDB)
+	// must not prevent storing the correct DKG.
+	skipStore := false
+	if mc.isHardforkActive("Nyx", mc.GetCurrentRound()) {
+		existingDKG, loadErr := LoadDKGSummary(ctx, dkgSum.ID)
+		if loadErr == nil && existingDKG.IsFinalized {
+			// Validate the existing DKG's shares against the current MB's MPKs
+			mpkMap, mpkErr := magicBlock.Mpks.GetMpkMap()
+			selfPartyID := bls.ComputeIDdkg(node.Self.Underlying().GetKey())
+			if mpkErr == nil && existingDKG.Verify(selfPartyID, mpkMap) == nil {
+				logging.Logger.Info("[mvc] dkg wait: skipping store — finalized DKG already exists and matches MB",
+					zap.String("id", dkgSum.ID),
+					zap.Int64("mb_num", magicBlock.MagicBlockNumber))
+				skipStore = true
+			} else {
+				logging.Logger.Warn("[mvc] dkg wait: existing finalized DKG does not match current MB — overwriting",
+					zap.String("id", dkgSum.ID),
+					zap.Int64("mb_num", magicBlock.MagicBlockNumber))
+			}
+		}
 	}
 
-	logging.Logger.Debug("[mvc] dkg wait: store mb",
-		zap.Int64("mb_num", magicBlock.MagicBlockNumber),
-		zap.Int64("mb_sr", magicBlock.StartingRound),
-		zap.String("mb_hash", magicBlock.Hash))
+	if !skipStore {
+		logging.Logger.Debug("[mvc] dkg_ss, store dkg summary")
+		if err = StoreDKGSummary(ctx, dkgSum); err != nil {
+			return nil, common.NewErrorf("vc_wait", "saving DKG summary: %v", err)
+		}
+		logging.Logger.Debug("[mvc] dkg wait: store dkg summary",
+			zap.String("id", dkgSum.ID),
+			zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+			zap.Int64("mb_sr", magicBlock.StartingRound),
+			zap.String("mb_hash", magicBlock.Hash),
+		)
+
+		if err = StoreMagicBlock(ctx, magicBlock); err != nil {
+			return nil, common.NewErrorf("vc_wait", "saving MB data: %v", err)
+		}
+		logging.Logger.Debug("[mvc] dkg wait: store mb",
+			zap.Int64("mb_num", magicBlock.MagicBlockNumber),
+			zap.Int64("mb_sr", magicBlock.StartingRound),
+			zap.String("mb_hash", magicBlock.Hash))
+	}
 
 	// create 'wait' transaction
 	if tx, err = mc.waitTransaction(mb); err != nil {

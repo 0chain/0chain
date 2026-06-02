@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"math"
 	"net/http"
 	"runtime"
 	"sort"
@@ -225,7 +224,7 @@ func (c *Chain) getRoundHealth(ctx context.Context) roundHealth {
 			phase = round.GetPhaseName(cr.GetPhase())
 		}
 
-		vrfThreshold = mb.T
+		vrfThreshold = c.GetThresholdFromState(mb.Miners.Size()) // Use t_percent from smart contract
 		if shares >= vrfThreshold {
 			check = "&#x2714;"
 		}
@@ -413,7 +412,8 @@ func (c *Chain) getBlocksHealth(ctx context.Context) BlockHealth {
 				numVerificationTickets = len(b.GetVerificationTickets())
 			}
 		}
-		consensus = int(math.Ceil((float64(config.GetThresholdCount()) / 100) * float64(lfmb.Miners.Size())))
+		// Use t_percent from smart contract for consensus threshold
+		consensus = c.GetThresholdFromState(lfmb.Miners.Size())
 	}
 
 	return BlockHealth{

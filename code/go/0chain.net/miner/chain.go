@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"0chain.net/chaincore/client"
+	cstate "0chain.net/chaincore/chain/state"
 	"0chain.net/chaincore/transaction"
+	"0chain.net/core/encryption"
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
@@ -18,11 +20,13 @@ import (
 	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
+	"0chain.net/chaincore/threshold/bls"
 	"0chain.net/core/cache"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
 	"0chain.net/core/memorystore"
 	"github.com/0chain/common/core/logging"
+	"github.com/0chain/common/core/util"
 )
 
 const (
@@ -159,6 +163,21 @@ type Chain struct {
 	generateBlockWorker                  *common.WithContextFunc
 }
 
+// isHardforkActive checks if a named hardfork is active for the given round
+// by reading the activation round from the LFB's MPT state.
+func (mc *Chain) isHardforkActive(name string, round int64) bool {
+	lfb := mc.GetLatestFinalizedBlock()
+	if lfb == nil || lfb.ClientState == nil {
+		return false
+	}
+	fork := cstate.NewHardFork(name, 0)
+	path := util.Path(encryption.Hash(fork.GetKey()))
+	if err := lfb.ClientState.GetNodeValue(path, fork); err != nil {
+		return false
+	}
+	return round >= fork.Round()
+}
+
 type ViewChangeEvent struct {
 	MagicBlock *block.MagicBlock
 }
@@ -249,6 +268,65 @@ func (mc *Chain) SetLatestFinalizedBlock(ctx context.Context, b *block.Block) {
 				zap.String("block", b.Hash))
 		}
 	}
+
+	// Check if the new LFB round requires a different MB than current finalized MB.
+	// This handles the case where forward sync advances LFB past an MB transition point.
+	expectedMB := mc.GetMagicBlock(b.Round)
+	if expectedMB == nil {
+		logging.Logger.Debug("SetLatestFinalizedBlock - GetMagicBlock returned nil",
+			zap.Int64("lfb_round", b.Round))
+		return
+	}
+	currentFinalizedMB := mc.GetLatestFinalizedMagicBlock(ctx)
+	if currentFinalizedMB == nil || currentFinalizedMB.MagicBlock == nil {
+		logging.Logger.Debug("SetLatestFinalizedBlock - GetLatestFinalizedMagicBlock returned nil",
+			zap.Int64("lfb_round", b.Round))
+		return
+	}
+	logging.Logger.Debug("SetLatestFinalizedBlock - checking MB transition",
+		zap.Int64("lfb_round", b.Round),
+		zap.Int64("expected_mb_num", expectedMB.MagicBlockNumber),
+		zap.Int64("expected_mb_sr", expectedMB.StartingRound),
+		zap.Int64("current_mb_num", currentFinalizedMB.MagicBlock.MagicBlockNumber),
+		zap.Int64("current_mb_sr", currentFinalizedMB.MagicBlock.StartingRound))
+	// Only update to a NEWER MB (higher number), never downgrade
+	if expectedMB.MagicBlockNumber > currentFinalizedMB.MagicBlock.MagicBlockNumber {
+		logging.Logger.Info("SetLatestFinalizedBlock - LFB crossed MB transition, updating finalized MB",
+			zap.Int64("lfb_round", b.Round),
+			zap.Int64("old_mb", currentFinalizedMB.MagicBlock.MagicBlockNumber),
+			zap.Int64("old_mb_sr", currentFinalizedMB.MagicBlock.StartingRound),
+			zap.Int64("new_mb", expectedMB.MagicBlockNumber),
+			zap.Int64("new_mb_sr", expectedMB.StartingRound))
+		// Create a block wrapper for SetLatestFinalizedMagicBlock
+		mbBlock := &block.Block{MagicBlock: expectedMB}
+		mbBlock.Round = expectedMB.StartingRound
+		mbBlock.Hash = expectedMB.Hash
+		mc.SetLatestFinalizedMagicBlock(mbBlock)
+	}
+
+	// Send phase events for non-MB miners registered via vc-add to participate in DKG.
+	// This is necessary because UpdateFinalizedBlock (used during active consensus) sends
+	// phase events, but SetLatestFinalizedBlock (used during syncing) previously did not.
+	// Without phase events, non-MB miners in the DKG miners list cannot contribute MPK.
+	if !mc.IsViewChangeEnabled() {
+		return
+	}
+
+	pn, err := mc.GetPhaseOfBlock(b)
+	if err != nil {
+		// Don't log error for ErrValueNotPresent - it just means no phase info in this block
+		return
+	}
+
+	if pn == nil {
+		return
+	}
+
+	logging.Logger.Debug("[mvc] SetLatestFinalizedBlock - send phase node for non-MB miner DKG participation",
+		zap.Int64("round", b.Round),
+		zap.Int64("start_round", pn.StartRound),
+		zap.String("phase", pn.Phase.String()))
+	go mc.SendPhaseNode(ctx, chain.PhaseEvent{Phase: *pn})
 }
 
 // LoadLatestBlocksFromStore loads LFB and LFMB from store and sets them
@@ -257,7 +335,9 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 	// var bl *blocksLoaded
 	lfbr, err := mc.LoadLFBRound()
 	if err != nil {
-		return fmt.Errorf("load_lfb - could not load lfb from state DB, err: %v", err)
+		logging.Logger.Warn("load_lfb - could not load lfb from state DB, trying to fetch current LFB from sharders",
+			zap.Error(err))
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
 	}
 
 	logging.Logger.Debug("load_lfb - load from stateDB",
@@ -265,23 +345,62 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.String("block", lfbr.Hash))
 
 	// fetch from sharders
-	// retry 3 times, each time wait for about 5 seconds.
+	// retry 10 times, each time wait for 3-5 seconds with backoff.
 	// the main reason for retry is that sharders APIs may not ready yet after all miners/sharders restarted
-	retry := 3
+	retry := 10
 	var b *block.Block
 	for i := 0; i < retry; i++ {
 		b, err = mc.GetNotarizedBlockFromSharders(ctx, lfbr.Hash, lfbr.Round)
 		if err != nil {
-			logging.Logger.Error("load_lfb - could not fetch block from sharders, waiting for retry...",
-				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash), zap.Error(err))
-			time.Sleep(5 * time.Second)
+			waitTime := time.Duration(3+i) * time.Second
+			logging.Logger.Warn("load_lfb - could not fetch block from sharders, waiting for retry...",
+				zap.Int64("round", lfbr.Round), zap.String("block", lfbr.Hash),
+				zap.Int("retry", i+1), zap.Int("max_retries", retry),
+				zap.Duration("wait", waitTime), zap.Error(err))
+			time.Sleep(waitTime)
 			continue
 		}
 		break
 	}
 
 	if b == nil {
-		return fmt.Errorf("load_lfb - could not fetch block from sharders, round: %d", lfbr.Round)
+		// Stored LFB not available from sharders - try to fetch current LFB from sharders instead
+		logging.Logger.Warn("load_lfb - stored LFB not available from sharders, trying to fetch current LFB",
+			zap.Int64("stored_round", lfbr.Round),
+			zap.String("stored_hash", lfbr.Hash))
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
+	}
+
+	// Verify block has sufficient verification tickets before accepting
+	if err = mc.VerifyBlockNotarization(ctx, b); err != nil {
+		logging.Logger.Error("load_lfb - block notarization verification failed, falling back to sharder sync",
+			zap.Error(err),
+			zap.Int64("round", b.Round),
+			zap.String("block", b.Hash),
+			zap.Int("tickets", len(b.GetVerificationTickets())))
+		// Block doesn't have enough tickets - fall back to fetching from sharders
+		// which will find blocks with valid notarization
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
+	}
+
+	// Verify block continuity and finalization depth from sharders
+	recommendedLFB, cerr := mc.verifyBlockContinuityFromSharders(ctx, b.Round, 500, 3)
+	if cerr != nil {
+		logging.Logger.Warn("load_lfb - continuity check failed, falling back to sharder sync",
+			zap.Int64("round", b.Round), zap.Error(cerr))
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
+	}
+	if recommendedLFB < b.Round {
+		logging.Logger.Info("load_lfb - finalization depth requires earlier LFB",
+			zap.Int64("stored_lfb", b.Round),
+			zap.Int64("recommended_lfb", recommendedLFB))
+		rb, rerr := mc.GetNotarizedBlockFromSharders(ctx, "", recommendedLFB)
+		if rerr != nil || rb == nil {
+			logging.Logger.Warn("load_lfb - could not fetch recommended LFB, falling back",
+				zap.Int64("round", recommendedLFB))
+			return mc.tryFetchCurrentLFBFromSharders(ctx)
+		}
+		b = rb
 	}
 
 	b.SetStateStatus(block.StateSuccessful)
@@ -294,10 +413,233 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 
 	mc.SetLatestFinalizedBlock(ctx, b)
 
+	// Set current round to LFB round (handles both forward sync and rollback)
+	if b.Round != mc.GetCurrentRound() {
+		mc.SetCurrentRound(b.Round)
+	}
+
 	logging.Logger.Info("load_lfb setup LFB from store",
 		zap.String("block", b.Hash),
 		zap.Int64("round", b.Round),
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
+
+	// Check if sharders have a higher LFB - if so, sync a limited number of blocks.
+	// Large gaps are handled by the block worker after startup completes.
+	// Limit startup sync to avoid blocking SetLFBLoadingComplete indefinitely.
+	const maxStartupSyncBlocks = 50
+	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
+	if len(fbs) > 0 && fbs[0].Block != nil && fbs[0].Block.Round > b.Round {
+		sharderLFB := fbs[0].Block
+		gap := sharderLFB.Round - b.Round
+		logging.Logger.Info("load_lfb - sharders have higher LFB",
+			zap.Int64("local_lfb", b.Round),
+			zap.Int64("sharder_lfb", sharderLFB.Round),
+			zap.Int64("gap", gap))
+
+		if gap > maxStartupSyncBlocks {
+			// Gap is too large - try to fast-forward to sharder's LFB
+			logging.Logger.Info("load_lfb - gap too large for startup sync, attempting fast-forward",
+				zap.Int64("gap", gap),
+				zap.Int("max_startup_sync", maxStartupSyncBlocks))
+			if err := mc.tryFetchCurrentLFBFromSharders(ctx); err != nil {
+				logging.Logger.Warn("load_lfb - fast-forward failed, block worker will sync sequentially",
+					zap.Error(err))
+			}
+		} else {
+			// Sync blocks from our LFB+1 to sharder's LFB
+			for r := b.Round + 1; r <= sharderLFB.Round; r++ {
+				fetchCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				syncBlock, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+				cancel()
+				if err != nil || syncBlock == nil {
+					logging.Logger.Warn("load_lfb - failed to sync block from sharders",
+						zap.Int64("round", r), zap.Error(err))
+					break
+				}
+				if err := mc.VerifyBlockNotarization(ctx, syncBlock); err != nil {
+					logging.Logger.Warn("load_lfb - sync block failed notarization",
+						zap.Int64("round", r), zap.Error(err))
+					break
+				}
+				// Push to block processor to finalize
+				if err := mc.PushToBlockProcessor(syncBlock); err != nil {
+					logging.Logger.Warn("load_lfb - failed to push sync block",
+						zap.Int64("round", r), zap.Error(err))
+				}
+			}
+		}
+	}
+
+	// Reset LFB ticket to match actual LFB after any rollback during startup.
+	// This ensures the ticket is not set too high from stale network data.
+	mc.Chain.ResetLFBTicket(ctx, b)
+
+	// Mark LFB loading as complete - workers can now call BumpLFBTicket
+	// and LFBTicketHandler can accept network tickets
+	mc.Chain.SetLFBLoadingComplete()
+
+	return nil
+}
+
+// verifyBlockContinuityFromSharders fetches blocks from sharders around the
+// candidate round, verifies notarization, and returns the recommended LFB round
+// based on finalization depth (highest block with finalizationDepth+ notarized successors).
+func (mc *Chain) verifyBlockContinuityFromSharders(ctx context.Context, candidateRound int64, targetContinuity int, finalizationDepth int) (int64, error) {
+	var ch []*block.Block
+
+	// Fetch blocks backward from candidate
+	for r := candidateRound; r > 0 && len(ch) < targetContinuity; r-- {
+		fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		b, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+		cancel()
+		if err != nil || b == nil {
+			break
+		}
+		if err := mc.VerifyBlockNotarization(ctx, b); err != nil {
+			break
+		}
+		ch = append([]*block.Block{b}, ch...)
+	}
+
+	// Fetch blocks forward from candidate+1
+	for r := candidateRound + 1; len(ch) < targetContinuity; r++ {
+		fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		b, err := mc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+		cancel()
+		if err != nil || b == nil {
+			break
+		}
+		if err := mc.VerifyBlockNotarization(ctx, b); err != nil {
+			break
+		}
+		ch = append(ch, b)
+	}
+
+	if len(ch) == 0 {
+		return 0, fmt.Errorf("no valid blocks from sharders around round %d", candidateRound)
+	}
+
+	logging.Logger.Info("verify_continuity - continuous chain from sharders",
+		zap.Int("length", len(ch)),
+		zap.Int64("from", ch[0].Round),
+		zap.Int64("to", ch[len(ch)-1].Round))
+
+	// Apply finalization depth
+	if len(ch) > finalizationDepth {
+		idx := len(ch) - 1 - finalizationDepth
+		return ch[idx].Round, nil
+	}
+	return ch[0].Round, nil
+}
+
+// tryFetchCurrentLFBFromSharders attempts to fetch the current LFB from sharders
+// and set it as the miner's LFB. This is used when local RocksDB state is stale or missing.
+// It verifies that blocks have sufficient verification tickets before accepting them.
+func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
+	// Retry fetching from sharders with backoff - sharders may still be starting up
+	var fbs []*chain.BlockConsensus
+	maxRetries := 10
+	for retry := 0; retry < maxRetries; retry++ {
+		fbs = mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
+		if len(fbs) > 0 {
+			break
+		}
+		waitTime := time.Duration(3+retry*2) * time.Second
+		logging.Logger.Info("load_lfb - no LFB from sharders yet, waiting for retry",
+			zap.Int("retry", retry+1),
+			zap.Int("max_retries", maxRetries),
+			zap.Duration("wait", waitTime))
+		time.Sleep(waitTime)
+	}
+	if len(fbs) == 0 {
+		logging.Logger.Warn("load_lfb - no LFB available from sharders after retries, will use genesis")
+		// Mark loading complete even for genesis fallback
+		mc.Chain.SetLFBLoadingComplete()
+		return nil // Fall back to genesis
+	}
+
+	// Find the highest round block that passes notarization verification
+	var best *block.Block
+	for _, fb := range fbs {
+		if fb.Block == nil {
+			continue
+		}
+		// Verify block has sufficient verification tickets
+		if err := mc.VerifyBlockNotarization(ctx, fb.Block); err != nil {
+			logging.Logger.Debug("load_lfb - block from sharder failed notarization verification",
+				zap.Int64("round", fb.Block.Round),
+				zap.String("hash", fb.Block.Hash),
+				zap.Int("tickets", len(fb.Block.GetVerificationTickets())),
+				zap.Error(err))
+			continue
+		}
+		// Block passed verification - check if it's better than current best
+		if best == nil || fb.Block.Round > best.Round {
+			best = fb.Block
+		}
+	}
+
+	if best == nil {
+		logging.Logger.Warn("load_lfb - no valid LFB with sufficient verification tickets from sharders, will use genesis")
+		// Mark loading complete even for genesis fallback
+		mc.Chain.SetLFBLoadingComplete()
+		return nil // Fall back to genesis
+	}
+
+	logging.Logger.Info("load_lfb - fetched current LFB from sharders with valid notarization",
+		zap.Int64("round", best.Round),
+		zap.String("hash", best.Hash),
+		zap.Int("tickets", len(best.GetVerificationTickets())))
+
+	// Verify continuity and finalization depth
+	recommendedLFB, cerr := mc.verifyBlockContinuityFromSharders(ctx, best.Round, 500, 3)
+	if cerr == nil && recommendedLFB < best.Round {
+		logging.Logger.Info("load_lfb - adjusting LFB for finalization depth",
+			zap.Int64("sharder_lfb", best.Round),
+			zap.Int64("recommended_lfb", recommendedLFB))
+		rb, rerr := mc.GetNotarizedBlockFromSharders(ctx, "", recommendedLFB)
+		if rerr == nil && rb != nil {
+			if verr := mc.VerifyBlockNotarization(ctx, rb); verr == nil {
+				best = rb
+			}
+		}
+	}
+
+	// Try to initialize the block's state from local RocksDB
+	best.SetStateStatus(block.StateSuccessful)
+	if err := mc.InitBlockState(best); err != nil {
+		best.SetStateStatus(0)
+		// State init failed - this happens when RocksDB is empty/cleared
+		// Blockchain state is cumulative - we can't just sync a single block's state
+		// Must start from genesis and replay blocks to rebuild state
+		logging.Logger.Warn("load_lfb - can't initialize LFB state (local state DB empty?), "+
+			"will start from genesis and sync incrementally",
+			zap.Int64("network_lfb_round", best.Round),
+			zap.String("network_lfb_hash", best.Hash),
+			zap.Error(err))
+		// Mark loading complete even for genesis fallback
+		mc.Chain.SetLFBLoadingComplete()
+		return nil // Fall back to genesis - state will be built as blocks are synced
+	}
+
+	mc.SetLatestFinalizedBlock(ctx, best)
+
+	// Set current round to LFB round (handles both forward sync and rollback)
+	if best.Round != mc.GetCurrentRound() {
+		mc.SetCurrentRound(best.Round)
+	}
+
+	logging.Logger.Info("load_lfb - successfully set LFB from sharders",
+		zap.Int64("round", best.Round),
+		zap.String("hash", best.Hash))
+
+	// Reset LFB ticket to match actual LFB after loading from sharders.
+	// This ensures the ticket is not set too high from stale network data.
+	mc.Chain.ResetLFBTicket(ctx, best)
+
+	// Mark LFB loading as complete - workers can now call BumpLFBTicket
+	// and LFBTicketHandler can accept network tickets
+	mc.Chain.SetLFBLoadingComplete()
 
 	return nil
 }
@@ -389,33 +731,88 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 		return // node leaves BC, don't do anything here
 	}
 
-	if mc.isSyncingBlocks() {
-		return nil
-	}
+	nyxActive := mc.isHardforkActive("Nyx", b.Round)
 
-	dkgSum, err := LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
-	if err != nil {
-		logging.Logger.Error("[mvc] view change failed to load dkg summary",
-			zap.Error(err),
-			zap.Int64("mb number", mb.MagicBlockNumber))
-		return nil
-	}
+	var dkgSum *bls.DKGSummary
 
-	dkgSum.IsFinalized = true
-	if err := StoreDKGSummary(ctx, dkgSum); err != nil {
-		logging.Logger.Error("[mvc] view change failed to update dkg summary",
-			zap.Error(err),
-			zap.Int64("mb number", mb.MagicBlockNumber))
-		return err
+	if nyxActive {
+		// Nyx: Prefer the in-memory viewChangeDKG if available,
+		// because the stored summary may be from a stale (failed) VC attempt whose
+		// shares don't match the finalized MB's MPKs.
+		mc.viewChangeProcess.Lock()
+		vcDKG := mc.viewChangeProcess.viewChangeDKG
+		mc.viewChangeProcess.Unlock()
+
+		if vcDKG != nil && vcDKG.MagicBlockNumber == mb.MagicBlockNumber {
+			dkgSum = vcDKG.GetDKGSummary()
+			dkgSum.IsFinalized = true
+			if storeErr := StoreDKGSummary(ctx, dkgSum); storeErr != nil {
+				logging.Logger.Error("[mvc] view change - failed to store fresh DKG from viewChangeDKG",
+					zap.Error(storeErr),
+					zap.Int64("mb number", mb.MagicBlockNumber))
+			} else {
+				logging.Logger.Info("[mvc] view change - stored fresh DKG from in-memory viewChangeDKG",
+					zap.Int64("mb number", mb.MagicBlockNumber))
+			}
+		} else {
+			var loadErr error
+			dkgSum, loadErr = LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+			if loadErr != nil {
+				logging.Logger.Error("[mvc] view change failed to load dkg summary",
+					zap.Error(loadErr),
+					zap.Int64("mb number", mb.MagicBlockNumber))
+				return nil
+			}
+			// Don't finalize here — SetDKGSFromStore validates Pi first.
+			logging.Logger.Info("[mvc] view change - loaded DKG from store",
+				zap.Int64("mb number", mb.MagicBlockNumber),
+				zap.Bool("is_finalized", dkgSum.IsFinalized))
+		}
+	} else {
+		// Pre-Nyx (staging behavior): load from store, mark finalized immediately
+		var loadErr error
+		dkgSum, loadErr = LoadDKGSummary(ctx, strconv.FormatInt(mb.MagicBlockNumber, 10))
+		if loadErr != nil {
+			logging.Logger.Error("[mvc] view change failed to load dkg summary",
+				zap.Error(loadErr),
+				zap.Int64("mb number", mb.MagicBlockNumber))
+			return nil
+		}
+		dkgSum.IsFinalized = true
+		if storeErr := StoreDKGSummary(ctx, dkgSum); storeErr != nil {
+			logging.Logger.Error("[mvc] view change failed to update dkg summary",
+				zap.Error(storeErr),
+				zap.Int64("mb number", mb.MagicBlockNumber))
+			return storeErr
+		}
 	}
 
 	if err := SetDKG(ctx, mb, dkgSum); err != nil {
+		if nyxActive {
+			// Nyx: DKG failure is non-fatal. Keep the MB so GetMagicBlock returns
+			// the correct MB. GetDKG will return nil, causing the miner to skip
+			// VRF signing (both GetBlsShare and AddVRFShare handle nil DKG).
+			logging.Logger.Error("[mvc] view change set dkg failed - miner will skip VRF signing for this MB's rounds",
+				zap.Int64("mb number", mb.MagicBlockNumber),
+				zap.Int64("mb sr", mb.StartingRound),
+				zap.Error(err))
+			return nil // Don't block finalization
+		}
+		// Pre-Nyx: DKG failure blocks finalization
 		logging.Logger.Error("[mvc] view change set dkg failed",
 			zap.Int64("mb number", mb.MagicBlockNumber),
 			zap.Int64("mb sr", mb.StartingRound),
 			zap.Error(err))
 		return err
 	}
+
+	// Update the latest finalized magic block - this is critical for the chain to
+	// recognize the new magic block and properly validate blocks after view change
+	mc.SetLatestFinalizedMagicBlock(b)
+	logging.Logger.Info("[mvc] view change - set latest finalized magic block",
+		zap.Int64("mb number", mb.MagicBlockNumber),
+		zap.Int64("mb sr", mb.StartingRound),
+		zap.String("mb hash", mb.Hash))
 
 	return
 }

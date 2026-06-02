@@ -32,6 +32,8 @@ var (
 	MinerNotarizedBlockSender node.EntitySendHandler
 	// DKGShareSender - Send dkg share to a node
 	DKGShareSender node.EntityRequestor
+	// DKGShareRecoverySender - Request a recovery share from a peer
+	DKGShareRecoverySender node.EntityRequestor
 )
 
 /*SetupM2MSenders - setup senders for miner to miner communication */
@@ -109,6 +111,7 @@ func x2mRespondersMap() map[string]func(http.ResponseWriter, *http.Request) {
 		getNotarizedBlockX2MV1Pattern: NotarizedBlockSendHandler,
 		"/v1/_x2m/state/get":          PartialStateHandler,
 		"/v1/_m2m/dkg/share":          SignShareRequestHandler,
+		"/v1/_m2m/dkg/recover_share":  RecoverShareRequestHandler,
 		"/v1/_m2m/chain/start":        StartChainRequestHandler,
 	}
 
@@ -133,6 +136,7 @@ func SetupM2MRequestors() {
 	dkgShareEntityMetadata := datastore.GetEntityMetadata("dkg_share")
 	options := &node.SendOptions{Timeout: node.TimeoutSmallMessage, MaxRelayLength: 0, CurrentRelayLength: 0, Compress: false}
 	DKGShareSender = node.RequestEntityHandler("/v1/_m2m/dkg/share", options, dkgShareEntityMetadata)
+	DKGShareRecoverySender = node.RequestEntityHandler("/v1/_m2m/dkg/recover_share", options, dkgShareEntityMetadata)
 }
 
 // vrfShareHandler - handle the vrf share.

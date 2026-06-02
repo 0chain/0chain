@@ -75,6 +75,39 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 	if err != nil {
 		bsc, err := c.getBlockStateChange(b)
 		if err != nil {
+			// Fallback: try to fetch the state root node from peers.
+			// This handles the case where the block is old and peers don't cache state changes,
+			// but the state root might still be available in their state DB.
+			logging.Logger.Info("ComputeOrSyncState - getBlockStateChange failed, trying GetStateNodes fallback",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Error(err))
+
+			fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			if fetchErr := c.GetStateNodes(fetchCtx, []util.Key{b.ClientStateHash}); fetchErr == nil {
+				cancel()
+				// Try to initialize block state with the fetched root
+				if initErr := b.InitStateDB(c.GetStateDB()); initErr == nil {
+					// Now sync any missing intermediate nodes
+					if syncErr := c.syncBlockMissingNodes(ctx, b); syncErr != nil {
+						logging.Logger.Warn("ComputeOrSyncState - syncBlockMissingNodes failed",
+							zap.Int64("round", b.Round),
+							zap.String("block", b.Hash),
+							zap.Error(syncErr))
+						// Continue anyway - partial state might still work
+					}
+					logging.Logger.Info("ComputeOrSyncState - state recovered via GetStateNodes fallback",
+						zap.Int64("round", b.Round),
+						zap.String("block", b.Hash))
+					return nil
+				}
+			} else {
+				cancel()
+				logging.Logger.Warn("ComputeOrSyncState - GetStateNodes fallback failed",
+					zap.Int64("round", b.Round),
+					zap.String("block", b.Hash),
+					zap.Error(fetchErr))
+			}
 			return err
 		}
 		if bsc != nil {
@@ -92,6 +125,54 @@ func (c *Chain) ComputeOrSyncState(ctx context.Context, b *block.Block) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// syncBlockMissingNodes syncs any missing intermediate state nodes from peers.
+// This iterates through the block's state tree and fetches any missing nodes.
+func (c *Chain) syncBlockMissingNodes(ctx context.Context, b *block.Block) error {
+	if b == nil || b.ClientState == nil {
+		return nil
+	}
+
+	for i := 0; i < 100; i++ { // max 100 iterations to prevent infinite loop
+		missing, err := b.ClientState.HasMissingNodes(ctx)
+		if err != nil {
+			logging.Logger.Warn("syncBlockMissingNodes - HasMissingNodes failed",
+				zap.Int64("round", b.Round),
+				zap.String("block", b.Hash),
+				zap.Error(err))
+			return err
+		}
+
+		if !missing {
+			logging.Logger.Debug("syncBlockMissingNodes - no more missing nodes",
+				zap.Int64("round", b.Round),
+				zap.Int("iterations", i))
+			return nil
+		}
+
+		keys := b.ClientState.GetMissingNodeKeys()
+		if len(keys) == 0 {
+			return nil
+		}
+
+		logging.Logger.Info("syncBlockMissingNodes - syncing missing nodes",
+			zap.Int64("round", b.Round),
+			zap.Int("missing_count", len(keys)),
+			zap.Int("iteration", i))
+
+		if err := c.GetStateNodes(ctx, keys); err != nil {
+			logging.Logger.Warn("syncBlockMissingNodes - GetStateNodes failed",
+				zap.Int64("round", b.Round),
+				zap.Int("keys", len(keys)),
+				zap.Error(err))
+			return err
+		}
+	}
+
+	logging.Logger.Warn("syncBlockMissingNodes - reached max iterations",
+		zap.Int64("round", b.Round))
 	return nil
 }
 

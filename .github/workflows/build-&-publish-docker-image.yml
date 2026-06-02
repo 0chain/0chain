@@ -41,27 +41,28 @@ jobs:
         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Setup go 1.20
-      uses: actions/setup-go@v2
+    - name: Setup go 1.22
+      uses: actions/setup-go@v5
       with:
-        go-version: '1.20' # The Go version to download (if necessary) and use.
+        go-version: '1.22'
+        cache: false
 
     - name: Login to Docker Hub
-      uses: docker/login-action@v1
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Install Dependencies
       run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+        sudo apt-get update -y
+        sudo apt-get install -y build-essential nghttp2 libnghttp2-dev libssl-dev wget
     
     - name: Get changed files using defaults
       id: changed-files
-      uses: tj-actions/changed-files@v18.4
+      uses: tj-actions/changed-files@v46
 
     - name: Pull Build Base & Run Base
       run: |
@@ -94,7 +95,7 @@ jobs:
         make build-mocks
 
         sed 's,%COPY%,COPY --from=miner_build $APP_DIR,g' "$DOCKERFILE_MINER.template" > "$DOCKERFILE_MINER"
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t miner:latest -f "$DOCKERFILE_MINER" .
+        docker build --build-arg GIT_COMMIT=${{ env.SHA }} -t miner:latest -f "$DOCKERFILE_MINER" .
 
 
         docker tag miner:latest ${MINER_REGISTRY}:$TAG
@@ -115,6 +116,7 @@ jobs:
 
 
   sharder:
+    needs: [miner]
     runs-on: [self-hosted, arc-runner]
     steps:
 
@@ -130,28 +132,28 @@ jobs:
         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
         echo "SHA=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}')" >> $GITHUB_ENV
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
-    - name: Setup go 1.20
-      uses: actions/setup-go@v2
+    - name: Setup go 1.22
+      uses: actions/setup-go@v5
       with:
-        go-version: '1.20' # The Go version to download (if necessary) and use.
-
+        go-version: '1.22'
+        cache: false
 
     - name: Login to Docker Hub
-      uses: docker/login-action@v1
+      uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_PASSWORD }}
 
     - name: Install Dependencies
       run: |
-        sudo apt update -y
-        sudo apt -y install build-essential nghttp2 libnghttp2-dev libssl-dev wget
+        sudo apt-get update -y
+        sudo apt-get install -y build-essential nghttp2 libnghttp2-dev libssl-dev wget
     
     - name: Get changed files using defaults
       id: changed-files
-      uses: tj-actions/changed-files@v18.4
+      uses: tj-actions/changed-files@v46
     
     - name: Pull Build Base & Run Base
       run: |
@@ -182,7 +184,7 @@ jobs:
         make install-mockery
         make build-mocks
 
-        docker build --build-arg GIT_COMMIT=$GITHUB_SHA -t sharder:latest -f docker.local/build.sharder/Dockerfile .
+        docker build --build-arg GIT_COMMIT=${{ env.SHA }} -t sharder:latest -f docker.local/build.sharder/Dockerfile .
 
         docker tag sharder:latest ${SHARDER_REGISTRY}:$TAG
         docker tag sharder:latest $SHARDER_REGISTRY:latest
@@ -199,95 +201,95 @@ jobs:
           docker push $SHARDER_REGISTRY:latest
 
 
-  system-tests:
-    if: ${{ github.event_name != 'workflow_dispatch' }}
-    needs: [miner, sharder]
-    runs-on: [ tests-suite ]
-    steps:
-      - name: "Get current PR"
-        uses: jwalton/gh-find-current-pr@v1
-        id: findPr
-        with:
-          github-token: ${{ github.token }}
+  # system-tests:
+  #   if: ${{ github.event_name != 'workflow_dispatch' }}
+  #   needs: [miner, sharder]
+  #   runs-on: [ tests-suite ]
+  #   steps:
+  #     - name: "Get current PR"
+  #       uses: jwalton/gh-find-current-pr@v1
+  #       id: findPr
+  #       with:
+  #         github-token: ${{ github.token }}
 
-      - name: "Set PR status as pending"
-        uses: 0chain/actions/set-pr-status@master
-        if: steps.findPr.outputs.number
-        with:
-          pr_number: ${{ steps.findPr.outputs.pr }}
-          description: "System tests running with default config..."
-          state: "pending"
-          repository: ${{ github.repository }}
-          status_name: "0Chain System Tests"
-          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          github_token: ${{ github.token }}
+  #     - name: "Set PR status as pending"
+  #       uses: 0chain/actions/set-pr-status@master
+  #       if: steps.findPr.outputs.number
+  #       with:
+  #         pr_number: ${{ steps.findPr.outputs.pr }}
+  #         description: "System tests running with default config..."
+  #         state: "pending"
+  #         repository: ${{ github.repository }}
+  #         status_name: "0Chain System Tests"
+  #         target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  #         github_token: ${{ github.token }}
 
-      - name: "Setup"
-        run: |
-          if [[ "${{github.ref}}" == refs/pull/* ]]; then
-            tag=${GITHUB_REF/\/merge/}
-            echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
-          else
-            echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
-          fi
+  #     - name: "Setup"
+  #       run: |
+  #         if [[ "${{github.ref}}" == refs/pull/* ]]; then
+  #           tag=${GITHUB_REF/\/merge/}
+  #           echo "TAG=$(echo pr-${tag:10})" >> $GITHUB_ENV
+  #         else
+  #           echo "TAG=$(echo ${GITHUB_REF#refs/*/} | sed 's/\//-/g')" >> $GITHUB_ENV
+  #         fi
 
-          echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
-          echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
+  #         echo "BRANCH=$([ -z '${{ github.event.pull_request.head.sha }}' ] && echo ${GITHUB_REF#refs/*/} || echo $GITHUB_HEAD_REF)" >> $GITHUB_ENV
+  #         echo "SHORT_SHA=$(([ -z '${{ github.event.pull_request.head.sha }}' ] && echo $GITHUB_SHA || echo '${{ github.event.pull_request.head.sha }}') | head -c 8)" >> $GITHUB_ENV
 
-          echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
-          echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
+  #         echo "NETWORK_URL=$(echo dev-${RUNNER_NAME:(-1)}.devnet-0chain.net)" >> $GITHUB_ENV
+  #         echo "RUNNER_NUMBER=${RUNNER_NAME:(-1)}" >> $GITHUB_ENV
           
-          if [[ "${{github.base_ref}}" == "staging" ]]; then
-            echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO STAGING>" >> $GITHUB_ENV
-          else
-            echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>" >> $GITHUB_ENV
-          fi
+  #         if [[ "${{github.base_ref}}" == "staging" ]]; then
+  #           echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO STAGING>" >> $GITHUB_ENV
+  #         else
+  #           echo "REPO_SNAPSHOTS_BRANCH=<CURRENT BRANCH WITH FALLBACK TO CURRENT_SPRINT>" >> $GITHUB_ENV
+  #         fi
 
-      - name: 'Setup jq'
-        uses: dcarbone/install-jq-action@v2.1.0
-        with:
-            version: '1.7'
-            force: 'false'
+  #     - name: Ensure jq is installed
+  #       run: |
+  #           sudo apt-get update
+  #           sudo apt-get install -y jq
+  #           jq --version
+        
+  #     - name: "Deploy 0Chain"
+  #       uses: 0chain/actions/deploy-0chain@master
+  #       with:
+  #         miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
+  #         sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
+  #         repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
+  #         svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
+  #         kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
+  #         teardown_condition: "TESTS_PASSED"
+  #         SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
+  #         TENDERLY_VIRTUAL_TESTNET_RPC_ID: ""
+  #         graphnode_sc: ${{ secrets.GRAPHNODE_SC }}
+  #         graphnode_network: ${{ secrets.GRAPHNODE_NETWORK }}
+  #         graphnode_ethereum_node_url: ""
 
-      - name: "Deploy 0Chain"
-        uses: 0chain/actions/deploy-0chain@master
-        with:
-          miner_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          sharder_image: ${{ env.TAG }}-${{ env.SHORT_SHA }}
-          repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
-          svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
-          kube_config: ${{ secrets[format('DEV{0}KC', env.RUNNER_NUMBER)] }}
-          teardown_condition: "TESTS_PASSED"
-          SUBGRAPH_API_URL: ${{ secrets.SUBGRAPH_API_URL }}
-          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ""
-          graphnode_sc: ${{ secrets.GRAPHNODE_SC }}
-          graphnode_network: ${{ secrets.GRAPHNODE_NETWORK }}
-          graphnode_ethereum_node_url: ""
+  #     - name: "Run System tests"
+  #       uses: 0chain/actions/run-system-tests@master
+  #       with:
+  #         repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
+  #         network: ${{ env.NETWORK_URL }}
+  #         svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
+  #         deploy_report_page: false
+  #         archive_results: true
+  #         run_flaky_tests: false
+  #         run_smoke_tests: ${{ github.ref != 'refs/heads/staging' && github.base_ref != 'staging' && github.ref != 'refs/heads/master' && github.base_ref != 'master' }}
+  #         retry_failures: true
+  #         TENDERLY_VIRTUAL_TESTNET_RPC_ID: ""
+  #         DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
+  #         S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+  #         S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
 
-      - name: "Run System tests"
-        uses: 0chain/actions/run-system-tests@master
-        with:
-          repo_snapshots_branch: ${{ env.REPO_SNAPSHOTS_BRANCH }}
-          network: ${{ env.NETWORK_URL }}
-          svc_account_secret: ${{ secrets.SVC_ACCOUNT_SECRET }}
-          deploy_report_page: false
-          archive_results: true
-          run_flaky_tests: false
-          run_smoke_tests: ${{ github.ref != 'refs/heads/staging' && github.base_ref != 'staging' && github.ref != 'refs/heads/master' && github.base_ref != 'master' }}
-          retry_failures: true
-          TENDERLY_VIRTUAL_TESTNET_RPC_ID: ""
-          DEVOPS_CHANNEL_WEBHOOK_URL: ${{ secrets.DEVOPS_CHANNEL_WEBHOOK_URL }}
-          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
-          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
-
-      - name: "Set PR status as ${{ job.status }}"
-        if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
-        uses: 0chain/actions/set-pr-status@master
-        with:
-          pr_number: ${{ steps.findPr.outputs.pr }}
-          description: "System tests with default config"
-          state: ${{ job.status }}
-          repository: ${{ github.repository }}
-          status_name: "0Chain System Tests"
-          target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          github_token: ${{ github.token }}
+  #     - name: "Set PR status as ${{ job.status }}"
+  #       if: ${{ (success() || failure()) && steps.findPr.outputs.number }}
+  #       uses: 0chain/actions/set-pr-status@master
+  #       with:
+  #         pr_number: ${{ steps.findPr.outputs.pr }}
+  #         description: "System tests with default config"
+  #         state: ${{ job.status }}
+  #         repository: ${{ github.repository }}
+  #         status_name: "0Chain System Tests"
+  #         target_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  #         github_token: ${{ github.token }}

@@ -231,17 +231,21 @@ func Init(workDir string, sViper *viper.Viper) {
 		}
 	}
 
-	bStore := &BlockStore{
-		cache:                 noOpCache{},
-		blockMetadataProvider: datastore.GetEntityMetadata("block"),
-		basePath:              basePath,
-	}
-
+	var cache cacher = noOpCache{}
 	if sViper != nil {
 		cViper := sViper.Sub("cache")
 		if cViper != nil {
-			bStore.cache = initCache(cViper)
+			cache = initCache(cViper)
 		}
 	}
-	SetupStore(bStore)
+
+	metaProvider := datastore.GetEntityMetadata("block")
+	// DB connection for round-ordered compaction is set later via SetCompactorDB
+	// after the sharder's postgres is initialized.
+	pStore := NewPackBlockStore(basePath, cache, metaProvider, nil)
+	SetupStore(pStore)
+
+	logging.Logger.Info("block store initialized with pack support",
+		zap.String("base_path", basePath),
+		zap.Int("existing_packs", pStore.PackCount()))
 }

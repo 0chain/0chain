@@ -435,8 +435,8 @@ func AddMockBlobbers(
 					ServiceCharge:   bb.StakePoolSettings.ServiceChargeRatio,
 					LastHealthCheck: bb.LastHealthCheck,
 				},
-				ChallengesPassed:    uint64(i),
-				ChallengesCompleted: uint64(i + 1),
+				ChallengesPassed:    int64(i),
+				ChallengesCompleted: int64(i + 1),
 				RankMetric:          float64(i) / (float64(i) + 1),
 				NotAvailable:        bb.NotAvailable,
 			}

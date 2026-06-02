@@ -305,6 +305,11 @@ func (sc *Chain) getRoundSummaries(ctx context.Context, bounds RangeBounds) []*r
 			// Try from the store
 			roundEntity, _ = sc.GetRoundFromStore(ctx, index)
 		}
+		// Don't serve rounds with empty BlockHash — these are unfinalized
+		// timeout rounds that should not be propagated to other sharders.
+		if roundEntity != nil && roundEntity.BlockHash == "" {
+			roundEntity = nil
+		}
 		roundS[loop] = roundEntity
 		loop++
 	}

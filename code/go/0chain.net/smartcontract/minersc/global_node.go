@@ -381,15 +381,18 @@ func (gn *GlobalNode) prevMagicBlock(balances cstate.StateContextI) (pmb *block.
 	}
 
 	if !isLocalMB {
-		// set mb to local store to avoid future reading from state
-		logging.Logger.Debug("set magic block to local store",
-			zap.Int64("starting round", mb.StartingRound),
-			zap.Int64("magic block number", mb.MagicBlockNumber),
-			zap.String("hash", mb.Hash),
-		)
-
-		// store the mb to local store
-		balances.SetMagicBlock(mb)
+		// Only cache MB if not ahead of current chain's finalized MB.
+		// Prevents orphan MBs (created during DKG Wait but never finalized) from
+		// polluting MagicBlockStorage, causing verify_related_mb_presence errors.
+		currentMB := balances.GetChainCurrentMagicBlock()
+		if currentMB != nil && mb.MagicBlockNumber <= currentMB.MagicBlockNumber {
+			logging.Logger.Debug("set magic block to local store",
+				zap.Int64("starting round", mb.StartingRound),
+				zap.Int64("magic block number", mb.MagicBlockNumber),
+				zap.String("hash", mb.Hash),
+			)
+			balances.SetMagicBlock(mb)
+		}
 	}
 
 	return mb, nil

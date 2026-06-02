@@ -16,6 +16,7 @@ import (
 
 	"0chain.net/chaincore/block"
 	"0chain.net/chaincore/chain"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/round"
 	"0chain.net/chaincore/state"
 	"0chain.net/core/common"
@@ -135,11 +136,16 @@ func (sc *Chain) GetBlockHash(ctx context.Context, roundNumber int64) (string, e
 
 	var err error
 	r := sc.GetSharderRound(roundNumber)
-	if r == nil {
-		r, err = sc.GetRoundFromStore(ctx, roundNumber)
-		if err != nil {
-			return "", err
-		}
+	if r != nil && r.BlockHash != "" {
+		return r.BlockHash, nil
+	}
+
+	// In-memory round may have empty BlockHash because UpdateFinalizedBlock
+	// finalizes a clone (not the original). Fall through to the store which
+	// has the finalized round with the correct BlockHash.
+	r, err = sc.GetRoundFromStore(ctx, roundNumber)
+	if err != nil {
+		return "", err
 	}
 	if r.BlockHash == "" {
 		return "", fmt.Errorf("round %d has empty block hash", roundNumber)
@@ -165,6 +171,123 @@ type blocksLoaded struct {
 	lfmb  *block.Block // magic block related to the lfb
 	r     *round.Round // round related to the lfb
 	nlfmb *block.Block // magic block equal to the lfmb or newer
+}
+
+// verifyBlockContinuityFromStore walks blocks around candidateRound in local
+// blockstore, verifies each has valid notarization, and returns the recommended
+// LFB round (highest block with finalizationDepth+ notarized successors).
+func (sc *Chain) verifyBlockContinuityFromStore(ctx context.Context, candidateRound int64, targetContinuity int, finalizationDepth int) (int64, error) {
+	const minConsecutiveBlocks = 5 // need at least 5 consecutive valid blocks for LFB
+
+	// Walk backward from candidateRound looking for a sequence of consecutive valid blocks.
+	// When we hit an invalid block, reset the chain and keep looking further back.
+	var chain []*block.Block
+
+	for r := candidateRound; r > 0 && r > candidateRound-int64(targetContinuity); r-- {
+		hash, err := sc.GetBlockHash(ctx, r)
+		if err != nil {
+			// No hash - reset chain and continue looking
+			if len(chain) > 0 {
+				logging.Logger.Debug("verify_continuity - gap in blocks, resetting chain",
+					zap.Int64("round", r), zap.Int("chain_len", len(chain)))
+			}
+			chain = nil
+			continue
+		}
+		b, err := sc.GetBlockFromStore(hash, r)
+		if err != nil {
+			// No block - reset chain and continue
+			chain = nil
+			continue
+		}
+		if err := sc.VerifyBlockNotarization(ctx, b); err != nil {
+			logging.Logger.Debug("verify_continuity - block failed notarization, resetting chain",
+				zap.Int64("round", r), zap.Error(err))
+			// Invalid block - reset chain and continue looking
+			chain = nil
+			continue
+		}
+
+		// Valid block - prepend to chain
+		chain = append([]*block.Block{b}, chain...)
+
+		// Check if we have enough consecutive valid blocks
+		if len(chain) >= minConsecutiveBlocks {
+			logging.Logger.Debug("verify_continuity - found consecutive valid blocks",
+				zap.Int("count", len(chain)),
+				zap.Int64("from", chain[0].Round),
+				zap.Int64("to", chain[len(chain)-1].Round))
+			break
+		}
+	}
+
+	if len(chain) < minConsecutiveBlocks {
+		return 0, fmt.Errorf("could not find %d consecutive valid blocks within %d rounds back from %d (found %d)",
+			minConsecutiveBlocks, targetContinuity, candidateRound, len(chain))
+	}
+
+	// Now walk forward from the end of our chain to extend it
+	lastRound := chain[len(chain)-1].Round
+	for r := lastRound + 1; len(chain) < targetContinuity; r++ {
+		hash, err := sc.GetBlockHash(ctx, r)
+		if err != nil {
+			break // no more blocks
+		}
+		b, err := sc.GetBlockFromStore(hash, r)
+		if err != nil {
+			break
+		}
+		if err := sc.VerifyBlockNotarization(ctx, b); err != nil {
+			break // chain ends at first invalid block going forward
+		}
+		chain = append(chain, b)
+	}
+
+	logging.Logger.Info("verify_continuity - continuous chain from local store",
+		zap.Int("length", len(chain)),
+		zap.Int64("from", chain[0].Round),
+		zap.Int64("to", chain[len(chain)-1].Round))
+
+	// Apply finalization depth: highest block with finalizationDepth successors
+	if len(chain) > finalizationDepth {
+		idx := len(chain) - 1 - finalizationDepth
+		return chain[idx].Round, nil
+	}
+
+	// Not enough depth — use earliest block (safest)
+	return chain[0].Round, nil
+}
+
+// fetchMissingBlocksFromSharders fetches blocks from peer sharders to fill gaps
+// in local blockstore around the given round.
+func (sc *Chain) fetchMissingBlocksFromSharders(ctx context.Context, aroundRound int64, count int) int {
+	fetched := 0
+	for r := aroundRound; r > aroundRound-int64(count) && r > 0; r-- {
+		hash, err := sc.GetBlockHash(ctx, r)
+		if err == nil {
+			if _, berr := sc.GetBlockFromStore(hash, r); berr == nil {
+				continue
+			}
+		}
+		fetchCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		nb, nerr := sc.GetNotarizedBlockFromSharders(fetchCtx, "", r)
+		cancel()
+		if nerr != nil || nb == nil {
+			continue
+		}
+		if serr := blockstore.GetStore().Write(nb); serr != nil {
+			logging.Logger.Debug("fetch_missing - failed to store block",
+				zap.Int64("round", r), zap.Error(serr))
+			continue
+		}
+		fetched++
+	}
+	if fetched > 0 {
+		logging.Logger.Info("fetch_missing - fetched blocks from sharders",
+			zap.Int("fetched", fetched),
+			zap.Int64("around_round", aroundRound))
+	}
+	return fetched
 }
 
 func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
@@ -195,13 +318,56 @@ func (sc *Chain) setupLatestBlocks(ctx context.Context, bl *blocksLoaded) (
 	// check is it notarized
 	err = sc.VerifyBlockNotarization(ctx, bl.lfb)
 	if err != nil {
-		logging.Logger.Error("load_lfb - verify notarization failed",
+		logging.Logger.Error("load_lfb - verify notarization failed, triggering rollback",
 			zap.Error(err),
 			zap.Int64("round", bl.lfb.Round),
 			zap.String("block", bl.lfb.Hash))
-		err = nil // not a real error
-		return    // do nothing, if not notarized
+		// Return errInvalidState to trigger rollback to find a block with valid notarization
+		return common.NewErrorf(errInvalidStateCode, "block notarization failed: %v", err)
 	}
+	// Verify block continuity and finalization depth
+	recommendedLFB, cerr := sc.verifyBlockContinuityFromStore(ctx, bl.lfb.Round, 500, 3)
+	if cerr != nil {
+		logging.Logger.Warn("load_lfb - continuity check failed, proceeding with current LFB",
+			zap.Int64("round", bl.lfb.Round), zap.Error(cerr))
+		// Don't rollback — state is valid at current round, continuity check is advisory
+	} else if recommendedLFB < bl.lfb.Round {
+		logging.Logger.Info("load_lfb - finalization depth recommends earlier LFB, attempting switch",
+			zap.Int64("current_lfb", bl.lfb.Round),
+			zap.Int64("recommended_lfb", recommendedLFB))
+		// Try to load the recommended block and its round from store
+		recRound, roundErr := sc.GetRoundFromStore(ctx, recommendedLFB)
+		if roundErr == nil {
+			recBlock, blkErr := sc.GetBlockFromStore(recRound.BlockHash, recommendedLFB)
+			if blkErr == nil {
+				recBlock.SetStateStatus(block.StateSuccessful)
+				if stErr := sc.InitBlockState(recBlock); stErr == nil {
+					logging.Logger.Info("load_lfb - switched to recommended LFB",
+						zap.Int64("round", recommendedLFB))
+					bl.lfb = recBlock
+					bl.r = recRound // IMPORTANT: also update the round!
+					// Update chain's internal state to match the switched LFB
+					sc.SetLatestFinalizedBlock(recBlock)
+					sc.SetCurrentRound(recommendedLFB)
+					// CRITICAL: Finalize the new round so subsequent rounds can be finalized
+					sc.SetRandomSeed(recRound, recRound.GetRandomSeed())
+					recRound.Finalize(recBlock)
+					// CRITICAL: Update the round cache with the new LFB round
+					sc.AddLoadedFinalizedBlocks(recBlock, bl.lfmb, recRound)
+				} else {
+					logging.Logger.Warn("load_lfb - recommended LFB has no state, keeping current",
+						zap.Int64("recommended", recommendedLFB),
+						zap.Int64("keeping", bl.lfb.Round),
+						zap.Error(stErr))
+				}
+			}
+		} else {
+			logging.Logger.Warn("load_lfb - could not load recommended round from store, keeping current",
+				zap.Int64("recommended", recommendedLFB),
+				zap.Error(roundErr))
+		}
+	}
+
 	bl.lfb.SetBlockNotarized()
 
 	// add as notarized
@@ -230,41 +396,55 @@ func (sc *Chain) loadLatestFinalizedMagicBlockFromStore(ctx context.Context,
 			"empty LatestFinalizedMagicBlockHash field") // fatal or genesis
 	}
 
+	// Check if block references itself as containing the LFMB
+	// Use MagicBlock.Hash for comparison (LatestFinalizedMagicBlockHash now stores MB hash, not block hash)
+	if lfb.MagicBlock != nil && lfb.LatestFinalizedMagicBlockHash == lfb.MagicBlock.Hash {
+		return lfb, nil // the same block contains its LFMB
+	}
+
+	// Also check legacy case where LatestFinalizedMagicBlockHash was block hash
 	if lfb.LatestFinalizedMagicBlockHash == lfb.Hash {
 		if lfb.MagicBlock == nil {
-			// fatal
 			return nil, common.NewError("load_lfb", "missing MagicBlock field")
 		}
-		return lfb, nil // the same
+		return lfb, nil // legacy: self-referencing by block hash
 	}
-
-	// load from store
 
 	logging.Logger.Debug("load_lfb (lfmb) from store",
-		zap.String("block_with_magic_block_hash",
-			lfb.LatestFinalizedMagicBlockHash),
-		zap.Int64("block_with_magic_block_round",
-			lfb.LatestFinalizedMagicBlockRound))
+		zap.String("lfmb_hash", lfb.LatestFinalizedMagicBlockHash),
+		zap.Int64("lfmb_round", lfb.LatestFinalizedMagicBlockRound))
 
-	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
-	if err != nil {
-		// fatality, can't find related LFMB
-		return nil, common.NewErrorf("load_lfb",
-			"related magic block not found: hash: %v, err: %v", lfb.LatestFinalizedMagicBlockHash, err)
+	// Primary: Try MagicBlockStorage lookup by round (works for both old and new blocks)
+	entity := sc.MagicBlockStorage.GetByStartingRound(lfb.LatestFinalizedMagicBlockRound)
+	if entity != nil {
+		mb := entity.(*block.MagicBlock)
+		// Create synthetic block wrapper for the magic block
+		lfmb = block.NewBlock("", mb.StartingRound)
+		lfmb.MagicBlock = mb
+		lfmb.Hash = mb.Hash
+		logging.Logger.Debug("load_lfb (lfmb) from MagicBlockStorage",
+			zap.Int64("round", lfmb.Round),
+			zap.String("mb_hash", mb.Hash))
+		return lfmb, nil
 	}
 
-	// with current implementation it's a case
+	// Fallback: Try blockstore read (backward compatibility with old blocks using block hash)
+	lfmb, err = blockstore.GetStore().Read(lfb.LatestFinalizedMagicBlockHash)
+	if err != nil {
+		return nil, common.NewErrorf("load_lfb",
+			"related magic block not found: hash: %v, round: %v, err: %v",
+			lfb.LatestFinalizedMagicBlockHash, lfb.LatestFinalizedMagicBlockRound, err)
+	}
+
 	if lfmb == nil {
-		// fatality, can't find related LFMB
 		return nil, common.NewError("load_lfb",
 			"related magic block not found (no error)")
 	}
 
-	logging.Logger.Debug("load_lfb (lfmb) from store", zap.Int64("round", lfmb.Round),
+	logging.Logger.Debug("load_lfb (lfmb) from blockstore", zap.Int64("round", lfmb.Round),
 		zap.String("hash", lfmb.Hash))
 
 	if lfmb.MagicBlock == nil {
-		// fatal
 		return nil, common.NewError("load_lfb", "missing MagicBlock field")
 	}
 
@@ -364,6 +544,23 @@ func (sc *Chain) LoadLatestMBs(ctx context.Context, fromMBNumber int64) (mbs []*
 				zap.Int64("mb number", i),
 				zap.Int64("round", mb.BlockRound),
 				zap.String("hash", mb.Hash))
+		}
+		// If the block's MagicBlock field is nil, try to load the MB directly
+		// from mb/ RocksDB. This happens when the block is fetched from the
+		// network without embedded MB data.
+		if b.MagicBlock == nil {
+			mbData, mbErr := block.LoadMagicBlock(ctx, mbStr)
+			if mbErr == nil && mbData != nil {
+				b.MagicBlock = mbData
+				logging.Logger.Info("load_latest_mb populated MagicBlock from mb/ store",
+					zap.Int64("mb number", i),
+					zap.Int64("mb_sr", mbData.StartingRound))
+			} else {
+				logging.Logger.Warn("load_latest_mb block has nil MagicBlock and mb/ load failed, skipping",
+					zap.Int64("mb number", i),
+					zap.Error(mbErr))
+				continue
+			}
 		}
 		mbs = append(mbs, b)
 	}
@@ -533,6 +730,142 @@ func (sc *Chain) walkDownLookingForLFB(iter *grocksdb.Iterator, r *round.Round) 
 	return nil, common.NewError("load_lfb", "no valid lfb found")
 }
 
+// discoverNewerMBsFromSharders tries to fetch MBs newer than currentMBNumber
+// from peer sharders and miners. For each found, it calls UpdateMagicBlock
+// (which registers nodes via SetupNodes) and SetLatestFinalizedMagicBlock.
+// This handles the case where the sharder missed a magic block transmission
+// (e.g., was down when the block containing the MB was created by miners).
+// Miners are tried as fallback when no peer sharder has the MB.
+func (sc *Chain) discoverNewerMBsFromSharders(ctx context.Context, currentMBNumber int64, lfbRound int64) {
+	mb := sc.GetLatestMagicBlock()
+	if mb == nil {
+		return
+	}
+	sharderURLs := mb.Sharders.N2NURLs()
+	minerURLs := mb.Miners.N2NURLs()
+	if len(sharderURLs) == 0 && len(minerURLs) == 0 {
+		return
+	}
+
+	verifyFn := func(b *block.Block) bool {
+		return b != nil && b.MagicBlock != nil
+	}
+
+	for nextMBNum := currentMBNumber + 1; ; nextMBNum++ {
+		var fetchedBlock *block.Block
+		var err error
+
+		// Try peer sharders first
+		if len(sharderURLs) > 0 {
+			fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			fetchedBlock, err = httpclientutil.FetchMagicBlockFromSharders(fetchCtx, sharderURLs, nextMBNum, verifyFn)
+			cancel()
+		}
+
+		// If sharders don't have it, try miners (they serve /v1/block/magic/get too)
+		if (fetchedBlock == nil || fetchedBlock.MagicBlock == nil) && len(minerURLs) > 0 {
+			fetchCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			fetchedBlock, err = httpclientutil.FetchMagicBlockFromSharders(fetchCtx, minerURLs, nextMBNum, verifyFn)
+			cancel()
+			if err == nil && fetchedBlock != nil && fetchedBlock.MagicBlock != nil {
+				logging.Logger.Info("load_lfb - fetched MB from miners (not available on peer sharders)",
+					zap.Int64("mb_number", nextMBNum))
+			}
+		}
+
+		if err != nil || fetchedBlock == nil || fetchedBlock.MagicBlock == nil {
+			break // no more newer MBs available
+		}
+
+		// Only activate if the MB's starting round is not far ahead of LFB
+		if fetchedBlock.MagicBlock.StartingRound > lfbRound+500 {
+			logging.Logger.Debug("load_lfb - skipping MB too far ahead of LFB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Int64("mb_sr", fetchedBlock.MagicBlock.StartingRound),
+				zap.Int64("lfb_round", lfbRound))
+			break
+		}
+
+		logging.Logger.Info("load_lfb - discovered newer MB",
+			zap.Int64("mb_number", fetchedBlock.MagicBlock.MagicBlockNumber),
+			zap.Int64("mb_sr", fetchedBlock.MagicBlock.StartingRound),
+			zap.Int("miners", fetchedBlock.MagicBlock.Miners.Size()),
+			zap.Int("sharders", fetchedBlock.MagicBlock.Sharders.Size()))
+
+		if err := sc.UpdateMagicBlock(fetchedBlock.MagicBlock); err != nil {
+			logging.Logger.Error("load_lfb - failed to activate newer MB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Error(err))
+			break
+		}
+		sc.SetLatestFinalizedMagicBlock(fetchedBlock)
+
+		// Also persist the MB to MagicBlockMap store so it's available on next restart
+		bs := fetchedBlock.GetSummary()
+		if err := sc.StoreMagicBlockMapFromBlock(bs.GetMagicBlockMap()); err != nil {
+			logging.Logger.Error("load_lfb - failed to persist discovered MB",
+				zap.Int64("mb_number", nextMBNum),
+				zap.Error(err))
+		}
+
+		// Update URLs for next fetch (new MB might have different nodes)
+		newMB := sc.GetLatestMagicBlock()
+		if newMB != nil {
+			sharderURLs = newMB.Sharders.N2NURLs()
+			minerURLs = newMB.Miners.N2NURLs()
+		}
+	}
+}
+
+// waitForMinersAndDiscover polls miners and sharders indefinitely until a
+// newer MB is discovered or the chain starts progressing. Without the newer
+// MB the sharder can't validate blocks, so there's no point giving up.
+func (sc *Chain) waitForMinersAndDiscover(minerURLs []string, mbNum, lfbRound int64) {
+	if len(minerURLs) == 0 {
+		return
+	}
+
+	verifyFn := func(b *block.Block) bool {
+		return b != nil && b.MagicBlock != nil
+	}
+
+	const pollInterval = 10 * time.Second
+
+	for {
+		time.Sleep(pollInterval)
+
+		// Check if a newer MB was already discovered (e.g., by block processing)
+		currentMB := sc.GetLatestMagicBlock()
+		if currentMB != nil && currentMB.MagicBlockNumber > mbNum {
+			logging.Logger.Info("waitForMinersAndDiscover - newer MB already discovered",
+				zap.Int64("current_mb", currentMB.MagicBlockNumber),
+				zap.Int64("original_mb", mbNum))
+			return
+		}
+
+		// Try to reach any miner and run discovery
+		fetchCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		b, _ := httpclientutil.FetchMagicBlockFromSharders(fetchCtx, minerURLs, mbNum, verifyFn)
+		cancel()
+
+		if b != nil && b.MagicBlock != nil {
+			logging.Logger.Info("waitForMinersAndDiscover - miner is reachable, running MB discovery",
+				zap.Int64("from_mb", mbNum))
+			sc.discoverNewerMBsFromSharders(context.Background(), mbNum, lfbRound)
+
+			// Check if discovery found a newer MB
+			newMB := sc.GetLatestMagicBlock()
+			if newMB != nil && newMB.MagicBlockNumber > mbNum {
+				logging.Logger.Info("waitForMinersAndDiscover - discovered newer MB",
+					zap.Int64("new_mb", newMB.MagicBlockNumber))
+				return
+			}
+			// Miners are up but don't have the newer MB yet (DKG recovery
+			// may still be running). Keep polling.
+		}
+	}
+}
+
 func (sc *Chain) loadLFBRoundAndBlocks(ctx context.Context, hash string, round int64) (*blocksLoaded, error) {
 	r, err := sc.GetRoundFromStore(ctx, round)
 	if err != nil {
@@ -647,6 +980,8 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 	if lfbRound == 0 {
 		// use genesis
 		logging.Logger.Debug("load_lfb - load from event db, use genesis block")
+		// Mark loading complete even for genesis fallback
+		sc.Chain.SetLFBLoadingComplete()
 		return nil
 	}
 
@@ -666,15 +1001,108 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 		logging.Logger.Debug("load_lfb - load from stateDB",
 			zap.Int64("round", lfbr.Round),
 			zap.String("block", lfbr.Hash))
+
+		// Use the highest MB number from RocksDB, not the one stored in LFB.
+		// This fixes a bug where a newer MB (e.g., MB 236) exists in RocksDB but
+		// lfbr.MagicBlockNumber is stale (e.g., 235) because GetCurrentMagicBlock()
+		// at the time of StoreLFBRound hadn't loaded the newer MB yet.
+		mbNumberForLoading := lfbr.MagicBlockNumber
+		highestMBM, mbErr := sc.GetHighestMagicBlockMap(ctx)
+		if mbErr != nil {
+			logging.Logger.Warn("load_lfb - could not get highest MB from RocksDB, using lfbr.MagicBlockNumber",
+				zap.Int64("lfbr_mb_number", lfbr.MagicBlockNumber),
+				zap.Error(mbErr))
+		} else {
+			// Parse the MB number from the ID field (stored as string)
+			highestMBNumber, parseErr := strconv.ParseInt(highestMBM.ID, 10, 64)
+			if parseErr != nil {
+				logging.Logger.Warn("load_lfb - could not parse highest MB number",
+					zap.String("highest_mb_id", highestMBM.ID),
+					zap.Error(parseErr))
+			} else if highestMBNumber > lfbr.MagicBlockNumber {
+				logging.Logger.Info("load_lfb - found newer MB in RocksDB than stored in LFB",
+					zap.Int64("highest_mb_number", highestMBNumber),
+					zap.Int64("lfbr_mb_number", lfbr.MagicBlockNumber))
+				mbNumberForLoading = highestMBNumber
+			}
+		}
+
 		// load and set up latest magic block
-		mbs := sc.LoadLatestMBs(ctx, lfbr.MagicBlockNumber)
+		mbs := sc.LoadLatestMBs(ctx, mbNumberForLoading)
 		if len(mbs) != 0 {
+			// Store all MBs in the MagicBlockStorage
 			for i := len(mbs) - 1; i >= 0; i-- {
+				if mbs[i].MagicBlock != nil {
 				sc.SetMagicBlock(mbs[i].MagicBlock)
 			}
+			}
 
-			sc.UpdateMagicBlock(mbs[0].MagicBlock)
-			sc.SetLatestFinalizedMagicBlock(mbs[0])
+			// Determine which MB to use as LFMB based on LFB round from state DB.
+			// The LFMB starting round should not exceed the LFB round, otherwise
+			// block validation will fail for blocks between LFB and LFMB because
+			// the miner pool won't include all miners that created those blocks.
+			selectedMB := mbs[0]
+			if mbs[0].MagicBlock != nil && mbs[0].MagicBlock.StartingRound > lfbr.Round {
+				logging.Logger.Warn("load_lfb - LFMB starting round ahead of LFB, finding appropriate MB",
+					zap.Int64("lfmb_sr", mbs[0].MagicBlock.StartingRound),
+					zap.Int64("lfb_round", lfbr.Round),
+					zap.Int64("lfmb_number", mbs[0].MagicBlock.MagicBlockNumber))
+				// Find the MB whose starting round is <= lfbr.Round (state DB)
+				for i := 1; i < len(mbs); i++ {
+					if mbs[i].MagicBlock != nil && mbs[i].MagicBlock.StartingRound <= lfbr.Round {
+						logging.Logger.Info("load_lfb - using appropriate MB for LFB round",
+							zap.Int64("lfb_round", lfbr.Round),
+							zap.Int64("mb_sr", mbs[i].MagicBlock.StartingRound),
+							zap.Int64("mb_number", mbs[i].MagicBlock.MagicBlockNumber))
+						selectedMB = mbs[i]
+						break
+					}
+				}
+			}
+
+			// Set PreviousMagicBlock BEFORE calling UpdateMagicBlock so that SetupNodes
+			// includes nodes from the previous MB. This is critical during MB transitions
+			// where a miner may be removed from the new MB but their blocks still need
+			// to be validated.
+			if selectedMB.MagicBlock != nil && selectedMB.MagicBlock.MagicBlockNumber > 1 {
+				// Look for the previous MB in the loaded MBs slice
+				for i := 0; i < len(mbs); i++ {
+					if mbs[i].MagicBlock != nil &&
+						mbs[i].MagicBlock.MagicBlockNumber == selectedMB.MagicBlock.MagicBlockNumber-1 {
+						sc.Chain.PreviousMagicBlock = mbs[i].MagicBlock
+						logging.Logger.Debug("load_lfb - set previous MB for node registration",
+							zap.Int64("prev_mb_number", mbs[i].MagicBlock.MagicBlockNumber),
+							zap.Int64("prev_mb_sr", mbs[i].MagicBlock.StartingRound),
+							zap.Int("prev_miners", mbs[i].MagicBlock.Miners.Size()))
+						break
+					}
+				}
+			}
+
+			// Now set up nodes and LFMB with the selected MB
+			if selectedMB.MagicBlock == nil {
+				logging.Logger.Warn("load_lfb - selected MB block has nil MagicBlock, skipping UpdateMagicBlock",
+					zap.Int64("round", selectedMB.Round),
+					zap.String("hash", selectedMB.Hash))
+			} else {
+				sc.UpdateMagicBlock(selectedMB.MagicBlock)
+				sc.SetLatestFinalizedMagicBlock(selectedMB)
+
+				// Try to discover and activate newer MBs from peer sharders.
+				if selectedMB.MagicBlock.MagicBlockNumber > 1 {
+					sc.discoverNewerMBsFromSharders(ctx, selectedMB.MagicBlock.MagicBlockNumber, lfbRound)
+
+					// Schedule MB discovery retry after miners are up. During startup,
+					// miners may not have their HTTP servers ready yet, so the miner
+					// URL fallback in discoverNewerMBsFromSharders fails. Poll until
+					// at least one miner is reachable, then run discovery.
+					mbNum := selectedMB.MagicBlock.MagicBlockNumber
+					minerURLs := selectedMB.MagicBlock.Miners.N2NURLs()
+					go func() {
+						sc.waitForMinersAndDiscover(minerURLs, mbNum, lfbRound)
+					}()
+				}
+			}
 
 			if lfbr.Round <= lfbRound {
 				// use LFB from state DB when:
@@ -701,7 +1129,8 @@ func (sc *Chain) LoadLatestBlocksFromStore(ctx context.Context) (err error) {
 
 	// sc.UpdateMagicBlock(lfmb.MagicBlock)
 
-	const maxRollbackRounds = 5
+	const maxRollbackRounds = 500
+	const maxLocalFailsBeforeNetworkFetch = 10
 	var i int
 
 loop:
@@ -715,10 +1144,33 @@ loop:
 			zap.String("block", lfbHash))
 		bl, err = sc.loadLFBRoundAndBlocks(ctx, lfbHash, lfbRound)
 		if err != nil {
-			return err
+			logging.Logger.Error("load_lfb - loadLFBRoundAndBlocks failed, rolling back",
+				zap.Int64("round", lfbRound),
+				zap.Error(err))
+			if lfbRound <= 0 {
+				return err
+			}
+			i++
+			if i >= maxRollbackRounds {
+				logging.Logger.Warn("load_lfb - rollback max count reached, falling back to genesis",
+					zap.Int("max", maxRollbackRounds))
+				sc.Chain.SetLFBLoadingComplete()
+				return nil
+			}
+			// Try the previous round — get its block hash from the round store
+			lfbRound = lfbRound - 1
+			prevR, prevErr := sc.GetRoundFromStore(ctx, lfbRound)
+			if prevErr != nil {
+				// Previous round also corrupted — use empty hash and keep rolling back
+				lfbHash = ""
+			} else {
+				lfbHash = prevR.BlockHash
+			}
+			continue
 		}
 
-		if bl.lfb.Round > sc.GetCurrentRound() {
+		// Set current round to LFB round (handles both forward sync and rollback)
+		if bl.lfb.Round != sc.GetCurrentRound() {
 			sc.SetCurrentRound(bl.lfb.Round)
 		}
 
@@ -737,13 +1189,41 @@ loop:
 
 			cerr, ok := err.(*common.Error)
 			if ok && cerr.Is(errInvalidState) {
+				i++
+
+				// After maxLocalFailsBeforeNetworkFetch consecutive local failures,
+				// stop rolling back and try to fetch LFB from peer sharders
+				if i == maxLocalFailsBeforeNetworkFetch {
+					logging.Logger.Warn("load_lfb - too many local failures, fetching LFB from peer sharders",
+						zap.Int("failures", i),
+						zap.Int64("current_round", lfbRound))
+
+					fetchCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					nb, nerr := sc.GetNotarizedBlockFromSharders(fetchCtx, "", lfbRound)
+					cancel()
+					if nerr == nil && nb != nil {
+						logging.Logger.Info("load_lfb - fetched block from peer sharders, retrying",
+							zap.Int64("round", nb.Round),
+							zap.String("block", nb.Hash))
+						// Store the fetched block locally
+						if serr := blockstore.GetStore().Write(nb); serr != nil {
+							logging.Logger.Warn("load_lfb - failed to store fetched block",
+								zap.Int64("round", nb.Round), zap.Error(serr))
+						}
+						lfbRound = nb.Round
+						lfbHash = nb.Hash
+						continue
+					}
+					logging.Logger.Warn("load_lfb - failed to fetch from peer sharders",
+						zap.Int64("round", lfbRound), zap.Error(nerr))
+				}
+
 				logging.Logger.Error("load_lfb - check previous block",
 					zap.Int64("round", lfbRound-1),
 					zap.String("hash", bl.lfb.PrevHash))
 				lfbRound = lfbRound - 1
 				lfbHash = bl.lfb.PrevHash
 
-				i++
 				if i >= maxRollbackRounds {
 					logging.Logger.Error("load_lfb - rollback max count meet", zap.Int("max", maxRollbackRounds))
 
@@ -801,6 +1281,14 @@ loop:
 		logging.Logger.Debug("load_lfb from store (nlfmb)",
 			zap.Int64("round", bl.nlfmb.Round))
 	}
+
+	// Reset LFB ticket to match actual LFB after any rollback during startup
+	sc.Chain.ResetLFBTicket(ctx, bl.lfb)
+
+	// Mark LFB loading as complete - workers can now call BumpLFBTicket
+	// and LFBTicketHandler can accept network tickets
+	sc.Chain.SetLFBLoadingComplete()
+
 	return nil
 }
 

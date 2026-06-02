@@ -5,9 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"os"
 	"path/filepath"
-	"runtime/pprof"
 	"sort"
 	"sync"
 	"sync/atomic"
@@ -598,9 +596,11 @@ func (r *Round) GetMinerRank(miner *node.Node) int {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 	if r.minerPerm == nil {
-		_ = pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
-		logging.Logger.DPanic(fmt.Sprintf("miner ranks not computed yet: %v, random seed: %v, round: %v",
-			r.GetPhase(), r.GetRandomSeed(), r.GetRoundNumber()))
+		logging.Logger.Debug("get miner rank - miner permutation not computed yet",
+			zap.Int("phase", int(r.GetPhase())),
+			zap.Int64("random_seed", r.GetRandomSeed()),
+			zap.Int64("round", r.GetRoundNumber()))
+		return -1
 	}
 	if miner.SetIndex >= len(r.minerPerm) {
 		logging.Logger.Warn("get miner rank -- the node index in the permutation is missing. Returns: -1.",
@@ -644,9 +644,16 @@ func (r *Round) Clear() {
 }
 
 // Restart - restart the round
+// Only prevents restart if round has notarized blocks. This allows recovery from
+// edge cases where a round reaches Complete phase without being notarized (e.g.,
+// due to race conditions at magic block boundaries).
 func (r *Round) Restart() error {
 	r.mutex.Lock()
-	if r.getState() >= Share {
+	// Only block restart if round is in late phase AND has notarized blocks.
+	// Rounds in Complete phase without notarized blocks (edge case from race
+	// conditions or bugs) should be allowed to restart.
+	if r.getState() >= Share && len(r.notarizedBlocks) > 0 {
+		r.mutex.Unlock()
 		return CompleteRoundRestartError
 	}
 	r.initialize()

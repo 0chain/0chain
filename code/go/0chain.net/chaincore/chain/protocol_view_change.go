@@ -332,17 +332,28 @@ func incTxnSendCount(num int64) {
 	logging.Logger.Debug("[mvc] current send txn count", zap.Int64("count", cout))
 }
 
+// DKG transaction names that should be broadcast to all miners
+var dkgTxns = map[string]bool{
+	"contributeMpk":      true,
+	"shareSignsOrShares": true,
+	"wait":               true,
+}
+
 func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	scData *httpclientutil.SmartContractTxnData,
 	minerUrls []string,
 	sharderUrls []string) error {
 
-	// if !httpclientutil.AcquireTxnLock(time.Second) {
-	// 	return httpclientutil.ErrTxnSendBusy
-	// }
-	// logging.Logger.Debug("[mvc] acquire txn lock")
-	// incTxnSendCount(1)
-	minerUrls = getRandomMinerURLs(minerUrls, 10)
+	// Log sharder URLs for debugging nonce sync issues
+	logging.Logger.Debug("[mvc] SendSmartContractTxn sharder URLs",
+		zap.Strings("sharder_urls", sharderUrls),
+		zap.String("txn_name", scData.Name))
+
+	// For DKG transactions, send to ALL miners (critical and infrequent)
+	// For other transactions, send to only 10% of miners
+	if scData == nil || !dkgTxns[scData.Name] {
+		minerUrls = getRandomMinerURLs(minerUrls, 10)
+	}
 	selfNode := node.Self.Underlying()
 	if selfNode != nil && selfNode.Type == node.NodeTypeMiner {
 		minerUrls = append(minerUrls, selfNode.GetN2NURLBase())
@@ -364,22 +375,25 @@ func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 		txn.Fee = int64(fee)
 	}
 
-	// nextNonce := node.Self.GetNextNonce()
-	// if nextNonce == 0 {
-	// try get nonce from LFB
-	// lfb := c.GetLatestFinalizedBlock()
-	// if lfb != nil {
-	// 	var err error
-	// 	nextNonce, err = c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
-	// 	if err != nil && state.ErrInvalidState(err) {
-	// 		return err
-	// 	}
-	// }
-
-	// logging.Logger.Debug("[mvc] nonce, set lfb nonce in send smart txn", zap.Int64("nonce", nextNonce))
-	// }
-	// logging.Logger.Debug("[mvc] nonce, send txn with nonce", zap.Int64("nonce", nextNonce))
-	// txn.Nonce = nextNonce
+	// Get nonce from local LFB state instead of querying sharders
+	// Miner's LFB is more up-to-date than sharder's LFB
+	lfb := c.GetLatestFinalizedBlock()
+	if lfb != nil && lfb.ClientState != nil {
+		nextNonce, err := c.GetCurrentSelfNonce(node.Self.Underlying().GetKey(), lfb.ClientState)
+		if err == nil && nextNonce > 0 {
+			txn.Nonce = nextNonce
+			logging.Logger.Debug("[mvc] nonce, using LFB state nonce",
+				zap.Int64("nonce", nextNonce),
+				zap.Int64("lfb_round", lfb.Round))
+		} else {
+			logging.Logger.Debug("[mvc] nonce, failed to get LFB nonce, falling back to sharder sync",
+				zap.Error(err))
+		}
+	} else {
+		logging.Logger.Debug("[mvc] nonce, LFB or ClientState is nil, falling back to sharder sync",
+			zap.Bool("lfb_nil", lfb == nil),
+			zap.Bool("client_state_nil", lfb != nil && lfb.ClientState == nil))
+	}
 
 	return httpclientutil.SendSmartContractTxn(txn, minerUrls, sharderUrls)
 }
@@ -449,6 +463,45 @@ func (c *Chain) GetCurrentMinerNonce(b *block.Block, bState util.MerklePatriciaT
 		}
 
 		logging.Logger.Debug("[mvc] nonce, get current miner nonce", zap.Int64("nonce", nonce))
+		return nil
+	}); err != nil {
+		return 0, err
+	}
+
+	return nonce, nil
+}
+
+// GetDKGNonceForSelf returns the nonce for DKG transactions using the LFB state.
+// After Medea hardfork, this returns the namespace nonce for the self node.
+// Before Medea, this returns the regular account nonce.
+func (c *Chain) GetDKGNonceForSelf(lfb *block.Block) (int64, error) {
+	if lfb == nil || lfb.ClientState == nil {
+		return 0, errors.New("LFB or its client state is nil")
+	}
+
+	selfID := node.Self.Underlying().GetKey()
+	sc := state.NewStateContext(lfb, lfb.ClientState, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	var nonce int64
+	if err := state.WithActivation(sc, "Medea", func() error {
+		// Before Medea: use regular account nonce
+		var er error
+		nonce, er = c.GetCurrentSelfNonce(selfID, lfb.ClientState)
+		return er
+	}, func() error {
+		// After Medea: use namespace nonce
+		ns, er := state.GetNamespaceNonce(lfb.ClientState, selfID, state.NonceNameSpaceMiner)
+		if er != nil && er != util.ErrValueNotPresent {
+			return er
+		}
+
+		if er == util.ErrValueNotPresent {
+			nonce = 1
+		} else {
+			nonce = ns.Nonce + 1
+		}
+
+		logging.Logger.Debug("[mvc] nonce, get DKG nonce for self", zap.String("selfID", selfID), zap.Int64("nonce", nonce))
 		return nil
 	}); err != nil {
 		return 0, err

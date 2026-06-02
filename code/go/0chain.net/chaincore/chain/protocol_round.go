@@ -15,7 +15,6 @@ import (
 	"go.uber.org/zap"
 
 	"0chain.net/chaincore/block"
-	"0chain.net/chaincore/node"
 	"0chain.net/chaincore/round"
 	"0chain.net/core/common"
 	"0chain.net/core/datastore"
@@ -103,11 +102,14 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 			if b.PrevBlock == nil {
 				pb := c.GetPreviousBlock(ctx, b)
 				if pb == nil {
-					logging.Logger.Error("compute finalized block: null prev block",
+					// Skip blocks whose prev can't be fetched - they may be orphans
+					// from magic block transitions. Continue with other valid chains.
+					logging.Logger.Warn("compute finalized block: skipping block with unreachable prev",
 						zap.Int64("round", roundNumber),
 						zap.Int64("block_round", b.Round),
-						zap.String("block", b.Hash))
-					return nil
+						zap.String("block", b.Hash),
+						zap.String("prev_hash", b.PrevHash))
+					continue
 				}
 			}
 			if isIn(prevNotarizedBlocks, b.PrevHash) {
@@ -115,6 +117,14 @@ func (c *Chain) ComputeFinalizedBlock(ctx context.Context, lfbr int64, r round.R
 			}
 			prevNotarizedBlocks = append(prevNotarizedBlocks, b.PrevBlock)
 		}
+
+		// If all blocks were orphans and we couldn't trace any chain back
+		if len(prevNotarizedBlocks) == 0 {
+			logging.Logger.Error("compute finalized block: all blocks have unreachable prev blocks",
+				zap.Int64("round", roundNumber))
+			return nil
+		}
+
 		notarizedBlocks = prevNotarizedBlocks
 		if len(notarizedBlocks) == 1 {
 			break
@@ -243,6 +253,7 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			" or don't have all the necessary blocks",
 			zap.Int64("round", roundNumber),
 			zap.Int("notarized_blocks_count", nbCount))
+		r.ResetFinalizingStateIfNotFinalized()
 		return
 	}
 	if lfb.Hash == plfb.Hash {
@@ -250,6 +261,24 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 			zap.Int64("round", roundNumber),
 			zap.Int64("lfb round", lfb.Round),
 			zap.Int64("plfb round", plfb.Round))
+		r.ResetFinalizingStateIfNotFinalized()
+		return
+	}
+
+	if lfb.Round == plfb.Round {
+		// Fork replacement: the canonical chain has a different block at the
+		// LFB round. This happens when the node finalized a fork block but the
+		// rest of the network built on the canonical block. Switch to the
+		// canonical block so subsequent rounds can finalize normally.
+		logging.Logger.Warn("finalize round - fork replacement at LFB round",
+			zap.Int64("round", lfb.Round),
+			zap.String("old_lfb_hash", plfb.Hash),
+			zap.String("canonical_hash", lfb.Hash))
+		c.SetLatestFinalizedBlock(lfb)
+		if rr := c.GetRound(lfb.Round); rr != nil {
+			rr.Finalize(lfb)
+		}
+		r.ResetFinalizingStateIfNotFinalized()
 		return
 	}
 
@@ -270,30 +299,23 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		for b := lfb; b != nil && b.Hash != plfb.Hash && b.Round > plfb.Round; {
 			frchain = append(frchain, b)
 			if b.PrevBlock == nil {
-				if node.Self.IsSharder() {
-					pb := c.GetLocalPreviousBlock(ctx, b)
-					if pb == nil {
-						logging.Logger.Error("finalize round - previous block is missing",
-							zap.Int64("round", b.Round), zap.Int64("prev_lfb", plfb.Round))
-						return
+				// March 2019 behavior: Both miners and sharders use GetPreviousBlock
+				// which syncs from the network if the block is not available locally.
+				// This allows sharders to fetch missing blocks during finalization.
+				pb := c.GetPreviousBlock(ctx, b)
+				if pb == nil {
+					// break to start finalizing blocks in frchain slice
+					if len(frchain) >= maxBackDepth {
+						break
 					}
-					b.SetPreviousBlock(pb)
-				} else {
-					pb := c.GetPreviousBlock(ctx, b)
-					if pb == nil {
-						// break to start finalizing blocks in frchain slice
-						if len(frchain) >= maxBackDepth {
-							break
-						}
 
-						// return and retry in next term
-						logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
-							zap.Int64("round", b.Round),
-							zap.Int64("prev round", b.Round-1),
-							zap.Int64("prev_lfb", plfb.Round),
-							zap.String("block", b.Hash))
-						return
-					}
+					// return and retry in next term
+					logging.Logger.Debug("finalize round - could not reach to lfb, get previous block failed",
+						zap.Int64("round", b.Round),
+						zap.Int64("prev round", b.Round-1),
+						zap.Int64("prev_lfb", plfb.Round),
+						zap.String("block", b.Hash))
+					return
 				}
 			}
 

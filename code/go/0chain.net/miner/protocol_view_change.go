@@ -141,10 +141,13 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		if lfbPhaseNode.Phase > pn.Phase {
-			logging.Logger.Error("[mvc] lfb phase > pn phase - skip",
+		// Skip stale phase events - either phase has advanced or phase has restarted with new StartRound
+		if lfbPhaseNode.Phase > pn.Phase || lfbPhaseNode.StartRound > pn.StartRound {
+			logging.Logger.Debug("[mvc] stale phase event - skip",
 				zap.String("lfb_phase", lfbPhaseNode.Phase.String()),
-				zap.String("pn_phase", pn.Phase.String()))
+				zap.String("pn_phase", pn.Phase.String()),
+				zap.Int64("lfb_start_round", lfbPhaseNode.StartRound),
+				zap.Int64("pn_start_round", pn.StartRound))
 			continue
 		}
 
@@ -168,7 +171,13 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			continue
 		}
 
-		lfmb := mc.GetCurrentMagicBlock()
+		// Use GetLatestMagicBlock (no offset) instead of GetCurrentMagicBlock
+		// (which applies mbRoundOffset). The VC process needs the LATEST finalized MB
+		// to correctly compute nextMBNum = latestMB.MagicBlockNumber + 1.
+		// GetCurrentMagicBlock applies a 20-round offset which causes it to return
+		// the OLD MB after a VC, making ContributeMpk create a duplicate DKG for
+		// the just-finalized MB number instead of the next one.
+		lfmb := mc.GetLatestMagicBlock()
 		if lfmb == nil {
 			logging.Logger.Error("[mvc] dkg process: can't get lfmb")
 			continue
@@ -178,7 +187,8 @@ func (mc *Chain) DKGProcess(ctx context.Context) {
 			zap.String("name", phaseFuncName),
 			zap.String("current_phase", mc.CurrentPhase().String()),
 			zap.String("next_phase", pn.Phase.String()),
-			zap.Int64("lfb round", lfb.Round))
+			zap.Int64("lfb round", lfb.Round),
+			zap.Int64("lfmb_number", lfmb.MagicBlockNumber))
 
 		txn, err := phaseFunc(ctx, lfb, lfmb)
 		if err != nil {
@@ -232,11 +242,32 @@ func (vcp *viewChangeProcess) clearViewChange() {
 //
 
 // DKGProcessStart represents 'start' phase function.
-func (mc *Chain) DKGProcessStart(context.Context, *block.Block,
-	*block.MagicBlock) (*httpclientutil.Transaction, error) {
+func (mc *Chain) DKGProcessStart(ctx context.Context, _ *block.Block,
+	mb *block.MagicBlock) (*httpclientutil.Transaction, error) {
 
 	mc.viewChangeProcess.Lock()
 	defer mc.viewChangeProcess.Unlock()
+
+	// Nyx: Clear any stale DKG summary for the upcoming MB.
+	// When VC phases restart (e.g., after a failed view change attempt),
+	// the previous attempt's DKG summary may have shares computed from
+	// a different polynomial that won't match the new attempt's MPKs.
+	if mc.isHardforkActive("Nyx", mc.GetCurrentRound()) && mb != nil {
+		upcomingMBNum := mb.MagicBlockNumber + 1
+		upcomingID := strconv.FormatInt(upcomingMBNum, 10)
+		if existing, err := LoadDKGSummary(ctx, upcomingID); err == nil && !existing.IsFinalized {
+			logging.Logger.Info("[mvc] DKGProcessStart - clearing stale non-finalized DKG summary",
+				zap.Int64("mb_number", upcomingMBNum))
+			emptySummary := &bls.DKGSummary{
+				SecretShares: nil,
+			}
+			emptySummary.ID = upcomingID
+			if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
+				logging.Logger.Error("[mvc] DKGProcessStart - failed to clear stale DKG summary",
+					zap.Error(storeErr))
+			}
+		}
+	}
 
 	mc.viewChangeProcess.clearViewChange()
 	return nil, nil
@@ -482,6 +513,7 @@ func (mc *Chain) waitTransaction(mb *block.MagicBlock) (
 	var selfNode = node.Self.Underlying()
 
 	tx = httpclientutil.NewSmartContractTxn(selfNode.GetKey(), mc.ID, selfNode.PublicKey, minersc.ADDRESS)
+
 	// minersUrls := getRandomMinerURLs(mb.Miners.N2NURLs(), 10)
 	// minersUrls = append(minersUrls, selfNode.GetN2NURLBase())
 	err = mc.SendSmartContractTxn(tx, data, mb.Miners.N2NURLs(), mb.Sharders.N2NURLs())
@@ -720,7 +752,13 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
-		logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		logging.Logger.Error("[CRITICAL] set dkgs from store failed for CURRENT MB - VRF signing will fail",
+			zap.Int64("mb_number", lfmb.MagicBlockNumber),
+			zap.Int64("mb_starting_round", lfmb.StartingRound),
+			zap.String("mb_hash", lfmb.MagicBlock.Hash),
+			zap.Error(err))
+		logging.Logger.Error("[CRITICAL] Miner cannot participate in consensus without valid DKG. " +
+			"Use /_diagnostics/dkg/restore to restore from backup or restart with valid DKG data.")
 	}
 
 	if lfmb.MagicBlockNumber <= 1 {
@@ -735,8 +773,14 @@ func (mc *Chain) SetupLatestAndPreviousMagicBlocks(ctx context.Context) {
 	}
 
 	if pfmb.MagicBlock.Hash == lfmb.MagicBlock.PreviousMagicBlockHash {
-		if err := mc.SetDKGSFromStore(ctx, lfmb.MagicBlock); err != nil {
-			logging.Logger.Warn("set dkgs from store failed", zap.Error(err))
+		// Fix: Load DKG from previous MB (pfmb), not current MB (lfmb)
+		// This was a copy-paste bug from 2020-08-28 commit 10c2e7df2d
+		if err := mc.SetDKGSFromStore(ctx, pfmb.MagicBlock); err != nil {
+			logging.Logger.Warn("set dkgs from store failed for previous MB - rounds using previous MB may fail",
+				zap.Int64("pfmb_number", pfmb.MagicBlockNumber),
+				zap.Int64("pfmb_sr", pfmb.StartingRound),
+				zap.String("pfmb_hash", pfmb.MagicBlock.Hash),
+				zap.Error(err))
 		}
 		mc.UpdateMagicBlocks(pfmb, lfmb)
 		return

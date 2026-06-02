@@ -28,14 +28,14 @@ type Challenge struct {
 	ChallengeID    string           `json:"challenge_id" gorm:"index:idx_cchallenge_id,unique"`
 	CreatedAt      common.Timestamp `json:"created_at" gorm:"index:idx_copen_challenge,priority:1"`
 	AllocationID   string           `json:"allocation_id"`
-	BlobberID      string           `json:"blobber_id" gorm:"index:idx_copen_challenge,priority:2"`
+	BlobberID      string           `json:"blobber_id" gorm:"index:idx_copen_challenge,priority:2;index:idx_copen_challenge_round,priority:1"`
 	ValidatorsID   string           `json:"validators_id"`
 	Seed           int64            `json:"seed"`
 	AllocationRoot string           `json:"allocation_root"`
-	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3"`
+	Responded      int64            `json:"responded" gorm:"index:idx_copen_challenge,priority:3;index:idx_copen_challenge_round,priority:2"`
 	Passed         bool             `json:"passed"`
 	RoundResponded int64            `json:"round_responded"`
-	RoundCreatedAt int64            `json:"round_created_at"`
+	RoundCreatedAt int64            `json:"round_created_at" gorm:"index:idx_copen_challenge_round,priority:3"`
 	ExpiredN       int              `json:"expired_n" gorm:"-"`
 	Timestamp      common.Timestamp `json:"timestamp" gorm:"timestamp"`
 }
@@ -156,7 +156,7 @@ func (edb *EventDb) GetOpenChallengesForBlobber(blobberID string, from int64, li
 }
 
 func (edb *EventDb) addChallenges(chlgs []Challenge) error {
-	return edb.Store.Get().Create(&chlgs).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&chlgs).Error
 }
 
 func (edb *EventDb) updateChallenges(chs []Challenge) error {

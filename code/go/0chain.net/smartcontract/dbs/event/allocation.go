@@ -52,7 +52,7 @@ type Allocation struct {
 	OwnerSigningPublicKey string `json:"owner_signing_public_key"`
 
 	//ref
-	User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	User  User                    `gorm:"foreignKey:Owner;references:UserID"`
 	Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:ID"`
 }
 
@@ -127,7 +127,10 @@ func (edb *EventDb) GetActiveAllocationsCount() (int64, error) {
 }
 
 func (edb *EventDb) addAllocations(allocs []Allocation) error {
-	return edb.Store.Get().Create(&allocs).Error
+	return edb.Store.Get().Omit(clause.Associations).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "allocation_id"}},
+		UpdateAll: true,
+	}).Create(&allocs).Error
 }
 
 func mergeAddAllocationEvents() *eventsMergerImpl[Allocation] {

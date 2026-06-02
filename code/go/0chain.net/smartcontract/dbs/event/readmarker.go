@@ -26,7 +26,7 @@ type ReadMarker struct {
 	AuthTicket    string  `json:"auth_ticket" gorm:"index:idx_rauth_alloc,priority:1"`   //used in readmarkers
 	BlockNumber   int64   `json:"block_number" gorm:"index:idx_ralloc_block,priority:2"` //used in alloc_read_size
 	//ref
-	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Allocation Allocation `gorm:"references:AllocationID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL"`
 }
 
 func (edb *EventDb) GetReadMarkersFromQueryPaginated(query ReadMarker, limit common2.Pagination) ([]ReadMarker, error) {

@@ -16,6 +16,11 @@ services:
       - ../sql_script/:/docker-entrypoint-initdb.d/
     command: postgres -c config_file=/etc/postgresql/postgresql.conf
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       testnet0:
         ipv4_address: 198.18.2.${SHARDER}
@@ -39,6 +44,11 @@ services:
       - -c
       - mkdir -p /0chain/data/blocks && mkdir -p /0chain/data/rocksdb && ./bin/sharder --deployment_mode 0 --keys_file config/b0snode${SHARDER}_keys.txt
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       testnet0:
         ipv4_address: 198.18.1.${SHARDER}

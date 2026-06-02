@@ -182,21 +182,6 @@ func WriteCurrentStatus(w http.ResponseWriter, c *chain.Chain) {
 	if lfb != nil {
 		fmt.Fprintf(w, "<tr><td class='tname'>Finalized Round</td><td>%v (%v)</td></tr>", lfb.Round, len(lfb.GetUniqueBlockExtensions()))
 	}
-	if c.LatestDeterministicBlock != nil {
-		fmt.Fprintf(w, "<tr><td class='tname'>Deterministic Finalized Round</td><td>%v (%v)</td></tr>", c.LatestDeterministicBlock.Round, len(c.LatestDeterministicBlock.GetUniqueBlockExtensions()))
-		if c.LatestDeterministicBlock != lfb {
-			var maxUBE int
-			var maxUBERound int64
-			for b := lfb; b != nil && b != c.LatestDeterministicBlock; b = b.PrevBlock {
-				var ube = len(b.GetUniqueBlockExtensions())
-				if ube > maxUBE {
-					maxUBE = ube
-					maxUBERound = b.Round
-				}
-			}
-			fmt.Fprintf(w, "<tr><td class='tname'>Next round to be deterministic</td><td>%v (%v)</td></tr>", maxUBERound, maxUBE)
-		}
-	}
 	fmt.Fprintf(w, "</table>")
 }
 

@@ -48,6 +48,10 @@ func (mc *Chain) SendNotarizedBlock(ctx context.Context, b *block.Block) {
 			mbs = mb.Sharders
 		)
 		mbs.SendAll(ctx, NotarizedBlockSender(b))
+		// Also send to sharders from previous MB that aren't in the current MB.
+		// This prevents deadlock when a view change drops a sharder from the MB
+		// but it still needs blocks to continue syncing.
+		mc.sendToExtraSharders(ctx, mb, NotarizedBlockSender(b))
 	}
 }
 
@@ -57,6 +61,7 @@ func (mc *Chain) ForcePushNotarizedBlock(ctx context.Context, b *block.Block) {
 		mb := mc.GetMagicBlock(b.Round)
 		m2s := mb.Sharders
 		m2s.SendAll(ctx, NotarizedBlockForcePushSender(b))
+		mc.sendToExtraSharders(ctx, mb, NotarizedBlockForcePushSender(b))
 	}
 }
 
@@ -67,6 +72,17 @@ func (mc *Chain) SendFinalizedBlock(ctx context.Context, b *block.Block) {
 		m2s := mb.Sharders
 		m2s.SendAll(ctx, FinalizedBlockSender(b))
 	}
+}
+
+// sendToExtraSharders sends a message to sharders from the previous MB that
+// are not in the current MB. This ensures sharders dropped by a view change
+// still receive notarized blocks and can continue syncing/finalizing.
+func (mc *Chain) sendToExtraSharders(ctx context.Context, currentMB *block.MagicBlock, handler node.SendHandler) {
+	prevMB := mc.GetMagicBlock(currentMB.StartingRound - 1)
+	if prevMB == nil || prevMB.MagicBlockNumber == currentMB.MagicBlockNumber {
+		return
+	}
+	prevMB.Sharders.SendAll(ctx, handler)
 }
 
 /*SendVRFShare - send the round vrf share */

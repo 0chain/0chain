@@ -12,6 +12,11 @@ services:
       net.core.somaxconn: '511'
     command: redis-server /0chain/config/redis/state.redis.conf
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       testnet0:
         ipv4_address: 198.18.5.${MINER}
@@ -28,6 +33,11 @@ services:
     #   - "638${MINER}:6379"
     command: redis-server /0chain/config/redis/transactions.redis.conf
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       testnet0:
         ipv4_address: 198.18.4.${MINER}
@@ -53,6 +63,11 @@ services:
       - "707${MINER}:707${MINER}"
     command: ./bin/miner  --deployment_mode 0 --keys_file config/b0mnode${MINER}_keys.txt --dkg_file config/b0mnode${MINER}_dkg.json
     restart: always
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       testnet0:
         ipv4_address: 198.18.3.${MINER}

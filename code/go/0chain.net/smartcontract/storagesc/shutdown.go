@@ -44,6 +44,18 @@ func (_ *StorageSmartContract) shutdownBlobber(
 					"can't get the blobber "+tx.ClientID+": "+err.Error())
 			}
 
+			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
+				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
+					return nil, "", nil, common.NewError("shutdown_blobber_failed",
+						"remove blobber form challenge partition, "+err.Error())
+				}
+			}
+
+			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
+			if err != nil {
+				return nil, "", nil, err
+			}
+
 			var authWallet string
 
 			if jasonActErr := cstate.WithActivation(balances, "jason", func() error {
@@ -62,18 +74,6 @@ func (_ *StorageSmartContract) shutdownBlobber(
 				return nil
 			}); jasonActErr != nil {
 				return nil, "", nil, jasonActErr
-			}
-
-			if err := partitionsChallengeReadyBlobbersRemove(balances, blobber.Id()); err != nil {
-				if !strings.HasPrefix(err.Error(), partitions.ErrItemNotFoundCode) {
-					return nil, "", nil, common.NewError("shutdown_blobber_failed",
-						"remove blobber form challenge partition, "+err.Error())
-				}
-			}
-
-			sp, err = getStakePoolAdapter(blobber.Type(), blobber.Id(), balances)
-			if err != nil {
-				return nil, "", nil, err
 			}
 
 			return blobber, authWallet, sp, nil

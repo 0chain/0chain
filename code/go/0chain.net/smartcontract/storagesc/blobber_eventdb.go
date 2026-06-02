@@ -176,7 +176,7 @@ func emitUpdateBlobberAllocatedSavedHealth(sn *StorageNode, balances cstate.Stat
 	})
 }
 
-func emitBlobberHealthCheck(sn *StorageNode, downtime uint64, balances cstate.StateContextI) {
+func emitBlobberHealthCheck(sn *StorageNode, downtime int64, balances cstate.StateContextI) {
 	b := sn.mustBase()
 	data := dbs.DbHealthCheck{
 		ID:              b.ID,

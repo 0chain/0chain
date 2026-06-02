@@ -197,13 +197,26 @@ func (c *Chain) UnsubLFBTicket(sub chan *LFBTicket) {
 func (c *Chain) GetLatestLFBTicket(ctx context.Context) (tk *LFBTicket) {
 	select {
 	case tk = <-c.getLFBTicket:
+		logging.Logger.Debug("GetLatestLFBTicket - received",
+			zap.Int64("round", tk.Round))
 	case <-ctx.Done():
+		logging.Logger.Debug("GetLatestLFBTicket - context done")
 	}
 	return
 }
 
 func (c *Chain) BumpLFBTicket(ctx context.Context) {
+	// Wait for LoadLatestBlocksFromStore to complete before bumping ticket.
+	// This prevents race conditions where workers bump the ticket with network data
+	// before the local LFB is properly loaded.
+	if !c.IsLFBLoadingComplete() {
+		logging.Logger.Debug("BumpLFBTicket - skipping (LFB loading not complete)")
+		return
+	}
+
+	// Fetch LFB from peer sharders and bump ticket if ahead of local
 	list := c.GetLatestFinalizedBlockFromSharder(ctx)
+
 	if len(list) == 0 {
 		logging.Logger.Debug("ensure_lfb - no new lfb received")
 		return // no LFB given
@@ -235,13 +248,183 @@ type BlockConsensus struct {
 func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 	fbs []*BlockConsensus) {
 
-	mb := c.GetLatestFinalizedMagicBlockBrief()
+	// Get magic block for sharders list
+	// First try LFMB, fall back to latest magic block (which always has genesis)
+	// This ensures we can query sharders even on fresh startup before LFMB is set
+	var mb *block.MagicBlock
+	lfmb := c.GetLatestFinalizedMagicBlock(ctx)
+	if lfmb != nil && lfmb.MagicBlock != nil {
+		mb = lfmb.MagicBlock
+	} else {
+		// Fallback: use GetLatestMagicBlock which always returns at least genesis
+		mb = c.GetLatestMagicBlock()
+	}
+
 	if mb == nil {
 		return
 	}
 
-	fbs = make([]*BlockConsensus, 0, len(mb.ShardersN2NURLs))
-	fbc := make(chan *block.Block, len(mb.ShardersN2NURLs))
+	// Query current MB's sharders
+	blocks := c.queryShardersForLFB(ctx, mb)
+
+	// If no responses (e.g., only sharder in MB is self), fall back to previous MB's sharders
+	if len(blocks) == 0 {
+		c.mbMutex.RLock()
+		prevMB := c.PreviousMagicBlock
+		c.mbMutex.RUnlock()
+		if prevMB != nil && prevMB.Sharders != nil && prevMB.MagicBlockNumber != mb.MagicBlockNumber {
+			logging.Logger.Info("GetLatestFinalizedBlockFromSharder - no responses from current MB sharders, trying previous MB",
+				zap.Int64("current_mb", mb.MagicBlockNumber),
+				zap.Int("current_mb_sharders", mb.Sharders.Size()),
+				zap.Int64("prev_mb", prevMB.MagicBlockNumber),
+				zap.Int("prev_mb_sharders", prevMB.Sharders.Size()))
+			blocks = c.queryShardersForLFB(ctx, prevMB)
+		}
+	}
+
+	if len(blocks) == 0 {
+		return
+	}
+
+	// Build consensus and filter
+	fbs = make([]*BlockConsensus, 0, len(blocks))
+
+	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	for _, fb := range blocks {
+		// increase consensus
+		for i, b := range fbs {
+			if b.Hash == fb.Hash {
+				fbs[i].Consensus++
+				continue
+			}
+		}
+
+		lfbtk := c.GetLatestLFBTicket(ctx)
+		localLFB := c.GetLatestFinalizedBlock()
+		localLFBRound := int64(0)
+		if localLFB != nil {
+			localLFBRound = localLFB.Round
+		}
+
+		// Only filter by ticket if:
+		// 1. We have a valid ticket with round > 0
+		// 2. Sharder's LFB is less than our ticket
+		// 3. AND sharder's LFB is also less than our actual LFB
+		// This prevents rejecting sharder LFBs that are ahead of us but behind a stale ticket
+		if lfbtk != nil && lfbtk.Round > 0 && fb.Round < lfbtk.Round && fb.Round < localLFBRound {
+			logging.Logger.Debug("lfb from sharder - round too old",
+				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
+				zap.Int64("current_round", c.GetCurrentRound()),
+				zap.Int64("local_lfb_round", localLFBRound),
+				zap.Int64("ticket_round", lfbtk.Round),
+			)
+			continue
+		}
+
+		// add new block
+		fbs = append(fbs, &BlockConsensus{
+			Block:     fb,
+			Consensus: 1,
+		})
+	}
+
+	// highest (the first sorting order), most popular (the second order)
+	sort.Slice(fbs, func(i int, j int) bool {
+		if fbs[i].Round == fbs[j].Round {
+			return fbs[i].Consensus > fbs[j].Consensus
+		}
+
+		return fbs[i].Round > fbs[j].Round
+	})
+
+	return
+}
+
+// GetLatestFinalizedBlockFromSharderNoFilter - request for latest finalized block from
+// all the sharders WITHOUT filtering by LFB ticket round. This is used as a fallback
+// when the miner's RocksDB is empty and needs to bootstrap from sharders.
+func (c *Chain) GetLatestFinalizedBlockFromSharderNoFilter(ctx context.Context) (
+	fbs []*BlockConsensus) {
+
+	// Use GetLatestMagicBlock() instead of GetLatestFinalizedMagicBlockBrief()
+	// because on fresh startup, LFMB may not be set yet in the worker,
+	// but GetLatestMagicBlock() always returns at least the genesis magic block.
+	mb := c.GetLatestMagicBlock()
+	if mb == nil {
+		logging.Logger.Warn("GetLatestFinalizedBlockFromSharderNoFilter - no magic block")
+		return
+	}
+
+	// Query current MB's sharders
+	blocks := c.queryShardersForLFB(ctx, mb)
+
+	// If no responses, fall back to previous MB's sharders
+	if len(blocks) == 0 {
+		c.mbMutex.RLock()
+		prevMB := c.PreviousMagicBlock
+		c.mbMutex.RUnlock()
+		if prevMB != nil && prevMB.Sharders != nil && prevMB.MagicBlockNumber != mb.MagicBlockNumber {
+			logging.Logger.Info("GetLatestFinalizedBlockFromSharderNoFilter - no responses, trying previous MB",
+				zap.Int64("current_mb", mb.MagicBlockNumber),
+				zap.Int64("prev_mb", prevMB.MagicBlockNumber))
+			blocks = c.queryShardersForLFB(ctx, prevMB)
+		}
+	}
+
+	if len(blocks) == 0 {
+		logging.Logger.Debug("GetLatestFinalizedBlockFromSharderNoFilter - no blocks received")
+		return
+	}
+
+	fbs = make([]*BlockConsensus, 0, len(blocks))
+
+	for _, fb := range blocks {
+		// increase consensus
+		found := false
+		for i, b := range fbs {
+			if b.Hash == fb.Hash {
+				fbs[i].Consensus++
+				found = true
+				break
+			}
+		}
+
+		if found {
+			continue
+		}
+
+		// add new block (NO filtering by ticket round)
+		fbs = append(fbs, &BlockConsensus{
+			Block:     fb,
+			Consensus: 1,
+		})
+	}
+
+	// highest (the first sorting order), most popular (the second order)
+	sort.Slice(fbs, func(i int, j int) bool {
+		if fbs[i].Round == fbs[j].Round {
+			return fbs[i].Consensus > fbs[j].Consensus
+		}
+
+		return fbs[i].Round > fbs[j].Round
+	})
+
+	logging.Logger.Debug("GetLatestFinalizedBlockFromSharderNoFilter - received blocks",
+		zap.Int("count", len(fbs)))
+
+	return
+}
+
+// queryShardersForLFB queries the sharders in the given magic block's pool for
+// their latest finalized block. Returns validated blocks, or nil if no sharder
+// responded (e.g., when the only sharder in the pool is self).
+func (c *Chain) queryShardersForLFB(ctx context.Context, mb *block.MagicBlock) []*block.Block {
+	if mb == nil || mb.Sharders == nil || mb.Sharders.Size() == 0 {
+		return nil
+	}
+
+	fbc := make(chan *block.Block, mb.Sharders.Size())
 
 	var handler = func(ctx context.Context, entity datastore.Entity) (
 		resp interface{}, err error) {
@@ -269,47 +452,14 @@ func (c *Chain) GetLatestFinalizedBlockFromSharder(ctx context.Context) (
 		return fb, nil
 	}
 
-	c.RequestEntityFromSharders(ctx, MinerLatestFinalizedBlockRequestor, nil, handler)
+	c.RequestEntityFromShardersOnMB(ctx, mb, MinerLatestFinalizedBlockRequestor, nil, handler)
 	close(fbc)
 
-	_, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
+	var blocks []*block.Block
 	for fb := range fbc {
-		// increase consensus
-		for i, b := range fbs {
-			if b.Hash == fb.Hash {
-				fbs[i].Consensus++
-				continue
-			}
-		}
-
-		lfbtk := c.GetLatestLFBTicket(ctx)
-
-		if fb.Round < lfbtk.Round {
-			logging.Logger.Debug("lfb from sharder - round too old",
-				zap.Int64("round", fb.Round), zap.String("block", fb.Hash),
-				zap.Int64("current_round", c.GetCurrentRound()),
-			)
-			continue
-		}
-
-		// add new block
-		fbs = append(fbs, &BlockConsensus{
-			Block:     fb,
-			Consensus: 1,
-		})
+		blocks = append(blocks, fb)
 	}
-
-	// highest (the first sorting order), most popular (the second order)
-	sort.Slice(fbs, func(i int, j int) bool {
-		if fbs[i].Round == fbs[j].Round {
-			return fbs[i].Consensus > fbs[j].Consensus
-		}
-
-		return fbs[i].Round > fbs[j].Round
-	})
-
-	return
+	return blocks
 }
 
 func (c *Chain) sendLFBTicketEventToSubscribers(
@@ -342,6 +492,7 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 		// loop locals
 		ticket *LFBTicket
 		b      *block.Block
+
 	)
 
 	defer close(c.lfbTickerWorkerIsDone)
@@ -363,9 +514,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 		select {
 
-		// request current
+		// request current - return received ticket (or local if higher) for sync decisions
 		case c.getLFBTicket <- latest:
-			// request latest LFB Ticket generated or received at any time
+			logging.Logger.Debug("getLFBTicket - sent",
+				zap.Int64("latest.Round", latest.Round))
+			// returns the highest known LFB ticket (received or local) for sync logic
 
 		// a received LFB
 		case ticket = <-c.updateLFBTicket:
@@ -382,16 +535,58 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 
 			ticket = prev // the latest in the channel
 
-			if ticket.Round <= latest.Round {
-				logging.Logger.Debug("update lfb ticket -  ticket.Round <= latest.Round",
-					zap.Int64("ticket.Round", ticket.Round),
-					zap.Int64("latest.Round", latest.Round))
-				continue // not updated
+			// Cap received ticket to prevent inflation beyond local LFB + ahead.
+			// Inflated tickets push `latest` too far ahead, which false-triggers
+			// IsBlockSyncing and drops all consensus messages via StopOnBlockSyncingHandler.
+			if capLFB := c.GetLatestFinalizedBlock(); capLFB != nil {
+				maxRound := capLFB.Round + int64(config.GetLFBTicketAhead())
+				if ticket.Round > maxRound {
+					logging.Logger.Warn("update lfb ticket - capping inflated ticket",
+						zap.Int64("original_round", ticket.Round),
+						zap.Int64("lfb_round", capLFB.Round),
+						zap.Int64("capped_to", maxRound))
+					ticket = &LFBTicket{Round: maxRound}
+				}
 			}
 
-			// for self updating case (kick itself)
+			if ticket.Round <= latest.Round {
+				logging.Logger.Debug("update lfb ticket - SKIPPING (ticket.Round <= latest.Round)",
+					zap.Int64("ticket.Round", ticket.Round),
+					zap.Int64("latest.Round", latest.Round),
+					zap.String("ticket.Sign", ticket.Sign))
+				continue // not updated
+			}
+			logging.Logger.Info("update lfb ticket - ACCEPTING (ticket.Round > latest.Round)",
+				zap.Int64("ticket.Round", ticket.Round),
+				zap.Int64("latest.Round", latest.Round),
+				zap.String("ticket.Sign", ticket.Sign))
+
+			// Received tickets can be any round - we accept them to learn the network state.
+			// We don't cap or rebroadcast received tickets; we only broadcast our own local LFB ticket.
+			// Trigger sync if ticket is ahead of local LFB.
+			lfb := c.GetLatestFinalizedBlock()
+			if lfb != nil && ticket.Round > lfb.Round {
+				logging.Logger.Info("update lfb ticket - received ticket ahead, triggering sync",
+					zap.Int64("ticket_round", ticket.Round),
+					zap.Int64("lfb_round", lfb.Round))
+				c.NotifyBlockSync()
+			}
+
+			// for self updating case (kick itself) - blank ticket from BumpTicket
 			if ticket.Sign == "" {
+				// If ticket is ahead of local LFB, trigger sync to catch up
+				lfb := c.GetLatestFinalizedBlock()
+				if lfb != nil && ticket.Round > lfb.Round {
+					logging.Logger.Info("update lfb ticket - ticket ahead of LFB, syncing",
+						zap.Int64("ticket.Round", ticket.Round),
+						zap.Int64("lfb.Round", lfb.Round))
+					c.NotifyBlockSync()
+				}
+				oldLatest := latest.Round
 				latest = ticket
+				logging.Logger.Info("update lfb ticket - UPDATED latest (blank ticket)",
+					zap.Int64("old_latest", oldLatest),
+					zap.Int64("new_latest", latest.Round))
 				// send for all subscribers
 				c.sendLFBTicketEventToSubscribers(subs, ticket)
 				continue // don't need a block for the blank kick ticket
@@ -401,7 +596,11 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
 			// update latest
+			oldLatest := latest.Round
 			latest = ticket //
+			logging.Logger.Info("update lfb ticket - UPDATED latest (signed ticket)",
+				zap.Int64("old_latest", oldLatest),
+				zap.Int64("new_latest", latest.Round))
 
 			// don't broadcast a received LFB ticket, since its already
 			// broadcasted by its sender
@@ -438,21 +637,37 @@ func (c *Chain) StartLFBTicketWorker(ctx context.Context, on *block.Block) {
 			if localBumpTicket.Round < ticket.Round {
 				localBumpTicket = ticket // update the latest
 				if ticket.Round > latest.Round {
+					oldLatest := latest.Round
 					latest = ticket
+					logging.Logger.Info("update lfb ticket - UPDATED latest (broadcast)",
+						zap.Int64("old_latest", oldLatest),
+						zap.Int64("new_latest", latest.Round))
 				}
 				logging.Logger.Debug("update lfb ticket", zap.Int64("round", latest.Round))
 			}
 
 		// rebroadcast after some timeout
 		case <-rebroadcast.C:
-			// send newer tickets
-			c.asyncSendLFBTicket(ctx, latest)
+			// Only rebroadcast our own ticket (localBumpTicket), not received tickets (latest).
+			// A node should only advertise LFB rounds it actually has blocks for.
+			c.asyncSendLFBTicket(ctx, localBumpTicket)
 
 		// subscribe / unsubscribe for new *received* LFB Tickets
 		case sub := <-c.subLFBTicket:
 			subs[sub] = struct{}{}
 		case unsub := <-c.unsubLFBTicket:
 			delete(subs, unsub)
+
+		// reset ticket to lower round (startup rollback)
+		case b = <-c.resetLFBTicket:
+			ticket = c.newLFBTicket(b)
+			latest = ticket
+			localBumpTicket = ticket
+			logging.Logger.Info("reset lfb ticket",
+				zap.Int64("round", ticket.Round),
+				zap.String("hash", ticket.LFBHash))
+			// send for all subscribers
+			c.sendLFBTicketEventToSubscribers(subs, ticket)
 
 		case <-ctx.Done():
 			return
@@ -469,9 +684,28 @@ func (c *Chain) AddReceivedLFBTicket(ctx context.Context, ticket *LFBTicket) {
 	}
 }
 
+// ResetLFBTicket forces the LFB ticket to a specific block, even if lower than current.
+// Used during startup when LFB rolls back due to invalid notarization.
+func (c *Chain) ResetLFBTicket(ctx context.Context, b *block.Block) {
+	select {
+	case c.resetLFBTicket <- b:
+	case <-ctx.Done():
+	}
+}
+
 // LFBTicketHandler handles LFB tickets.
 func LFBTicketHandler(ctx context.Context, r *http.Request) (
 	resp interface{}, err error) {
+
+	var chain = GetServerChain()
+
+	// Reject network tickets until LoadLatestBlocksFromStore completes.
+	// This prevents the ticket from being set too high before the local LFB is loaded,
+	// which would cause the node to reject valid blocks during sync.
+	if !chain.IsLFBLoadingComplete() {
+		logging.Logger.Debug("handling LFB ticket - rejecting (LFB loading not complete)")
+		return nil, common.NewError("lfb_ticket_handler", "node still loading")
+	}
 
 	var dec = json.NewDecoder(r.Body)
 	defer r.Body.Close()
@@ -483,13 +717,16 @@ func LFBTicketHandler(ctx context.Context, r *http.Request) (
 		return // (nil, err)
 	}
 
-	var chain = GetServerChain()
 	if !chain.verifyLFBTicket(&ticket) {
 		logging.Logger.Debug("handling LFB ticket", zap.String("err", "can't verify"),
 			zap.Int64("round", ticket.Round))
 		return nil, common.NewError("lfb_ticket_handler", "can't verify")
 	}
 
+	// Accept all signed tickets from network - they represent the sender's actual LFB state.
+	// No cap on ticket round - nodes that are behind need to learn where the network is.
+	// The rebroadcast logic uses localBumpTicket (not received tickets) so we won't
+	// rebroadcast tickets we haven't synced to.
 	chain.AddReceivedLFBTicket(ctx, &ticket)
 	return // (nil, nil)
 }
@@ -533,7 +770,9 @@ func (c *Chain) updateLatestFinalizedMagicBlock(ctx context.Context, lfmb *block
 	}
 }
 
-// IsBlockSyncing checks if the miner is syncing blocks
+// IsBlockSyncing checks if the miner is syncing blocks.
+// Returns true when the node is significantly behind the network and should
+// sync blocks rather than participate in consensus.
 func (c *Chain) IsBlockSyncing() bool {
 	var (
 		lfb          = c.GetLatestFinalizedBlock()
@@ -542,7 +781,13 @@ func (c *Chain) IsBlockSyncing() bool {
 		currentRound = c.GetCurrentRound()
 	)
 
-	if currentRound < lfbTkt.Round ||
+	// Condition 1: node is significantly behind the network ticket.
+	// Use aheadN tolerance so that normal finalization depth (where
+	// currentRound ≈ LFB and ticket is a few rounds ahead) does NOT
+	// trigger sync mode — that would drop all VRF shares and deadlock.
+	// Condition 2: LFB is more than aheadN rounds behind the ticket.
+	// Condition 3: current round is far ahead of LFB (computing but not finalizing).
+	if currentRound+aheadN < lfbTkt.Round ||
 		lfb.Round+aheadN < lfbTkt.Round ||
 		lfb.Round+int64(config.GetLFBTicketAhead()) < currentRound {
 		return true

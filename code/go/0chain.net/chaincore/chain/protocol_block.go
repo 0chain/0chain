@@ -2,11 +2,16 @@ package chain
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
+	"io"
+	"math"
+	"net/http"
+	"strconv"
 	"time"
 
 	"0chain.net/chaincore/block"
+	"0chain.net/chaincore/httpclientutil"
 	"0chain.net/chaincore/node"
 	"0chain.net/core/common"
 	"0chain.net/core/config"
@@ -14,6 +19,7 @@ import (
 	"0chain.net/core/maths"
 	"0chain.net/core/util/waitgroup"
 	"0chain.net/smartcontract/dbs/event"
+	"0chain.net/smartcontract/minersc"
 	"github.com/0chain/common/core/currency"
 	"github.com/0chain/common/core/logging"
 	"go.uber.org/zap"
@@ -155,18 +161,31 @@ func (c *Chain) VerifyNotarization(ctx context.Context, b *block.Block, bvt []*b
 }
 
 // VerifyRelatedMagicBlockPresence check is there related magic block and
-// returns detailed error or nil for successful case. Since GetMagicBlock
-// is optimistic it can returns different magic block for requested round.
+// returns detailed error or nil for successful case.
+// Uses the block's declared LatestFinalizedMagicBlockRound to look up the MB
+// directly, rather than deriving it from the block's round. This fixes issues
+// at view change boundaries where GetMagicBlock(b.Round) might return a newer
+// MB than what the block was actually created with.
 func (c *Chain) VerifyRelatedMagicBlockPresence(b *block.Block) (err error) {
-
-	// return // force ok to check
 
 	var (
 		lfb        = c.GetLatestFinalizedBlock()
 		relatedmbr = b.LatestFinalizedMagicBlockRound
-		mb         = c.GetMagicBlock(b.Round)
 	)
 
+	// Look up MB by exact starting round from the block, not by calculating from block round.
+	// This fixes view change boundary issues where blocks created just before a new MB
+	// becomes active would fail verification because GetMagicBlock(b.Round) returns the new MB.
+	c.mbMutex.RLock()
+	entity := c.MagicBlockStorage.GetByStartingRound(relatedmbr)
+	c.mbMutex.RUnlock()
+
+	if entity == nil {
+		return common.NewErrorf("verify_related_mb_presence",
+			"MB not found for starting round: %d, block_round: %d", relatedmbr, b.Round)
+	}
+
+	mb := entity.(*block.MagicBlock)
 	if mb.StartingRound != relatedmbr {
 		return common.NewErrorf("verify_related_mb_presence",
 			"no corresponding MB, want_mb_sr: %d, got_mb_sr: %d",
@@ -207,26 +226,98 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	bvt []*block.VerificationTicket) bool {
 
 	var (
-		mb        = c.GetMagicBlock(round)
-		num       = mb.Miners.Size()
-		threshold = c.GetNotarizationThresholdCount(num)
-		err       error
+		mb           = c.GetMagicBlock(round)
+		num          = mb.Miners.Size()
+		numTickets   = len(bvt)
+		// First try with fast default threshold (no MPT read)
+		fastThreshold = c.GetNotarizationThresholdCount(num)
+		threshold     = fastThreshold
+		err           error
 	)
 
-	if mb.StartingRound != mbRound {
-		// return true when local MB does not match the block's mb_round,
-		// this could be the miner just started, and try to fetch the MagicBlock from remote
+	// Fast path: if we have enough tickets with default threshold, no MPT read needed
+	// Only read from MPT if verification fails (t_percent might be lower than default)
+	if c.ThresholdByCount() > 0 && numTickets >= fastThreshold && mb.StartingRound == mbRound {
+		logging.Logger.Debug("reachedNotarization - fast path success",
+			zap.Int64("round", round),
+			zap.Int("tickets", numTickets),
+			zap.Int("fast_threshold", fastThreshold))
 		return true
 	}
 
+	// Slow path: need to check MPT state for actual t_percent
+	// This handles cases where:
+	// 1. We don't have enough tickets (t_percent might be lower)
+	// 2. MB mismatch (need accurate thresholds for both MBs)
+	threshold = c.GetThresholdFromState(num)
+
+	// MB mismatch: block was created under different MB configuration.
+	// Use minimum threshold between current MB and block's MB for safety.
+	// This ensures blocks with sufficient tickets for either MB config are accepted.
+	if mb.StartingRound != mbRound {
+		c.mbMutex.RLock()
+		entity := c.MagicBlockStorage.GetByStartingRound(mbRound)
+		c.mbMutex.RUnlock()
+		if entity != nil {
+			blockMB := entity.(*block.MagicBlock)
+			// Calculate threshold for block's MB from t_percent in smart contract state
+			blockMBThreshold := c.GetThresholdFromState(blockMB.Miners.Size())
+			// Use the lower threshold - block may have been created under either config
+			if blockMBThreshold < threshold {
+				threshold = blockMBThreshold
+				num = blockMB.Miners.Size()
+			}
+			logging.Logger.Debug("reachedNotarization - MB mismatch, using min threshold",
+				zap.Int64("round", round),
+				zap.Int64("block_mb_round", mbRound),
+				zap.Int64("local_mb_sr", mb.StartingRound),
+				zap.Int("current_mb_threshold", threshold),
+				zap.Int("block_mb_threshold", blockMBThreshold),
+				zap.Int("using_threshold", threshold),
+				zap.Int("tickets", numTickets))
+		} else {
+			// Block's MB not found locally - try to fetch from sharders
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			blockMB, fetchErr := c.fetchMagicBlockByStartingRound(ctx, mbRound)
+			cancel()
+			if fetchErr == nil && blockMB != nil {
+				// Register miners from the fetched MB so their signatures can be verified
+				if updateErr := c.UpdateMagicBlock(blockMB); updateErr != nil {
+					logging.Logger.Error("reachedNotarization - failed to update fetched MB",
+						zap.Int64("mb_sr", blockMB.StartingRound),
+						zap.Error(updateErr))
+				}
+				blockMBThreshold := c.GetThresholdFromState(blockMB.Miners.Size())
+				if blockMBThreshold < threshold {
+					threshold = blockMBThreshold
+					num = blockMB.Miners.Size()
+				}
+				logging.Logger.Info("reachedNotarization - fetched missing MB",
+					zap.Int64("round", round),
+					zap.Int64("block_mb_round", mbRound),
+					zap.Int("fetched_mb_miners", blockMB.Miners.Size()),
+					zap.Int("using_threshold", threshold),
+					zap.Int("tickets", numTickets))
+			} else {
+				// Block's MB not found - use current MB's threshold
+				logging.Logger.Debug("reachedNotarization - MB mismatch, block MB not found, using current MB threshold",
+					zap.Int64("round", round),
+					zap.Int64("block_mb_round", mbRound),
+					zap.Int64("local_mb_sr", mb.StartingRound),
+					zap.Int("threshold", threshold),
+					zap.Int("tickets", numTickets),
+					zap.Error(fetchErr))
+			}
+		}
+	}
+
 	if c.ThresholdByCount() > 0 {
-		var numSignatures = len(bvt)
-		if numSignatures < threshold {
+		if numTickets < threshold {
 			logging.Logger.Info("not reached notarization",
 				zap.Int64("mb_sr", mb.StartingRound),
 				zap.Int("active_miners", num),
 				zap.Int("threshold", threshold),
-				zap.Int("num_signatures", numSignatures),
+				zap.Int("num_signatures", numTickets),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
 			return false
@@ -248,7 +339,7 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 				zap.Uint64("verify stake", verifiersStake),
 				zap.Int("threshold", c.ThresholdByStake()),
 				zap.Int("active_miners", num),
-				zap.Int("num_signatures", len(bvt)),
+				zap.Int("num_signatures", numTickets),
 				zap.Int("signature threshold", threshold),
 				zap.Int64("current_round", c.GetCurrentRound()),
 				zap.Int64("round", round))
@@ -257,6 +348,113 @@ func (c *Chain) reachedNotarization(round, mbRound int64, hash string,
 	}
 
 	return true
+}
+
+// fetchMagicBlockByStartingRound fetches a magic block from sharders by its starting round.
+// It searches in the appropriate direction based on whether the target is newer or older
+// than the current MB.
+func (c *Chain) fetchMagicBlockByStartingRound(ctx context.Context, startingRound int64) (*block.MagicBlock, error) {
+	currentMB := c.GetCurrentMagicBlock()
+	if currentMB == nil {
+		return nil, common.NewError("fetch_mb_by_starting_round", "no current magic block")
+	}
+
+	// If the current MB matches, return it directly
+	if currentMB.StartingRound == startingRound {
+		return currentMB, nil
+	}
+
+	sharderURLs := currentMB.Sharders.N2NURLs()
+	minerURLs := currentMB.Miners.N2NURLs()
+	if len(sharderURLs) == 0 && len(minerURLs) == 0 {
+		return nil, common.NewError("fetch_mb_by_starting_round", "no URLs available")
+	}
+
+	verifyFn := func(b *block.Block) bool {
+		return b != nil && b.MagicBlock != nil
+	}
+
+	// Determine search direction based on whether target is newer or older
+	searchUpward := startingRound > currentMB.StartingRound
+	startMBNumber := currentMB.MagicBlockNumber
+
+	logging.Logger.Debug("fetch_mb_by_starting_round - starting search",
+		zap.Int64("target_starting_round", startingRound),
+		zap.Int64("current_mb_sr", currentMB.StartingRound),
+		zap.Int64("current_mb_number", startMBNumber),
+		zap.Bool("search_upward", searchUpward))
+
+	// Limit search to prevent infinite loops (search up to 1000 MBs)
+	maxIterations := int64(1000)
+	for i := int64(0); i < maxIterations; i++ {
+		var mbNumber int64
+		if searchUpward {
+			mbNumber = startMBNumber + i
+		} else {
+			mbNumber = startMBNumber - i
+			if mbNumber < 0 {
+				break
+			}
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		// Fetch magic block by number from sharders first, then miners
+		var b *block.Block
+		var err error
+		if len(sharderURLs) > 0 {
+			b, err = httpclientutil.FetchMagicBlockFromSharders(ctx, sharderURLs, mbNumber, verifyFn)
+		}
+		if (b == nil || b.MagicBlock == nil) && len(minerURLs) > 0 {
+			b, err = httpclientutil.FetchMagicBlockFromSharders(ctx, minerURLs, mbNumber, verifyFn)
+		}
+		if err != nil || b == nil || b.MagicBlock == nil {
+			logging.Logger.Debug("fetch_mb_by_starting_round - fetch failed",
+				zap.Int64("mb_number", mbNumber),
+				zap.Error(err))
+			// If searching upward and fetch fails, we've likely gone past the latest MB
+			if searchUpward {
+				break
+			}
+			continue
+		}
+
+		if b != nil && b.MagicBlock != nil {
+			// Store the fetched MB locally for future use
+			c.mbMutex.Lock()
+			c.MagicBlockStorage.Put(b.MagicBlock, b.MagicBlock.StartingRound)
+			c.mbMutex.Unlock()
+
+			// Check if this is the magic block we're looking for
+			if b.MagicBlock.StartingRound == startingRound {
+				logging.Logger.Info("fetch_mb_by_starting_round - found magic block",
+					zap.Int64("starting_round", startingRound),
+					zap.Int64("mb_number", mbNumber),
+					zap.Int("miners", b.MagicBlock.Miners.Size()))
+				return b.MagicBlock, nil
+			}
+
+			// Check if we've gone past the target (in either direction)
+			if searchUpward && b.MagicBlock.StartingRound > startingRound {
+				logging.Logger.Debug("fetch_mb_by_starting_round - passed target round (upward), stopping search",
+					zap.Int64("target_starting_round", startingRound),
+					zap.Int64("found_starting_round", b.MagicBlock.StartingRound))
+				break
+			}
+			if !searchUpward && b.MagicBlock.StartingRound < startingRound {
+				logging.Logger.Debug("fetch_mb_by_starting_round - passed target round (downward), stopping search",
+					zap.Int64("target_starting_round", startingRound),
+					zap.Int64("found_starting_round", b.MagicBlock.StartingRound))
+				break
+			}
+		}
+	}
+
+	return nil, common.NewErrorf("fetch_mb_by_starting_round", "magic block with starting round %d not found", startingRound)
 }
 
 /*
@@ -330,29 +528,34 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 		zap.Int("round_rank", fb.RoundRank), zap.Int8("state", fb.GetBlockState()))
 	ts := time.Now()
 	numGenerators := c.GetGeneratorsNumOfRound(fb.Round)
+
+	// March 2019 behavior: Don't reject blocks with invalid rank, just log warning and skip stats
+	// This can happen during timeout when random seed changes and ranks are recomputed
 	if fb.RoundRank >= numGenerators || fb.RoundRank < 0 {
-		logging.Logger.Warn("finalize block - round rank is invalid or greater than num_generators",
+		logging.Logger.Warn("finalize block - round rank outside normal range (timeout scenario)",
+			zap.Int64("round", fb.Round),
+			zap.String("block", fb.Hash),
 			zap.Int("round_rank", fb.RoundRank),
 			zap.Int("num_generators", numGenerators))
-		return errors.New("round rank is invalid or greater than num_generators")
+		// Don't return error - continue with finalization (March 2019 behavior)
 	} else {
+		// Update stats only for valid ranks
 		bNode := c.GetMiners(fb.Round).GetNode(fb.MinerID)
 		if bNode != nil {
 			if bNode.ProtocolStats != nil {
-				//FIXME: fix node stats
 				ms := bNode.ProtocolStats.(*MinerStats)
 				if numGenerators > len(ms.FinalizationCountByRank) {
 					newRankStat := make([]int64, numGenerators)
 					copy(newRankStat, ms.FinalizationCountByRank)
 					ms.FinalizationCountByRank = newRankStat
 				}
-				ms.FinalizationCountByRank[fb.RoundRank]++ // stat
+				ms.FinalizationCountByRank[fb.RoundRank]++
 			}
 		} else {
-			logging.Logger.Error("generator is not registered",
+			logging.Logger.Warn("finalize block - generator not registered, skipping stats",
 				zap.Int64("round", fb.Round),
 				zap.String("miner", fb.MinerID))
-			return fmt.Errorf("generator: %s is not registered", fb.MinerID)
+			// Don't return error - continue with finalization
 		}
 	}
 	fr := c.GetRound(fb.Round)
@@ -363,7 +566,13 @@ func (c *Chain) finalizeBlock(ctx context.Context, fb *block.Block, bsh BlockSta
 	logging.Logger.Info("finalize block -- round", zap.Any("round", fr), zap.String("block", fb.Hash))
 	generators := c.GetGenerators(fr)
 	for idx, g := range generators {
-		ms := g.ProtocolStats.(*MinerStats)
+		if g.ProtocolStats == nil {
+			continue
+		}
+		ms, ok := g.ProtocolStats.(*MinerStats)
+		if !ok || ms == nil {
+			continue
+		}
 		if len(generators) > len(ms.GenerationCountByRank) {
 			newRankStat := make([]int64, len(generators))
 			copy(newRankStat, ms.GenerationCountByRank)
@@ -630,10 +839,146 @@ func (c *Chain) IsFinalizedDeterministically(b *block.Block) bool {
 	if c.GetLatestFinalizedBlock().Round < b.Round {
 		return false
 	}
-	if len(b.GetUniqueBlockExtensions())*100 >= mb.Miners.Size()*c.ThresholdByCount() {
+	numExtensions := len(b.GetUniqueBlockExtensions())
+	// Fast path: check with default threshold first (no MPT read)
+	fastThreshold := c.GetNotarizationThresholdCount(mb.Miners.Size())
+	if numExtensions >= fastThreshold {
+		return true
+	}
+	// Slow path: only read from MPT if fast check failed (t_percent might be lower)
+	threshold := c.GetThresholdFromState(mb.Miners.Size())
+	if numExtensions >= threshold {
 		return true
 	}
 	return false
+}
+
+// GetThresholdFromState reads t_percent from smart contract's GlobalNode state
+// and calculates the notarization threshold. If local state read fails (corrupted state),
+// it fetches t_percent from peer sharders via REST API. Falls back to local config only
+// if both local state and peer fetch fail.
+// This method is exported for use by miner package.
+func (c *Chain) GetThresholdFromState(minersCount int) int {
+	lfb := c.GetLatestFinalizedBlock()
+
+	// If LFB is available, try to read from local state
+	if lfb != nil && lfb.Round >= 1 {
+		var gn minersc.GlobalNode
+		err := c.GetBlockStateNode(lfb, minersc.GlobalNodeKey, &gn)
+		if err == nil {
+			tPercent := gn.MustBase().TPercent
+			threshold := int(math.Ceil(float64(minersCount) * tPercent))
+			logging.Logger.Debug("getThresholdFromState - using t_percent from smart contract",
+				zap.Float64("t_percent", tPercent),
+				zap.Int("miners_count", minersCount),
+				zap.Int("threshold", threshold))
+			return threshold
+		}
+		logging.Logger.Debug("getThresholdFromState - failed to read GlobalNode from local state, trying peer sharders",
+			zap.Error(err),
+			zap.Int64("lfb_round", lfb.Round))
+	} else {
+		logging.Logger.Debug("getThresholdFromState - LFB not available, trying peer sharders")
+	}
+
+	// Try to fetch t_percent from peer sharders via REST API
+	// This is used when local state is corrupted OR during early bootstrap
+	tPercent, fetchErr := c.getTPercentFromSharders()
+	if fetchErr != nil {
+		logging.Logger.Debug("getThresholdFromState - failed to fetch from peers, using local config",
+			zap.Error(fetchErr))
+		return c.GetNotarizationThresholdCount(minersCount)
+	}
+
+	threshold := int(math.Ceil(float64(minersCount) * tPercent))
+	logging.Logger.Info("getThresholdFromState - using t_percent from peer sharders",
+		zap.Float64("t_percent", tPercent),
+		zap.Int("miners_count", minersCount),
+		zap.Int("threshold", threshold))
+	return threshold
+}
+
+// getTPercentFromSharders fetches t_percent from peer sharders via the smart contract
+// REST API when local state is corrupted or unavailable.
+func (c *Chain) getTPercentFromSharders() (float64, error) {
+	mb := c.GetLatestMagicBlock()
+	if mb == nil || mb.Sharders == nil {
+		return 0, common.NewError("no_magic_block", "no magic block available")
+	}
+
+	sharders := mb.Sharders.CopyNodesMap()
+	if len(sharders) == 0 {
+		return 0, common.NewError("no_sharders", "no sharders in magic block")
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	// Try each sharder until we get a successful response
+	for _, sharder := range sharders {
+		if sharder.GetStatus() == node.NodeStatusInactive {
+			continue
+		}
+
+		url := fmt.Sprintf("%s/v1/screst/%s/configs", sharder.GetN2NURLBase(), minersc.ADDRESS)
+
+		resp, err := client.Get(url)
+		if err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - request failed",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Error(err))
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			logging.Logger.Debug("getTPercentFromSharders - non-200 status",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Int("status", resp.StatusCode))
+			continue
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - failed to read body",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Error(err))
+			continue
+		}
+
+		var result struct {
+			Fields map[string]string `json:"fields"`
+		}
+		if err := json.Unmarshal(body, &result); err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - failed to parse JSON",
+				zap.String("sharder", sharder.GetKey()),
+				zap.Error(err))
+			continue
+		}
+
+		tPercentStr, ok := result.Fields["t_percent"]
+		if !ok {
+			logging.Logger.Debug("getTPercentFromSharders - t_percent not in response",
+				zap.String("sharder", sharder.GetKey()))
+			continue
+		}
+
+		tPercent, err := strconv.ParseFloat(tPercentStr, 64)
+		if err != nil {
+			logging.Logger.Debug("getTPercentFromSharders - failed to parse t_percent",
+				zap.String("sharder", sharder.GetKey()),
+				zap.String("t_percent_str", tPercentStr),
+				zap.Error(err))
+			continue
+		}
+
+		logging.Logger.Info("getTPercentFromSharders - successfully fetched t_percent",
+			zap.String("sharder", sharder.GetKey()),
+			zap.Float64("t_percent", tPercent))
+		return tPercent, nil
+	}
+
+	return 0, common.NewError("fetch_failed", "failed to fetch t_percent from all peer sharders")
 }
 
 // GetLocalPreviousBlock returns previous block for the block. Without a network
@@ -671,16 +1016,21 @@ func (c *Chain) GetPreviousBlock(ctx context.Context, b *block.Block) *block.Blo
 	lfb := c.GetLatestFinalizedBlock()
 	if lfb != nil && lfb.Round == b.Round-1 && lfb.IsStateComputed() {
 		// previous round is latest finalized round
-		if b.PrevHash != lfb.Hash {
-			logging.Logger.Error("get_previous_block - can't set lfb as previous block, hash mismatch")
-			return nil
+		if b.PrevHash == lfb.Hash {
+			b.SetPreviousBlock(lfb)
+			logging.Logger.Info("get_previous_block - previous block is lfb",
+				zap.Int64("round", b.Round),
+				zap.Int64("lfb_round", lfb.Round),
+				zap.String("block", b.Hash))
+			return lfb
 		}
-		b.SetPreviousBlock(lfb)
-		logging.Logger.Info("get_previous_block - previous block is lfb",
+		// Hash mismatch: LFB at this round has a different hash than what the
+		// block expects. This can happen when the LFB is from a fork. Fall
+		// through to SyncPreviousBlocks to fetch the correct block from peers.
+		logging.Logger.Warn("get_previous_block - lfb hash mismatch, will try syncing from peers",
 			zap.Int64("round", b.Round),
-			zap.Int64("lfb_round", lfb.Round),
-			zap.String("block", b.Hash))
-		return lfb
+			zap.String("block_prev_hash", b.PrevHash),
+			zap.String("lfb_hash", lfb.Hash))
 	}
 
 	maxSyncDepth := int64(config.GetLFBTicketAhead())

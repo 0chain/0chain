@@ -17,6 +17,7 @@ type RoundStorage interface {
 	GetLatest() RoundStorageEntity
 	Put(entity RoundStorageEntity, round int64) error
 	Prune(round int64) error
+	DeleteAfter(round int64) error
 	Count() int
 	GetRound(i int) int64
 	FindRoundIndex(round int64) int
@@ -188,5 +189,41 @@ func (s *roundStartingStorage) Prune(round int64) error {
 		delete(s.items, s.rounds[i])
 	}
 	s.rounds = s.rounds[pruneIndex+1:]
+	return nil
+}
+
+// DeleteAfter removes all items with starting round > the given round.
+// This is used to remove non-finalized magic blocks during startup to prevent split-brain.
+func (s *roundStartingStorage) DeleteAfter(round int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Find the index of the first round > the given round
+	deleteIndex := -1
+	for i := 0; i < len(s.rounds); i++ {
+		if s.rounds[i] > round {
+			deleteIndex = i
+			break
+		}
+	}
+
+	if deleteIndex == -1 {
+		// No items to delete
+		return nil
+	}
+
+	// Remove all items from deleteIndex onwards (higher rounds)
+	for i := deleteIndex; i < len(s.rounds); i++ {
+		delete(s.items, s.rounds[i])
+	}
+	s.rounds = s.rounds[:deleteIndex]
+
+	// Update max to the new highest round
+	if len(s.rounds) > 0 {
+		s.max = s.rounds[len(s.rounds)-1]
+	} else {
+		s.max = 0
+	}
+
 	return nil
 }

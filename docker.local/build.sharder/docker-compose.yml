@@ -13,6 +13,11 @@ services:
       - ../sharder${SHARDER}/data/postgresql:/var/lib/postgresql/data
       - ../sql_script/:/docker-entrypoint-initdb.d/
       # - ../sharder${SHARDER}/data/postgresql2:/var/lib/postgresql/hdd_ts
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
     networks:
       default:
 
@@ -32,6 +37,11 @@ services:
       testnet0:
         ipv4_address: 198.18.0.8${SHARDER}
     command: ./bin/sharder --deployment_mode 0 --keys_file config${KEYS_CONFIG_PATH}/b0snode${SHARDER}_keys.txt
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "3"
 
 networks:
   default:

@@ -613,7 +613,7 @@ func (sc *StorageSmartContract) blobberHealthCheck(t *transaction.Transaction,
 ) (string, error) {
 	var (
 		blobber  *StorageNode
-		downtime uint64
+		downtime int64
 		err      error
 	)
 	if blobber, err = sc.getBlobber(t.ClientID, balances); err != nil {
@@ -1029,6 +1029,18 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 			"error marshalling allocation blobber details")
 	}
 
+	// Early check: reject commits from killed/shutdown blobbers before write marker validation
+	blobber, err := sc.getBlobber(blobAlloc.BlobberID, balances)
+	if err != nil {
+		return "", common.NewErrorf("commit_connection_failed",
+			"error fetching blobber: %v", err)
+	}
+
+	if blobber.IsKilled() || blobber.IsShutDown() {
+		return "", common.NewError("commit_connection_failed",
+			"blobber is killed or shutdown")
+	}
+
 	if !commitConnection.WriteMarker.VerifySignature(alloc.OwnerPublicKey, balances) {
 		return "", common.NewError("commit_connection_failed",
 			"Invalid signature for write marker")
@@ -1129,17 +1141,6 @@ func (sc *StorageSmartContract) commitBlobberConnection(
 					"Previous allocation root does not match the latest allocation root")
 			}
 		}
-	}
-
-	blobber, err := sc.getBlobber(blobAlloc.BlobberID, balances)
-	if err != nil {
-		return "", common.NewErrorf("commit_connection_failed",
-			"error fetching blobber: %v", err)
-	}
-
-	if blobber.IsKilled() || blobber.IsShutDown() {
-		return "", common.NewError("commit_connection_failed",
-			"blobber is killed or shutdown")
 	}
 
 	if blobAlloc.Stats.UsedSize == 0 {
@@ -1340,7 +1341,14 @@ func (sc *StorageSmartContract) insertBlobber(t *transaction.Transaction,
 		return fmt.Errorf("could not check blobber url: %v", err)
 	}
 	if has {
-		return fmt.Errorf("invalid blobber, url: %s already used", bb.BaseURL)
+		// URL is taken. This could be from a killed/shutdown blobber whose URL was
+		// never released (pre-fix) or from a live blobber. Since this is a NEW blobber
+		// registration (different ID — we already checked ID doesn't exist above),
+		// the original owner with this URL is either killed or was fully deleted.
+		// A live blobber wouldn't lose its registration just because the URL key is
+		// removed — it's already registered in the blobber partition list.
+		// Release the stale URL key so this new blobber can register.
+		_, _ = balances.DeleteTrieNode(blobberUrlKey(bb.BaseURL, sc.ID))
 	}
 
 	if actErr := cstate.WithActivation(balances, "hercules", func() error {

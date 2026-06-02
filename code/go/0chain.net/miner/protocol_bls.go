@@ -96,11 +96,37 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 
 	// Time loading DKG summary
 	startLoad := time.Now()
+
+	nyxActive := mc.isHardforkActive("Nyx", mc.GetCurrentRound())
+
 	if len(dkgSum) > 0 {
 		summary = dkgSum[0]
 	} else {
 		summary, err = LoadDKGSummary(ctx, id)
 		if err != nil {
+			// Only attempt recovery if:
+			// 1. This is the latest MB (not an old one that would block startup)
+			// 2. Self is actually a member of this MB (otherwise peers will reject)
+			latestMB := mc.GetLatestMagicBlock()
+			selfInMB := mb.Miners != nil && mb.Miners.HasNode(selfNodeKey)
+			if latestMB != nil && mb.MagicBlockNumber >= latestMB.MagicBlockNumber && selfInMB {
+				logging.Logger.Warn("[dkg] LoadDKGSummary failed, attempting VRF-seeded recovery",
+					zap.Int64("mb_number", mb.MagicBlockNumber),
+					zap.Error(err))
+				if recoverErr := mc.RecoverDKG(ctx, mb); recoverErr != nil {
+					logging.Logger.Error("[dkg] recovery also failed after LoadDKGSummary error",
+						zap.Int64("mb_number", mb.MagicBlockNumber),
+						zap.Error(recoverErr))
+					return fmt.Errorf("LoadDKGSummary: %v, recovery: %v", err, recoverErr)
+				}
+				// RecoverDKG succeeded — it already called mc.SetDKG and stored the summary
+				return nil
+			}
+			logging.Logger.Warn("[dkg] LoadDKGSummary failed, skipping recovery",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Bool("self_in_mb", selfInMB),
+				zap.Bool("is_latest", latestMB != nil && mb.MagicBlockNumber >= latestMB.MagicBlockNumber),
+				zap.Error(err))
 			return
 		}
 	}
@@ -108,12 +134,31 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 		zap.Duration("duration", time.Since(startLoad)))
 
 	if mb.StartingRound > 0 && !summary.IsFinalized {
-		return errors.New("DKG summary is not finalized")
+		if nyxActive {
+			// Nyx: don't reject non-finalized summaries — Pi validation below is a stronger check.
+			logging.Logger.Warn("[dkg] DKG summary not finalized, will validate via Pi check",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Int64("mb_starting_round", mb.StartingRound))
+		} else {
+			// Pre-Nyx: reject non-finalized summaries
+			return errors.New("DKG summary is not finalized")
+		}
 	}
 
 	if summary.SecretShares == nil {
-		return common.NewError("failed to set dkg from store",
-			"no saved shares for dkg")
+		latestMB := mc.GetLatestMagicBlock()
+		selfInMB := mb.Miners != nil && mb.Miners.HasNode(selfNodeKey)
+		if latestMB != nil && mb.MagicBlockNumber >= latestMB.MagicBlockNumber && selfInMB {
+			logging.Logger.Warn("[dkg] empty DKG summary (no shares), attempting VRF-seeded recovery",
+				zap.Int64("mb_number", mb.MagicBlockNumber))
+			if recoverErr := mc.RecoverDKG(ctx, mb); recoverErr != nil {
+				return common.NewErrorf("failed to set dkg from store",
+					"no saved shares and recovery failed: %v", recoverErr)
+			}
+			// RecoverDKG succeeded — it already called mc.SetDKG and stored the summary
+			return nil
+		}
+		return common.NewError("failed to set dkg from store", "no saved shares for dkg")
 	}
 
 	// Time DKG creation
@@ -181,6 +226,23 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 		zap.Duration("duration", time.Since(startShares)))
 
 	if !newDKG.HasAllSecretShares() {
+		latestMB := mc.GetLatestMagicBlock()
+		selfInMB := mb.Miners != nil && mb.Miners.HasNode(selfNodeKey)
+		if latestMB != nil && mb.MagicBlockNumber >= latestMB.MagicBlockNumber && selfInMB {
+			// Schedule background recovery — can't block startup because
+			// HTTP server may not be up yet (other miners can't serve shares).
+			mbCopy := mb
+			go func() {
+				time.Sleep(15 * time.Second) // Wait for peers' HTTP servers
+				logging.Logger.Warn("[dkg] not enough secret shares, attempting VRF-seeded recovery",
+					zap.Int64("mb_number", mbCopy.MagicBlockNumber))
+				if recoverErr := mc.RecoverDKG(context.Background(), mbCopy); recoverErr != nil {
+					logging.Logger.Error("[dkg] recovery failed after insufficient shares",
+						zap.Int64("mb_number", mbCopy.MagicBlockNumber),
+						zap.Error(recoverErr))
+				}
+			}()
+		}
 		return common.NewError("failed to set dkg from store",
 			"not enough secret shares for dkg")
 	}
@@ -198,12 +260,155 @@ func (mc *Chain) SetDKGSFromStore(ctx context.Context, mb *block.MagicBlock, dkg
 	logging.Logger.Debug("[dkg_timing] convert mpks",
 		zap.Duration("duration", time.Since(startAgg)))
 
-	startAgg = time.Now()
-	// if err := newDKG.AggregatePublicKeySharesParallel(mpks); err != nil {
-	// 	return err
-	// }
-	// logging.Logger.Debug("[dkg_timing] pub key aggregation",
-	// 	zap.Duration("duration", time.Since(startAgg)))
+	if nyxActive {
+		// Nyx: Validate that Pi from secret shares matches the expected public key from magic block MPKs.
+		// This prevents using stale/corrupted DKG keys that would cause VRF verification failures.
+		startValidate := time.Now()
+		myPartyID := bls.ComputeIDdkg(selfNodeKey)
+		expectedPi, err := newDKG.GetPublicKeyByIDFromMpks(myPartyID)
+		if err != nil {
+			return common.NewErrorf("dkg_key_validation_failed",
+				"failed to compute expected public key from MPKs: %v", err)
+		}
+		if !newDKG.Pi.IsEqual(&expectedPi) {
+			logging.Logger.Warn("[dkg] public key mismatch from stored shares, retrying with magic block ShareOrSigns",
+				zap.Int64("mb_number", mb.MagicBlockNumber),
+				zap.Int64("mb_starting_round", mb.StartingRound))
+
+			// Stored DKG summary has corrupted shares (e.g., from a failed/different view change).
+			// Retry using ONLY the magic block's ShareOrSigns — the network-agreed correct shares.
+			retryDKG := bls.MakeDKG(mb.T, mb.N, selfNodeKey)
+			retryDKG.MagicBlockNumber = mb.MagicBlockNumber
+			retryDKG.StartingRound = mb.StartingRound
+
+			retryMiners := mb.Miners.CopyNodesMap()
+			for k := range retryMiners {
+				if v, ok := mb.GetShareOrSigns().Get(k); ok {
+					if share, ok := v.ShareOrSigns[selfNodeKey]; ok && share.Share != "" {
+						if addErr := retryDKG.AddSecretShare(bls.ComputeIDdkg(k), share.Share, true); addErr != nil {
+							logging.Logger.Error("[dkg] retry: failed to add share from MB",
+								zap.String("from", k[:8]),
+								zap.Error(addErr))
+						}
+					}
+				}
+			}
+
+			if retryDKG.HasAllSecretShares() {
+				retryDKG.AggregateSecretKeyShares()
+				retryDKG.Pi = retryDKG.Si.GetPublicKey()
+				retryDKG.SetMpksMap(mpks)
+
+				if retryDKG.Pi.IsEqual(&expectedPi) {
+					logging.Logger.Info("[dkg] recovered DKG from magic block ShareOrSigns",
+						zap.Int64("mb_number", mb.MagicBlockNumber))
+
+					// Update stored summary with correct shares for future restarts
+					newShares := make(map[string]string)
+					for k := range retryMiners {
+						if v, ok := mb.GetShareOrSigns().Get(k); ok {
+							if share, ok := v.ShareOrSigns[selfNodeKey]; ok && share.Share != "" {
+								newShares[ComputeBlsID(k)] = share.Share
+							}
+						}
+					}
+					summary.SecretShares = newShares
+					if !summary.IsFinalized {
+						summary.IsFinalized = true
+					}
+					if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
+						logging.Logger.Error("[dkg] failed to update corrected DKG summary",
+							zap.Error(storeErr))
+					}
+
+					newDKG = retryDKG
+				} else {
+					logging.Logger.Warn("[dkg] retry also produced key mismatch, scheduling VRF-seeded recovery",
+						zap.String("retry_pi", retryDKG.Pi.GetHexString()[:16]),
+						zap.String("expected_pi", expectedPi.GetHexString()[:16]),
+						zap.Int64("mb_number", mb.MagicBlockNumber))
+					// Clear corrupted summary and schedule async recovery
+					emptySummary := &bls.DKGSummary{SecretShares: nil}
+					emptySummary.ID = id
+					if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
+						logging.Logger.Error("[dkg] failed to clear corrupted DKG summary",
+							zap.Error(storeErr),
+							zap.Int64("mb_number", mb.MagicBlockNumber))
+					}
+					if recoverErr := mc.RecoverDKG(ctx, mb); recoverErr != nil {
+					return fmt.Errorf("DKG Pi mismatch for MB#%d, recovery failed: %v", mb.MagicBlockNumber, recoverErr)
+				}
+				return nil
+				}
+			} else {
+				logging.Logger.Warn("[dkg] not enough shares in MB ShareOrSigns for recovery",
+					zap.Int64("mb_number", mb.MagicBlockNumber))
+				// Clear corrupted summary so miner falls back to previous MB's DKG
+				emptySummary := &bls.DKGSummary{SecretShares: nil}
+				emptySummary.ID = id
+				if storeErr := StoreDKGSummary(ctx, emptySummary); storeErr != nil {
+					logging.Logger.Error("[dkg] failed to clear corrupted DKG summary",
+						zap.Error(storeErr),
+						zap.Int64("mb_number", mb.MagicBlockNumber))
+				}
+				if recoverErr := mc.RecoverDKG(ctx, mb); recoverErr != nil {
+				return fmt.Errorf("DKG Pi mismatch for MB#%d, recovery failed: %v", mb.MagicBlockNumber, recoverErr)
+			}
+			return nil
+			}
+		}
+		logging.Logger.Debug("[dkg_timing] Pi validation",
+			zap.Duration("duration", time.Since(startValidate)))
+
+		// If Pi validated but summary wasn't finalized, finalize it now
+		if !summary.IsFinalized {
+			summary.IsFinalized = true
+			if storeErr := StoreDKGSummary(ctx, summary); storeErr != nil {
+				logging.Logger.Error("[dkg] failed to finalize DKG summary after Pi validation",
+					zap.Error(storeErr))
+			} else {
+				logging.Logger.Info("[dkg] DKG summary finalized after Pi validation",
+					zap.Int64("mb_number", mb.MagicBlockNumber))
+			}
+		}
+	}
+
+	// Stuck-chain convergence: if chain is stuck and this is the latest MB,
+	// schedule VRF-seeded recovery AFTER startup (in background goroutine).
+	// Can't run synchronously here because this runs during LoadMagicBlocksAndDKG
+	// before the HTTP server is up — all miners would deadlock trying to reach each other.
+	{
+		latestMB := mc.GetLatestMagicBlock()
+		selfInMB := mb.Miners != nil && mb.Miners.HasNode(selfNodeKey)
+		isLatest := latestMB != nil && mb.MagicBlockNumber >= latestMB.MagicBlockNumber
+		if isLatest && selfInMB {
+			mbCopy := mb // capture for goroutine
+			go func() {
+				// Wait for HTTP server to be up so peers can serve recovery shares
+				time.Sleep(30 * time.Second)
+				lfb := mc.GetLatestFinalizedBlock()
+				chainStuck := false
+				if lfb != nil {
+					lfbAge := time.Since(time.Unix(int64(lfb.CreationDate), 0))
+					chainStuck = lfbAge >= 3*time.Minute
+				} else {
+					chainStuck = true
+				}
+				if !chainStuck {
+					logging.Logger.Debug("[dkg] chain not stuck, skipping VRF-seeded convergence",
+						zap.Int64("mb_number", mbCopy.MagicBlockNumber))
+					return
+				}
+				logging.Logger.Info("[dkg] chain stuck — forcing VRF-seeded convergence even with valid stored DKG",
+					zap.Int64("mb_number", mbCopy.MagicBlockNumber))
+				if recoverErr := mc.RecoverDKG(context.Background(), mbCopy); recoverErr != nil {
+					logging.Logger.Error("[dkg] VRF-seeded convergence failed",
+						zap.Int64("mb_number", mbCopy.MagicBlockNumber),
+						zap.Error(recoverErr))
+				}
+			}()
+		}
+	}
 
 	// Time final DKG setting
 	startSet := time.Now()

@@ -362,45 +362,44 @@ type Chainer interface {
 	GetRound(roundNumber int64) round.RoundI
 	IsRoundGenerator(r round.RoundI, nd *node.Node) bool
 	GetLatestFinalizedBlock() *block.Block
+	GetThresholdFromState(minersCount int) int
 }
 
 //
 // the block fetching functions
 //
 
-// getFinalizedBlockFromSharders - request for a finalized block from all
-// sharders from current magic block.
+// getFinalizedBlockFromSharders - request for a finalized block trying:
+// 1. Miners first (they keep 1000 rounds in memory)
+// 2. Current MB sharders
+// 3. Previous MB sharders (fallback for view change scenarios)
 func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTicket) (fb *block.Block, err error) {
 	mb := c.getLatestFinalizedMagicBlock(ctx)
 	if mb == nil {
-		return nil, common.NewError("fetch_nb_from_miners", "could not find magic block")
+		return nil, common.NewError("fetch_fb_from_sharders", "could not find magic block")
 	}
 
-	sharders := mb.Sharders
-	blockC := make(chan *block.Block, sharders.Size())
-
-	lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
-	defer cancel()
+	// First try: miners (they keep recent blocks in memory)
+	b, err := c.GetNotarizedBlockFromMiners(ctx, ticket.LFBHash, ticket.Round, true)
+	if err == nil {
+		return b, nil
+	}
+	if err == context.Canceled || err == context.DeadlineExceeded {
+		return nil, err
+	}
+	logging.Logger.Debug("fetch from miners failed, trying sharders",
+		zap.Int64("round", ticket.Round),
+		zap.Error(err))
 
 	params := make(url.Values)
 	params.Add("hash", ticket.LFBHash)
 	params.Add("round", strconv.FormatInt(ticket.Round, 10))
 
-	// request from ticket sender, or. if the sender is missing,
-	// try to fetch from all other sharders from the current MB
-	if node.Self.Underlying().GetKey() != ticket.SharderID {
-		if sh := sharders.GetNode(ticket.SharderID); sh != nil {
-			sh.RequestEntityFromNode(lctx, FBRequestor, &params, fbHandlerFunc(blockC, ticket))
-			select {
-			case fb = <-blockC:
-				return c.validateBlock(ctx, fb)
-			case <-lctx.Done():
-			}
-		}
-	}
-
 	fetchFB := func(nds []*node.Node) (*block.Block, error) {
-		lctx, cancel = context.WithTimeout(ctx, node.TimeoutLargeMessage)
+		if len(nds) == 0 {
+			return nil, common.NewError("fetch_fb_from_sharders", "no nodes to fetch from")
+		}
+		lctx, cancel := context.WithTimeout(ctx, node.TimeoutLargeMessage)
 		defer cancel()
 		var (
 			doneC  = make(chan struct{})
@@ -435,51 +434,87 @@ func (c *Chain) getFinalizedBlockFromSharders(ctx context.Context, ticket *LFBTi
 		}
 	}
 
-	var (
-		nodes     []*node.Node
-		batchSize = 4 // concurrent requests batch size
-	)
-
-	if node.GetFetchStrategy() == node.FetchStrategyRandom {
-		nodes = sharders.ShuffleNodes(true)
-	} else {
-		nodes = sharders.GetNodesByLargeMessageTime()
-	}
-
-	if batchSize > len(nodes) {
-		batchSize = len(nodes)
-	}
-
-	batchNum := len(nodes) / batchSize
-	if len(nodes)%batchSize != 0 {
-		batchNum++
-	}
-
-	for i := 0; i < batchNum; i++ {
-		start, end := i*batchSize, (i+1)*batchSize
-		if end > len(nodes) {
-			end = len(nodes)
+	fetchFromSharderPool := func(sharders *node.Pool, source string) (*block.Block, error) {
+		if sharders == nil || sharders.Size() == 0 {
+			return nil, common.NewError("fetch_fb_from_sharders", "no sharders in pool")
 		}
 
-		b, err := fetchFB(nodes[start:end])
-		switch err {
-		case nil:
-			return b, nil
-		case context.Canceled, context.DeadlineExceeded:
-			return nil, err
-		default:
-			ns := make([]string, len(nodes[start:end]))
-			for i, n := range nodes[start:end] {
-				ns[i] = n.N2NHost
+		var (
+			nodes     []*node.Node
+			batchSize = 4 // concurrent requests batch size
+		)
+
+		if node.GetFetchStrategy() == node.FetchStrategyRandom {
+			nodes = sharders.ShuffleNodes(true)
+		} else {
+			nodes = sharders.GetNodesByLargeMessageTime()
+		}
+
+		if batchSize > len(nodes) {
+			batchSize = len(nodes)
+		}
+
+		batchNum := len(nodes) / batchSize
+		if len(nodes)%batchSize != 0 {
+			batchNum++
+		}
+
+		for i := 0; i < batchNum; i++ {
+			start, end := i*batchSize, (i+1)*batchSize
+			if end > len(nodes) {
+				end = len(nodes)
 			}
-			logging.Logger.Error("fetch_fb_from_sharders failed",
-				zap.Int("start", start),
-				zap.Int("end", end),
-				zap.Any("nodes", ns),
-				zap.Error(err))
+
+			b, err := fetchFB(nodes[start:end])
+			switch err {
+			case nil:
+				return b, nil
+			case context.Canceled, context.DeadlineExceeded:
+				return nil, err
+			default:
+				ns := make([]string, len(nodes[start:end]))
+				for j, n := range nodes[start:end] {
+					ns[j] = n.N2NHost
+				}
+				logging.Logger.Debug("fetch_fb_from_sharders batch failed",
+					zap.String("source", source),
+					zap.Int("start", start),
+					zap.Int("end", end),
+					zap.Any("nodes", ns),
+					zap.Error(err))
+			}
+		}
+		return nil, common.NewError("fetch_fb_from_sharders", "no FB from "+source)
+	}
+
+	// Second try: current MB sharders
+	sharders := mb.Sharders
+	b, err = fetchFromSharderPool(sharders, "current_mb")
+	if err == nil {
+		return b, nil
+	}
+	if err == context.Canceled || err == context.DeadlineExceeded {
+		return nil, err
+	}
+
+	// Third try: previous MB sharders (fallback for view change scenarios)
+	c.mbMutex.RLock()
+	prevMB := c.PreviousMagicBlock
+	c.mbMutex.RUnlock()
+
+	if prevMB != nil && prevMB.Sharders != nil {
+		logging.Logger.Info("fetch_fb_from_sharders: falling back to previous MB sharders",
+			zap.Int64("round", ticket.Round),
+			zap.Int64("current_mb_number", mb.MagicBlockNumber),
+			zap.Int64("prev_mb_number", prevMB.MagicBlockNumber))
+
+		b, err = fetchFromSharderPool(prevMB.Sharders, "previous_mb")
+		if err == nil {
+			return b, nil
 		}
 	}
-	return nil, common.NewError("fetch_fb_from_sharders", "no FB given")
+
+	return nil, common.NewError("fetch_fb_from_sharders", "no FB given from miners or sharders")
 }
 
 func fbHandlerFunc(bc chan *block.Block, ticket *LFBTicket) datastore.JSONEntityReqResponderF {
@@ -505,7 +540,49 @@ func fbHandlerFunc(bc chan *block.Block, ticket *LFBTicket) datastore.JSONEntity
 	}
 }
 
+// registerMinersFromRelatedMagicBlock ensures miners from the block's magic block period
+// are registered in the global node pool for validation lookups.
+// This is needed when validating blocks from other magic block periods - the miner
+// who created the block may not be in the current magic block's miner set.
+// NOTE: We don't set b.MagicBlock because that would change the block hash computation.
+func (c *Chain) registerMinersFromRelatedMagicBlock(b *block.Block) {
+	// Check if miner is already known
+	if node.GetNode(b.MinerID) != nil {
+		return // miner already in global pool
+	}
+
+	c.mbMutex.RLock()
+	entity := c.MagicBlockStorage.GetByStartingRound(b.LatestFinalizedMagicBlockRound)
+	c.mbMutex.RUnlock()
+
+	if entity != nil {
+		mb := entity.(*block.MagicBlock)
+		// Register the specific miner from the related magic block
+		miner := mb.Miners.GetNode(b.MinerID)
+		if miner != nil {
+			if err := node.Setup(miner); err == nil {
+				node.RegisterNode(miner)
+				logging.Logger.Debug("registerMinersFromRelatedMagicBlock - registered miner from related MB",
+					zap.Int64("block_round", b.Round),
+					zap.String("miner_id", b.MinerID),
+					zap.Int64("mb_sr", mb.StartingRound))
+			}
+		} else {
+			logging.Logger.Warn("registerMinersFromRelatedMagicBlock - miner not found in related MB",
+				zap.Int64("block_round", b.Round),
+				zap.String("miner_id", b.MinerID),
+				zap.Int64("mb_sr", mb.StartingRound),
+				zap.Int("mb_miners", mb.Miners.Size()))
+		}
+	}
+}
+
 func (c *Chain) validateBlock(ctx context.Context, b *block.Block) (*block.Block, error) {
+	// Register miners from the related magic block so they can be looked up
+	// during block.Validate(). We don't set b.MagicBlock because that would
+	// change the block hash computation.
+	c.registerMinersFromRelatedMagicBlock(b)
+
 	if err := b.Validate(ctx); err != nil {
 		logging.Logger.Error("fetch_fb_from_sharders - invalid",
 			zap.Int64("round", b.Round), zap.String("block", b.Hash), zap.Error(err))
@@ -586,6 +663,11 @@ func (c *Chain) GetNotarizedBlockFromMiners(ctx context.Context, hash string, ro
 				zap.Duration("duration", time.Since(ts)))
 			return nil, common.NewErrorf("fetch_nb_from_miners", "no notarized block given")
 		}
+
+		// Register miners from the related magic block so they can be looked up
+		// during block.Validate(). We don't set nb.MagicBlock because that would
+		// change the block hash computation.
+		c.registerMinersFromRelatedMagicBlock(nb)
 
 		if err = nb.Validate(ctx); err != nil {
 			logging.Logger.Error("fetch_nb_from_miners - invalid",
@@ -671,11 +753,17 @@ func (c *Chain) RequestEntityFromShardersOnMB(ctx context.Context,
 
 func (c *Chain) getLatestFinalizedMagicBlock(ctx context.Context) (mb *block.MagicBlock) {
 	b := c.GetLatestFinalizedMagicBlock(ctx)
-	if b == nil {
-		return nil
+	if b != nil && b.MagicBlock != nil {
+		return b.MagicBlock
 	}
 
-	return b.MagicBlock
+	// Fallback: use GetLatestMagicBlock which always returns at least genesis
+	// This is needed during startup when LFMB worker hasn't populated the channel yet
+	mb = c.GetLatestMagicBlock()
+	if mb != nil {
+		logging.Logger.Debug("getLatestFinalizedMagicBlock - using fallback magic block (LFMB not set)")
+	}
+	return mb
 }
 
 //

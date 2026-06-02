@@ -43,7 +43,7 @@ type TransactionErrors struct {
 }
 
 func (edb *EventDb) addTransactions(txns []Transaction) error {
-	return edb.Store.Get().Create(&txns).Error
+	return edb.Store.Get().Clauses(clause.OnConflict{DoNothing: true}).Create(&txns).Error
 }
 
 func mergeAddTransactionsEvents() *eventsMergerImpl[Transaction] {

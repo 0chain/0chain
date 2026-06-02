@@ -43,7 +43,7 @@ func TestColumnizer(t *testing.T) {
 			Provider 	  *Provider
 			Hash		  AllocationHash
 			References	  []string
-			User  User                    `gorm:"foreignKey:Owner;references:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+			User  User                    `gorm:"foreignKey:Owner;references:UserID"`
 			Terms []AllocationBlobberTerm `json:"terms" gorm:"foreignKey:AllocationID;references:AllocationID"`
 
 		}

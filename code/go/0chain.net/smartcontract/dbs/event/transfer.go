@@ -53,7 +53,7 @@ func mergeFromChallengePoolsEvents() *eventsMergerImpl[ChallengePoolLock] {
 
 func withMergeChallengePoolLockEvents() eventMergeMiddleware {
 	return withEventMerge(func(a, b *ChallengePoolLock) (*ChallengePoolLock, error) {
-		a.Amount += a.Amount
+		a.Amount += b.Amount
 		return a, nil
 	})
 }
