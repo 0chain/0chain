@@ -2,9 +2,6 @@ name: Update Sprint Branch on every merge to staging
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - staging
 
 jobs:
   update-sprint:

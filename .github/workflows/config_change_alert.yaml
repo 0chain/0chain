@@ -1,22 +1,8 @@
 name: config_change_alert
 
 on:
-  push:
-   branches: 
-     - staging
-   paths:
-      - docker.local/config/0chain.yaml
-      - docker.local/config/sc.yaml
-  
-  pull_request:
-    branches: 
-      - staging
-    types:
-      - closed
-    paths:
-      - docker.local/config/0chain.yaml
-      - docker.local/config/sc.yaml
-   
+  workflow_dispatch:
+
 jobs:
   Config_Alert:
     runs-on: docker-builds
