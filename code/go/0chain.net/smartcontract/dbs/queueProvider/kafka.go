@@ -2,6 +2,7 @@ package queueProvider
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -131,7 +132,7 @@ func (k *KafkaProvider) CloseAllWriters() error {
 }
 
 func (k *KafkaProvider) createKafkaWriter(topic string) sarama.AsyncProducer {
-	producer, err := sarama.NewAsyncProducer([]string{k.Host}, k.Config)
+	producer, err := sarama.NewAsyncProducer(strings.Split(k.Host, ","), k.Config)
 	if err != nil {
 		logging.Logger.Panic(fmt.Sprintf("Failed to start Sarama producer: %v", err))
 	}
