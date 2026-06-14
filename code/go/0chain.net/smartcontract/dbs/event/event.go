@@ -133,8 +133,8 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 		for i, e := range events.events {
 			eventsMap[e.SequenceNumber] = &events.events[i]
 		}
-		var results []chan int64
 		self := node.Self.Underlying()
+		const maxPublishRetry = 5
 		for _, filteredEvent := range events.events {
 			data := map[string]interface{}{
 				"event":  filteredEvent,
@@ -148,8 +148,36 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 			ts := time.Now()
 			key := filteredEvent.EventKey
-			res := broker.PublishToKafka(topic, []byte(key), eventJson)
-			results = append(results, res)
+			// Publish strictly in SequenceNumber order, one at a time. On a kafka
+			// leader failover the idempotent producer's sequence desyncs; recreate
+			// the writer (fresh producer epoch) and retry the SAME event so the
+			// stream stays in sequence rather than reordering or skipping ahead.
+			var perr error
+			for attempt := 0; attempt < maxPublishRetry; attempt++ {
+				perr = broker.PublishToKafka(topic, []byte(key), eventJson)
+				if perr == nil {
+					break
+				}
+				logging.Logger.Error("kafka publish failed, reconnecting and retrying in order",
+					zap.Int64("round", events.round),
+					zap.Int64("seq", filteredEvent.SequenceNumber),
+					zap.Int("attempt", attempt),
+					zap.Error(perr))
+				if rerr := broker.ReconnectWriter(topic); rerr != nil {
+					logging.Logger.Error("kafka reconnect failed", zap.Error(rerr))
+				}
+				time.Sleep(time.Duration(attempt+1) * 200 * time.Millisecond)
+			}
+			if perr != nil {
+				// Backstop: retries exhausted (kafka genuinely unreachable). Do NOT
+				// let the sharder advance without the events reaching 0box — hard
+				// stop; the startup doOnce republishes unpublished events on restart.
+				logging.Logger.Panic("kafka - failed to publish event after retries",
+					zap.Int64("round", events.round),
+					zap.Int64("seq", filteredEvent.SequenceNumber),
+					zap.Error(perr))
+			}
+
 			if filteredEvent.Tag == TagFinalizeBlock {
 				if blockData, ok := filteredEvent.Data.(*Block); ok {
 					finalizationTime := blockData.FinalizationTime
@@ -168,23 +196,6 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			KafkaEventPushLatencyMetric.Update(tm.Milliseconds()) // update kafka latency metric
 			if tm > 100*time.Millisecond {
 				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
-			}
-		}
-
-		//wait for all responses
-		timeout, cancelFunc := context.WithTimeout(context.Background(), 50*time.Second)
-		defer cancelFunc()
-		sent := 0
-	L:
-		for _, ch := range results {
-			select {
-			case <-ch:
-				sent++
-				if sent == len(events.events) {
-					break L
-				}
-			case <-timeout.Done():
-				logging.Logger.Panic("Timeout to publish event to kafka")
 			}
 		}
 		if updateColumn {

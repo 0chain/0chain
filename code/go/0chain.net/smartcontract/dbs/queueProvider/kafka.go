@@ -12,7 +12,7 @@ import (
 )
 
 type KafkaProviderI interface {
-	PublishToKafka(topic string, key, message []byte) chan int64
+	PublishToKafka(topic string, key, message []byte) error
 	ReconnectWriter(topic string) error
 	CloseWriter(topic string) error
 	CloseAllWriters() error
@@ -26,10 +26,10 @@ type KafkaProvider struct {
 }
 
 // map of kafka writers for each topic
-var writers map[string]sarama.AsyncProducer
+var writers map[string]sarama.SyncProducer
 
 func init() {
-	writers = make(map[string]sarama.AsyncProducer)
+	writers = make(map[string]sarama.SyncProducer)
 }
 
 func NewKafkaProvider(host, username, password string, writeTimeout time.Duration) *KafkaProvider {
@@ -58,19 +58,18 @@ func NewKafkaProvider(host, username, password string, writeTimeout time.Duratio
 	}
 }
 
-func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) chan int64 {
+func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error {
 	k.mutex.RLock()
 	writer := writers[topic]
 	k.mutex.RUnlock()
-	res := make(chan int64)
 	if writer == nil {
 		k.mutex.Lock() // Upgrade to write lock
-		defer k.mutex.Unlock()
 		writer = writers[topic]
 		if writer == nil {
 			writer = k.createKafkaWriter(topic)
 			writers[topic] = writer
 		}
+		k.mutex.Unlock()
 	}
 	msg := &sarama.ProducerMessage{
 		Topic: topic,
@@ -78,12 +77,12 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) chan i
 		Value: sarama.ByteEncoder(message),
 	}
 
-	writer.Input() <- msg
-	go func() {
-		r := <-writer.Successes()
-		res <- r.Offset
-	}()
-	return res
+	// SyncProducer.SendMessage blocks until the broker acks, in order, and
+	// returns the error directly — no async Successes/Errors channel race and
+	// no 50s timeout-panic. The caller (mustPushEventsToKafka) is responsible
+	// for reconnecting + retrying in sequence on a failover error.
+	_, _, err := writer.SendMessage(msg)
+	return err
 }
 
 func (k *KafkaProvider) ReconnectWriter(topic string) error {
@@ -131,18 +130,11 @@ func (k *KafkaProvider) CloseAllWriters() error {
 	return nil
 }
 
-func (k *KafkaProvider) createKafkaWriter(topic string) sarama.AsyncProducer {
-	producer, err := sarama.NewAsyncProducer(strings.Split(k.Host, ","), k.Config)
+func (k *KafkaProvider) createKafkaWriter(topic string) sarama.SyncProducer {
+	producer, err := sarama.NewSyncProducer(strings.Split(k.Host, ","), k.Config)
 	if err != nil {
-		logging.Logger.Panic(fmt.Sprintf("Failed to start Sarama producer: %v", err))
+		logging.Logger.Panic(fmt.Sprintf("Failed to start Sarama sync producer: %v", err))
 	}
-
-	go func() {
-		for err := range producer.Errors() {
-			fmt.Println("kafka - failed to write access log entry:", err)
-			logging.Logger.Panic("kafka - failed to write access log entry:", zap.Error(err))
-		}
-	}()
 
 	return producer
 }
