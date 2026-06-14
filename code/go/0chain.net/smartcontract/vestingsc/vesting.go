@@ -222,7 +222,7 @@ func newVestingPool() (vp *vestingPool) {
 	return
 }
 
-// newVestingPoolFromRequest is the same as newVestingPool, but other fields
+// newVestingPoolFromReqeust is the same as newVestingPool, but other fields
 // set by the request. The request must be validated before.
 func newVestingPoolFromReqeust(clientID datastore.Key, ar *addRequest) (
 	vp *vestingPool) {
