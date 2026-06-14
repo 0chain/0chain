@@ -13,6 +13,7 @@ import (
 
 type KafkaProviderI interface {
 	PublishToKafka(topic string, key, message []byte) error
+	PublishBatchToKafka(topic string, keys, messages [][]byte) error
 	ReconnectWriter(topic string) error
 	CloseWriter(topic string) error
 	CloseAllWriters() error
@@ -83,6 +84,45 @@ func (k *KafkaProvider) PublishToKafka(topic string, key, message []byte) error 
 	// for reconnecting + retrying in sequence on a failover error.
 	_, _, err := writer.SendMessage(msg)
 	return err
+}
+
+// PublishBatchToKafka sends a whole block's events in a single ordered,
+// idempotent SendMessages call instead of N synchronous SendMessage round-trips
+// (the per-event serialization was throttling sharder round advancement on
+// event-heavy rounds). With MaxOpenRequests=1 + Idempotent the broker preserves
+// the slice order; on a failover/transient error SendMessages returns
+// sarama.ProducerErrors and the caller (mustPushEventsToKafka) reconnects +
+// retries the WHOLE batch in sequence.
+func (k *KafkaProvider) PublishBatchToKafka(topic string, keys, messages [][]byte) error {
+	if len(messages) == 0 {
+		return nil
+	}
+	k.mutex.RLock()
+	writer := writers[topic]
+	k.mutex.RUnlock()
+	if writer == nil {
+		k.mutex.Lock() // Upgrade to write lock
+		writer = writers[topic]
+		if writer == nil {
+			writer = k.createKafkaWriter(topic)
+			writers[topic] = writer
+		}
+		k.mutex.Unlock()
+	}
+
+	msgs := make([]*sarama.ProducerMessage, len(messages))
+	for i := range messages {
+		var key sarama.Encoder
+		if i < len(keys) {
+			key = sarama.ByteEncoder(keys[i])
+		}
+		msgs[i] = &sarama.ProducerMessage{
+			Topic: topic,
+			Key:   key,
+			Value: sarama.ByteEncoder(messages[i]),
+		}
+	}
+	return writer.SendMessages(msgs)
 }
 
 func (k *KafkaProvider) ReconnectWriter(topic string) error {

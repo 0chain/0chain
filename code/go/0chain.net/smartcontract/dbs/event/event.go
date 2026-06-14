@@ -135,9 +135,18 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 		}
 		self := node.Self.Underlying()
 		const maxPublishRetry = 5
-		for _, filteredEvent := range events.events {
+		// Build the whole block's events as one ordered batch and publish in a
+		// single SendMessages call instead of N synchronous SendMessage round-trips
+		// — the per-event serialization was throttling round advancement on
+		// event-heavy rounds. With MaxOpenRequests=1 + Idempotent the batch keeps
+		// SequenceNumber order; on a kafka leader failover the idempotent producer's
+		// sequence desyncs, so recreate the writer (fresh epoch) and retry the WHOLE
+		// batch in sequence rather than reordering or skipping ahead.
+		keys := make([][]byte, 0, len(events.events))
+		msgs := make([][]byte, 0, len(events.events))
+		for i := range events.events {
 			data := map[string]interface{}{
-				"event":  filteredEvent,
+				"event":  events.events[i],
 				"round":  events.round,
 				"source": self.ID,
 			}
@@ -145,22 +154,21 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			if err != nil {
 				logging.Logger.Panic(fmt.Sprintf("Failed to get marshal event: %v", err))
 			}
+			keys = append(keys, []byte(events.events[i].EventKey))
+			msgs = append(msgs, eventJson)
+		}
 
+		if len(msgs) > 0 {
 			ts := time.Now()
-			key := filteredEvent.EventKey
-			// Publish strictly in SequenceNumber order, one at a time. On a kafka
-			// leader failover the idempotent producer's sequence desyncs; recreate
-			// the writer (fresh producer epoch) and retry the SAME event so the
-			// stream stays in sequence rather than reordering or skipping ahead.
 			var perr error
 			for attempt := 0; attempt < maxPublishRetry; attempt++ {
-				perr = broker.PublishToKafka(topic, []byte(key), eventJson)
+				perr = broker.PublishBatchToKafka(topic, keys, msgs)
 				if perr == nil {
 					break
 				}
-				logging.Logger.Error("kafka publish failed, reconnecting and retrying in order",
+				logging.Logger.Error("kafka batch publish failed, reconnecting and retrying in order",
 					zap.Int64("round", events.round),
-					zap.Int64("seq", filteredEvent.SequenceNumber),
+					zap.Int("events", len(msgs)),
 					zap.Int("attempt", attempt),
 					zap.Error(perr))
 				if rerr := broker.ReconnectWriter(topic); rerr != nil {
@@ -172,28 +180,28 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 				// Backstop: retries exhausted (kafka genuinely unreachable). Do NOT
 				// let the sharder advance without the events reaching 0box — hard
 				// stop; the startup doOnce republishes unpublished events on restart.
-				logging.Logger.Panic("kafka - failed to publish event after retries",
+				logging.Logger.Panic("kafka - failed to publish events batch after retries",
 					zap.Int64("round", events.round),
-					zap.Int64("seq", filteredEvent.SequenceNumber),
+					zap.Int("events", len(msgs)),
 					zap.Error(perr))
 			}
 
-			if filteredEvent.Tag == TagFinalizeBlock {
-				if blockData, ok := filteredEvent.Data.(*Block); ok {
-					finalizationTime := blockData.FinalizationTime
-					FinalizationToKafkaLatencyMetric.Update(time.Since(finalizationTime).Milliseconds()) // update block finalization to kafka push latency metric
-				}
-			}
-
-			eventsMap[filteredEvent.SequenceNumber].IsPublished = true
-
-			logging.Logger.Debug("Pushed event to kafka",
-				zap.String("event", filteredEvent.Tag.String()),
-				zap.Int64("seq", filteredEvent.SequenceNumber),
-				zap.Int64("round", events.round))
-
+			// Batch acked in order — mark every event published + update metrics.
 			tm := time.Since(ts)
 			KafkaEventPushLatencyMetric.Update(tm.Milliseconds()) // update kafka latency metric
+			for i := range events.events {
+				fe := &events.events[i]
+				eventsMap[fe.SequenceNumber].IsPublished = true
+				if fe.Tag == TagFinalizeBlock {
+					if blockData, ok := fe.Data.(*Block); ok {
+						FinalizationToKafkaLatencyMetric.Update(time.Since(blockData.FinalizationTime).Milliseconds()) // block finalization -> kafka push latency
+					}
+				}
+			}
+			logging.Logger.Debug("Pushed events batch to kafka",
+				zap.Int("events", len(msgs)),
+				zap.Int64("round", events.round),
+				zap.Duration("duration", tm))
 			if tm > 100*time.Millisecond {
 				logging.Logger.Debug("Push to kafka slow", zap.Int64("round", events.round), zap.Duration("duration", tm))
 			}
