@@ -35,6 +35,34 @@ func (z ApprovedMinter) Msgsize() (s int) {
 }
 
 // MarshalMsg implements msgp.Marshaler
+func (z NonceNameSpace) MarshalMsg(b []byte) (o []byte, err error) {
+	o = msgp.Require(b, z.Msgsize())
+	o = msgp.AppendInt8(o, int8(z))
+	return
+}
+
+// UnmarshalMsg implements msgp.Unmarshaler
+func (z *NonceNameSpace) UnmarshalMsg(bts []byte) (o []byte, err error) {
+	{
+		var zb0001 int8
+		zb0001, bts, err = msgp.ReadInt8Bytes(bts)
+		if err != nil {
+			err = msgp.WrapError(err)
+			return
+		}
+		(*z) = NonceNameSpace(zb0001)
+	}
+	o = bts
+	return
+}
+
+// Msgsize returns an upper bound estimate of the number of bytes occupied by the serialized message
+func (z NonceNameSpace) Msgsize() (s int) {
+	s = msgp.Int8Size
+	return
+}
+
+// MarshalMsg implements msgp.Marshaler
 func (z StateContext) MarshalMsg(b []byte) (o []byte, err error) {
 	o = msgp.Require(b, z.Msgsize())
 	// map header, size 0
