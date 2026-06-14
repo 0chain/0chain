@@ -974,6 +974,14 @@ func (c *Chain) GetMagicBlock(round int64) *block.MagicBlock {
 	c.mbMutex.RUnlock()
 	// mb := entity.(*block.MagicBlock).Clone()
 	mb := entity.(*block.MagicBlock)
+
+	logging.Logger.Debug("[mvc] GetMagicBlock",
+		zap.Int64("round", round),
+		zap.Int64("mb_starting_round", mb.StartingRound),
+		zap.String("mb_hash", mb.Hash),
+		zap.Int("mb_miners_size", mb.Miners.Size()),
+		zap.Int("mb_sharders_size", mb.Sharders.Size()))
+
 	return mb
 }
 
@@ -1756,7 +1764,8 @@ func (c *Chain) ValidateMagicBlock(_ context.Context, mr *round.Round, b *block.
 
 // GetGenerators - get all the block generators for a given round.
 func (c *Chain) GetGenerators(r round.RoundI) []*node.Node {
-	miners := r.GetMinersByRank(c.GetMiners(r.GetRoundNumber()).CopyNodes())
+	nodes := c.GetMiners(r.GetRoundNumber()).CopyNodes("options")
+	miners := r.GetMinersByRank(nodes)
 	genNum := getGeneratorsNum(len(miners), c.MinGenerators(), c.GeneratorsPercent())
 	if genNum > len(miners) {
 		logging.Logger.Warn("get generators -- the number of generators is greater than the number of miners",
