@@ -111,7 +111,7 @@ func (mb *MagicBlockMap) Decode(input []byte) error {
 	return json.Unmarshal(input, mb)
 }
 
-/*SetupTxnSummaryEntity - setup the txn summary entity */
+/*SetupMagicBlockMapEntity - setup the magic block map entity */
 func SetupMagicBlockMapEntity(store datastore.Store) {
 	magicBlockMapEntityMetadata = datastore.MetadataProvider()
 	magicBlockMapEntityMetadata.Name = "magic_block_map"
