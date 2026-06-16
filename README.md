@@ -8,13 +8,16 @@
 ## Table of Contents
 - [Züs Overview](#züs-overview)
 - [Changelog](#changelog)
-- [Initial Setup](#initial-setup)
-  - [Host Machine Network Setup](#host-machine-network-setup)
-  - [Directory Setup for Miners & Sharders](#directory-setup-for-miners-and-sharders)
-  - [Setup Network](#setup-network)
-  - [Building the Nodes](#building-the-nodes)
-  - [Configuring the Nodes](#configuring-the-nodes)
-  - [Starting the Nodes](#starting-the-nodes)
+- [Quickstart](#quickstart)
+- [Get Started](#get-started)
+  - [1. Network Setup](#1-network-setup)
+  - [2. Directory Setup for Miners and Sharders](#2-directory-setup-for-miners-and-sharders)
+  - [3. Build and Start 0dns](#3-build-and-start-0dns)
+  - [4. Setup Network](#4-setup-network)
+  - [5. Building the Miner and Sharder Nodes](#5-building-the-miner-and-sharder-nodes)
+  - [6. Configuring the Miner and Sharder Nodes](#6-configuring-the-miner-and-sharder-nodes)
+  - [7. Starting the Miner and Sharder Nodes](#7-starting-the-miner-and-sharder-nodes)
+  - [8. Building and Starting Blobber Nodes](#8-building-and-starting-blobber-nodes)
   - [Check Chain Status](#check-chain-status)
   - [Restarting the Nodes](#restarting-the-nodes)
   - [Cleanup](#cleanup)
@@ -57,37 +60,90 @@ Other apps are [Bolt](https://bolt.holdings/), a wallet that is very secure with
 ## Changelog
 [CHANGELOG.md](CHANGELOG.md)
 
-## Initial Setup
+## Quickstart
 
-Docker and Go must be installed to run the testnet containers. Get Docker from [here](https://docs.docker.com/engine/install/) and Go from [here](https://go.dev/doc/install). 
+Quickstart with a convenient bash script for deploying a Züs testnet locally. follow the guide mentioned below:
+- [Deploy Züs testnet locally](https://docs.zus.network/guides/setup-a-blockchain/step-1-set-up-the-project)
 
-### Host Machine Network setup
+## Get Started
 
+### Required OS and Software Dependencies
+
+ - Linux (Ubuntu Preferred) Version: 20.04 and Above
+ - Mac(Apple Silicon or Intel) Version: Big Sur and Above
+ - Windows Version: Windows 11 or 10 version 2004 and later requires WSL2. Instructions for installing WSL with docker can be found [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-wsl-with-docker).
+ - Docker and Go must be installed to run the testnet containers. Instructions for installing Docker can be found [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-docker-desktop) and for Go find installation instructions [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-go). 
+ 
+### 1. Network setup
+
+1.1 Open terminal and clone the 0chain repo:
+```
+git clone https://github.com/0chain/0chain.git
+```
+
+1.2 Navigate to 0chain directory.
+
+```
+cd 0chain
+```
 #### MacOS
 ```bash
 ./macos_network.sh
-```
-#### Windows
-Run powershell as administrator
-```powershell
-./windows_network.ps1
 ```
 #### Ubuntu/WSL2
 Run the following script
 ```bash
 ./wsl_ubuntu_network_iptables.sh
 ```
-### Directory Setup for Miners and Sharders
+### 2. Directory setup for Miners and Sharders
 
-In the git/0chain run the following command
+2.1) Inside the 0chain directory, run the following command:
 
 ```
-./docker.local/bin/init.setup.sh
+sudo ./docker.local/bin/init.setup.sh
 ```
 
-### Setup Network
+Response: The response will intialize 8 miner and 4 sharder directories in `0chain/docker.local/`
+```
+~/0chain/docker.local$ ls
+Makefile    build.benchmarks  build.sc_unit_test     build.unit_test  miner2  miner6    sharder2
+benchmarks  build.genkeys     build.sharder          config           miner3  miner7    sharder3
+bin         build.magicBlock  build.swagger          docker-clean     miner4  miner8    sharder4
+build.base  build.miner       build.test.multisigsc  miner1           miner5  sharder1  sql_script
+```
 
-Set up a network called testnet0 for each of these node containers to talk to each other.
+### 3. Build and start 0dns
+
+0dns service is responsible for connecting to the network and fetching all the magic blocks from the network which are saved in the DB. For building and starting 0dns:
+
+3.1) Open another terminal window, clone the 0dns repo and navigate to 0dns directory using the command below:
+
+```
+git clone https://github.com/0chain/0dns.git
+cd 0dns
+```
+
+3.2) For miner and sharder URLs to work locally, update `0dns/docker.local/config/0dns.yaml` file and set both `use_https` and `use_path` to `false`.
+
+3.3) Then run the following command
+
+```
+./docker.local/bin/build.sh
+```
+
+3.4) Run the container using
+
+```
+./docker.local/bin/start.sh
+```
+### 4. Setup Network
+
+4.1) Inside the git/0chain directory:
+   
+```
+cd 0chain
+``` 
+4.2) Set up a network called testnet0 for each of these node containers to talk to each other.
 
 **_Note: The config file should be providing the IP address of the nodes as per the IP addresses in this network._**
 
@@ -95,63 +151,66 @@ Set up a network called testnet0 for each of these node containers to talk to ea
 ./docker.local/bin/setup.network.sh
 ```
 
-## Building the Nodes
+## 5. Building the Miner and Sharder Nodes
 
-1. Open 5 terminal tabs. Use the first one for building the containers by being in git/0chain directory. Use the next 3 for 3 miners and be in the respective miner directories created above in docker.local. Use the 5th terminal and be in the sharder1 directory.
+5.1) Navigate to 0chain directory:
+```
+cd 0chain
+``` 
+5.2) First build the base containers, zchain_build_base and zchain_run_base
 
-   1.1) First build the base containers, zchain_build_base and zchain_run_base
-
-   ```
-   ./docker.local/bin/build.base.sh
-   ```
-2. Build mocks from the Makefile in the repo, from git/0chain directory run:
+ ```
+ ./docker.local/bin/build.base.sh
+ ```
+5.3) Build mocks from the Makefile in the repo, from git/0chain directory run:
    
    ```
     make build-mocks 
    ```
-   Note: Mocks have to be built once in the beginning. Building mocks require mockery and brew which can be installed from [here](https://docs.zus.network/guides/setup-a-blockchain/additional-tips-and-troubleshooting-for-mac#install-homebrew-and-mockery-on-mac-and-linux). 
+   Note: Mocks have to be built once in the beginning. Building mocks require mockery which can be installed from [here](https://github.com/0chain/0chain/blob/hm90121-patch-1/standalone_guides.md#install-brew-and-mockery).
+   
+5.4) Building the miners and sharders. From the git/0chain directory:
 
-3. Building the miners and sharders. From the git/0chain directory use
-
-   3.1) To build the miner containers
+   5.4.1) To build the miner containers
 
    ```
    ./docker.local/bin/build.miners.sh
    ```
 
-   3.2) To build the sharder containers
+   5.4.2) To build the sharder containers
 
    ```
    ./docker.local/bin/build.sharders.sh
    ```
 
-   3.3) Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions    that are within 5 seconds of creation). This step is needed periodically when you see the validation error.
+   5.4.3)(Optional)Syncing time (the host and the containers are being offset by a few seconds that throws validation errors as we accept transactions that are within 5 seconds of creation). This step is needed 
+    periodically when you see the validation error.
 
    ```
    ./docker.local/bin/sync_clock.sh
    ```
 
-## Configuring the nodes
+## 6. Configuring the Miner and Sharder Nodes
 
-1. Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
+6.1) Use `./docker.local/config/0chain.yaml` to configure the blockchain properties. The default options are set up for running the blockchain fast in development.
 
-  1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
+  6.1.1) If you want the logs to appear on the console - change `logging.console` from `false` to `true`
 
-  1.2) If you want the debug statements in the logs to appear - change `logging.level` from `"info"` to `"debug"`
+  6.1.2) If you want the debug statements in the logs to appear - change `logging.level` from `"info"` to `"debug"`
 
-  1.3) If you want to change the block size, set the value of `server_chain.block.size`
+  6.1.3) If you want to change the block size, set the value of `server_chain.block.size`
 
-  1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
+  6.1.4) If you want to adjust the network relay time, set the value of `network.relay_time`
 
-  1.5) If you want to turn off fees adjust `server_chain.smart_contract.miner` from `true` to `false`
+  6.1.5) If you want to turn off fees adjust `server_chain.smart_contract.miner` from `true` to `false`
 
 **_Note: Remove sharder72 and miner75 from docker.local/config/b0snode2_keys.txt and docker.local/config/b0mnode5_keys.txt respectively if you are joining to local network._**
 
-## Starting the nodes
+## 7. Starting the Miner and Sharder Nodes
 
-1. Starting the nodes. On each of the miner terminals use the commands (note the `..` at the beginning. This is because, these commands are run from within the `docker.local/<miner/sharder|i>` directories and the `bin` is one level above relative to these directories)
+7.1) For starting the nodes open 4 terminal tabs. Use the 1st terminal tab and be in the sharder1 (`0chain/docker.local/sharder1`) directory. On other 3 terminal tabs be in the miner directory(0chain/docker.local/miner|i)(miner1/2/3). 
 
-Start sharder first because miners need the genesis magic block. On the sharder terminal, use
+Start sharder first because miners need the genesis magic block. On the sharder terminal tab, use the command below to start the sharders:
 
 ```
 ../bin/start.b0sharder.sh
@@ -159,11 +218,108 @@ Start sharder first because miners need the genesis magic block. On the sharder 
 
 Wait till the cassandra is started and the sharder is ready to listen to requests.
 
-On the respective miner terminal, use
+On the respective miner terminal tabs, use the command below to start the miners:
 
 ```
 ../bin/start.b0miner.sh
 ```
+
+Note: The above commands will run 1 sharder and 3 miners for minimal setup. For running more sharders and miners repeat the process in more terminal tabs. 
+
+## 8. Building and Starting Blobber Nodes
+
+For detailed steps on building and starting blobbers, follow the guides below:
+
+- [Directory Setup for Blobbers](https://github.com/0chain/blobber/tree/hm90121-patch-2#directory-setup-for-blobbers)
+- [Building and Starting the Blobber Nodes](https://github.com/0chain/blobber/tree/hm90121-patch-2#building-and-starting-the-nodes)
+ 
+8.1) After starting blobbers check whether the blobber has registered to the blockchain by running the zbox command below:
+
+```
+./zbox ls-blobbers
+```
+Note: In case you have not installed and configured zbox for testnet yet, follow the guides below:
+
+ - [Install zboxcli](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#1-installation)
+ - [Configure zbox network](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#2-configure-network) 
+
+In the command response you should see the local blobbers mentioned with their urls for example `http://198.18.0.91:5051` and `http://198.18.0.92:5052`
+
+Sample Response:
+```
+- id:                    7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+  url:                   http://198.18.0.92:5052
+  used / total capacity: 0 B / 1.0 GiB
+  last_health_check:	  1635347427
+  terms:
+    read_price:          10.000 mZCN / GB
+    write_price:         100.000 mZCN / GB / time_unit
+    min_lock_demand:     0.1
+    cct:                 2m0s
+    max_offer_duration:  744h0m0s
+- id:                    f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+  url:                   http://198.18.0.91:5051
+  used / total capacity: 0 B / 1.0 GiB
+  last_health_check:	  1635347950
+  terms:
+    read_price:          10.000 mZCN / GB
+    write_price:         100.000 mZCN / GB / time_unit
+    min_lock_demand:     0.1
+    cct:                 2m0s
+    max_offer_duration:  744h0m0s
+```
+
+Note: When starting multiple blobbers, it could happen that blobbers are not being registered properly (not returned on `zbox ls-blobbers`). 
+   
+Blobber registration takes some time and adding at least 5 second wait before starting the next blobber usually avoids the issue.
+  
+8.2) Now you can create allocations on blobber and store files. For creating allocations you need tokens into your wallet, Running the command below in zwallet will give 1 token to wallet.
+
+```sh
+./zwallet faucet --methodName pour --input "need token"
+```
+
+You can specify the number of tokens required using the following command  for adding 5 tokens:
+
+```sh
+./zwallet faucet --methodName pour --input "need token" --tokens 5
+```
+Sample output from `faucet` prints the transaction.
+
+```
+Execute faucet smart contract success with txn:  d25acd4a339f38a9ce4d1fa91b287302fab713ef4385522e16d18fd147b2ebaf
+```
+To check wallet balance run `./zwallet getbalance` command
+
+Response:
+```
+Balance: 5 ZCN (4.2299999999999995 USD)
+```
+8.3) Lock some tokens in blobber stake pools, use the commands below to lock tokens into stake pool: 
+
+```
+export BLOBBER1=f65af5d64000c7cd2883f4910eb69086f9d6e6635c744e62afcfab58b938ee25
+export BLOBBER2=7a90e6790bcd3d78422d7a230390edc102870fe58c15472073922024985b1c7d
+export BLOBBER3=2f051ca6447d8712a020213672bece683dbd0d23a81fdf93ff273043a0764d18
+export BLOBBER4=2a4d5a5c6c0976873f426128d2ff23a060ee715bccf0fd3ca5e987d57f25b78e
+
+./zbox sp-lock --blobber_id $BLOBBER1 --tokens 1
+./zbox sp-lock --blobber_id $BLOBBER2 --tokens 1
+./zbox sp-lock --blobber_id $BLOBBER3 --tokens 1
+./zbox sp-lock --blobber_id $BLOBBER4 --tokens 1
+
+```
+Note: Atleast have 4 ZCN balance in your wallet before locking tokens into stake pool using the command above.
+
+8.4) Then create new allocation using the command below:
+
+```
+./zbox newallocation --lock 0.5
+```
+Note: Atleast have 1 ZCN balance in your wallet before running the command above.
+
+Now, you can store files in allocated space and execute a variety of operations using zboxcli. For a comprehensive list of zbox commands and their respective functionalities, please refer to the documentation [here](https://github.com/0chain/zboxcli/tree/hm90121-patch-1-1#commands-table).
+
 ## Check Chain Status
 
 1. Ensure the port mapping is all correct:
