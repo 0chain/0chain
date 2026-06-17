@@ -66,13 +66,13 @@ func configureConfig() (configured *config) {
 	config2.SmartContractConfig.Set(pfx+"max_duration", 10*time.Hour)
 	config2.SmartContractConfig.Set(pfx+"max_destinations", 2)
 	config2.SmartContractConfig.Set(pfx+"max_description_length", 20)
-	config2.SmartContractConfig.Set(pfx+"owner_id", "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802")
+	config2.SmartContractConfig.Set(pfx+"owner_id", "c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9")
 	config2.SmartContractConfig.Set(pfx+"cost", "{\"1\":1, \"2\":2, \"3\":3}")
 
 	return &config{
 		100e10,
 		1 * time.Second, 10 * time.Hour,
-		2, 20, "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+		2, 20, "c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9",
 		map[string]int{"1": 1, "2": 2, "3": 3},
 	}
 }
@@ -184,7 +184,7 @@ func TestUpdateConfig(t *testing.T) {
 					Settings[MaxDuration]:          "1h",
 					Settings[MaxDestinations]:      "0",
 					Settings[MaxDescriptionLength]: "17",
-					Settings[OwnerId]:              "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+					Settings[OwnerId]:              "c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9",
 					fmt.Sprintf("%s.%s", Settings[Cost], costFunctions[0]): "50",
 				},
 			},
@@ -195,7 +195,7 @@ func TestUpdateConfig(t *testing.T) {
 				client: mockNotOwner,
 				input: map[string]string{
 					Settings[MaxDuration]: "1h",
-					Settings[OwnerId]:     "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+					Settings[OwnerId]:     "c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9",
 				},
 			},
 			want: want{
@@ -209,7 +209,7 @@ func TestUpdateConfig(t *testing.T) {
 				client: owner,
 				input: map[string]string{
 					Settings[MinDuration]: mockBadData,
-					Settings[OwnerId]:     "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+					Settings[OwnerId]:     "c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9",
 				},
 			},
 			want: want{
@@ -223,7 +223,7 @@ func TestUpdateConfig(t *testing.T) {
 				client: owner,
 				input: map[string]string{
 					mockBadKey:        "1",
-					Settings[OwnerId]: "1746b06bb09f55ee01b33b5e2e055d6cc7a900cb57c0a3a5eaabb8a0e7745802",
+					Settings[OwnerId]: "c4a3573c7f7c2e31210c1988d49ee2b6c2009fe67613457904ea7109cae1f4c9",
 				},
 			},
 			want: want{
