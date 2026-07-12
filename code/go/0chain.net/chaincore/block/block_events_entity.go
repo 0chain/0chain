@@ -18,10 +18,8 @@ const (
 )
 
 var (
-	// EventsRingSize represents the length of the block events ring.
-	// Sized to keep well over blockGapScanSpan (event pkg) rounds replayable
-	// for the blocks-gap repair worker (~12 min at mainnet block rate).
-	EventsRingSize           = 1024
+	// EventsRingSize represents the length of the block events ring
+	EventsRingSize           = 100
 	blockEventEntityMetadata *datastore.EntityMetadataImpl
 )
 
