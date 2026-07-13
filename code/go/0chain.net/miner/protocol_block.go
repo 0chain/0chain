@@ -1352,6 +1352,7 @@ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*trans
 	if err != nil {
 		return nil, 0, err
 	}
+
 	if globalNode.ChallengeEnabled && b.Round%globalNode.ChallengeGenerationGap == 0 {
 		gcTxn, err := mc.createGenerateChallengeTxn(b)
 		if err != nil {

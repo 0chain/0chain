@@ -6,15 +6,19 @@ on:
 jobs:
   BUILD_INTEGRATION_IMAGES:
     name: BUILD-INTEGRATION-IMAGES
-    runs-on: [self-hosted, arc-runner]
-    # env:
-    #   GOPATH: "/root/actions-runner/_work/_tool/go"
-    #   GOMODCACHE: "/root/actions-runner/_work/_tool/go/pkg/mod"
-    #   GOCACHE: "/root/actions-runner/_work/_tool/.cache/go-build"
+    runs-on: [hetzner-build]
+    env:
+      HOME: /home/ubuntu
+      GOCACHE: /home/ubuntu/.cache/go-build
+      GOMODCACHE: /home/ubuntu/go/pkg/mod
+      GOPATH: /home/ubuntu/go
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
+    - uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - uses: actions/setup-go@v5
       with:
         go-version: '1.20'
         

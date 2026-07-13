@@ -22,7 +22,12 @@ env:
 
 jobs:
   miner:
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [hetzner-build]
+    env:
+      HOME: /root
+      GOCACHE: /root/.cache/go-build
+      GOMODCACHE: /root/go/pkg/mod
+      GOPATH: /root/go
     steps:
 
     - name: Set docker image tag
@@ -40,7 +45,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Setup go 1.20
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: '1.20' # The Go version to download (if necessary) and use.
 
@@ -111,7 +116,12 @@ jobs:
 
 
   sharder:
-    runs-on: [self-hosted, arc-runner]
+    runs-on: [hetzner-build]
+    env:
+      HOME: /root
+      GOCACHE: /root/.cache/go-build
+      GOMODCACHE: /root/go/pkg/mod
+      GOPATH: /root/go
     steps:
 
     - name: Set docker image tag
@@ -129,7 +139,7 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Setup go 1.20
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: '1.20' # The Go version to download (if necessary) and use.
 
@@ -198,7 +208,12 @@ jobs:
   system-tests:
     if: ${{ github.event_name != 'workflow_dispatch' }}
     needs: [miner, sharder]
-    runs-on: [ tests-suite ]
+    runs-on: [ hetzner-testsuite ]
+    env:
+      HOME: /root
+      GOCACHE: /root/.cache/go-build
+      GOMODCACHE: /root/go/pkg/mod
+      GOPATH: /root/go
     steps:
       - name: "Get current PR"
         uses: jwalton/gh-find-current-pr@v1
