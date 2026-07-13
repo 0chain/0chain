@@ -106,12 +106,17 @@ func (edb *EventDb) addEvents(ctx context.Context, events BlockEvents) error {
 		return nil
 	}
 
-	if events.round >= edb.Config().KafkaTriggerRound {
-		edb.mustPushEventsToKafka(&events, false)
-	}
-
+	// Persist to Postgres FIRST so a slow or unreachable kafka can never drop the
+	// events_db row — the block is already finalized+stored by this point. Rows are
+	// written is_published=false; the kafka publish below is best-effort and marks
+	// them published on success, and replayUnpublishedEventsWorker re-sends any that
+	// it misses. (Before: kafka was published first and blocked/dropped the write.)
 	if err := edb.Store.Get().WithContext(ctx).Create(&events.events).Error; err != nil {
 		return err
+	}
+
+	if events.round >= edb.Config().KafkaTriggerRound {
+		edb.mustPushEventsToKafka(&events, true)
 	}
 
 	return nil
@@ -152,7 +157,11 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 			eventJson, err := json.Marshal(data)
 			if err != nil {
-				logging.Logger.Panic(fmt.Sprintf("Failed to get marshal event: %v", err))
+				// Non-fatal: rows are already in Postgres; skip publishing this round
+				// and let the replay worker retry rather than crashing the sharder.
+				logging.Logger.Error("kafka - marshal event failed; leaving round unpublished for replay",
+					zap.Int64("round", events.round), zap.Error(err))
+				return
 			}
 			keys = append(keys, []byte(events.events[i].EventKey))
 			msgs = append(msgs, eventJson)
@@ -177,13 +186,18 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 				time.Sleep(time.Duration(attempt+1) * 200 * time.Millisecond)
 			}
 			if perr != nil {
-				// Backstop: retries exhausted (kafka genuinely unreachable). Do NOT
-				// let the sharder advance without the events reaching 0box — hard
-				// stop; the startup doOnce republishes unpublished events on restart.
-				logging.Logger.Panic("kafka - failed to publish events batch after retries",
+				// Kafka unreachable after retries. Do NOT panic and do NOT block the
+				// round: the events are already durably in Postgres (written before
+				// this call), so leave them is_published=false and let the periodic
+				// replayUnpublishedEventsWorker (and the startup replay) re-send them
+				// when kafka recovers. This keeps events_db complete AND the sharder
+				// alive — the crash-loop backstop is no longer needed now that
+				// Postgres, not kafka, is the durable write.
+				logging.Logger.Error("kafka - publish failed after retries; left unpublished for replay",
 					zap.Int64("round", events.round),
 					zap.Int("events", len(msgs)),
 					zap.Error(perr))
+				return
 			}
 
 			// Batch acked in order — mark every event published + update metrics.
@@ -207,9 +221,11 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 			}
 		}
 		if updateColumn {
-			// updates the events as published
+			// Mark rows published. A failure here is non-fatal — the replay worker
+			// re-sends and the kafka consumer dedups; never crash the sharder over it.
 			if err := edb.setEventPublished(events.round); err != nil {
-				logging.Logger.Panic(fmt.Sprintf("Failed to update event as published: %v", err))
+				logging.Logger.Error("kafka - failed to mark events published (will replay)",
+					zap.Int64("round", events.round), zap.Error(err))
 			}
 		}
 	}
@@ -217,6 +233,54 @@ func (edb *EventDb) mustPushEventsToKafka(events *BlockEvents, updateColumn bool
 
 func (edb *EventDb) setEventPublished(round int64) error {
 	return edb.Store.Get().Model(&Event{}).Where("block_number = ?", round).Update("is_published", true).Error
+}
+
+// replayUnpublishedEventsWorker periodically re-publishes to kafka any events that
+// were persisted to Postgres but failed to publish (is_published=false), so 0box/ES
+// catch up when kafka recovers WITHOUT needing a sharder restart. Combined with the
+// Postgres-first write in addEvents this makes kafka failures fully non-fatal: the
+// events_db is always complete and the sharder never crash-loops on a kafka outage.
+func (edb *EventDb) replayUnpublishedEventsWorker(ctx context.Context) {
+	if !edb.dbConfig.KafkaEnabled {
+		return
+	}
+	ticker := time.NewTicker(60 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			edb.replayUnpublishedEvents()
+		}
+	}
+}
+
+func (edb *EventDb) replayUnpublishedEvents() {
+	trigger := edb.Config().KafkaTriggerRound
+	var rounds []int64
+	// Bounded per pass so a large backlog drains gradually without stalling.
+	if err := edb.Store.Get().Model(&Event{}).
+		Where("is_published = ? AND block_number >= ?", false, trigger).
+		Distinct("block_number").Order("block_number").Limit(500).
+		Pluck("block_number", &rounds).Error; err != nil {
+		logging.Logger.Error("kafka replay - scan unpublished failed", zap.Error(err))
+		return
+	}
+	if len(rounds) == 0 {
+		return
+	}
+	logging.Logger.Info("kafka replay - re-sending unpublished rounds", zap.Int("rounds", len(rounds)))
+	for _, r := range rounds {
+		var evs []Event
+		if err := edb.Store.Get().Where("block_number = ? AND is_published = ?", r, false).
+			Order("sequence_number").Find(&evs).Error; err != nil || len(evs) == 0 {
+			continue
+		}
+		// mustPushEventsToKafka is non-fatal now: publishes + marks published on
+		// success, logs and leaves unpublished on failure (retried next pass).
+		edb.mustPushEventsToKafka(&BlockEvents{round: r, events: evs}, true)
+	}
 }
 
 func (edb *EventDb) getLastPublishedRound() (int64, error) {

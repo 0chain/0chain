@@ -27,6 +27,7 @@ func NewEventDbWithWorker(config config.DbAccess, settings config.DbSettings,
 	}
 	goose.Migrate(sqldb)
 	go eventDb.addEventsWorker(common.GetRootContext(), getBlockEventsFunc)
+	go eventDb.replayUnpublishedEventsWorker(common.GetRootContext())
 
 	return eventDb, nil
 }
