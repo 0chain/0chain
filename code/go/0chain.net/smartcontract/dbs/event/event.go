@@ -3,7 +3,6 @@ package event
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
