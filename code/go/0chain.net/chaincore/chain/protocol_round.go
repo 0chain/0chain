@@ -293,13 +293,8 @@ func (c *Chain) finalizeRound(ctx context.Context, r round.RoundI) {
 		}
 
 		// maxBackDepth is the maximum number of blocks that we will fetch
-		// back from new computed lfb to previous lfb. Rounds beyond this cap
-		// are skipped permanently ("finalize round (missed blocks)") - they
-		// never finalize locally, so their events/blocks rows are lost. Keep
-		// the cap well above lfb_ticket.ahead so transient finalization lag
-		// (shared-host contention) catches up instead of dropping rounds; a
-		// truly wedged sharder still skips rather than stalls.
-		maxBackDepth := 10 * config.GetLFBTicketAhead()
+		// back from new computed lfb to previous lfb.
+		maxBackDepth := config.GetLFBTicketAhead()
 		frchain := make([]*block.Block, 0, maxBackDepth)
 		for b := lfb; b != nil && b.Hash != plfb.Hash && b.Round > plfb.Round; {
 			frchain = append(frchain, b)
