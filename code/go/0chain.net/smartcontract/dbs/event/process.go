@@ -349,7 +349,9 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	round, err := edb.getLastPublishedRound()
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
-			logging.Logger.Panic("could not get unpublished events", zap.Error(err))
+			// Non-fatal: events are durable in Postgres; don't crash on a kafka
+			// bookkeeping read. Skip the startup replay (periodic worker retries).
+			logging.Logger.Error("kafka - could not get last published round (non-fatal)", zap.Error(err))
 		}
 		logging.Logger.Debug("kafka - see no published round events")
 		// when see gorm.ErrRecordNotFound, it means there is no published events, which could
@@ -360,7 +362,8 @@ func (edb *EventDb) publishUnPublishedEvents(getBlockEvents func(round int64) (i
 	lfbRound, err := edb.getLatestFinalizedBlock()
 	if err != nil {
 		if err != gorm.ErrRecordNotFound {
-			logging.Logger.Panic("kafka - could not get latest finalized block", zap.Error(err))
+			// Non-fatal (see above): skip startup replay rather than crash.
+			logging.Logger.Error("kafka - could not get latest finalized block (non-fatal)", zap.Error(err))
 		}
 		logging.Logger.Debug("kafka - see no lfb")
 		return nil
@@ -410,7 +413,12 @@ func Work(
 
 	doOnce.Do(func() {
 		if err := tx.publishUnPublishedEvents(getBlockEvents); err != nil {
-			logging.Logger.Panic("push unpublished events", zap.Error(err))
+			// Non-fatal: the events are already durable in Postgres (written before
+			// the kafka publish since the postgres-first change). A failed startup
+			// kafka replay must NOT crash-loop the sharder — replayUnpublishedEventsWorker
+			// re-sends unpublished rows when kafka is reachable. This is the panic that
+			// wedged b2 on restart.
+			logging.Logger.Error("kafka - startup replay of unpublished events failed (non-fatal)", zap.Error(err))
 		}
 	})
 
