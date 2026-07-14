@@ -442,13 +442,6 @@ func (pn *PhaseNode) Decode(input []byte) error {
 // 	dkgmn.XPercent = gnb.XPercent
 // }
 
-func min(a, b int) int {
-	if a > b {
-		return b
-	}
-	return a
-}
-
 // The min_n is checked before the calculateTKN call, so, the n >= min_n.
 // The calculateTKN used to set initial T, K, and N.
 // func (dkgmn *DKGMinerNodes) calculateTKN(gn *GlobalNode, n int) {
