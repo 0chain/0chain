@@ -467,12 +467,21 @@ func SetupEntity(store datastore.Store) {
 }
 
 /*Sign - given a client and client's private key, sign this transaction */
-func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme) (string, error) {
+func (t *Transaction) Sign(signatureScheme encryption.SignatureScheme, isSplit bool, zauthServer string) (string, error) {
 	t.Hash = t.ComputeHash()
+
 	signature, err := signatureScheme.Sign(t.Hash)
 	if err != nil {
 		return signature, err
 	}
+
+	if isSplit {
+		signature, err = PerformZauthSignTxn(signature, zauthServer)
+		if err != nil {
+			return signature, err
+		}
+	}
+
 	t.Signature = signature
 	return signature, nil
 }

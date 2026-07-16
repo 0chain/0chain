@@ -351,6 +351,20 @@ func (c *ConfigImpl) TxnExempt() map[string]bool {
 	return c.conf.TxnExempt
 }
 
+func (c *ConfigImpl) IsSplit() bool {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.IsSplit
+}
+
+func (c *ConfigImpl) ZauthServer() string {
+	c.guard.RLock()
+	defer c.guard.RUnlock()
+
+	return c.conf.ZauthServer
+}
+
 func (c *ConfigImpl) MinTxnFee() currency.Coin {
 	c.guard.RLock()
 	defer c.guard.RUnlock()
@@ -457,6 +471,10 @@ type ConfigData struct {
 	DbsEvents   config2.DbAccess   `json:"dbs_event"`
 	DbsSettings config2.DbSettings `json:"dbs_settings"`
 	TxnExempt   map[string]bool    `json:"txn_exempt"`
+
+	IsSplit bool `json:"is_split"` // enables split key mode for internal transactions.
+
+	ZauthServer string `json:"zauth_server"` // zauth server used for split key transaction signing operations.
 }
 
 func (c *ConfigImpl) FromViper() error {
@@ -526,6 +544,10 @@ func (c *ConfigImpl) FromViper() error {
 	for i := range txnExp {
 		conf.TxnExempt[txnExp[i]] = true
 	}
+
+	conf.IsSplit = viper.GetBool("is_split")
+	conf.ZauthServer = viper.GetString("zauth_server")
+
 	conf.PruneStateBelowCount = viper.GetInt("server_chain.state.prune_below_count")
 
 	verificationTicketsTo := viper.GetString("server_chain.messages.verification_tickets_to")

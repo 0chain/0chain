@@ -298,7 +298,7 @@ func TestGenerateCompressionTrainingData(t *testing.T) {
 		}
 		txn := wf.CreateSendTransaction(wt.ClientID, value, "", func(transaction2 *transaction.Transaction) currency.Coin {
 			return 0
-		})
+		}, false, "")
 		data := common.ToMsgpack(txn)
 		err = os.WriteFile(fmt.Sprintf("/tmp/txn/data/%v.json", txn.Hash), data.Bytes(), 0644)
 		if err != nil {

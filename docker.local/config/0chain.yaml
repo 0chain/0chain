@@ -169,6 +169,12 @@ service_charge: 0.10 # [0; 1) of all fees
 # max number of delegate pools allowed by a node in miner SC
 number_of_delegates: 10 # max number of delegate pools
 
+# enables split key mode for transaction sign operations.
+is_split: false
+
+# represents zauth server used for split key transaction signing operations.
+zauth_server: ""
+
 # There's a TODO comment in fs_store.go. Please check this while we go into production.
 storage:
 # cache is optional. It should be SSD drive. Having HDD drive as cache is not effective.

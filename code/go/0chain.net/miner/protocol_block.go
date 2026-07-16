@@ -1224,7 +1224,7 @@ l:
 			return fmt.Errorf("could not get miner nonce of %v: %v", b.MinerID, err)
 		}
 
-		_, err := biTxn.Sign(node.Self.GetSignatureScheme())
+		_, err := biTxn.Sign(node.Self.GetSignatureScheme(), false, "")
 		if err != nil {
 			panic(err)
 		}

@@ -467,7 +467,7 @@ func createDataTxn(data string) (*transaction.Transaction, error) {
 		TransactionType: transaction.TxnTypeData,
 	}
 	txn.OutputHash = txn.ComputeOutputHash()
-	if _, err := txn.Sign(node.Self.GetSignatureScheme()); err != nil {
+	if _, err := txn.Sign(node.Self.GetSignatureScheme(), false, ""); err != nil {
 		return nil, err
 	}
 	return txn, nil
