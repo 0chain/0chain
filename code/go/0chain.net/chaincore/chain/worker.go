@@ -287,6 +287,28 @@ func (c *Chain) finalizeBlockProcess(ctx context.Context, fb *block.Block, bsh B
 		}
 
 		if isSharder {
+			// Regenerate events for state-synced blocks: a synced block reports
+			// IsStateComputed()==true with fb.Events empty (state applied, txns
+			// never executed), so it finalizes eventless — a permanent events_db
+			// hole (missing rounds + dangling FK refs that can wedge finalization
+			// later). At finalize time the block's txns and the previous block's
+			// state are both available, so reset the status and re-execute to emit
+			// the events; the recomputed root is verified against ClientStateHash.
+			// On any failure fall back to the synced state (finalize as before).
+			if fb.GetStateStatus() == block.StateSynched && len(fb.Events) == 0 && len(fb.Txns) > 0 {
+				fb.SetStateStatus(block.StatePending)
+				if err := c.ComputeState(ctx, fb); err != nil {
+					logging.Logger.Warn("finalize block - events regen re-execution failed, keeping synced state",
+						zap.Int64("round", fb.Round),
+						zap.String("block", fb.Hash),
+						zap.Error(err))
+					fb.SetStateStatus(block.StateSynched)
+				} else {
+					logging.Logger.Info("finalize block - regenerated events for state-synced block",
+						zap.Int64("round", fb.Round),
+						zap.Int("events", len(fb.Events)))
+				}
+			}
 			// compute state
 			if err := c.ComputeState(ctx, fb); err != nil {
 				logging.Logger.Error("finalize block - compute state failed",
