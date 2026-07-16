@@ -207,20 +207,54 @@ func getRequestEntity(r *http.Request, reader io.Reader, entityMetadata datastor
 func getResponseEntity(resp *http.Response, reader io.Reader, entityMetadata datastore.EntityMetadata) (int, datastore.Entity, error) {
 	buffer := reader
 	var size int
+
+	// Log initial response metadata
+	logging.N2n.Info("Jayash Processing response",
+		zap.String("content_encoding", resp.Header.Get("Content-Encoding")),
+		zap.Int64("content_length", resp.ContentLength),
+		zap.String("codec", resp.Header.Get(HeaderRequestCODEC)),
+	)
+
 	if resp.Header.Get("Content-Encoding") == compDecomp.Encoding() {
 		cbuffer := new(bytes.Buffer)
-		if _, err := cbuffer.ReadFrom(reader); err != nil {
+		n, err := cbuffer.ReadFrom(reader)
+		if err != nil {
+			logging.N2n.Error("Jayash Error reading from reader", zap.Error(err))
 			return 0, nil, err
 		}
+
 		size = cbuffer.Len()
+		logging.N2n.Info("Jayash Read compressed response",
+			zap.Int("size", size),
+			zap.Int64("bytes_read", n),
+		)
+
 		cbytes, err := compDecomp.Decompress(cbuffer.Bytes())
 		if err != nil {
-			logging.N2n.Error("decoding", zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
+			logging.N2n.Error("Jayash Error decompressing response",
+				zap.String("encoding", compDecomp.Encoding()), zap.Error(err))
 			return size, nil, err
 		}
+
+		logging.Logger.Info("Jayash Decompressed response",
+			zap.Int("size", len(cbytes)),
+		)
+
 		buffer = bytes.NewReader(cbytes)
 	}
+
+	logging.Logger.Info("Jayash Getting entity from response",
+		zap.String("codec", resp.Header.Get(HeaderRequestCODEC)),
+	)
+
 	entity, err := getEntity(resp.Header.Get(HeaderRequestCODEC), buffer, entityMetadata)
+	if err != nil {
+		logging.N2n.Error("Jayash Error getting entity from response",
+			zap.String("codec", resp.Header.Get(HeaderRequestCODEC)),
+			zap.Error(err),
+		)
+	}
+
 	return size, entity, err
 }
 
