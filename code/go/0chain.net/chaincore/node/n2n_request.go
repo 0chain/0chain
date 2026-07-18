@@ -264,7 +264,7 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 			if !grabbed {
 				logging.N2n.Warn("request skipped - provider send slots jammed",
 					zap.String("to", provider.GetPseudoName()))
-				return nil
+				return false
 			}
 			defer cancel()
 
