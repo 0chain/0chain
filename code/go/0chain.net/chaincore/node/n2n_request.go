@@ -235,8 +235,12 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				tm       *time.Timer
 				closeTmC = make(chan struct{})
 			)
-			func() {
-				provider.Grab()
+			grabbed := func() bool {
+				// bounded wait (see Node.GrabWithTimeout): don't park forever on
+				// a jammed/unreachable provider's send slots.
+				if !provider.GrabWithTimeout(5 * time.Second) {
+					return false
+				}
 				defer provider.Release()
 				ts = time.Now()
 
@@ -255,7 +259,13 @@ func RequestEntityHandler(uri string, options *SendOptions, entityMetadata datas
 				}()
 				req = req.WithContext(cctx)
 				resp, err = httpClient.Do(req)
+				return true
 			}()
+			if !grabbed {
+				logging.N2n.Warn("request skipped - provider send slots jammed",
+					zap.String("to", provider.GetPseudoName()))
+				return nil
+			}
 			defer cancel()
 
 			duration := time.Since(ts)

@@ -307,8 +307,13 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				cancel   func()
 			)
 
-			func() {
-				receiver.Grab()
+			grabbed := func() bool {
+				// bounded: an unreachable receiver keeps its slots busy for the
+				// full HTTP timeout each; waiting unboundedly here leaked one
+				// parked goroutine per broadcast (miner OOM). Skip instead.
+				if !receiver.GrabWithTimeout(5 * time.Second) {
+					return false
+				}
 				defer receiver.Release()
 
 				selfNode = Self.Underlying()
@@ -318,7 +323,14 @@ func SendEntityHandler(uri string, options *SendOptions) EntitySendHandler {
 				cctx, cancel = context.WithTimeout(ctx, timeout)
 				req = req.WithContext(cctx)
 				resp, err = httpClient.Do(req)
+				return true
 			}()
+			if !grabbed {
+				logging.N2n.Warn("send skipped - receiver send slots jammed",
+					zap.String("to", receiver.GetPseudoName()),
+					zap.String("handler", uri))
+				return false
+			}
 
 			defer cancel()
 

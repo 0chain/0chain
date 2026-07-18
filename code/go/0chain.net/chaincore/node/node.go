@@ -372,6 +372,32 @@ func (n *Node) Grab() {
 	n.sent++
 }
 
+// GrabWithTimeout - grab a send slot, giving up after timeout. Returns false if
+// no slot freed in time. An unreachable node drains its slots at ~1 per HTTP
+// timeout while broadcasts enqueue hundreds/min; the unbounded Grab() wait made
+// every waiter a permanently-parked goroutine (measured 3M goroutines / ~24GB
+// stacks on a mainnet miner -> the recurring miner OOM). Callers should skip
+// the node when this returns false — broadcast redundancy covers it.
+func (n *Node) GrabWithTimeout(timeout time.Duration) bool {
+	select {
+	case n.CommChannel <- struct{}{}:
+	default:
+		t := time.NewTimer(timeout)
+		defer t.Stop()
+		select {
+		case n.CommChannel <- struct{}{}:
+		case <-t.C:
+			return false
+		}
+	}
+
+	n.mutex.Lock()
+	defer n.mutex.Unlock()
+
+	n.sent++
+	return true
+}
+
 // Release - release a slot after sending the message
 func (n *Node) Release() {
 	<-n.CommChannel
