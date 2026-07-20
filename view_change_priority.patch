@@ -1,0 +1,43 @@
+diff --git a/code/go/0chain.net/miner/protocol_block.go b/code/go/0chain.net/miner/protocol_block.go
+index 1caeb6287..15933b195 100644
+--- a/code/go/0chain.net/miner/protocol_block.go
++++ b/code/go/0chain.net/miner/protocol_block.go
+@@ -1340,7 +1340,17 @@ l:
+ func (mc *Chain) buildInTxns(ctx context.Context, lfb, b *block.Block) ([]*transaction.Transaction, int, error) {
+ 	txns := make([]*transaction.Transaction, 0, 4)
+ 
+-	if mc.ChainConfig.IsFeeEnabled() {
++	// Check if we're in an active view change phase
++	// During view change (phases: Start, Contribute, Share, Publish, Wait),
++	// skip payFees to avoid nonce conflicts with DKG transactions
++	inViewChange := mc.CurrentPhase() != minersc.Unknown
++	if inViewChange {
++		logging.Logger.Debug("buildInTxns: skipping payFees during view change",
++			zap.String("phase", mc.CurrentPhase().String()),
++			zap.Int64("round", b.Round))
++	}
++
++	if mc.ChainConfig.IsFeeEnabled() && !inViewChange {
+ 		feeTxn, err := mc.createFeeTxn(b)
+ 		if err != nil {
+ 			return nil, 0, err
+diff --git a/code/go/0chain.net/miner/worker.go b/code/go/0chain.net/miner/worker.go
+index 96c0b1c3e..e2edb202f 100644
+--- a/code/go/0chain.net/miner/worker.go
++++ b/code/go/0chain.net/miner/worker.go
+@@ -257,6 +257,15 @@ func (mc *Chain) MinerHealthCheck(ctx context.Context) {
+ 		case <-ctx.Done():
+ 			return
+ 		default:
++			// Skip health check during active view change phases to avoid nonce conflicts
++			// with DKG transactions (contributeMpk, publishShares)
++			if mc.CurrentPhase() != minersc.Unknown {
++				logging.Logger.Debug("MinerHealthCheck: skipping during view change",
++					zap.String("phase", mc.CurrentPhase().String()))
++				time.Sleep(HEALTH_CHECK_TIMER)
++				continue
++			}
++
+ 			selfNode := node.Self.Underlying()
+ 			txn := httpclientutil.NewSmartContractTxn(selfNode.GetKey(), mc.ID, selfNode.PublicKey, minersc.ADDRESS)
+ 			scData := &httpclientutil.SmartContractTxnData{}

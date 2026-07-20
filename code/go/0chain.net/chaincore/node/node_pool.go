@@ -363,6 +363,10 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 				return err
 			}
 		}
+		// Initialize maps to prevent nil map panic during n2n communication
+		n.TimersByURI = make(map[string]metrics.Timer, 10)
+		n.SizeByURI = make(map[string]metrics.Histogram, 10)
+		n.setupCommChannel()
 		np.Nodes = append(np.Nodes, n)
 	}
 
@@ -392,6 +396,10 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 				return nil, err
 			}
 		}
+		// Initialize maps to prevent nil map panic during n2n communication
+		n.TimersByURI = make(map[string]metrics.Timer, 10)
+		n.SizeByURI = make(map[string]metrics.Histogram, 10)
+		n.setupCommChannel()
 		np.Nodes = append(np.Nodes, n)
 		np.NodesMap[k] = n
 	}

@@ -332,17 +332,23 @@ func incTxnSendCount(num int64) {
 	logging.Logger.Debug("[mvc] current send txn count", zap.Int64("count", cout))
 }
 
+// DKG transaction names that should be broadcast to all miners
+var dkgTxns = map[string]bool{
+	"contributeMpk":      true,
+	"shareSignsOrShares": true,
+	"wait":               true,
+}
+
 func (c *Chain) SendSmartContractTxn(txn *httpclientutil.Transaction,
 	scData *httpclientutil.SmartContractTxnData,
 	minerUrls []string,
 	sharderUrls []string) error {
 
-	// if !httpclientutil.AcquireTxnLock(time.Second) {
-	// 	return httpclientutil.ErrTxnSendBusy
-	// }
-	// logging.Logger.Debug("[mvc] acquire txn lock")
-	// incTxnSendCount(1)
-	minerUrls = getRandomMinerURLs(minerUrls, 10)
+	// For DKG transactions, send to ALL miners (critical and infrequent)
+	// For other transactions, send to only 10% of miners
+	if scData == nil || !dkgTxns[scData.Name] {
+		minerUrls = getRandomMinerURLs(minerUrls, 10)
+	}
 	selfNode := node.Self.Underlying()
 	if selfNode != nil && selfNode.Type == node.NodeTypeMiner {
 		minerUrls = append(minerUrls, selfNode.GetN2NURLBase())

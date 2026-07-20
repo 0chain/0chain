@@ -1,0 +1,16 @@
+  227  docker ps
+  228  sudo ./zus_restart.sh
+  229  sudo ./zus_restart.sh >/tmp/setup.log 2>&1 &
+  230  sudo ./zus_start.sh >/tmp/setup.log 2>&1 &
+  231  docker ps
+  232  sudo ./zus_start.sh 
+  233  sudo ./zus_start.sh >/tmp/setup.log 2>&1 &
+  234  ssh root@198.154.93.98
+  235  ssh root@134.119.187.255
+  236  ssh root@198.154.93.98
+  237  ssh root@147.124.220.135
+  238  ssh root@198.154.93.98
+  239  docker ps
+  240  docker logs miner | grep "dkg proces"
+  241  docker logs 43d0e21e1b57 | grep "dkg process"
+  242  docker logs 43d0e21e1b57 | grep "dkg process: start"

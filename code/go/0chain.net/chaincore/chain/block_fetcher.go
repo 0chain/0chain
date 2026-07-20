@@ -671,11 +671,17 @@ func (c *Chain) RequestEntityFromShardersOnMB(ctx context.Context,
 
 func (c *Chain) getLatestFinalizedMagicBlock(ctx context.Context) (mb *block.MagicBlock) {
 	b := c.GetLatestFinalizedMagicBlock(ctx)
-	if b == nil {
-		return nil
+	if b != nil && b.MagicBlock != nil {
+		return b.MagicBlock
 	}
 
-	return b.MagicBlock
+	// Fallback: use GetLatestMagicBlock which always returns at least genesis
+	// This is needed during startup when LFMB worker hasn't populated the channel yet
+	mb = c.GetLatestMagicBlock()
+	if mb != nil {
+		logging.Logger.Debug("getLatestFinalizedMagicBlock - using fallback magic block (LFMB not set)")
+	}
+	return mb
 }
 
 //

@@ -263,7 +263,19 @@ func (c *Chain) getBlockStateChange(b *block.Block) (*block.StateChange, error) 
 	defer cancel()
 	params := &url.Values{}
 	params.Add("block", b.Hash)
-	mb := c.GetLatestFinalizedMagicBlock(cctx)
+
+	// First try LFMB, fall back to latest magic block (genesis) if not yet set
+	// This is needed during startup when LFMB worker hasn't populated the channel yet
+	var mb *block.MagicBlock
+	lfmb := c.GetLatestFinalizedMagicBlock(cctx)
+	if lfmb != nil && lfmb.MagicBlock != nil {
+		mb = lfmb.MagicBlock
+	} else {
+		// Fallback: use GetLatestMagicBlock which always returns at least genesis
+		mb = c.GetLatestMagicBlock()
+		logging.Logger.Debug("getBlockStateChange - using fallback magic block (LFMB not set)")
+	}
+
 	if mb == nil {
 		return nil, errors.New("can't get mb")
 	}

@@ -2118,6 +2118,8 @@ func (c *Chain) ResetRoundTimeoutCount() {
 // IncrementRoundTimeoutCount - increment the counter
 func (c *Chain) IncrementRoundTimeoutCount() {
 	atomic.AddInt64(&c.crtCount, 1)
+	// Note: This chain-level counter is for diagnostics only.
+	// The round-level timeoutCounter (with cap) is used for VRF share matching.
 }
 
 // GetRoundTimeoutCount - get the counter
@@ -2394,6 +2396,9 @@ func (c *Chain) IsActiveInChain() bool {
 }
 
 func (c *Chain) UpdateMagicBlock(newMagicBlock *block.MagicBlock) error {
+	if newMagicBlock == nil {
+		return common.NewError("failed to update magic block", "magic block is nil")
+	}
 	if newMagicBlock.Miners == nil || newMagicBlock.Miners.Size() == 0 {
 		return common.NewError("failed to update magic block",
 			"there are no miners in the magic block")
@@ -2833,7 +2838,7 @@ func (c *Chain) LoadLatestFinalizedMagicBlockFromStore(ctx context.Context) {
 
 func (c *Chain) UpdateMagicBlocks(mbs ...*block.Block) {
 	for _, mb := range mbs {
-		if mb == nil {
+		if mb == nil || mb.MagicBlock == nil {
 			continue
 		}
 		if err := c.UpdateMagicBlock(mb.MagicBlock); err == nil {

@@ -257,7 +257,9 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 	// var bl *blocksLoaded
 	lfbr, err := mc.LoadLFBRound()
 	if err != nil {
-		return fmt.Errorf("load_lfb - could not load lfb from state DB, err: %v", err)
+		logging.Logger.Warn("load_lfb - could not load lfb from state DB, trying to fetch current LFB from sharders",
+			zap.Error(err))
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
 	}
 
 	logging.Logger.Debug("load_lfb - load from stateDB",
@@ -281,7 +283,11 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 	}
 
 	if b == nil {
-		return fmt.Errorf("load_lfb - could not fetch block from sharders, round: %d", lfbr.Round)
+		// Stored LFB not available from sharders - try to fetch current LFB from sharders instead
+		logging.Logger.Warn("load_lfb - stored LFB not available from sharders, trying to fetch current LFB",
+			zap.Int64("stored_round", lfbr.Round),
+			zap.String("stored_hash", lfbr.Hash))
+		return mc.tryFetchCurrentLFBFromSharders(ctx)
 	}
 
 	b.SetStateStatus(block.StateSuccessful)
@@ -299,6 +305,55 @@ func (mc *Chain) LoadLatestBlocksFromStore(ctx context.Context) error {
 		zap.Int64("round", b.Round),
 		zap.Int64("lf_round", mc.GetLatestFinalizedBlock().Round))
 
+	return nil
+}
+
+// tryFetchCurrentLFBFromSharders attempts to fetch the current LFB from sharders
+// and set it as the miner's LFB. This is used when local RocksDB state is stale or missing.
+func (mc *Chain) tryFetchCurrentLFBFromSharders(ctx context.Context) error {
+	// Use unfiltered fetch to get whatever LFB sharders have
+	fbs := mc.GetLatestFinalizedBlockFromSharderNoFilter(ctx)
+	if len(fbs) == 0 {
+		logging.Logger.Warn("load_lfb - no LFB available from sharders, will use genesis")
+		return nil // Fall back to genesis
+	}
+
+	// Find the highest round block
+	var best *block.Block
+	for _, fb := range fbs {
+		if fb.Block != nil && (best == nil || fb.Block.Round > best.Round) {
+			best = fb.Block
+		}
+	}
+
+	if best == nil {
+		logging.Logger.Warn("load_lfb - no valid LFB in sharder response, will use genesis")
+		return nil // Fall back to genesis
+	}
+
+	logging.Logger.Info("load_lfb - fetched current LFB from sharders",
+		zap.Int64("round", best.Round),
+		zap.String("hash", best.Hash))
+
+	// Try to initialize the block's state from local RocksDB
+	best.SetStateStatus(block.StateSuccessful)
+	if err := mc.InitBlockState(best); err != nil {
+		best.SetStateStatus(0)
+		// State init failed - this happens when RocksDB is empty/cleared
+		// Blockchain state is cumulative - we can't just sync a single block's state
+		// Must start from genesis and replay blocks to rebuild state
+		logging.Logger.Warn("load_lfb - can't initialize LFB state (local state DB empty?), "+
+			"will start from genesis and sync incrementally",
+			zap.Int64("network_lfb_round", best.Round),
+			zap.String("network_lfb_hash", best.Hash),
+			zap.Error(err))
+		return nil // Fall back to genesis - state will be built as blocks are synced
+	}
+
+	mc.SetLatestFinalizedBlock(ctx, best)
+	logging.Logger.Info("load_lfb - successfully set LFB from sharders",
+		zap.Int64("round", best.Round),
+		zap.String("hash", best.Hash))
 	return nil
 }
 
@@ -416,6 +471,14 @@ func (mc *Chain) ViewChange(ctx context.Context, b *block.Block) (err error) {
 			zap.Error(err))
 		return err
 	}
+
+	// Update the latest finalized magic block - this is critical for the chain to
+	// recognize the new magic block and properly validate blocks after view change
+	mc.SetLatestFinalizedMagicBlock(b)
+	logging.Logger.Info("[mvc] view change - set latest finalized magic block",
+		zap.Int64("mb number", mb.MagicBlockNumber),
+		zap.Int64("mb sr", mb.StartingRound),
+		zap.String("mb hash", mb.Hash))
 
 	return
 }

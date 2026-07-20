@@ -50,6 +50,7 @@ install-mockery:
 	&& ([ -f ./tmp/mockery/mockery.tar.gz ] || curl -L -o ./tmp/mockery/mockery.tar.gz https://github.com/vektra/mockery/releases/download/v2.28.1/mockery_2.28.1_$(detected_OS)_$(detected_ARCH).tar.gz) \
 	&& echo "[+]install mockery" \
 	&& tar zxvfC ./tmp/mockery/mockery.tar.gz ./tmp/mockery \
+	&& (rm -f $(GOPATH)/bin/mockery 2>/dev/null || true) \
 	&& cp ./tmp/mockery/mockery $(GOPATH)/bin/ \
 	&& rm -rf ./tmp
 build-mocks:

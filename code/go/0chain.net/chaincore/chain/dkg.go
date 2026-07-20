@@ -18,6 +18,11 @@ func (c *Chain) GetDKG(round int64) *bls.DKG {
 	defer c.roundDkgMu.RUnlock()
 	entity := c.roundDkg.Get(round)
 	if entity == nil {
+		// Fallback to latest DKG (similar pattern as GetMagicBlock)
+		// This handles the case when round is far from magic block's starting round
+		entity = c.roundDkg.GetLatest()
+	}
+	if entity == nil {
 		return nil
 	}
 	return entity.(*bls.DKG)

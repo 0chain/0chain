@@ -1,0 +1,8 @@
+   miners:
+     - http://localhost:7071
+     - http://localhost:7072
+     - http://localhost:7073
+     - http://localhost:7074
+   sharders:
+     - http://localhost:7171
+     - http://localhost:7172
