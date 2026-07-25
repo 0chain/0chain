@@ -887,6 +887,8 @@ func SendSmartContractTxn(txn *Transaction, minerUrls []string, sharderUrls []st
 		logging.Logger.Debug("[mvc] nonce, sync in send smart txn", zap.Int64("nonce", nextNonce))
 	}
 
+	txn.Nonce++
+
 	signer := func(hash string) (string, error) {
 		return node.Self.Sign(hash)
 	}
