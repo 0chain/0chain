@@ -1838,6 +1838,9 @@ func (sab *storageAllocationBase) removeExpiredChallenges(
 	balances cstate.StateContextI,
 	sc *StorageSmartContract,
 ) (int, error) {
+	logging.Logger.Info("removeExpiredChallenges",
+		zap.Any("allocChallenges", allocChallenges),
+	)
 
 	var expiredChallengeBlobberMap = make(map[string]string)
 	var nonExpiredChallenges []*AllocOpenChallenge
