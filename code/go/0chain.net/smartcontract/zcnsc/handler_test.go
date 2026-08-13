@@ -151,7 +151,7 @@ func TestMintNonceHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "Get processed mint nonces for the client, which does not exist, should not work",
+			name: "Get processed mint nonces for the client, which has no user entity, should return the default mint nonce",
 			body: func(t *testing.T) {
 				target := url.URL{Path: baseUrl}
 
@@ -168,11 +168,73 @@ func TestMintNonceHandler(t *testing.T) {
 
 				handler.ServeHTTP(rr, req)
 
-				require.Equal(t, http.StatusBadRequest, rr.Result().StatusCode)
+				require.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 				var resp int64
 				err = json.NewDecoder(rr.Body).Decode(&resp)
-				require.Error(t, err)
+				require.NoError(t, err)
+				require.Equal(t, int64(0), resp)
+			},
+		},
+		{
+			name: "Get processed mint nonces of the client, which has no user entity, should not create one",
+			body: func(t *testing.T) {
+				target := url.URL{Path: baseUrl}
+
+				query := target.Query()
+
+				query.Add("client_id", clientID)
+
+				target.RawQuery = query.Encode()
+
+				rr := httptest.NewRecorder()
+				handler := http.HandlerFunc(srh.MintNonceHandler)
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				handler.ServeHTTP(rr, req)
+
+				require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+				var count int64
+				err = eventDb.Get().Model(&event.User{}).Where("user_id = ?", clientID).Count(&count).Error
+				require.NoError(t, err)
+				require.Equal(t, int64(0), count)
+			},
+		},
+		{
+			name: "Get mint nonces of the client, which has performed mint operation, should not be defaulted",
+			body: func(t *testing.T) {
+				err := eventDb.Get().Model(&event.User{}).Create(&event.User{
+					UserID:    clientID,
+					MintNonce: 42,
+				}).Error
+				require.NoError(t, err)
+
+				target := url.URL{Path: baseUrl}
+
+				query := target.Query()
+
+				query.Add("client_id", clientID)
+
+				target.RawQuery = query.Encode()
+
+				rr := httptest.NewRecorder()
+				handler := http.HandlerFunc(srh.MintNonceHandler)
+
+				req := httptest.NewRequest(http.MethodGet, target.String(), nil)
+
+				handler.ServeHTTP(rr, req)
+
+				require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+				var resp int64
+				err = json.NewDecoder(rr.Body).Decode(&resp)
+				require.NoError(t, err)
+				require.Equal(t, int64(42), resp)
+
+				err = eventDb.Get().Model(&event.User{}).Where("user_id = ?", clientID).Delete(&event.User{}).Error
+				require.NoError(t, err)
 			},
 		},
 	}

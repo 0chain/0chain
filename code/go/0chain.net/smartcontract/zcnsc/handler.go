@@ -18,6 +18,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// defaultMintNonce is the mint nonce of a client that has not minted anything yet.
+const defaultMintNonce = int64(0)
+
 type ZcnRestHandler struct {
 	rest.RestHandlerI
 }
@@ -156,6 +159,7 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 // swagger:route GET /v1/screst/6dba10422e368813802877a85039d3985d96760ed844092319743fb3a76712e0/v1/mint_nonce zcn-sc GetMintNonce
 // Get mint nonce.
 // Retrieve the latest mint nonce for the client with the given client ID.
+// A client that has not minted yet has no user entity, in which case the default mint nonce 0 is returned.
 //
 // parameters:
 //	+name: client_id
@@ -168,7 +172,6 @@ func (zrh *ZcnRestHandler) getAuthorizer(w http.ResponseWriter, r *http.Request)
 //
 //	200: Int64Map
 //  400:
-//	404:
 
 // MintNonceHandler returns the latest mint nonce for the client with the help of the given client id
 func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Request) {
@@ -179,9 +182,21 @@ func (zrh *ZcnRestHandler) MintNonceHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	clientID := r.FormValue("client_id")
+	if clientID == "" {
+		common.Respond(w, r, nil, errors.New("argument 'client_id' should not be empty"))
+		return
+	}
 
 	user, err := edb.GetUser(clientID)
 	if err != nil {
+		// A user entity is only created once the client is seen on chain, so a
+		// client that has not minted yet simply has no entity to read. That is not
+		// an error: its next mint nonce is the default one.
+		if errors.Is(err, util.ErrValueNotPresent) {
+			common.Respond(w, r, defaultMintNonce, nil)
+			return
+		}
+
 		common.Respond(w, r, nil, errors.Wrap(err, "GetUser DB error, ID = "+clientID))
 		return
 	}
