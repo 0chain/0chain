@@ -330,12 +330,12 @@ func (n *Node) ComputeProperties() error {
 
 /*GetURLBase - get the end point base */
 func (n *Node) GetURLBase() string {
-	return fmt.Sprintf("http://%v:%v", n.Host, n.Port)
+	return fmt.Sprintf("http://%v:%v", RewriteHost(n.Host), n.Port)
 }
 
 /*GetN2NURLBase - get the end point base for n2n communication */
 func (n *Node) GetN2NURLBase() string {
-	return fmt.Sprintf("http://%v:%v", n.N2NHost, n.Port)
+	return fmt.Sprintf("http://%v:%v", RewriteHost(n.N2NHost), n.Port)
 }
 
 func (n *Node) GetN2NURLBaseLocal() string {

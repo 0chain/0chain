@@ -77,6 +77,8 @@ func (np *Pool) AddNode(node *Node) error {
 		return fmt.Errorf("invalid public key, %v", err)
 	}
 
+	node.applyHostRewrite()
+
 	np.mmx.Lock()
 	_, ok := np.NodesMap[node.GetKey()]
 	if !ok {
@@ -330,6 +332,7 @@ func (np *Pool) UnmarshalJSON(data []byte) error {
 
 		n.TimersByURI = make(map[string]metrics.Timer, 10)
 		n.SizeByURI = make(map[string]metrics.Histogram, 10)
+		n.applyHostRewrite()
 		n.setupCommChannel()
 		np.Nodes = append(np.Nodes, n)
 	}
@@ -366,6 +369,7 @@ func (np *Pool) DecodeMsgpack(dec *msgpack.Decoder) error {
 		// Initialize maps to prevent nil map panic during n2n communication
 		n.TimersByURI = make(map[string]metrics.Timer, 10)
 		n.SizeByURI = make(map[string]metrics.Histogram, 10)
+		n.applyHostRewrite()
 		n.setupCommChannel()
 		np.Nodes = append(np.Nodes, n)
 	}
@@ -399,6 +403,7 @@ func (np *Pool) UnmarshalMsg(b []byte) ([]byte, error) {
 		// Initialize maps to prevent nil map panic during n2n communication
 		n.TimersByURI = make(map[string]metrics.Timer, 10)
 		n.SizeByURI = make(map[string]metrics.Histogram, 10)
+		n.applyHostRewrite()
 		n.setupCommChannel()
 		np.Nodes = append(np.Nodes, n)
 		np.NodesMap[k] = n

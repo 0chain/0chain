@@ -119,6 +119,8 @@ func main() {
 
 	miner.SetNetworkRelayTime(viper.GetDuration("network.relay_time") * time.Millisecond)
 	node.ReadConfig()
+	// network.host_rewrite: local hostname suffix rewrites (MB hash excludes hosts)
+	node.SetHostRewrites(viper.GetStringSlice("network.host_rewrite"))
 
 	if *initialStatesFile == "" {
 		*initialStatesFile = filepath.Join(workdir, viper.GetString("network.initial_states"))
